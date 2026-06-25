@@ -1,10 +1,10 @@
 /**
  * Author: SERP Project
- * Description: Part of Serp Project - Delivery manifests route page
+ * Description: Part of Serp Project - Delivery manifests legacy route page
  */
 
-import { DeliveryManifestListPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
 export default function FirstMileDeliveryManifestsPage() {
-  return <DeliveryManifestListPage />;
+  redirect('/first-mile/dispatchers/last-mile');
 }

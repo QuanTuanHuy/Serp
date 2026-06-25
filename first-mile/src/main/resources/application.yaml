@@ -42,7 +42,7 @@ spring:
         - classpath:db/migration/vehicle.sql
         - classpath:db/migration/trip.sql
         - classpath:db/migration/trip-type.sql
-        - classpath:db/migration/pickup-checkin.sql
+        - classpath:db/migration/checkin.sql
         - classpath:db/migration/post-office-handover-manifests.sql
         - classpath:db/migration/post-office-handover-manifest-assignment.sql
         - classpath:db/migration/order-storage-compatibility.sql

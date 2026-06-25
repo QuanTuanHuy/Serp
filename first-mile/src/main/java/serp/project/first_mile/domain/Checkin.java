@@ -8,6 +8,8 @@ package serp.project.first_mile.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -19,6 +21,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import serp.project.first_mile.enums.CheckinType;
 
 import java.time.LocalDateTime;
 
@@ -28,22 +31,35 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "pickup_checkin")
+@Table(name = "checkin")
 @EntityListeners(AuditingEntityListener.class)
-public class PickupCheckin extends AbstractAudit {
+public class Checkin extends AbstractAudit {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "trip_order_id", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "checkin_type", nullable = false, length = 30)
+    private CheckinType checkinType;
+
+    @Column(name = "trip_order_id")
     private Long tripOrderId;
 
     @Column(name = "order_id", nullable = false)
     private Long orderId;
 
-    @Column(name = "trip_id", nullable = false)
+    @Column(name = "order_code", length = 100)
+    private String orderCode;
+
+    @Column(name = "trip_id")
     private Long tripId;
+
+    @Column(name = "delivery_manifest_id")
+    private Long deliveryManifestId;
+
+    @Column(name = "delivery_manifest_order_id")
+    private Long deliveryManifestOrderId;
 
     @Column(name = "courier_staff_id", nullable = false)
     private Long courierStaffId;
@@ -57,7 +73,7 @@ public class PickupCheckin extends AbstractAudit {
     @Column(name = "distance_m", nullable = false)
     private Double distanceM;
 
-    @Column(name = "allowed_radius_m", nullable = false)
+    @Column(name = "allowed_radius_m")
     private Double allowedRadiusM;
 
     @Column(name = "photo_url", nullable = false)

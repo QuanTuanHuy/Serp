@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.caller.TmsOrderClient;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
-import serp.project.first_mile.domain.PickupCheckin;
+import serp.project.first_mile.domain.Checkin;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.Trip;
@@ -29,6 +29,7 @@ import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.PickupCheckinDetailResponse;
 import serp.project.first_mile.dto.response.PickupTripLifecycleResponse;
 import serp.project.first_mile.dto.response.PickupTrackingOverviewResponse;
+import serp.project.first_mile.enums.CheckinType;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.TripStatus;
@@ -37,7 +38,7 @@ import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
-import serp.project.first_mile.repository.PickupCheckinRepository;
+import serp.project.first_mile.repository.CheckinRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
 import serp.project.first_mile.repository.TripOrderRepository;
@@ -94,7 +95,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
     private final TmsOrderClient tmsOrderClient;
     private final TripRepository tripRepository;
     private final TripOrderRepository tripOrderRepository;
-    private final PickupCheckinRepository pickupCheckinRepository;
+    private final CheckinRepository checkinRepository;
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final FileStorageService fileStorageService;
@@ -165,10 +166,15 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 .filter(Objects::nonNull)
                 .toList();
 
-        Map<Long, PickupCheckin> pickupCheckinByTripOrderId = tripOrderIds.isEmpty()
+        Map<Long, Checkin> pickupCheckinByTripOrderId = tripOrderIds.isEmpty()
                 ? Map.of()
-                : pickupCheckinRepository.findByTenantIdAndTripOrderIdIn(tenantId, tripOrderIds).stream()
-                        .collect(Collectors.toMap(PickupCheckin::getTripOrderId, pickupCheckin -> pickupCheckin));
+                : checkinRepository.findByTenantIdAndCheckinTypeAndTripOrderIdIn(
+                                tenantId,
+                                CheckinType.PICKUP,
+                                tripOrderIds
+                        )
+                        .stream()
+                        .collect(Collectors.toMap(Checkin::getTripOrderId, pickupCheckin -> pickupCheckin));
 
         Map<Long, PostOffice> postOfficeById = loadPostOfficeById(tenantId, scopedTrips);
         Map<Long, PostOfficeStaff> courierById = loadCourierById(tenantId, scopedTrips);
@@ -203,7 +209,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 continue;
             }
 
-            PickupCheckin pickupCheckin = pickupCheckinByTripOrderId.get(tripOrder.getId());
+            Checkin pickupCheckin = pickupCheckinByTripOrderId.get(tripOrder.getId());
             boolean checkedIn = pickupCheckin != null;
 
             totalOrders += 1;
@@ -405,13 +411,15 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         String contentType = ImageContentTypeUtils.normalizeImageContentType(photo.getContentType());
         FileUploadResponse uploadResponse = uploadPickupCheckinPhoto(photo, contentType, tenantId);
 
-        PickupCheckin pickupCheckin = pickupCheckinRepository
-                .findByTenantIdAndTripOrderId(tenantId, tripOrder.getId())
-                .orElseGet(PickupCheckin::new);
+        Checkin pickupCheckin = checkinRepository
+                .findByTenantIdAndCheckinTypeAndTripOrderId(tenantId, CheckinType.PICKUP, tripOrder.getId())
+                .orElseGet(Checkin::new);
 
         pickupCheckin.setTenantId(tenantId);
+        pickupCheckin.setCheckinType(CheckinType.PICKUP);
         pickupCheckin.setTripOrderId(tripOrder.getId());
         pickupCheckin.setOrderId(order.getId());
+        pickupCheckin.setOrderCode(order.getOrderCode());
         pickupCheckin.setTripId(tripOrder.getTrip().getId());
         pickupCheckin.setCourierStaffId(courierStaffId);
         pickupCheckin.setCheckinTime(LocalDateTime.now());
@@ -420,7 +428,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         pickupCheckin.setAllowedRadiusM(round3(allowedRadiusMeters));
         pickupCheckin.setPhotoUrl(uploadResponse.getUrl());
 
-        PickupCheckin savedCheckin = pickupCheckinRepository.save(pickupCheckin);
+        Checkin savedCheckin = checkinRepository.save(pickupCheckin);
 
         if (TripStatus.PLANNED.equals(tripOrder.getTrip().getStatus())) {
             tripOrder.getTrip().setStatus(TripStatus.IN_PROGRESS);
@@ -460,8 +468,8 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "orderId must be greater than 0.");
         }
 
-        PickupCheckin pickupCheckin = pickupCheckinRepository
-                .findByTenantIdAndOrderId(tenantId, orderId)
+        Checkin pickupCheckin = checkinRepository
+                .findByTenantIdAndCheckinTypeAndOrderId(tenantId, CheckinType.PICKUP, orderId)
                 .orElseThrow(() -> new AppException(
                         ErrorCode.ORDER_NOT_FOUND,
                         "Pickup check-in not found for this order."
@@ -552,8 +560,13 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
 
         Set<Long> checkedInTripOrderIds = tripOrderIds.isEmpty()
                 ? Set.of()
-                : pickupCheckinRepository.findByTenantIdAndTripOrderIdIn(tenantId, tripOrderIds).stream()
-                .map(PickupCheckin::getTripOrderId)
+                : checkinRepository.findByTenantIdAndCheckinTypeAndTripOrderIdIn(
+                                tenantId,
+                                CheckinType.PICKUP,
+                                tripOrderIds
+                        )
+                .stream()
+                .map(Checkin::getTripOrderId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
@@ -839,7 +852,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 .build(), tenantId);
     }
 
-    private void ensureCanViewPickupCheckin(Long tenantId, Trip trip, PickupCheckin pickupCheckin) {
+    private void ensureCanViewPickupCheckin(Long tenantId, Trip trip, Checkin pickupCheckin) {
         if (firstMileAccessUtils.isAdmin()) {
             return;
         }
@@ -951,7 +964,11 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
     private PickupTripLifecycleResponse buildTripLifecycleResponse(Trip trip, Long tenantId) {
         List<TripOrder> tripOrders = tripOrderRepository.findByTenantIdAndTrip_IdOrderBySequenceNoAsc(tenantId, trip.getId());
         int totalOrders = tripOrders.size();
-        int checkedInOrders = (int) pickupCheckinRepository.countByTenantIdAndTripId(tenantId, trip.getId());
+        int checkedInOrders = (int) checkinRepository.countByTenantIdAndCheckinTypeAndTripId(
+                tenantId,
+                CheckinType.PICKUP,
+                trip.getId()
+        );
 
         List<Long> orderIds = tripOrders.stream()
                 .map(TripOrder::getOrderId)
@@ -1156,7 +1173,11 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             return;
         }
 
-        long checkedInOrders = pickupCheckinRepository.countByTenantIdAndTripId(tenantId, trip.getId());
+        long checkedInOrders = checkinRepository.countByTenantIdAndCheckinTypeAndTripId(
+                tenantId,
+                CheckinType.PICKUP,
+                trip.getId()
+        );
         if (checkedInOrders >= totalOrders) {
             trip.setStatus(TripStatus.COMPLETED);
         }
@@ -1182,7 +1203,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
     private PickupCheckinResponse toPickupCheckinResponse(
             TmsOrderOperationView order,
             Trip trip,
-            PickupCheckin pickupCheckin,
+            Checkin pickupCheckin,
             Point pickupLocation
     ) {
         Point checkinLocation = pickupCheckin == null ? null : pickupCheckin.getCheckinLocation();

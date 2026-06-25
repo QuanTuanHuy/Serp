@@ -40,13 +40,13 @@ import {
   useConfirmReturnMutation,
   useGetDeliveryManifestDetailQuery,
   useInitiateDeliveryPaymentMutation,
-} from '../../../api/lastMileApi';
+} from '../../../../api/lastMileApi';
 import type {
   DeliveryPaymentInitResponse,
   DeliveryManifestResponse,
   DeliveryManifestOrderResponse,
   DeliveryOrderStatus,
-} from '../../../types';
+} from '../../../../types';
 
 const ORDER_STATUS_CONFIG: Record<
   DeliveryOrderStatus,
@@ -671,7 +671,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
           />
           <KpiCard
             label='COD Collected'
-            value={`${current.collectedCodAmount.toLocaleString()}đ`}
+            value={`${current.collectedCodAmount.toLocaleString()} VND`}
             icon={Banknote}
             color='text-amber-600'
           />
@@ -759,11 +759,11 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
           <div className='mt-4 border rounded-lg p-4 bg-muted/30'>
             <div className='flex items-center justify-between mb-3'>
               <h4 className='font-medium text-sm'>
-                {actionMode === 'deliver' && '✓ Confirm Delivery'}
-                {actionMode === 'fail' && '✗ Report Delivery Failure'}
-                {actionMode === 'return' && '↩ Return to Sender'}
+                {actionMode === 'deliver' && 'Confirm Delivery'}
+                {actionMode === 'fail' && 'Report Delivery Failure'}
+                {actionMode === 'return' && 'Return to Sender'}
                 <span className='text-muted-foreground ml-2'>
-                  — {activeOrder.orderCode}
+                  - {activeOrder.orderCode}
                 </span>
               </h4>
               <Button variant='ghost' size='sm' onClick={resetForm}>
@@ -1162,12 +1162,12 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
         <div className='flex flex-col items-end gap-1'>
           {order.codAmount > 0 && (
             <span className='text-xs font-medium text-amber-600'>
-              COD: {order.codAmount.toLocaleString()}đ
+              COD: {order.codAmount.toLocaleString()} VND
             </span>
           )}
           {order.shippingFee > 0 && (
             <span className='text-xs text-muted-foreground'>
-              Fee: {order.shippingFee.toLocaleString()}đ
+              Fee: {order.shippingFee.toLocaleString()} VND
             </span>
           )}
         </div>
@@ -1243,7 +1243,7 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
       {order.status === 'FAILED' && order.failureReason && (
         <div className='mt-2 pt-2 border-t text-xs text-red-600'>
           Reason: {order.failureReason}
-          {order.note && ` — ${order.note}`}
+          {order.note && ` - ${order.note}`}
         </div>
       )}
     </div>

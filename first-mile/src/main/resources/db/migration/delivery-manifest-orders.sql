@@ -34,9 +34,6 @@ CREATE TABLE IF NOT EXISTS delivery_manifest_orders (
 );
 
 ALTER TABLE delivery_manifest_orders
-    ADD COLUMN IF NOT EXISTS delivery_checkin_lat DOUBLE PRECISION,
-    ADD COLUMN IF NOT EXISTS delivery_checkin_lng DOUBLE PRECISION,
-    ADD COLUMN IF NOT EXISTS delivery_checkin_distance_m DOUBLE PRECISION,
     ADD COLUMN IF NOT EXISTS delivery_payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID',
     ADD COLUMN IF NOT EXISTS delivery_payment_amount BIGINT NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS delivery_payment_app_trans_id VARCHAR(100),

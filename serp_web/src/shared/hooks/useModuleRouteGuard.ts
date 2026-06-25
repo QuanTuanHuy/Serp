@@ -24,6 +24,23 @@ const LOGISTICS2_ROUTE_ALIASES: Record<string, string> = {
   '/logistics2/my-routes': '/logistics2/routes',
 };
 
+const TMS_ROUTE_ALIASES: Record<string, string> = {
+  '/first-mile/dispatchers/last-mile': '/first-mile/delivery-manifests',
+  '/first-mile/delivery-manifests': '/first-mile/dispatchers/last-mile',
+};
+
+const getEquivalentRoutePaths = (
+  currentPath: string,
+  moduleCode: string
+): string[] => {
+  if (toCanonicalModuleCode(moduleCode) !== 'TMS') {
+    return [currentPath];
+  }
+
+  const aliasedPath = TMS_ROUTE_ALIASES[currentPath];
+  return aliasedPath ? [currentPath, aliasedPath] : [currentPath];
+};
+
 interface RouteGuardResult {
   hasAccess: boolean;
 
@@ -66,7 +83,9 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
   const currentPath = useMemo(() => {
     const normalizedPath = normalizeMenuPathForModule(pathname, moduleCode);
 
-    if (toCanonicalModuleCode(moduleCode) !== 'LOGISTICS2') {
+    const canonicalModuleCode = toCanonicalModuleCode(moduleCode);
+
+    if (canonicalModuleCode !== 'LOGISTICS2') {
       return normalizedPath;
     }
 
@@ -95,15 +114,19 @@ export const useModuleRouteGuard = (moduleCode: string): RouteGuardResult => {
 
     const normalizedModuleRootPath = normalizePath(moduleRootPath);
 
+    const currentPathMatches = getEquivalentRoutePaths(currentPath, moduleCode);
+
     const hasMatch = menuDisplays.some((menu) => {
       if (!menu.path) return false;
 
       const menuPath = normalizeMenuPathForModule(menu.path, moduleCode);
 
-      if (currentPath === menuPath) return true;
+      if (currentPathMatches.includes(menuPath)) return true;
 
       // Parent path match (e.g., /ptm/tasks/123 matches /ptm/tasks)
-      if (currentPath.startsWith(menuPath + '/')) return true;
+      if (currentPathMatches.some((path) => path.startsWith(menuPath + '/'))) {
+        return true;
+      }
 
       return false;
     });

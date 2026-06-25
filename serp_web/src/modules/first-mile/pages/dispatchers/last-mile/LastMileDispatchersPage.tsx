@@ -1,6 +1,6 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Delivery Manifest List Page
+ * Description: Part of Serp Project - Last-mile dispatchers page
  */
 
 'use client';
@@ -22,13 +22,13 @@ import { Input } from '@/shared/components/ui/input';
 import { Badge } from '@/shared/components/ui/badge';
 import { getErrorMessage, useAppSelector } from '@/lib/store';
 import { useNotification } from '@/shared/hooks';
-import { TmsCombobox } from '../../components/TmsCombobox';
-import { useGetPostOfficesQuery } from '../../api/firstMileApi';
-import { useGetDeliveryManifestsQuery } from '../../api/lastMileApi';
+import { TmsCombobox } from '../../../components/TmsCombobox';
+import { useGetPostOfficesQuery } from '../../../api/firstMileApi';
+import { useGetDeliveryManifestsQuery } from '../../../api/lastMileApi';
 import type {
   DeliveryManifestResponse,
   DeliveryManifestStatus,
-} from '../../types';
+} from '../../../types';
 import { DeliveryManifestFormDialog } from './components/DeliveryManifestFormDialog';
 import { DeliveryManifestDetailDialog } from './components/DeliveryManifestDetailDialog';
 
@@ -92,7 +92,7 @@ const getScopeDescription = (scope: DeliveryManifestAccessScope): string => {
   return 'Your account does not have permission to access delivery manifests.';
 };
 
-export const DeliveryManifestListPage: React.FC = () => {
+export const LastMileDispatchersPage: React.FC = () => {
   const notification = useNotification();
   const roles = useAppSelector(
     (state) => state.account.user.profile?.roles ?? []
@@ -166,10 +166,10 @@ export const DeliveryManifestListPage: React.FC = () => {
       <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>
-            Delivery Manifests
+            Last-mile Dispatchers
           </h1>
           <p className='text-muted-foreground mt-1'>
-            Manage delivery manifests for last-mile courier routes.
+            Create and monitor delivery manifests for last-mile courier routes.
           </p>
         </div>
         {canManageManifests ? (
@@ -408,10 +408,10 @@ const ManifestCard: React.FC<ManifestCardProps> = ({ manifest, onClick }) => {
           <div className='flex items-center gap-1 text-sm'>
             <Banknote className='h-4 w-4 text-green-600' />
             <span className='font-medium'>
-              {manifest.collectedCodAmount.toLocaleString()}đ
+              {manifest.collectedCodAmount.toLocaleString()} VND
             </span>
             <span className='text-muted-foreground'>
-              / {manifest.totalCodAmount.toLocaleString()}đ
+              / {manifest.totalCodAmount.toLocaleString()} VND
             </span>
           </div>
           {manifest.failedCount > 0 && (

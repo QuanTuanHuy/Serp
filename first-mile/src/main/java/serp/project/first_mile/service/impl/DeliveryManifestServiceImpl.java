@@ -9,6 +9,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +24,7 @@ import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderResponse;
 import serp.project.first_mile.caller.dto.payment.PaymentQueryOrderResponse;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
+import serp.project.first_mile.domain.Checkin;
 import serp.project.first_mile.domain.DeliveryManifest;
 import serp.project.first_mile.domain.DeliveryManifestOrder;
 import serp.project.first_mile.dto.request.ConfirmDeliveryFailureRequest;
@@ -33,6 +38,7 @@ import serp.project.first_mile.dto.response.DeliveryManifestResponse;
 import serp.project.first_mile.dto.response.DeliveryPaymentConfirmResponse;
 import serp.project.first_mile.dto.response.DeliveryPaymentInitResponse;
 import serp.project.first_mile.dto.response.FileUploadResponse;
+import serp.project.first_mile.enums.CheckinType;
 import serp.project.first_mile.enums.DeliveryManifestStatus;
 import serp.project.first_mile.enums.DeliveryOrderStatus;
 import serp.project.first_mile.enums.OrderStatus;
@@ -42,6 +48,7 @@ import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
+import serp.project.first_mile.repository.CheckinRepository;
 import serp.project.first_mile.repository.DeliveryManifestOrderRepository;
 import serp.project.first_mile.repository.DeliveryManifestRepository;
 import serp.project.first_mile.service.DeliveryManifestService;
@@ -67,6 +74,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class DeliveryManifestServiceImpl implements DeliveryManifestService {
 
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
     private static final String TRANSITION_SOURCE = "LAST_MILE_DELIVERY";
     private static final String RECEIVER = "RECEIVER";
     private static final String STORAGE_SERVICE_NAME = "first-mile";
@@ -78,6 +86,7 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
 
     private final DeliveryManifestRepository manifestRepository;
     private final DeliveryManifestOrderRepository manifestOrderRepository;
+    private final CheckinRepository checkinRepository;
     private final DeliveryRouteOptimizationService routeOptimizationService;
     private final PaymentServiceCaller paymentServiceCaller;
     private final TmsOrderClient tmsOrderClient;
@@ -287,15 +296,34 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
         String contentType = ImageContentTypeUtils.normalizeImageContentType(photo.getContentType());
         FileUploadResponse uploadResponse = uploadDeliveryCheckinPhoto(photo, contentType, tenantId);
 
+        LocalDateTime deliveredAt = request.getDeliveredAt() != null ? request.getDeliveredAt() : LocalDateTime.now();
+
+        Checkin deliveryCheckin = checkinRepository
+                .findByTenantIdAndCheckinTypeAndDeliveryManifestOrderId(
+                        tenantId,
+                        CheckinType.DELIVERY,
+                        manifestOrder.getId()
+                )
+                .orElseGet(Checkin::new);
+        deliveryCheckin.setTenantId(tenantId);
+        deliveryCheckin.setCheckinType(CheckinType.DELIVERY);
+        deliveryCheckin.setOrderId(manifestOrder.getOrderId());
+        deliveryCheckin.setOrderCode(manifestOrder.getOrderCode());
+        deliveryCheckin.setDeliveryManifestId(manifest.getId());
+        deliveryCheckin.setDeliveryManifestOrderId(manifestOrder.getId());
+        deliveryCheckin.setCourierStaffId(manifest.getCourierId());
+        deliveryCheckin.setCheckinTime(deliveredAt);
+        deliveryCheckin.setCheckinLocation(toPoint(request.getLatitude(), request.getLongitude()));
+        deliveryCheckin.setDistanceM(round3(distanceMeters));
+        deliveryCheckin.setAllowedRadiusM(null);
+        deliveryCheckin.setPhotoUrl(uploadResponse.getUrl());
+        checkinRepository.save(deliveryCheckin);
+
         // Update order
         manifestOrder.setStatus(DeliveryOrderStatus.DELIVERED);
-        manifestOrder.setProofPhotoUrl(uploadResponse.getUrl());
         manifestOrder.setCodCollected(codCollected);
         manifestOrder.setShippingFeeCollected(shippingFeeCollected);
-        manifestOrder.setDeliveredAt(request.getDeliveredAt() != null ? request.getDeliveredAt() : LocalDateTime.now());
-        manifestOrder.setDeliveryCheckinLat(request.getLatitude());
-        manifestOrder.setDeliveryCheckinLng(request.getLongitude());
-        manifestOrder.setDeliveryCheckinDistanceM(round3(distanceMeters));
+        manifestOrder.setDeliveredAt(deliveredAt);
         manifestOrder.setNote(request.getNote());
 
         // Update manifest totals
@@ -739,6 +767,15 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
     }
 
     private DeliveryManifestOrderResponse toOrderResponse(DeliveryManifestOrder order) {
+        Checkin deliveryCheckin = order.getId() == null
+                ? null
+                : checkinRepository.findByTenantIdAndCheckinTypeAndDeliveryManifestOrderId(
+                        order.getTenantId(),
+                        CheckinType.DELIVERY,
+                        order.getId()
+                ).orElse(null);
+        Point checkinLocation = deliveryCheckin == null ? null : deliveryCheckin.getCheckinLocation();
+
         return DeliveryManifestOrderResponse.builder()
                 .id(order.getId())
                 .orderId(order.getOrderId())
@@ -762,12 +799,12 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
                 .deliveryPaymentAmount(order.getDeliveryPaymentAmount())
                 .deliveryPaymentAppTransId(order.getDeliveryPaymentAppTransId())
                 .deliveryPaymentConfirmedAt(order.getDeliveryPaymentConfirmedAt())
-                .proofPhotoUrl(order.getProofPhotoUrl())
+                .proofPhotoUrl(deliveryCheckin == null ? order.getProofPhotoUrl() : deliveryCheckin.getPhotoUrl())
                 .failureReason(order.getFailureReason())
                 .deliveredAt(order.getDeliveredAt())
-                .deliveryCheckinLat(order.getDeliveryCheckinLat())
-                .deliveryCheckinLng(order.getDeliveryCheckinLng())
-                .deliveryCheckinDistanceM(order.getDeliveryCheckinDistanceM())
+                .deliveryCheckinLat(checkinLocation == null ? null : round3(checkinLocation.getY()))
+                .deliveryCheckinLng(checkinLocation == null ? null : round3(checkinLocation.getX()))
+                .deliveryCheckinDistanceM(deliveryCheckin == null ? null : deliveryCheckin.getDistanceM())
                 .note(order.getNote())
                 .build();
     }
@@ -936,6 +973,12 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
         );
 
         return EARTH_RADIUS_METERS * centralAngle;
+    }
+
+    private Point toPoint(double latitude, double longitude) {
+        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
+        point.setSRID(4326);
+        return point;
     }
 
     private boolean isValidCoordinate(double latitude, double longitude) {

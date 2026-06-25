@@ -12,15 +12,15 @@ import { Card } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { Badge } from '@/shared/components/ui/badge';
-import { TmsCombobox } from '../../../components/TmsCombobox';
+import { TmsCombobox } from '../../../../components/TmsCombobox';
 import {
   useGetActiveCouriersByPostOfficeQuery,
   useGetFirstMileVehiclesQuery,
-} from '../../../api/firstMileApi';
+} from '../../../../api/firstMileApi';
 import {
   useGetInboundOrdersQuery,
   useCreateDeliveryManifestMutation,
-} from '../../../api/lastMileApi';
+} from '../../../../api/lastMileApi';
 
 const NONE_VALUE = '__NONE__';
 
@@ -273,7 +273,7 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
                   </div>
                   {order.codAmount > 0 && (
                     <span className='text-xs text-amber-600 font-medium'>
-                      COD {order.codAmount.toLocaleString()}đ
+                      COD {order.codAmount.toLocaleString()} VND
                     </span>
                   )}
                 </label>
