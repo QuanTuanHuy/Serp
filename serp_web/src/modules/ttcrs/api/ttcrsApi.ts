@@ -16,6 +16,7 @@ import type {
   CreateLocationPayload,
   UpdateLocationPayload,
   LocationItem,
+  LocationImportResult,
   ContainerItem,
   TruckItem,
   TrailerItem,
@@ -91,33 +92,51 @@ export const ttcrsApi = api.injectEndpoints({
     >({
       query: (params) => {
         const searchParams = new URLSearchParams();
-        if (params.statuses?.length) params.statuses.forEach((s) => searchParams.append('statuses', s));
+        if (params.statuses?.length)
+          params.statuses.forEach((s) => searchParams.append('statuses', s));
         if (params.type) searchParams.set('type', params.type);
-        if (params.srcLocationCode) searchParams.set('srcLocationCode', params.srcLocationCode);
-        if (params.destLocationCode) searchParams.set('destLocationCode', params.destLocationCode);
-        if (params.createdFrom) searchParams.set('createdFrom', params.createdFrom);
+        if (params.srcLocationCode)
+          searchParams.set('srcLocationCode', params.srcLocationCode);
+        if (params.destLocationCode)
+          searchParams.set('destLocationCode', params.destLocationCode);
+        if (params.createdFrom)
+          searchParams.set('createdFrom', params.createdFrom);
         if (params.createdTo) searchParams.set('createdTo', params.createdTo);
-        if (params.page !== undefined) searchParams.set('page', String(params.page));
-        if (params.size !== undefined) searchParams.set('size', String(params.size));
+        if (params.page !== undefined)
+          searchParams.set('page', String(params.page));
+        if (params.size !== undefined)
+          searchParams.set('size', String(params.size));
         if (params.sortBy) searchParams.set('sortBy', params.sortBy);
-        if (params.sortDirection) searchParams.set('sortDirection', params.sortDirection);
-        return { url: `/customer/requests?${searchParams.toString()}`, method: 'GET' };
+        if (params.sortDirection)
+          searchParams.set('sortDirection', params.sortDirection);
+        return {
+          url: `/customer/requests?${searchParams.toString()}`,
+          method: 'GET',
+        };
       },
       extraOptions: { service: 'ttcrs' },
       providesTags: (result) =>
         result?.data?.items
           ? [
-              ...result.data.items.map(({ id }) => ({ type: 'ttcrs/Request' as const, id })),
+              ...result.data.items.map(({ id }) => ({
+                type: 'ttcrs/Request' as const,
+                id,
+              })),
               { type: 'ttcrs/Request', id: 'CUSTOMER_LIST' },
             ]
           : [{ type: 'ttcrs/Request', id: 'CUSTOMER_LIST' }],
     }),
 
     // GET /ttcrs/api/v1/customer/requests/{id}
-    getCustomerRequestDetail: builder.query<TtcrsApiResponse<TtcrsRequest>, number>({
+    getCustomerRequestDetail: builder.query<
+      TtcrsApiResponse<TtcrsRequest>,
+      number
+    >({
       query: (id) => ({ url: `/customer/requests/${id}`, method: 'GET' }),
       extraOptions: { service: 'ttcrs' },
-      providesTags: (_, __, id) => [{ type: 'ttcrs/Request', id: `CUSTOMER_${id}` }],
+      providesTags: (_, __, id) => [
+        { type: 'ttcrs/Request', id: `CUSTOMER_${id}` },
+      ],
     }),
 
     // -------------------------------------------------------------------------
@@ -336,6 +355,20 @@ export const ttcrsApi = api.injectEndpoints({
       invalidatesTags: [{ type: 'ttcrs/Location', id: 'LIST' }],
     }),
 
+    // POST /ttcrs/api/v1/dispatcher/locations/import
+    importDispatcherLocations: builder.mutation<
+      TtcrsApiResponse<LocationImportResult>,
+      FormData
+    >({
+      query: (formData) => ({
+        url: '/dispatcher/locations/import',
+        method: 'POST',
+        body: formData,
+      }),
+      extraOptions: { service: 'ttcrs' },
+      invalidatesTags: [{ type: 'ttcrs/Location', id: 'LIST' }],
+    }),
+
     // -------------------------------------------------------------------------
     // Containers update / delete
     // -------------------------------------------------------------------------
@@ -494,7 +527,11 @@ export const ttcrsApi = api.injectEndpoints({
       TtcrsApiResponse<TransportPlanSavedItem[]>,
       SaveTransportPlanPayload
     >({
-      query: (body) => ({ url: '/dispatcher/manual-routes', method: 'POST', body }),
+      query: (body) => ({
+        url: '/dispatcher/manual-routes',
+        method: 'POST',
+        body,
+      }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: [
         { type: 'ttcrs/Request', id: 'LIST' },
@@ -507,14 +544,19 @@ export const ttcrsApi = api.injectEndpoints({
     // -------------------------------------------------------------------------
 
     // PATCH /ttcrs/api/v1/driver/transport-plans/{id}/start
-    startRoute: builder.mutation<TtcrsApiResponse<TransportPlanDetail>, number>({
-      query: (id) => ({ url: `/driver/transport-plans/${id}/start`, method: 'PATCH' }),
-      extraOptions: { service: 'ttcrs' },
-      invalidatesTags: (_r, _e, id) => [
-        { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
-        { type: 'ttcrs/Request', id: 'MY_TRANSPORT_PLANS' },
-      ],
-    }),
+    startRoute: builder.mutation<TtcrsApiResponse<TransportPlanDetail>, number>(
+      {
+        query: (id) => ({
+          url: `/driver/transport-plans/${id}/start`,
+          method: 'PATCH',
+        }),
+        extraOptions: { service: 'ttcrs' },
+        invalidatesTags: (_r, _e, id) => [
+          { type: 'ttcrs/Request', id: `MY_TRANSPORT_PLAN_${id}` },
+          { type: 'ttcrs/Request', id: 'MY_TRANSPORT_PLANS' },
+        ],
+      }
+    ),
 
     // PATCH /ttcrs/api/v1/dispatcher/transport-plans/{id}/cancel
     cancelRoute: builder.mutation<
@@ -566,8 +608,14 @@ export const ttcrsApi = api.injectEndpoints({
     }),
 
     // PATCH /ttcrs/api/v1/dispatcher/transport-plans/{id}/restore
-    restoreRoute: builder.mutation<TtcrsApiResponse<TransportPlanDetail>, number>({
-      query: (id) => ({ url: `/dispatcher/transport-plans/${id}/restore`, method: 'PATCH' }),
+    restoreRoute: builder.mutation<
+      TtcrsApiResponse<TransportPlanDetail>,
+      number
+    >({
+      query: (id) => ({
+        url: `/dispatcher/transport-plans/${id}/restore`,
+        method: 'PATCH',
+      }),
       extraOptions: { service: 'ttcrs' },
       invalidatesTags: (_r, _e, id) => [
         { type: 'ttcrs/Request', id: `TRANSPORT_PLAN_${id}` },
@@ -576,7 +624,10 @@ export const ttcrsApi = api.injectEndpoints({
     }),
 
     // POST /ttcrs/api/v1/driver/transport-plans/evidence/upload
-    uploadEvidence: builder.mutation<TtcrsApiResponse<UploadEvidenceResponse>, FormData>({
+    uploadEvidence: builder.mutation<
+      TtcrsApiResponse<UploadEvidenceResponse>,
+      FormData
+    >({
       query: (formData) => ({
         url: '/driver/transport-plans/evidence/upload',
         method: 'POST',
@@ -600,6 +651,7 @@ export const {
   useCreateDispatcherLocationMutation,
   useUpdateDispatcherLocationMutation,
   useDeleteDispatcherLocationMutation,
+  useImportDispatcherLocationsMutation,
   useGetDispatcherContainersQuery,
   useCreateDispatcherContainerMutation,
   useUpdateDispatcherContainerMutation,

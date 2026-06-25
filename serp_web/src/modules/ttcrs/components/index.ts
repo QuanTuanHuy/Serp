@@ -1,5 +1,6 @@
 export { CreateRequestDialog } from './CreateRequestDialog';
 export { CreateLocationDialog } from './CreateLocationDialog';
+export { ImportLocationsDialog } from './ImportLocationsDialog';
 export { CreateResourceDialog } from './CreateResourceDialog';
 export { RequestDetailSheet } from './RequestDetailSheet';
 export { LocationDetailSheet } from './LocationDetailSheet';
