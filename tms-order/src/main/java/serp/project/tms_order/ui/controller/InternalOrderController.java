@@ -22,8 +22,8 @@ import serp.project.tms_order.dto.response.OrderStatusTransitionResponse;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
 import serp.project.tms_order.kernel.utils.AuthUtils;
+import serp.project.tms_order.service.OrderPaymentService;
 import serp.project.tms_order.service.OrderQueryService;
-import serp.project.tms_order.service.OrderService;
 import serp.project.tms_order.service.OrderTransitionService;
 
 import java.util.List;
@@ -36,7 +36,7 @@ public class InternalOrderController {
 
     private final AuthUtils authUtils;
     private final OrderQueryService orderQueryService;
-    private final OrderService orderService;
+    private final OrderPaymentService orderPaymentService;
     private final OrderTransitionService orderTransitionService;
 
     @PostMapping("/lookup")
@@ -71,7 +71,7 @@ public class InternalOrderController {
     public void updatePaymentStatus(@RequestBody UpdatePaymentStatusRequest request) {
         Long tenantId = getCurrentTenantId();
         log.info("Internal request to update payment status orderCode={} tenant {}", request.getOrderCode(), tenantId);
-        orderService.updatePaymentStatus(request.getOrderCode(), tenantId, request.getPaymentStatus());
+        orderPaymentService.updatePaymentStatus(request.getOrderCode(), tenantId, request.getPaymentStatus());
     }
 
     private Long getCurrentTenantId() {

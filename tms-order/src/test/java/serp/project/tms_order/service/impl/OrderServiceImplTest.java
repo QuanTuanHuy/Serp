@@ -5,28 +5,22 @@ Description: Part of Serp Project
 
 package serp.project.tms_order.service.impl;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
 import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
-import serp.project.tms_order.caller.PaymentServiceCaller;
 import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
-import serp.project.tms_order.caller.dto.payment.PaymentQueryOrderResponse;
 import serp.project.tms_order.domain.Order;
 import serp.project.tms_order.domain.ProductType;
 import serp.project.tms_order.dto.request.CancelOrderRequest;
-import serp.project.tms_order.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.tms_order.dto.request.CreateOrderRequest;
-import serp.project.tms_order.dto.request.PaymentOrderConfirmedWebhookRequest;
 import serp.project.tms_order.dto.response.OrderConfirmationResponse;
-import serp.project.tms_order.dto.response.OrderPaymentConfirmResponse;
-import serp.project.tms_order.dto.response.PaymentWebhookProcessResponse;
 import serp.project.tms_order.dto.response.OrderDetailResponse;
 import serp.project.tms_order.enums.DeliveryRequestTime;
 import serp.project.tms_order.enums.FeePayer;
@@ -36,12 +30,18 @@ import serp.project.tms_order.enums.OrderType;
 import serp.project.tms_order.enums.PaymentStatus;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
+import serp.project.tms_order.kafka.OrderEventDispatcher;
 import serp.project.tms_order.kafka.OrderNotificationEventPublisher;
 import serp.project.tms_order.kafka.OrderSyncEventPublisher;
 import serp.project.tms_order.kernel.utils.AuthUtils;
 import serp.project.tms_order.repository.OrderRepository;
 import serp.project.tms_order.repository.ProductTypeRepository;
+import serp.project.tms_order.service.OrderExcelService;
+import serp.project.tms_order.service.OrderImportExcelService;
 import serp.project.tms_order.service.OrderTimelineService;
+import serp.project.tms_order.service.order.OrderAccessPolicy;
+import serp.project.tms_order.service.order.OrderFilterNormalizer;
+import serp.project.tms_order.service.order.OrderTemplateExporter;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -74,9 +74,6 @@ class OrderServiceImplTest {
     private AuthUtils authUtils;
 
     @Mock
-    private PaymentServiceCaller paymentServiceCaller;
-
-    @Mock
     private FirstMilePostOfficeCaller firstMilePostOfficeCaller;
 
     @Mock
@@ -88,8 +85,33 @@ class OrderServiceImplTest {
     @Mock
     private OrderTimelineService orderTimelineService;
 
-    @InjectMocks
+    @Mock
+    private OrderExcelService orderExcelService;
+
+    @Mock
+    private OrderImportExcelService orderImportExcelService;
+
     private OrderServiceImpl orderService;
+
+    @BeforeEach
+    void setUp() {
+        OrderEventDispatcher orderEventDispatcher = new OrderEventDispatcher(
+                orderSyncEventPublisher,
+                orderNotificationEventPublisher
+        );
+        OrderAccessPolicy orderAccessPolicy = new OrderAccessPolicy(authUtils);
+        orderService = new OrderServiceImpl(
+                orderRepository,
+                productTypeRepository,
+                orderImportExcelService,
+                orderTimelineService,
+                firstMilePostOfficeCaller,
+                new OrderTemplateExporter(orderExcelService),
+                new OrderFilterNormalizer(),
+                orderAccessPolicy,
+                orderEventDispatcher
+        );
+    }
 
     @Test
     void createOrderBuildsOrderAndAggregatesProducts() {
@@ -203,55 +225,6 @@ class OrderServiceImplTest {
     }
 
     @Test
-    void confirmOrderPaymentReturnsSuccessWhenOrderAlreadyPaid() {
-        Order order = confirmableOrder();
-        order.setPaymentStatus(PaymentStatus.PAID);
-
-        when(orderRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID))
-                .thenReturn(Optional.of(order));
-        when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(true);
-
-        OrderPaymentConfirmResponse response = orderService.confirmOrderPayment(
-                1L,
-                TENANT_ID,
-                new ConfirmOrderPaymentRequest("250101_abc")
-        );
-
-        assertEquals(PaymentStatus.PAID, response.paymentStatus());
-        assertEquals("SUCCESS", response.gatewayStatus());
-        verify(paymentServiceCaller, never()).queryOrderStatus(any());
-        verify(orderSyncEventPublisher, never()).publish(any());
-        verify(orderNotificationEventPublisher, never()).publishOrderPaymentSucceeded(any());
-    }
-
-    @Test
-    void confirmOrderPaymentMarksOrderPaidAndPublishesNotification() {
-        Order order = confirmableOrder();
-        order.setPaymentStatus(PaymentStatus.UNPAID);
-
-        when(orderRepository.findByIdAndTenantIdForUpdate(1L, TENANT_ID))
-                .thenReturn(Optional.of(order));
-        when(authUtils.hasAnyRole("TMS_ADMIN")).thenReturn(true);
-        when(paymentServiceCaller.queryOrderStatus("250101_abc"))
-                .thenReturn(PaymentQueryOrderResponse.builder()
-                        .status("SUCCESS")
-                        .message("Payment completed")
-                        .build());
-        when(orderRepository.save(any(Order.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        OrderPaymentConfirmResponse response = orderService.confirmOrderPayment(
-                1L,
-                TENANT_ID,
-                new ConfirmOrderPaymentRequest("250101_abc")
-        );
-
-        assertEquals(PaymentStatus.PAID, response.paymentStatus());
-        verify(orderSyncEventPublisher).publish(order);
-        verify(orderNotificationEventPublisher).publishOrderPaymentSucceeded(order);
-    }
-
-    @Test
     void cancelOrderMarksCancelledAndPublishesNotification() {
         Order order = confirmableOrder();
         CancelOrderRequest request = new CancelOrderRequest();
@@ -269,35 +242,6 @@ class OrderServiceImplTest {
         assertEquals("Customer requested cancellation", order.getCancelReason());
         verify(orderSyncEventPublisher).publish(order);
         verify(orderNotificationEventPublisher).publishOrderCancelled(order);
-    }
-
-    @Test
-    void processPaymentWebhookMarksOrderPaidAndPublishesSyncEvent() {
-        Order order = confirmableOrder();
-        order.setPaymentStatus(PaymentStatus.UNPAID);
-
-        when(orderRepository.findByOrderCodeAndTenantIdForUpdate("ORD-001", TENANT_ID))
-                .thenReturn(Optional.of(order));
-        when(orderRepository.save(any(Order.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        PaymentWebhookProcessResponse response = orderService.processPaymentOrderConfirmedWebhook(
-                new PaymentOrderConfirmedWebhookRequest(
-                        "250101_abc",
-                        "ORD-001",
-                        TENANT_ID,
-                        45000L,
-                        null,
-                        "zalopay",
-                        "gateway-1"
-                )
-        );
-
-        assertTrue(response.updated());
-        assertEquals(PaymentStatus.PAID, order.getPaymentStatus());
-        assertEquals(45000L, order.getTotalShippingFee());
-        verify(orderSyncEventPublisher).publish(order);
-        verify(orderNotificationEventPublisher).publishOrderPaymentSucceeded(order);
     }
 
     private CreateOrderRequest createRequest() {

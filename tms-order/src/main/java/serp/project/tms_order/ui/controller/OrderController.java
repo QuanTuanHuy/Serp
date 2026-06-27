@@ -46,6 +46,8 @@ import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
 import serp.project.tms_order.exception.MessageService;
 import serp.project.tms_order.kernel.utils.AuthUtils;
+import serp.project.tms_order.service.OrderDropOffService;
+import serp.project.tms_order.service.OrderPaymentService;
 import serp.project.tms_order.service.OrderService;
 import serp.project.tms_order.service.OrderTimelineService;
 
@@ -61,6 +63,8 @@ public class OrderController {
     private final AuthUtils authUtils;
     private final MessageService messageService;
     private final OrderService orderService;
+    private final OrderDropOffService orderDropOffService;
+    private final OrderPaymentService orderPaymentService;
     private final OrderTimelineService orderTimelineService;
 
     @GetMapping("/template")
@@ -192,7 +196,7 @@ public class OrderController {
         log.info("REST request to get drop-off post office suggestions for TMS Order {} tenant {}", orderId, tenantId);
         return ApiResponse.<List<OrderDropOffPostOfficeSuggestionResponse>>builder()
                 .message(messageService.getMessage("success.orders.drop_off_suggestions"))
-                .result(orderService.getDropOffPostOfficeSuggestions(orderId, limit, tenantId))
+                .result(orderDropOffService.getDropOffPostOfficeSuggestions(orderId, limit, tenantId))
                 .build();
     }
 
@@ -262,7 +266,7 @@ public class OrderController {
                 orderId, request.getPostOfficeId(), tenantId);
         return ApiResponse.<OrderConfirmationResponse>builder()
                 .message(messageService.getMessage("success.orders.confirm"))
-                .result(orderService.confirmDropOffOrderAtPostOffice(orderId, tenantId, request))
+                .result(orderDropOffService.confirmDropOffOrderAtPostOffice(orderId, tenantId, request))
                 .build();
     }
 
@@ -277,7 +281,7 @@ public class OrderController {
         log.info("REST request to initiate payment for TMS Order {} tenant {}", orderId, tenantId);
         return ApiResponse.<OrderPaymentInitResponse>builder()
                 .message(messageService.getMessage("success.orders.payment.initiate"))
-                .result(orderService.initiateOrderPayment(orderId, tenantId, request))
+                .result(orderPaymentService.initiateOrderPayment(orderId, tenantId, request))
                 .build();
     }
 
@@ -295,7 +299,7 @@ public class OrderController {
                 request.getAppTransId());
         return ApiResponse.<OrderPaymentConfirmResponse>builder()
                 .message(messageService.getMessage("success.orders.payment.confirm"))
-                .result(orderService.confirmOrderPayment(orderId, tenantId, request))
+                .result(orderPaymentService.confirmOrderPayment(orderId, tenantId, request))
                 .build();
     }
 
