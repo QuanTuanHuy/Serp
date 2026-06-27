@@ -26,19 +26,13 @@ import org.springframework.web.multipart.MultipartFile;
 import serp.project.tms_order.dto.ApiResponse;
 import serp.project.tms_order.dto.PageResponse;
 import serp.project.tms_order.dto.request.CancelOrderRequest;
-import serp.project.tms_order.dto.request.ConfirmDropOffOrderRequest;
-import serp.project.tms_order.dto.request.ConfirmOrderPaymentRequest;
 import serp.project.tms_order.dto.request.CreateOrderRequest;
-import serp.project.tms_order.dto.request.InitiateOrderPaymentRequest;
 import serp.project.tms_order.dto.request.OrderImportDTO;
 import serp.project.tms_order.dto.request.OrderFilterRequest;
 import serp.project.tms_order.dto.request.UpdateOrderRequest;
 import serp.project.tms_order.dto.response.ImportHistoryResponse;
 import serp.project.tms_order.dto.response.OrderConfirmationResponse;
 import serp.project.tms_order.dto.response.OrderDetailResponse;
-import serp.project.tms_order.dto.response.OrderDropOffPostOfficeSuggestionResponse;
-import serp.project.tms_order.dto.response.OrderPaymentConfirmResponse;
-import serp.project.tms_order.dto.response.OrderPaymentInitResponse;
 import serp.project.tms_order.dto.response.OrderTimelineResponse;
 import serp.project.tms_order.dto.response.ValidateImportFileDTO;
 import serp.project.tms_order.enums.OrderStatus;
@@ -46,8 +40,6 @@ import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
 import serp.project.tms_order.exception.MessageService;
 import serp.project.tms_order.kernel.utils.AuthUtils;
-import serp.project.tms_order.service.OrderDropOffService;
-import serp.project.tms_order.service.OrderPaymentService;
 import serp.project.tms_order.service.OrderService;
 import serp.project.tms_order.service.OrderTimelineService;
 
@@ -63,8 +55,6 @@ public class OrderController {
     private final AuthUtils authUtils;
     private final MessageService messageService;
     private final OrderService orderService;
-    private final OrderDropOffService orderDropOffService;
-    private final OrderPaymentService orderPaymentService;
     private final OrderTimelineService orderTimelineService;
 
     @GetMapping("/template")
@@ -185,21 +175,6 @@ public class OrderController {
                 .build();
     }
 
-    @GetMapping("/{orderId}/drop-off-post-office-suggestions")
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
-    public ApiResponse<List<OrderDropOffPostOfficeSuggestionResponse>> getDropOffPostOfficeSuggestions(
-            @PathVariable Long orderId,
-            @RequestParam(name = "limit", defaultValue = "5") Integer limit
-    ) {
-        Long tenantId = getCurrentTenantId();
-
-        log.info("REST request to get drop-off post office suggestions for TMS Order {} tenant {}", orderId, tenantId);
-        return ApiResponse.<List<OrderDropOffPostOfficeSuggestionResponse>>builder()
-                .message(messageService.getMessage("success.orders.drop_off_suggestions"))
-                .result(orderDropOffService.getDropOffPostOfficeSuggestions(orderId, limit, tenantId))
-                .build();
-    }
-
     @PutMapping("/{orderId}")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
     public ApiResponse<OrderDetailResponse> updateOrder(
@@ -251,55 +226,6 @@ public class OrderController {
         return ApiResponse.<OrderConfirmationResponse>builder()
                 .message(messageService.getMessage("success.orders.confirm"))
                 .result(orderService.confirmOrder(orderId, tenantId))
-                .build();
-    }
-
-    @PostMapping("/{orderId}/drop-off-confirm")
-    @PreAuthorize("hasRole('TMS_POSTOFFICER_MANAGER')")
-    public ApiResponse<OrderConfirmationResponse> confirmDropOffOrderAtPostOffice(
-            @PathVariable Long orderId,
-            @Valid @RequestBody ConfirmDropOffOrderRequest request
-    ) {
-        Long tenantId = getCurrentTenantId();
-
-        log.info("REST request to confirm drop-off TMS Order {} at post office {} tenant {}",
-                orderId, request.getPostOfficeId(), tenantId);
-        return ApiResponse.<OrderConfirmationResponse>builder()
-                .message(messageService.getMessage("success.orders.confirm"))
-                .result(orderDropOffService.confirmDropOffOrderAtPostOffice(orderId, tenantId, request))
-                .build();
-    }
-
-    @PostMapping("/{orderId}/payment/initiate")
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
-    public ApiResponse<OrderPaymentInitResponse> initiateOrderPayment(
-            @PathVariable Long orderId,
-            @Valid @RequestBody(required = false) InitiateOrderPaymentRequest request
-    ) {
-        Long tenantId = getCurrentTenantId();
-
-        log.info("REST request to initiate payment for TMS Order {} tenant {}", orderId, tenantId);
-        return ApiResponse.<OrderPaymentInitResponse>builder()
-                .message(messageService.getMessage("success.orders.payment.initiate"))
-                .result(orderPaymentService.initiateOrderPayment(orderId, tenantId, request))
-                .build();
-    }
-
-    @PostMapping("/{orderId}/payment/confirm")
-    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_CUSTOMER')")
-    public ApiResponse<OrderPaymentConfirmResponse> confirmOrderPayment(
-            @PathVariable Long orderId,
-            @Valid @RequestBody ConfirmOrderPaymentRequest request
-    ) {
-        Long tenantId = getCurrentTenantId();
-
-        log.info("REST request to confirm payment for TMS Order {} tenant {} appTransId={}",
-                orderId,
-                tenantId,
-                request.getAppTransId());
-        return ApiResponse.<OrderPaymentConfirmResponse>builder()
-                .message(messageService.getMessage("success.orders.payment.confirm"))
-                .result(orderPaymentService.confirmOrderPayment(orderId, tenantId, request))
                 .build();
     }
 
