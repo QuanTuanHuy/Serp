@@ -56,9 +56,11 @@ import serp.project.second_mile.repository.HubStaffAssignmentRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.BagSpecification;
+import serp.project.second_mile.service.BagCapacityCalculator;
 import serp.project.second_mile.service.BagCapacitySettingsService;
 import serp.project.second_mile.service.BagService;
 import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.second_mile.service.dto.BagDestinationTarget;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -66,20 +68,32 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+
+import static serp.project.second_mile.kernel.utils.CommonValueUtils.gramsToKilograms;
+import static serp.project.second_mile.kernel.utils.CommonValueUtils.idempotencyKey;
+import static serp.project.second_mile.kernel.utils.CommonValueUtils.normalizeCodes;
+import static serp.project.second_mile.kernel.utils.CommonValueUtils.normalizeText;
+import static serp.project.second_mile.kernel.utils.CommonValueUtils.nullSafeDouble;
+import static serp.project.second_mile.kernel.utils.CommonValueUtils.positiveOrDefault;
+import static serp.project.second_mile.kernel.utils.CommonValueUtils.safeDouble;
+import static serp.project.second_mile.kernel.utils.CommonValueUtils.safeInt;
+import static serp.project.second_mile.service.BagCapacityCalculator.canFit;
+import static serp.project.second_mile.service.BagCapacityCalculator.normalizePositiveOrDefault;
+import static serp.project.second_mile.service.BagCapacityCalculator.orderWeightKg;
+import static serp.project.second_mile.service.BagCapacityCalculator.planAutoBags;
+import static serp.project.second_mile.service.BagCapacityCalculator.remainingOrders;
+import static serp.project.second_mile.service.BagCapacityCalculator.remainingVolume;
+import static serp.project.second_mile.service.BagCapacityCalculator.remainingWeight;
 
 @Service
 @RequiredArgsConstructor
 public class BagServiceImpl implements BagService {
     private static final String TRANSITION_SOURCE = "SECOND_MILE";
     private static final DateTimeFormatter AUTO_BAG_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final double GRAMS_PER_KILOGRAM = 1000.0;
 
     private final BagRepository bagRepository;
     private final BagOrderRepository bagOrderRepository;
@@ -101,7 +115,7 @@ public class BagServiceImpl implements BagService {
 
         Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
-        BagFilterRequest normalizedFilterRequest = normalizeFilterRequest(filterRequest);
+        BagFilterRequest normalizedFilterRequest = BagMapper.normalizeFilterRequest(filterRequest);
 
         Page<Bag> bagPage = bagRepository.findAll(
                 BagSpecification.byFilter(tenantId, normalizedFilterRequest),
@@ -253,14 +267,13 @@ public class BagServiceImpl implements BagService {
         Bag bag = getBagOrThrow(bagId);
         validateTenantAccess(bag);
         validateBagEditable(bag);
-        validateBagCanAcceptOrders(bag);
 
         String normalizedOrderCode = normalizeText(request.getOrderCode());
         if (normalizedOrderCode == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        TmsOrderOperationView order = lookupOrderByCode(tenantId, normalizedOrderCode);
+        TmsOrderOperationView order = lookupOrdersByCodes(tenantId, List.of(normalizedOrderCode)).getFirst();
         if (bagOrderRepository.existsByBag_IdAndTmsOrderIdAndTenantId(bag.getId(), order.getId(), tenantId)) {
             throw new AppException(ErrorCode.BAG_ORDER_ALREADY_IN_BAG);
         }
@@ -271,7 +284,7 @@ public class BagServiceImpl implements BagService {
         BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
         validateOrderForBagAssignment(tenantId, bag, order, 0.0, 0.0, 0, capacitySettings);
 
-        BagOrder bagOrder = toBagOrder(bag, order, tenantId);
+        BagOrder bagOrder = BagMapper.toBagOrder(bag, order, tenantId);
         BagOrder savedBagOrder = bagOrderRepository.save(bagOrder);
         recalculateBagMetrics(bag, tenantId);
         bagRepository.save(bag);
@@ -279,7 +292,7 @@ public class BagServiceImpl implements BagService {
         enqueueBagTransition(
                 tenantId,
                 idempotencyKey("bag-order", savedBagOrder.getId(), "bagged"),
-                List.of(toTransitionItem(
+                List.of(BagMapper.toTransitionItem(
                         order,
                         OrderStatus.BAGGED,
                         List.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.BAGGING_IN_PROGRESS),
@@ -301,7 +314,6 @@ public class BagServiceImpl implements BagService {
         Bag bag = getBagOrThrow(bagId);
         validateTenantAccess(bag);
         validateBagEditable(bag);
-        validateBagCanAcceptOrders(bag);
 
         String normalizedOrderCode = normalizeText(orderCode);
         if (normalizedOrderCode == null) {
@@ -322,7 +334,7 @@ public class BagServiceImpl implements BagService {
         enqueueBagTransition(
                 tenantId,
                 idempotencyKey("bag-order", bagOrder.getId(), "inbound-origin-hub"),
-                List.of(toTransitionItem(
+                List.of(BagMapper.toTransitionItem(
                         bagOrder,
                         OrderStatus.INBOUND_AT_ORIGIN_HUB,
                         List.of(OrderStatus.BAGGED, OrderStatus.INBOUND_AT_ORIGIN_HUB),
@@ -366,7 +378,7 @@ public class BagServiceImpl implements BagService {
                 tenantId,
                 idempotencyKey("bag", savedBag.getId(), "seal", savedBag.getSealedAt()),
                 bagOrders.stream()
-                        .map(item -> toTransitionItem(
+                        .map(item -> BagMapper.toTransitionItem(
                                 item,
                                 OrderStatus.BAG_SEALED,
                                 List.of(OrderStatus.BAGGED),
@@ -413,7 +425,7 @@ public class BagServiceImpl implements BagService {
                 tenantId,
                 idempotencyKey("bag", savedBag.getId(), "reopen", LocalDateTime.now()),
                 bagOrders.stream()
-                        .map(item -> toTransitionItem(
+                        .map(item -> BagMapper.toTransitionItem(
                                 item,
                                 OrderStatus.BAGGED,
                                 List.of(OrderStatus.BAG_SEALED),
@@ -438,11 +450,11 @@ public class BagServiceImpl implements BagService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        TmsOrderOperationView order = lookupOrderByCode(tenantId, normalizedOrderCode);
+        TmsOrderOperationView order = lookupOrdersByCodes(tenantId, List.of(normalizedOrderCode)).getFirst();
         if (bagOrderRepository.existsByTmsOrderIdAndTenantId(order.getId(), tenantId)) {
             return List.of();
         }
-        if (!isReadyForBagging(order.getStatus())) {
+        if (!OrderStatus.isReadyForBagging(order.getStatus())) {
             return List.of();
         }
 
@@ -477,7 +489,7 @@ public class BagServiceImpl implements BagService {
         validateTenantAccess(bag);
         validateBagEditable(bag);
 
-        List<String> normalizedOrderCodes = normalizeOrderCodes(request.getOrderCodes());
+        List<String> normalizedOrderCodes = normalizeCodes(request.getOrderCodes());
         if (normalizedOrderCodes.isEmpty()) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
@@ -546,7 +558,7 @@ public class BagServiceImpl implements BagService {
                 null
         );
 
-        List<String> normalizedOrderCodes = normalizeOrderCodes(request.getOrderCodes());
+        List<String> normalizedOrderCodes = normalizeCodes(request.getOrderCodes());
         if (normalizedOrderCodes.isEmpty()) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
@@ -556,7 +568,7 @@ public class BagServiceImpl implements BagService {
             if (bagOrderRepository.existsByTmsOrderIdAndTenantId(order.getId(), tenantId)) {
                 throw new AppException(ErrorCode.BAG_ORDER_ALREADY_ASSIGNED);
             }
-            if (!isReadyForBagging(order.getStatus())) {
+            if (!OrderStatus.isReadyForBagging(order.getStatus())) {
                 throw new AppException(ErrorCode.INVALID_REQUEST, "Only inbound orders can be auto-bagged.");
             }
             validateOrderOriginMatchesHub(tenantId, order, request.getOriginHubId());
@@ -566,45 +578,18 @@ public class BagServiceImpl implements BagService {
 
         BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
 
-        List<TmsOrderOperationView> sortedOrders = orders.stream()
-                .sorted(Comparator.comparing((TmsOrderOperationView order) ->
-                                sizeScore(order, capacitySettings.maxWeight(), capacitySettings.maxVolume()))
-                        .reversed())
-                .toList();
-
-        List<AutoBagBin> bins = new ArrayList<>();
-        for (TmsOrderOperationView order : sortedOrders) {
-            AutoBagBin selected = null;
-            for (AutoBagBin bin : bins) {
-                if (bin.canFit(order)) {
-                    selected = bin;
-                    break;
-                }
-            }
-            if (selected == null) {
-                selected = new AutoBagBin(
-                        capacitySettings.maxWeight(),
-                        capacitySettings.maxVolume(),
-                        capacitySettings.maxOrders()
-                );
-                if (!selected.canFit(order)) {
-                    throw new AppException(ErrorCode.INVALID_REQUEST, "Order exceeds single bag capacity.");
-                }
-                bins.add(selected);
-            }
-            selected.add(order);
-        }
+        List<BagCapacityCalculator.AutoBagBin> bins = planAutoBags(orders, capacitySettings);
 
         boolean execute = Boolean.TRUE.equals(request.getExecute());
         List<AutoBaggingPlanItemResponse> planItems = new ArrayList<>();
         if (!execute) {
             int index = 1;
-            for (AutoBagBin bin : bins) {
+            for (BagCapacityCalculator.AutoBagBin bin : bins) {
                 planItems.add(new AutoBaggingPlanItemResponse(
                         "PLAN-" + index++,
                         bin.orderCodes(),
-                        bin.totalWeight,
-                        bin.totalVolume
+                        bin.totalWeight(),
+                        bin.totalVolume()
                 ));
             }
             return new AutoBaggingPlanResponse(false, bins.size(), planItems);
@@ -612,7 +597,7 @@ public class BagServiceImpl implements BagService {
 
         List<TmsOrderStatusTransitionRequest.Item> transitionItems = new ArrayList<>();
         int index = 1;
-        for (AutoBagBin bin : bins) {
+        for (BagCapacityCalculator.AutoBagBin bin : bins) {
             String bagCode = generateAutoBagCode(tenantId, request.getOriginHubId(), index);
             Bag bag = Bag.builder()
                     .bagCode(bagCode)
@@ -623,18 +608,18 @@ public class BagServiceImpl implements BagService {
                     .maxWeight(capacitySettings.maxWeight())
                     .maxVolume(capacitySettings.maxVolume())
                     .maxOrders(capacitySettings.maxOrders())
-                    .currentWeight(bin.totalWeight)
-                    .currentVolume(bin.totalVolume)
-                    .currentOrders(bin.orders.size())
+                    .currentWeight(bin.totalWeight())
+                    .currentVolume(bin.totalVolume())
+                    .currentOrders(bin.orders().size())
                     .status(BagStatus.CREATED)
                     .tenantId(tenantId)
                     .build();
             Bag savedBag = bagRepository.save(bag);
             TmsOrderStatusTransitionRequest.Context context = buildBagContext(savedBag);
 
-            for (TmsOrderOperationView order : bin.orders) {
-                BagOrder bagOrder = bagOrderRepository.save(toBagOrder(savedBag, order, tenantId));
-                transitionItems.add(toTransitionItem(
+            for (TmsOrderOperationView order : bin.orders()) {
+                BagOrder bagOrder = bagOrderRepository.save(BagMapper.toBagOrder(savedBag, order, tenantId));
+                transitionItems.add(BagMapper.toTransitionItem(
                         order,
                         OrderStatus.BAGGED,
                         List.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.BAGGING_IN_PROGRESS),
@@ -647,8 +632,8 @@ public class BagServiceImpl implements BagService {
             planItems.add(new AutoBaggingPlanItemResponse(
                     savedBag.getBagCode(),
                     bin.orderCodes(),
-                    bin.totalWeight,
-                    bin.totalVolume
+                    bin.totalWeight(),
+                    bin.totalVolume()
             ));
             index++;
         }
@@ -719,21 +704,6 @@ public class BagServiceImpl implements BagService {
                 secondMileAccessUtils.getCurrentTenantIdOrThrow()
         );
         return BagMapper.toResponse(bag, bagOrders);
-    }
-
-    private BagOrder toBagOrder(Bag bag, TmsOrderOperationView order, Long tenantId) {
-        return BagOrder.builder()
-                .bag(bag)
-                .tmsOrderId(order.getId())
-                .orderCode(normalizeText(order.getOrderCode()))
-                .customerOrderCode(normalizeText(order.getCustomerOrderCode()))
-                .lastKnownStatus(statusName(order.getStatus()))
-                .originPostOfficeCode(normalizeText(order.getOriginPostOfficeCode()))
-                .destinationPostOfficeCode(normalizeText(order.getDestinationPostOfficeCode()))
-                .totalWeightSnapshot(safeDouble(order.getTotalWeight()))
-                .totalVolumeSnapshot(safeDouble(order.getTotalVolume()))
-                .tenantId(tenantId)
-                .build();
     }
 
     private void validateTenantAccess(Bag bag) {
@@ -897,15 +867,6 @@ public class BagServiceImpl implements BagService {
         }
     }
 
-    private void validateBagCanAcceptOrders(Bag bag) {
-        if (bag.getStatus() == BagStatus.ARRIVED
-                || bag.getStatus() == BagStatus.CANCELLED
-                || bag.getStatus() == BagStatus.IN_TRANSIT
-                || bag.getStatus() == BagStatus.SEALED) {
-            throw new AppException(ErrorCode.BAG_STATUS_INVALID);
-        }
-    }
-
     private void validateOrderForBagAssignment(
             Long tenantId,
             Bag bag,
@@ -915,23 +876,12 @@ public class BagServiceImpl implements BagService {
             int extraOrders,
             BagCapacitySettingsResponse capacitySettings
     ) {
-        if (!isReadyForBagging(order.getStatus())) {
+        if (!OrderStatus.isReadyForBagging(order.getStatus())) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Order is not ready for bagging.");
         }
 
         validateOrderOriginMatchesHub(tenantId, order, bag.getOriginHubId());
 
-        validateOrderDestinationMatchesBag(tenantId, bag, order);
-        if (!canFit(bag, order, extraWeight, extraVolume, extraOrders, capacitySettings)) {
-            throw new AppException(ErrorCode.BAG_STATUS_INVALID, "Bag capacity exceeded.");
-        }
-    }
-
-    private boolean isReadyForBagging(OrderStatus status) {
-        return status == OrderStatus.INBOUND_AT_ORIGIN_HUB || status == OrderStatus.BAGGING_IN_PROGRESS;
-    }
-
-    private void validateOrderDestinationMatchesBag(Long tenantId, Bag bag, TmsOrderOperationView order) {
         validateOrderDestinationMatchesTarget(
                 tenantId,
                 bag.getOriginHubId(),
@@ -940,6 +890,9 @@ public class BagServiceImpl implements BagService {
                 bag.getDestinationPostOfficeCode(),
                 order
         );
+        if (!canFit(bag, order, extraWeight, extraVolume, extraOrders, capacitySettings)) {
+            throw new AppException(ErrorCode.BAG_STATUS_INVALID, "Bag capacity exceeded.");
+        }
     }
 
     private void validateOrderOriginMatchesHub(Long tenantId, TmsOrderOperationView order, Long originHubId) {
@@ -1020,12 +973,12 @@ public class BagServiceImpl implements BagService {
     }
 
     private List<Bag> findEditableBagsByTarget(Long tenantId, Long originHubId, BagDestinationTarget target) {
-        if (target.destinationType == BagDestinationType.HUB) {
+        if (target.destinationType() == BagDestinationType.HUB) {
             return bagRepository.findByTenantIdAndOriginHubIdAndDestinationTypeAndDestinationHubIdAndStatus(
                     tenantId,
                     originHubId,
                     BagDestinationType.HUB,
-                    target.destinationHubId,
+                    target.destinationHubId(),
                     BagStatus.CREATED
             );
         }
@@ -1033,7 +986,7 @@ public class BagServiceImpl implements BagService {
                 tenantId,
                 originHubId,
                 BagDestinationType.POST_OFFICE,
-                target.destinationPostOfficeCode,
+                target.destinationPostOfficeCode(),
                 BagStatus.CREATED
         );
     }
@@ -1053,40 +1006,6 @@ public class BagServiceImpl implements BagService {
         bag.setCurrentOrders(totalOrders);
     }
 
-    private boolean canFit(
-            Bag bag,
-            TmsOrderOperationView order,
-            double extraWeight,
-            double extraVolume,
-            int extraOrders,
-            BagCapacitySettingsResponse capacitySettings
-    ) {
-        double nextWeight = safeDouble(bag.getCurrentWeight()) + orderWeightKg(order) + extraWeight;
-        double nextVolume = safeDouble(bag.getCurrentVolume()) + safeDouble(order.getTotalVolume()) + extraVolume;
-        int nextOrders = safeInt(bag.getCurrentOrders()) + 1 + extraOrders;
-
-        boolean withinWeight = nextWeight <= positiveOrDefault(bag.getMaxWeight(), capacitySettings.maxWeight());
-        boolean withinVolume = nextVolume <= positiveOrDefault(bag.getMaxVolume(), capacitySettings.maxVolume());
-        boolean withinOrders = nextOrders <= positiveOrDefault(bag.getMaxOrders(), capacitySettings.maxOrders());
-        return withinWeight && withinVolume && withinOrders;
-    }
-
-    private double remainingWeight(Bag bag, BagCapacitySettingsResponse capacitySettings) {
-        return positiveOrDefault(bag.getMaxWeight(), capacitySettings.maxWeight()) - safeDouble(bag.getCurrentWeight());
-    }
-
-    private double remainingVolume(Bag bag, BagCapacitySettingsResponse capacitySettings) {
-        return positiveOrDefault(bag.getMaxVolume(), capacitySettings.maxVolume()) - safeDouble(bag.getCurrentVolume());
-    }
-
-    private int remainingOrders(Bag bag, BagCapacitySettingsResponse capacitySettings) {
-        return positiveOrDefault(bag.getMaxOrders(), capacitySettings.maxOrders()) - safeInt(bag.getCurrentOrders());
-    }
-
-    private TmsOrderOperationView lookupOrderByCode(Long tenantId, String orderCode) {
-        return lookupOrdersByCodes(tenantId, List.of(orderCode)).getFirst();
-    }
-
     private List<TmsOrderOperationView> lookupOrdersByCodes(Long tenantId, List<String> orderCodes) {
         Map<String, TmsOrderOperationView> orderByCode = lookupOrderMapByCodes(tenantId, orderCodes);
         List<TmsOrderOperationView> orders = new ArrayList<>();
@@ -1104,22 +1023,18 @@ public class BagServiceImpl implements BagService {
         Map<String, TmsOrderOperationView> orderByCode = new LinkedHashMap<>();
         List<TmsOrderOperationView> orders = tmsOrderClient.lookupByCodes(orderCodes);
         for (TmsOrderOperationView order : orders) {
-            validateTmsOrderTenant(tenantId, order);
+            if (order == null || order.getId() == null) {
+                throw new AppException(ErrorCode.BAG_ORDER_NOT_FOUND);
+            }
+            if (order.getTenantId() != null && !Objects.equals(order.getTenantId(), tenantId)) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
             String normalizedOrderCode = normalizeText(order.getOrderCode());
             if (normalizedOrderCode != null) {
                 orderByCode.put(normalizedOrderCode, order);
             }
         }
         return orderByCode;
-    }
-
-    private void validateTmsOrderTenant(Long tenantId, TmsOrderOperationView order) {
-        if (order == null || order.getId() == null) {
-            throw new AppException(ErrorCode.BAG_ORDER_NOT_FOUND);
-        }
-        if (order.getTenantId() != null && !Objects.equals(order.getTenantId(), tenantId)) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
-        }
     }
 
     private void enqueueBagTransition(
@@ -1137,40 +1052,6 @@ public class BagServiceImpl implements BagService {
                 .build(), tenantId);
     }
 
-    private TmsOrderStatusTransitionRequest.Item toTransitionItem(
-            TmsOrderOperationView order,
-            OrderStatus targetStatus,
-            List<OrderStatus> expectedStatuses,
-            String description,
-            TmsOrderStatusTransitionRequest.Context context
-    ) {
-        return TmsOrderStatusTransitionRequest.Item.builder()
-                .orderId(order.getId())
-                .orderCode(order.getOrderCode())
-                .expectedStatuses(expectedStatuses)
-                .targetStatus(targetStatus)
-                .description(description)
-                .context(context)
-                .build();
-    }
-
-    private TmsOrderStatusTransitionRequest.Item toTransitionItem(
-            BagOrder bagOrder,
-            OrderStatus targetStatus,
-            List<OrderStatus> expectedStatuses,
-            String description,
-            TmsOrderStatusTransitionRequest.Context context
-    ) {
-        return TmsOrderStatusTransitionRequest.Item.builder()
-                .orderId(bagOrder.getTmsOrderId())
-                .orderCode(bagOrder.getOrderCode())
-                .expectedStatuses(expectedStatuses)
-                .targetStatus(targetStatus)
-                .description(description)
-                .context(context)
-                .build();
-    }
-
     private TmsOrderStatusTransitionRequest.Context buildBagContext(Bag bag) {
         Hub hub = bag.getOriginHubId() == null
                 ? null
@@ -1181,33 +1062,7 @@ public class BagServiceImpl implements BagService {
         Route route = bag.getRouteId() == null
                 ? null
                 : routeRepository.findById(bag.getRouteId()).orElse(null);
-        return TmsOrderStatusTransitionRequest.Context.builder()
-                .eventTime(LocalDateTime.now())
-                .hubId(hub == null ? bag.getOriginHubId() : hub.getId())
-                .hubCode(hub == null ? null : hub.getCode())
-                .hubName(hub == null ? null : hub.getName())
-                .bagId(bag.getId())
-                .bagCode(bag.getBagCode())
-                .routeId(route == null ? bag.getRouteId() : route.getId())
-                .routeCode(route == null ? null : route.getRouteCode())
-                .driverId(vehicle == null ? null : vehicle.getAssignedStaffId())
-                .vehicleId(vehicle == null ? bag.getVehicleId() : vehicle.getId())
-                .vehicleLicensePlate(vehicle == null ? null : vehicle.getLicensePlate())
-                .build();
-    }
-
-    private List<String> normalizeOrderCodes(List<String> orderCodes) {
-        if (orderCodes == null || orderCodes.isEmpty()) {
-            return List.of();
-        }
-        Set<String> normalized = new LinkedHashSet<>();
-        for (String orderCode : orderCodes) {
-            String normalizedCode = normalizeText(orderCode);
-            if (normalizedCode != null) {
-                normalized.add(normalizedCode);
-            }
-        }
-        return new ArrayList<>(normalized);
+        return BagMapper.toBagContext(bag, hub, vehicle, route);
     }
 
     private String generateAutoBagCode(Long tenantId, Long originHubId, int index) {
@@ -1225,151 +1080,4 @@ public class BagServiceImpl implements BagService {
         return code + "-" + (System.nanoTime() % 1000);
     }
 
-    private double sizeScore(TmsOrderOperationView order, double maxWeight, double maxVolume) {
-        double weightRatio = orderWeightKg(order) / maxWeight;
-        double volumeRatio = safeDouble(order.getTotalVolume()) / maxVolume;
-        return Math.max(weightRatio, volumeRatio);
-    }
-
-    private double orderWeightKg(TmsOrderOperationView order) {
-        return gramsToKilograms(safeDouble(order.getTotalWeight()));
-    }
-
-    private double gramsToKilograms(double grams) {
-        return grams / GRAMS_PER_KILOGRAM;
-    }
-
-    private BagFilterRequest normalizeFilterRequest(BagFilterRequest filterRequest) {
-        if (filterRequest == null) {
-            return BagFilterRequest.builder().build();
-        }
-
-        return BagFilterRequest.builder()
-                .keyword(normalizeText(filterRequest.getKeyword()))
-                .bagCode(normalizeText(filterRequest.getBagCode()))
-                .originHubId(filterRequest.getOriginHubId())
-                .destinationType(filterRequest.getDestinationType())
-                .destinationHubId(filterRequest.getDestinationHubId())
-                .destinationPostOfficeCode(normalizeText(filterRequest.getDestinationPostOfficeCode()))
-                .vehicleId(filterRequest.getVehicleId())
-                .status(filterRequest.getStatus())
-                .build();
-    }
-
-    private String idempotencyKey(Object... parts) {
-        return java.util.Arrays.stream(parts)
-                .filter(Objects::nonNull)
-                .map(part -> part.toString().trim())
-                .filter(part -> !part.isEmpty())
-                .collect(Collectors.joining(":"));
-    }
-
-    private String normalizeText(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmedValue = value.trim();
-        return trimmedValue.isEmpty() ? null : trimmedValue.toUpperCase(Locale.ROOT);
-    }
-
-    private String statusName(OrderStatus status) {
-        return status == null ? null : status.name();
-    }
-
-    private double safeDouble(Double value) {
-        return value == null || value < 0 ? 0.0 : value;
-    }
-
-    private int safeInt(Integer value) {
-        return value == null || value < 0 ? 0 : value;
-    }
-
-    private double positiveOrDefault(Double value, double fallback) {
-        if (value == null || value <= 0) {
-            return fallback;
-        }
-        return value;
-    }
-
-    private int positiveOrDefault(Integer value, int fallback) {
-        if (value == null || value <= 0) {
-            return fallback;
-        }
-        return value;
-    }
-
-    private double normalizePositiveOrDefault(Double value, double fallback) {
-        if (value == null) {
-            return fallback;
-        }
-        if (value <= 0) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-        return value;
-    }
-
-    private int normalizePositiveOrDefault(Integer value, int fallback) {
-        if (value == null) {
-            return fallback;
-        }
-        if (value <= 0) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-        return value;
-    }
-
-    private double nullSafeDouble(Double value) {
-        return value == null ? Double.MAX_VALUE : value;
-    }
-
-    private static class BagDestinationTarget {
-        private final BagDestinationType destinationType;
-        private final Long destinationHubId;
-        private final String destinationPostOfficeCode;
-
-        private BagDestinationTarget(BagDestinationType destinationType, Long destinationHubId, String destinationPostOfficeCode) {
-            this.destinationType = destinationType;
-            this.destinationHubId = destinationHubId;
-            this.destinationPostOfficeCode = destinationPostOfficeCode;
-        }
-    }
-
-    private static class AutoBagBin {
-        private final double maxWeight;
-        private final double maxVolume;
-        private final int maxOrders;
-        private final List<TmsOrderOperationView> orders = new ArrayList<>();
-        private double totalWeight = 0.0;
-        private double totalVolume = 0.0;
-
-        private AutoBagBin(double maxWeight, double maxVolume, int maxOrders) {
-            this.maxWeight = maxWeight;
-            this.maxVolume = maxVolume;
-            this.maxOrders = maxOrders;
-        }
-
-        private boolean canFit(TmsOrderOperationView order) {
-            return (totalWeight + weightKg(order) <= maxWeight)
-                    && (totalVolume + safe(order.getTotalVolume()) <= maxVolume)
-                    && (orders.size() + 1 <= maxOrders);
-        }
-
-        private void add(TmsOrderOperationView order) {
-            orders.add(order);
-            totalWeight += weightKg(order);
-            totalVolume += safe(order.getTotalVolume());
-        }
-
-        private List<String> orderCodes() {
-            return orders.stream().map(TmsOrderOperationView::getOrderCode).collect(Collectors.toList());
-        }
-
-        private static double safe(Double value) {
-            return value == null || value < 0 ? 0.0 : value;
-        }
-
-        private static double weightKg(TmsOrderOperationView order) {
-            return safe(order.getTotalWeight()) / GRAMS_PER_KILOGRAM;
-        }
-    }
 }
