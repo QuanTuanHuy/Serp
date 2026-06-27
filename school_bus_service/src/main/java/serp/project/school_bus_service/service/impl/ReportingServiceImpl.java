@@ -134,14 +134,23 @@ public class ReportingServiceImpl implements IReportingService {
         LocalDateTime to = params == null || params.getDateTo() == null
                 ? null
                 : params.getDateTo().plusDays(1).atStartOfDay();
+        Long tripId = params == null ? null : params.getTripId();
+        Long routeId = params == null ? null : params.getRouteId();
+        Pageable pageable = attendancePageable(params);
+        if (from != null && to != null) {
+            return PageResponse.from(attendanceRepository.findReportAttendanceBetween(
+                    tenantId, tripId, routeId, from, to, pageable), mapper::toAttendanceResponse);
+        }
+        if (from != null) {
+            return PageResponse.from(attendanceRepository.findReportAttendanceFrom(
+                    tenantId, tripId, routeId, from, pageable), mapper::toAttendanceResponse);
+        }
+        if (to != null) {
+            return PageResponse.from(attendanceRepository.findReportAttendanceTo(
+                    tenantId, tripId, routeId, to, pageable), mapper::toAttendanceResponse);
+        }
         return PageResponse.from(attendanceRepository.findReportAttendance(
-                        tenantId,
-                        params == null ? null : params.getTripId(),
-                        params == null ? null : params.getRouteId(),
-                        from,
-                        to,
-                        attendancePageable(params)),
-                mapper::toAttendanceResponse);
+                tenantId, tripId, routeId, pageable), mapper::toAttendanceResponse);
     }
 
     @Override

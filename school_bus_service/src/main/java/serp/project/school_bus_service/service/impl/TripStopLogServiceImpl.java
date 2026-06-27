@@ -3,6 +3,7 @@ package serp.project.school_bus_service.service.impl;
 import org.springframework.stereotype.Service;
 import serp.project.school_bus_service.entity.TripStopLogEntity;
 import serp.project.school_bus_service.repository.TripStopLogRepository;
+import serp.project.school_bus_service.repository.projection.TripStopProgressRowProjection;
 import serp.project.school_bus_service.service.IRouteStopService;
 import serp.project.school_bus_service.service.ITripStopLogService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
@@ -45,6 +46,14 @@ public class TripStopLogServiceImpl extends AbstractBaseService<TripStopLogEntit
         return hydrateRouteStops(
                 tripStopLogRepository.findByTripsOrderedByRouteStopOrder(tripIds, tenantId),
                 tenantId);
+    }
+
+    @Override
+    public List<TripStopProgressRowProjection> findProgressRowsByTripIds(Collection<Long> tripIds, Long tenantId) {
+        if (tripIds == null || tripIds.isEmpty()) {
+            return List.of();
+        }
+        return tripStopLogRepository.findProgressRowsByTripIds(tripIds, tenantId);
     }
 
     @Override

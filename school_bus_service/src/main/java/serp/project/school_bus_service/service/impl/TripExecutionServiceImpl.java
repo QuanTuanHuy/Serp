@@ -1,11 +1,8 @@
 package serp.project.school_bus_service.service.impl;
 
-import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.Subquery;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.TripExecutionParamsRequest;
@@ -14,6 +11,7 @@ import serp.project.school_bus_service.dto.request.CancelTripRequest;
 import serp.project.school_bus_service.dto.request.CompleteTripRequest;
 import serp.project.school_bus_service.dto.request.SkipStopRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
+import serp.project.school_bus_service.dto.response.TripExecutionListItemResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
 import serp.project.school_bus_service.dto.response.TripStopLogResponse;
 import serp.project.school_bus_service.dto.response.TripStudentResponse;
@@ -36,6 +34,7 @@ import serp.project.school_bus_service.enums.TripStudentStatus;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.repository.RouteAssignmentRepository;
 import serp.project.school_bus_service.repository.projection.RouteAssignmentSummaryProjection;
+import serp.project.school_bus_service.repository.projection.TripStopProgressRowProjection;
 import serp.project.school_bus_service.repository.TripExecutionRepository;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.ISchoolBusDomainNotificationService;
@@ -51,7 +50,6 @@ import serp.project.school_bus_service.service.ITripStudentService;
 import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
-import serp.project.school_bus_service.shared.base.specification.BaseSpecification;
 import serp.project.school_bus_service.shared.code.SchoolBusCode;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
@@ -130,111 +128,52 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     }
 
     @Override
-    public PageResponse<TripExecutionResponse> getTrips(TripExecutionParamsRequest params, Long tenantId) {
-        Specification<TripExecutionEntity> spec = BaseSpecification.tenantActiveWithKeyword(
-                tenantId,
-                params == null ? null : params.getKeyword(),
-                "tripCode", "route.routeCode", "route.routeName", "status");
-        if (params != null && params.getRouteId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("route").get("id"), params.getRouteId()));
-        }
-        if (params != null && params.getServiceDate() != null) {
-            spec = spec.and((root, query, cb) ->
-                    cb.equal(root.get("route").get("planningSession").get("serviceDate"), params.getServiceDate()));
-        }
-        if (params != null && params.getStatus() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), TripStatus.parse(params.getStatus())));
+    public PageResponse<TripExecutionListItemResponse> getTrips(TripExecutionParamsRequest params, Long tenantId) {
+        boolean tenantWide = securityService.isAdminOrDispatcher();
+        Long driverProfileId = null;
+        Long attendantProfileId = null;
+        Long parentProfileId = null;
+        if (!tenantWide) {
+            if (securityService.isDriver()) {
+                driverProfileId = schoolBusDataScopeService.getCurrentDriverProfileIdRequired();
+            } else if (securityService.isAttendant()) {
+                attendantProfileId = schoolBusDataScopeService.getCurrentAttendantProfileIdRequired();
+            } else if (securityService.isParentOnly()) {
+                parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            }
         }
 
-        if (securityService.isAdminOrDispatcher()) {
-            // Tenant scope - no extra filters
-        } else if (securityService.isDriver()) {
-            Long driverProfileId = schoolBusDataScopeService.getCurrentDriverProfileIdRequired();
-            spec = spec.and((root, query, cb) -> {
-                Subquery<Long> subquery = query.subquery(Long.class);
-                Root<RouteAssignmentEntity> assignmentRoot = subquery.from(RouteAssignmentEntity.class);
-                subquery.select(cb.literal(1L));
-                subquery.where(
-                        cb.equal(assignmentRoot.get("route"), root.get("route")),
-                        cb.equal(assignmentRoot.get("driver").get("id"), driverProfileId),
-                        cb.equal(assignmentRoot.get("tenantId"), tenantId),
-                        cb.equal(assignmentRoot.get("isDeleted"), false)
-                );
-                return cb.exists(subquery);
-            });
-        } else if (securityService.isAttendant()) {
-            Long attendantProfileId = schoolBusDataScopeService.getCurrentAttendantProfileIdRequired();
-            spec = spec.and((root, query, cb) -> {
-                Subquery<Long> subquery = query.subquery(Long.class);
-                Root<RouteAssignmentEntity> assignmentRoot = subquery.from(RouteAssignmentEntity.class);
-                subquery.select(cb.literal(1L));
-                subquery.where(
-                        cb.equal(assignmentRoot.get("route"), root.get("route")),
-                        cb.equal(assignmentRoot.get("attendant").get("id"), attendantProfileId),
-                        cb.equal(assignmentRoot.get("tenantId"), tenantId),
-                        cb.equal(assignmentRoot.get("isDeleted"), false)
-                );
-                return cb.exists(subquery);
-            });
-        } else if (securityService.isParentOnly()) {
-            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
-            spec = spec.and((root, query, cb) -> {
-                Subquery<Long> subquery = query.subquery(Long.class);
-                Root<TripStudentEntity> tsRoot = subquery.from(TripStudentEntity.class);
-                subquery.select(cb.literal(1L));
-                subquery.where(
-                    cb.equal(tsRoot.get("trip"), root),
-                    cb.equal(tsRoot.get("subscription").get("student").get("parentProfile").get("id"), parentProfileId),
-                    cb.equal(tsRoot.get("isDeleted"), false)
-                );
-                return cb.exists(subquery);
-            });
-        }
-        Page<TripExecutionEntity> tripPage = tripRepository.findAll(
-                spec,
-                pageable(params, Set.of("id", "tripCode", "status", "createdAt", "updatedAt"),
+        Page<TripExecutionListItemResponse> tripPage = tripRepository.findTripListItems(
+                tenantId,
+                params == null ? null : params.getRouteId(),
+                params == null ? null : params.getSchoolId(),
+                params == null ? null : params.getServiceDate(),
+                RouteDirection.parseNullable(params == null ? null : params.getDirection()),
+                parseTripStatus(params == null ? null : params.getStatus()),
+                keywordPattern(params == null ? null : params.getKeyword()),
+                tenantWide,
+                driverProfileId,
+                attendantProfileId,
+                parentProfileId,
+                pageable(params, Set.of(
+                        "id",
+                        "tripCode",
+                        "status",
+                        "createdAt",
+                        "updatedAt",
+                        "route.routeCode",
+                        "route.planningSession.serviceDate",
+                        "route.planningSession.routeDirection"),
                         "createdAt"));
 
-        List<TripExecutionEntity> trips = tripPage.getContent();
+        List<TripExecutionListItemResponse> trips = tripPage.getContent();
         if (trips.isEmpty()) {
-            return PageResponse.from(tripPage, trip -> mapper.toTripExecutionResponse(trip, List.of(), List.of()));
+            return PageResponse.from(tripPage, trip -> trip);
         }
 
-        List<Long> tripIds = trips.stream().map(TripExecutionEntity::getId).toList();
-
-        // Batch fetch stops and group by trip ID
-        List<TripStopLogEntity> stops = tripStopLogService.findByTrips(tripIds, tenantId);
-        stops.forEach(stop -> {
-            if (stop.getRouteStop() != null) {
-                routeStopService.hydrateLocation(stop.getRouteStop(), tenantId);
-            }
-        });
-        Map<Long, List<TripStopLogEntity>> stopsMap = stops.stream()
-                .collect(Collectors.groupingBy(stop -> stop.getTrip().getId()));
-
-        Map<Long, RouteAssignmentSummaryProjection> assignmentMap = assignmentSummariesByRoute(trips, tenantId);
-
-        // Map to response DTOs
-        PageResponse<TripExecutionResponse> response = new PageResponse<>();
-        response.setItems(trips.stream().map(trip -> {
-            List<TripStopLogEntity> tripStops = stopsMap.getOrDefault(trip.getId(), List.of());
-            applyAssignmentSummary(trip, assignmentMap.get(trip.getRoute().getId()));
-            populateTripEndpoints(trip, tripStops);
-            return mapper.toTripExecutionResponse(
-                    trip,
-                    tripStops,
-                    List.of()
-            );
-        }).toList());
-        response.setPage(tripPage.getNumber());
-        response.setSize(tripPage.getSize());
-        response.setTotalElements(tripPage.getTotalElements());
-        response.setTotalPages(tripPage.getTotalPages());
-        response.setFirst(tripPage.isFirst());
-        response.setLast(tripPage.isLast());
-        response.setHasNext(tripPage.hasNext());
-        response.setHasPrevious(tripPage.hasPrevious());
-        return response;
+        applyTripListAssignments(trips, tenantId);
+        applyTripListProgress(trips, tenantId);
+        return PageResponse.from(tripPage, trip -> trip);
     }
 
     @Override
@@ -715,6 +654,98 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
                 .collect(Collectors.toMap(RouteAssignmentSummaryProjection::getRouteId, java.util.function.Function.identity()));
     }
 
+    private void applyTripListAssignments(List<TripExecutionListItemResponse> trips, Long tenantId) {
+        List<Long> routeIds = trips.stream()
+                .map(TripExecutionListItemResponse::getRouteId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (routeIds.isEmpty()) {
+            return;
+        }
+        Map<Long, RouteAssignmentSummaryProjection> assignmentMap = routeAssignmentRepository
+                .findCurrentSummariesByRouteIds(tenantId, routeIds)
+                .stream()
+                .collect(Collectors.toMap(RouteAssignmentSummaryProjection::getRouteId,
+                        java.util.function.Function.identity()));
+        trips.forEach(trip -> {
+            RouteAssignmentSummaryProjection summary = assignmentMap.get(trip.getRouteId());
+            if (summary == null) {
+                return;
+            }
+            trip.setBusId(summary.getBusId());
+            trip.setBusPlateNumber(summary.getBusPlateNumber());
+            trip.setDriverId(summary.getDriverId());
+            trip.setDriverName(summary.getDriverName());
+            trip.setAttendantId(summary.getAttendantId());
+            trip.setAttendantName(summary.getAttendantName());
+        });
+    }
+
+    private void applyTripListProgress(List<TripExecutionListItemResponse> trips, Long tenantId) {
+        List<Long> tripIds = trips.stream()
+                .map(TripExecutionListItemResponse::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (tripIds.isEmpty()) {
+            return;
+        }
+        Map<Long, List<TripStopProgressRowProjection>> rowsByTrip = tripStopLogService
+                .findProgressRowsByTripIds(tripIds, tenantId)
+                .stream()
+                .collect(Collectors.groupingBy(TripStopProgressRowProjection::getTripId));
+        trips.forEach(trip -> applyTripListProgress(trip, rowsByTrip.getOrDefault(trip.getId(), List.of())));
+    }
+
+    private void applyTripListProgress(TripExecutionListItemResponse trip,
+                                       List<TripStopProgressRowProjection> rows) {
+        if (rows.isEmpty()) {
+            return;
+        }
+        List<TripStopProgressRowProjection> sorted = rows.stream()
+                .sorted(Comparator.comparingInt(row -> row.getStopOrder() == null ? Integer.MAX_VALUE : row.getStopOrder()))
+                .toList();
+        trip.setTotalStops(sorted.size());
+        int completedStops = 0;
+        for (int i = 0; i < sorted.size(); i++) {
+            if (isTripListStopCompleted(sorted.get(i).getStatus(), i == 0, i == sorted.size() - 1)) {
+                completedStops++;
+            }
+        }
+        trip.setCompletedStops(completedStops);
+        TripStopProgressRowProjection first = sorted.get(0);
+        TripStopProgressRowProjection last = sorted.get(sorted.size() - 1);
+        trip.setStartLocationType(first.getLocationType());
+        trip.setStartLocationName(first.getStopName());
+        trip.setEndLocationType(last.getLocationType());
+        trip.setEndLocationName(last.getStopName());
+        sorted.stream()
+                .filter(row -> isTripListNextStopStatus(row.getStatus()))
+                .findFirst()
+                .ifPresent(next -> {
+                    trip.setNextRouteStopId(next.getRouteStopId());
+                    trip.setNextStopName(next.getStopName());
+                    trip.setNextStopStatus(next.getStatus());
+                });
+    }
+
+    private boolean isTripListStopCompleted(String status, boolean first, boolean last) {
+        if (status == null) {
+            return false;
+        }
+        if (first) {
+            return "DEPARTED".equals(status);
+        }
+        if (last) {
+            return "ARRIVED".equals(status) || "DEPARTED".equals(status) || "SKIPPED".equals(status);
+        }
+        return "DEPARTED".equals(status) || "SKIPPED".equals(status);
+    }
+
+    private boolean isTripListNextStopStatus(String status) {
+        return "PENDING".equals(status) || "ARRIVED".equals(status) || "BOARDING".equals(status);
+    }
+
     private void applyAssignmentSummary(TripExecutionEntity trip, RouteAssignmentSummaryProjection summary) {
         if (trip == null || summary == null) {
             return;
@@ -865,6 +896,14 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         }
         copy.setSortBy(sortBy);
         return copy;
+    }
+
+    private TripStatus parseTripStatus(String status) {
+        return status == null || status.isBlank() ? null : TripStatus.parse(status);
+    }
+
+    private String keywordPattern(String keyword) {
+        return keyword == null || keyword.isBlank() ? null : "%" + keyword.trim().toLowerCase() + "%";
     }
 
     private int routeStopOrder(TripStopLogEntity log) {

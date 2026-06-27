@@ -423,35 +423,9 @@ export function SchoolBusTripsPage() {
       key: 'stopsCount',
       header: 'Stop Progress',
       render: (trip) => {
-        const totalStops = trip.stops?.length || 0;
+        const totalStops = trip.totalStops || 0;
         const completedStops =
-          trip.status === 'COMPLETED'
-            ? totalStops
-            : trip.stops
-              ? (() => {
-                  const sortedStops = [...trip.stops].sort(
-                    (a: any, b: any) => (a.stopOrder || 0) - (b.stopOrder || 0)
-                  );
-                  return sortedStops.filter((s: any, idx: number) => {
-                    const isFirst = idx === 0;
-                    const isLast = idx === sortedStops.length - 1;
-                    if (isFirst) {
-                      return s.status === 'DEPARTED';
-                    }
-                    if (isLast) {
-                      return (
-                        s.status === 'ARRIVED' ||
-                        s.status === 'DEPARTED' ||
-                        s.status === 'SKIPPED'
-                      );
-                    }
-                    return s.status === 'DEPARTED' || s.status === 'SKIPPED';
-                  }).length;
-                })()
-              : 0;
-        const nextStop = trip.stops?.find((s: any) =>
-          ['PENDING', 'ARRIVED', 'BOARDING'].includes(s.status)
-        );
+          trip.status === 'COMPLETED' ? totalStops : trip.completedStops || 0;
         const percent =
           totalStops > 0 ? (completedStops / totalStops) * 100 : 0;
 
@@ -484,12 +458,12 @@ export function SchoolBusTripsPage() {
                 No stops
               </span>
             )}
-            {nextStop && (
+            {trip.nextStopName && (
               <span
                 className='text-[10px] text-slate-500 truncate mt-0.5'
-                title={nextStop.stopName}
+                title={trip.nextStopName}
               >
-                Next: {nextStop.stopName}
+                Next: {trip.nextStopName}
               </span>
             )}
           </div>
@@ -567,13 +541,11 @@ export function SchoolBusTripsPage() {
         }
 
         if (normalized === 'IN_PROGRESS') {
-          const nextStop = trip.stops?.find((s: any) =>
-            ['PENDING', 'ARRIVED', 'BOARDING'].includes(s.status)
-          );
+          const hasNextStop = !!trip.nextRouteStopId;
 
-          if (nextStop) {
+          if (hasNextStop) {
             const isArrivedOrBoarding = ['ARRIVED', 'BOARDING'].includes(
-              nextStop.status
+              trip.nextStopStatus
             );
             return (
               <div className='flex items-center justify-end gap-1.5'>
@@ -588,7 +560,7 @@ export function SchoolBusTripsPage() {
                       call('Depart stop', () =>
                         departTripStop({
                           tripId: trip.id,
-                          routeStopId: nextStop.routeStopId,
+                          routeStopId: trip.nextRouteStopId,
                         }).unwrap()
                       )
                     }
@@ -603,7 +575,7 @@ export function SchoolBusTripsPage() {
                       call('Arrive stop', () =>
                         arriveTripStop({
                           tripId: trip.id,
-                          routeStopId: nextStop.routeStopId,
+                          routeStopId: trip.nextRouteStopId,
                         }).unwrap()
                       )
                     }

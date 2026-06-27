@@ -46,6 +46,7 @@ import type {
   SchoolBusTripAttendanceManifest,
   SchoolBusTripAttendanceSummary,
   SchoolBusTripExecution,
+  SchoolBusTripExecutionListItem,
   SchoolBusTripStopLog,
   SchoolBusTripStudent,
   SchoolBusSchoolPickupPoint,
@@ -1191,13 +1192,13 @@ export const schoolBusApi = api.injectEndpoints({
       ],
     }),
     getTrips: builder.query<
-      ApiResponse<PagedResponse<SchoolBusTripExecution>>,
+      ApiResponse<PagedResponse<SchoolBusTripExecutionListItem>>,
       SchoolBusListParams | void
     >({
       query: (params) => listQuery('/trips', params),
       extraOptions: { service: 'school-bus' },
       transformResponse:
-        transformApiResponse<PagedResponse<SchoolBusTripExecution>>(),
+        transformApiResponse<PagedResponse<SchoolBusTripExecutionListItem>>(),
       providesTags: [{ type: 'schoolBus/TripExecution', id: 'TRIPS' }],
     }),
     getTripById: builder.query<ApiResponse<SchoolBusTripExecution>, number>({

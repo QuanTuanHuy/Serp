@@ -24,8 +24,6 @@ public interface AttendanceRepository extends BaseRepository<AttendanceEntity, L
           AND a.isDeleted = false
           AND (:tripId IS NULL OR t.id = :tripId)
           AND (:routeId IS NULL OR r.id = :routeId)
-          AND (:dateFrom IS NULL OR a.recordedAt >= :dateFrom)
-          AND (:dateTo IS NULL OR a.recordedAt < :dateTo)
     """,
     countQuery = """
         SELECT COUNT(a) FROM AttendanceEntity a
@@ -36,10 +34,102 @@ public interface AttendanceRepository extends BaseRepository<AttendanceEntity, L
           AND a.isDeleted = false
           AND (:tripId IS NULL OR t.id = :tripId)
           AND (:routeId IS NULL OR r.id = :routeId)
-          AND (:dateFrom IS NULL OR a.recordedAt >= :dateFrom)
-          AND (:dateTo IS NULL OR a.recordedAt < :dateTo)
     """)
     Page<AttendanceEntity> findReportAttendance(
+            @Param("tenantId") Long tenantId,
+            @Param("tripId") Long tripId,
+            @Param("routeId") Long routeId,
+            Pageable pageable);
+
+    @Query(value = """
+        SELECT a FROM AttendanceEntity a
+        JOIN FETCH a.tripStudent ts
+        JOIN FETCH ts.trip t
+        JOIN FETCH t.route r
+        JOIN FETCH ts.subscription sub
+        JOIN FETCH sub.student student
+        WHERE a.tenantId = :tenantId
+          AND a.isDeleted = false
+          AND (:tripId IS NULL OR t.id = :tripId)
+          AND (:routeId IS NULL OR r.id = :routeId)
+          AND a.recordedAt >= :dateFrom
+    """,
+    countQuery = """
+        SELECT COUNT(a) FROM AttendanceEntity a
+        JOIN a.tripStudent ts
+        JOIN ts.trip t
+        JOIN t.route r
+        WHERE a.tenantId = :tenantId
+          AND a.isDeleted = false
+          AND (:tripId IS NULL OR t.id = :tripId)
+          AND (:routeId IS NULL OR r.id = :routeId)
+          AND a.recordedAt >= :dateFrom
+    """)
+    Page<AttendanceEntity> findReportAttendanceFrom(
+            @Param("tenantId") Long tenantId,
+            @Param("tripId") Long tripId,
+            @Param("routeId") Long routeId,
+            @Param("dateFrom") java.time.LocalDateTime dateFrom,
+            Pageable pageable);
+
+    @Query(value = """
+        SELECT a FROM AttendanceEntity a
+        JOIN FETCH a.tripStudent ts
+        JOIN FETCH ts.trip t
+        JOIN FETCH t.route r
+        JOIN FETCH ts.subscription sub
+        JOIN FETCH sub.student student
+        WHERE a.tenantId = :tenantId
+          AND a.isDeleted = false
+          AND (:tripId IS NULL OR t.id = :tripId)
+          AND (:routeId IS NULL OR r.id = :routeId)
+          AND a.recordedAt < :dateTo
+    """,
+    countQuery = """
+        SELECT COUNT(a) FROM AttendanceEntity a
+        JOIN a.tripStudent ts
+        JOIN ts.trip t
+        JOIN t.route r
+        WHERE a.tenantId = :tenantId
+          AND a.isDeleted = false
+          AND (:tripId IS NULL OR t.id = :tripId)
+          AND (:routeId IS NULL OR r.id = :routeId)
+          AND a.recordedAt < :dateTo
+    """)
+    Page<AttendanceEntity> findReportAttendanceTo(
+            @Param("tenantId") Long tenantId,
+            @Param("tripId") Long tripId,
+            @Param("routeId") Long routeId,
+            @Param("dateTo") java.time.LocalDateTime dateTo,
+            Pageable pageable);
+
+    @Query(value = """
+        SELECT a FROM AttendanceEntity a
+        JOIN FETCH a.tripStudent ts
+        JOIN FETCH ts.trip t
+        JOIN FETCH t.route r
+        JOIN FETCH ts.subscription sub
+        JOIN FETCH sub.student student
+        WHERE a.tenantId = :tenantId
+          AND a.isDeleted = false
+          AND (:tripId IS NULL OR t.id = :tripId)
+          AND (:routeId IS NULL OR r.id = :routeId)
+          AND a.recordedAt >= :dateFrom
+          AND a.recordedAt < :dateTo
+    """,
+    countQuery = """
+        SELECT COUNT(a) FROM AttendanceEntity a
+        JOIN a.tripStudent ts
+        JOIN ts.trip t
+        JOIN t.route r
+        WHERE a.tenantId = :tenantId
+          AND a.isDeleted = false
+          AND (:tripId IS NULL OR t.id = :tripId)
+          AND (:routeId IS NULL OR r.id = :routeId)
+          AND a.recordedAt >= :dateFrom
+          AND a.recordedAt < :dateTo
+    """)
+    Page<AttendanceEntity> findReportAttendanceBetween(
             @Param("tenantId") Long tenantId,
             @Param("tripId") Long tripId,
             @Param("routeId") Long routeId,

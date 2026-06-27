@@ -441,7 +441,7 @@ export interface SchoolBusTripStudent extends SchoolBusBaseRecord {
   note?: string | null;
 }
 
-export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
+  export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
   tripCode: string;
   routeId: number;
   routeCode: string;
@@ -468,10 +468,41 @@ export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
   startLocationType?: string | null;
   startLocationName?: string | null;
   endLocationType?: string | null;
-  endLocationName?: string | null;
-}
+    endLocationName?: string | null;
+  }
 
-export interface SchoolBusCapacityUtilization {
+  export interface SchoolBusTripExecutionListItem extends SchoolBusBaseRecord {
+    tripCode: string;
+    routeId: number;
+    routeCode: string;
+    routeName: string;
+    serviceDate: string;
+    routeDirection: 'OUTBOUND' | 'RETURN';
+    status: string;
+    plannedStartAt?: string | null;
+    plannedEndAt?: string | null;
+    startedAt?: string | null;
+    completedAt?: string | null;
+    cancelledAt?: string | null;
+    cancellationReason?: string | null;
+    busId?: number | null;
+    busPlateNumber?: string | null;
+    driverId?: number | null;
+    driverName?: string | null;
+    attendantId?: number | null;
+    attendantName?: string | null;
+    startLocationType?: string | null;
+    startLocationName?: string | null;
+    endLocationType?: string | null;
+    endLocationName?: string | null;
+    totalStops: number;
+    completedStops: number;
+    nextRouteStopId?: number | null;
+    nextStopName?: string | null;
+    nextStopStatus?: string | null;
+  }
+  
+  export interface SchoolBusCapacityUtilization {
   tripId: number;
   tripCode: string;
   routeCode: string;
