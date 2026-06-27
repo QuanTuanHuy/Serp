@@ -14,13 +14,8 @@ import {
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
-  useGetDashboardAttendanceStatusQuery,
-  useGetDashboardRequestStatusQuery,
-  useGetDashboardRouteReadinessQuery,
+  useGetDashboardOperationsQuery,
   useGetDashboardSchoolsQuery,
-  useGetDashboardSummaryQuery,
-  useGetDashboardTripsByDateQuery,
-  useGetDashboardTripStatusQuery,
   type SchoolBusDashboardQueryParams,
 } from '../api/schoolBusDashboardApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -93,17 +88,13 @@ export function SchoolBusDashboardPage() {
     userKey: access.userKey,
   };
 
-  const summaryQuery = useGetDashboardSummaryQuery(queryArgs);
-  const tripStatusQuery = useGetDashboardTripStatusQuery(queryArgs);
-  const attendanceQuery = useGetDashboardAttendanceStatusQuery(queryArgs);
-  const routeReadinessQuery = useGetDashboardRouteReadinessQuery(queryArgs);
-  const requestStatusQuery = useGetDashboardRequestStatusQuery(queryArgs);
-  const tripsByDateQuery = useGetDashboardTripsByDateQuery(queryArgs);
+  const operationsQuery = useGetDashboardOperationsQuery(queryArgs);
   const schoolsQuery = useGetDashboardSchoolsQuery({
     userKey: access.userKey,
   });
 
-  const summary = summaryQuery.data?.data;
+  const operations = operationsQuery.data?.data;
+  const summary = operations?.summary;
   const activeFilterCount = countActiveFilters(filters);
   const pageTitle = access.isParentOnly
     ? 'Student transit dashboard'
@@ -167,7 +158,7 @@ export function SchoolBusDashboardPage() {
         }
       >
         <div className='space-y-6'>
-          {summaryQuery.isLoading ? (
+          {operationsQuery.isLoading ? (
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               {[0, 1, 2, 3].map((item) => (
                 <div
@@ -176,7 +167,7 @@ export function SchoolBusDashboardPage() {
                 />
               ))}
             </div>
-          ) : summaryQuery.isError || !summary ? (
+          ) : operationsQuery.isError || !summary ? (
             <SchoolBusEmptyState
               title='Summary metrics unavailable'
               description='The chart blocks remain available while the summary request is retried.'
@@ -219,36 +210,36 @@ export function SchoolBusDashboardPage() {
           <div className='grid gap-6 md:grid-cols-3'>
             <DashboardChartCard
               title='Trip Status Distribution'
-              isLoading={tripStatusQuery.isLoading}
-              isError={tripStatusQuery.isError}
+              isLoading={operationsQuery.isLoading}
+              isError={operationsQuery.isError}
             >
               <DashboardDonutChart
                 title='Trip Status Distribution'
-                data={tripStatusQuery.data?.data || []}
+                data={operations?.tripStatusChart || []}
                 colorMap={TRIP_STATUS_COLORS}
               />
             </DashboardChartCard>
 
             <DashboardChartCard
               title='Student Attendance Status'
-              isLoading={attendanceQuery.isLoading}
-              isError={attendanceQuery.isError}
+              isLoading={operationsQuery.isLoading}
+              isError={operationsQuery.isError}
             >
               <DashboardDonutChart
                 title='Student Attendance Status'
-                data={attendanceQuery.data?.data || []}
+                data={operations?.attendanceChart || []}
                 colorMap={ATTENDANCE_COLORS}
               />
             </DashboardChartCard>
 
             <DashboardChartCard
               title='Route Assignment Status'
-              isLoading={routeReadinessQuery.isLoading}
-              isError={routeReadinessQuery.isError}
+              isLoading={operationsQuery.isLoading}
+              isError={operationsQuery.isError}
             >
               <DashboardBarChart
                 title='Route Assignment Status'
-                data={routeReadinessQuery.data?.data || []}
+                data={operations?.routeReadinessChart || []}
                 colorMap={READINESS_COLORS}
               />
             </DashboardChartCard>
@@ -257,25 +248,25 @@ export function SchoolBusDashboardPage() {
           <div className='grid gap-6 md:grid-cols-3'>
             <DashboardChartCard
               title='Trips Run Over Time'
-              isLoading={tripsByDateQuery.isLoading}
-              isError={tripsByDateQuery.isError}
+              isLoading={operationsQuery.isLoading}
+              isError={operationsQuery.isError}
               className='md:col-span-2'
             >
               <DashboardLineChart
                 title='Trips Run Over Time'
-                data={tripsByDateQuery.data?.data || []}
+                data={operations?.tripsByDate || []}
                 color='#991B1B'
               />
             </DashboardChartCard>
 
             <DashboardChartCard
               title='Request Workload'
-              isLoading={requestStatusQuery.isLoading}
-              isError={requestStatusQuery.isError}
+              isLoading={operationsQuery.isLoading}
+              isError={operationsQuery.isError}
             >
               <DashboardBarChart
                 title='Request Workload'
-                data={requestStatusQuery.data?.data || []}
+                data={operations?.requestStatusChart || []}
                 colorMap={REQUEST_COLORS}
               />
             </DashboardChartCard>

@@ -1,4 +1,4 @@
-import { api } from '@/lib/store/api';
+﻿import { api } from '@/lib/store/api';
 import { createApiResponseTransform } from '@/lib/store/api/utils';
 import type { FetchBaseQueryMeta } from '@reduxjs/toolkit/query';
 import type {
@@ -1272,7 +1272,7 @@ export const schoolBusApi = api.injectEndpoints({
       query: ({ id, body }) => ({
         url: `/trips/${id}/complete`,
         method: 'POST',
-        body: body ?? {},
+        body: body || {},
       }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusTripExecution>(),
@@ -1538,11 +1538,11 @@ export const schoolBusApi = api.injectEndpoints({
           pickupPointName: string | null;
           usageType: string | null;
           hasCoordinates: boolean | null;
-          // Stable enum code for logic — READY | MISSING_PICKUP_WINDOW | MISSING_COORDINATES | UNSUPPORTED_USAGE_TYPE | NOT_CHECKED
+          // Stable enum code for logic - READY | MISSING_PICKUP_WINDOW | MISSING_COORDINATES | UNSUPPORTED_USAGE_TYPE | NOT_CHECKED
           pickupReadinessCode: string;
-          // Human-readable label — display directly in UI
+          // Human-readable label - display directly in UI
           pickupReadinessLabel: string;
-          // Legacy — kept for backward compat
+          // Legacy - kept for backward compat
           pickupReadinessStatus: string;
           pickupMissingConfigReason: string | null;
           pickupWindowStart: string | null;
@@ -1664,7 +1664,7 @@ export const schoolBusApi = api.injectEndpoints({
       ],
     }),
 
-    // ── Planning Sessions ──────────────────────────────────────────────────
+    // -- Planning Sessions --------------------------------------------------
     previewPlanningDemand: builder.mutation<
       import('../types').ApiResponse<
         import('../types').SchoolBusPlanningPreview
@@ -1701,7 +1701,7 @@ export const schoolBusApi = api.injectEndpoints({
       query: () => ({ url: '/route-planning-sessions', method: 'GET' }),
       extraOptions: { service: 'school-bus' },
       providesTags: (result) => {
-        const sessions = result?.data ?? [];
+        const sessions = result?.data || [];
         return [
           { type: 'schoolBus/Route', id: 'SESSION_LIST' },
           ...sessions.map((s) => ({
@@ -1818,7 +1818,7 @@ export const schoolBusApi = api.injectEndpoints({
       query: ({ sessionId, routeId, body }) => ({
         url: `/route-planning-sessions/${sessionId}/routes/${routeId}/greedy-fill`,
         method: 'POST',
-        body: body ?? { preserveExistingAssignments: true },
+        body: body || { preserveExistingAssignments: true },
       }),
       extraOptions: { service: 'school-bus' },
       invalidatesTags: (_result, _error, { sessionId, routeId }) => [
@@ -2008,7 +2008,7 @@ const {
 
 function wrapQueryHook<T extends (arg: any, options?: any) => any>(hook: T): T {
   return ((arg: any, options?: any) => {
-    return hook(arg, { refetchOnMountOrArgChange: true, ...options });
+    return hook(arg, options);
   }) as unknown as T;
 }
 
@@ -2192,3 +2192,4 @@ export {
   useGreedyFillRouteMutation,
   useAssignStudentToRouteMutation,
 };
+

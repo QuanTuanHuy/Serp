@@ -22,10 +22,6 @@ public class RoutePlanStudentEntity extends BaseModel {
     private RoutePlanEntity route;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "student_id")
-    private StudentEntity student;
-
-    @ManyToOne(optional = false)
     @JoinColumn(name = "subscription_id")
     private StudentSubscriptionEntity subscription;
 
@@ -36,4 +32,12 @@ public class RoutePlanStudentEntity extends BaseModel {
     @ManyToOne
     @JoinColumn(name = "dropoff_stop_id")
     private RouteStopEntity dropoffStop;
+
+    public StudentEntity getStudent() {
+        return subscription != null ? subscription.getStudent() : null;
+    }
+
+    public void setStudent(StudentEntity student) {
+        // Student is derived from subscription after normalization.
+    }
 }

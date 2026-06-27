@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -67,23 +67,23 @@ import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibili
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import { schoolBusUi } from '../theme';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// -- Helpers ------------------------------------------------------------------
 
 function stopTypeLabel(stop: TripAttendanceStopItem): string {
   const { stopPurpose, locationType } = stop;
   if (stopPurpose === 'START_TERMINAL') {
     return locationType === 'SCHOOL'
-      ? 'School – Start terminal'
-      : 'Depot – Start terminal';
+      ? 'School - Start terminal'
+      : 'Depot - Start terminal';
   }
   if (stopPurpose === 'END_TERMINAL') {
     return locationType === 'SCHOOL'
-      ? 'School – End terminal'
-      : 'Depot – End terminal';
+      ? 'School - End terminal'
+      : 'Depot - End terminal';
   }
   if (stopPurpose === 'PICKUP') return 'Pickup stop';
   if (stopPurpose === 'DROPOFF') return 'Drop-off stop';
-  return locationType ?? 'Stop';
+  return locationType || 'Stop';
 }
 
 const statusMap: Record<string, { label: string; className: string }> = {
@@ -241,7 +241,7 @@ export function SchoolBusTripOperationDetailPage({
   tripId,
 }: SchoolBusTripOperationDetailPageProps) {
   const access = useSchoolBusAccess();
-  // ── State ──────────────────────────────────────────────────────────────────
+  // -- State ------------------------------------------------------------------
   const [selectedStopId, setSelectedStopId] = React.useState<number | null>(
     null
   );
@@ -258,7 +258,7 @@ export function SchoolBusTripOperationDetailPage({
   const [pollInterval, setPollInterval] = React.useState(IDLE_POLL_INTERVAL_MS);
   const [isSyncDelayed, setIsSyncDelayed] = React.useState(false);
 
-  // ── Queries ────────────────────────────────────────────────────────────────
+  // -- Queries ----------------------------------------------------------------
   const { data: tripData, isLoading: tripLoading } =
     useGetTripByIdQuery(tripId);
 
@@ -277,28 +277,28 @@ export function SchoolBusTripOperationDetailPage({
     { skip: !manifestData?.data?.routeId || access.isParentOnly }
   );
 
-  // ── Derived ────────────────────────────────────────────────────────────────
-  const trip = tripData?.data ?? null;
-  const manifest = manifestData?.data ?? null;
-  const summary = manifest?.summary ?? null;
-  const restEvents = eventsData?.data ?? [];
+  // -- Derived ----------------------------------------------------------------
+  const trip = tripData?.data || null;
+  const manifest = manifestData?.data || null;
+  const summary = manifest?.summary || null;
+  const restEvents = eventsData?.data || [];
 
-  const tripStatus = manifest?.tripStatus ?? trip?.status ?? null;
+  const tripStatus = manifest?.tripStatus || trip?.status || null;
   const tripIsActive = [
     'IN_PROGRESS',
     'BOARDING',
     'DROPOFF',
     'ARRIVED',
-  ].includes(tripStatus ?? '');
+  ].includes(tripStatus || '');
   const tripIsCompleted = tripStatus === 'COMPLETED';
   const tripIsCancelled = tripStatus === 'CANCELLED';
   const isOutbound =
-    (manifest?.routeDirection ?? trip?.routeDirection) === 'OUTBOUND';
-  const tripCode = manifest?.tripCode ?? trip?.tripCode ?? `Trip #${tripId}`;
-  const routeCode = manifest?.routeCode ?? trip?.routeCode ?? '';
-  const routeName = (manifest as any)?.routeName ?? trip?.routeName ?? '';
+    (manifest?.routeDirection || trip?.routeDirection) === 'OUTBOUND';
+  const tripCode = manifest?.tripCode || trip?.tripCode || `Trip #${tripId}`;
+  const routeCode = manifest?.routeCode || trip?.routeCode || '';
+  const routeName = (manifest as any)?.routeName || trip?.routeName || '';
 
-  // ── Polling implementation ─────────────────────────────────────────────────
+  // -- Polling implementation -------------------------------------------------
   const isRefreshingRef = React.useRef(false);
   const lastAttendanceRefreshRef = React.useRef(Date.now());
 
@@ -328,8 +328,8 @@ export function SchoolBusTripOperationDetailPage({
           attendanceResult?.error as PollingError | undefined
         );
         const backoffMs = Math.max(
-          manifestBackoff ?? 0,
-          attendanceBackoff ?? 0
+          manifestBackoff || 0,
+          attendanceBackoff || 0
         );
 
         if (backoffMs > 0) {
@@ -405,7 +405,7 @@ export function SchoolBusTripOperationDetailPage({
     );
   }, [restEvents]);
 
-  // ── Auto-advance to current (first non-done) stop ─────────────────────────
+  // -- Auto-advance to current (first non-done) stop -------------------------
   React.useEffect(() => {
     if (!manifest?.stops?.length) return;
     const selected = manifest.stops.find(
@@ -420,14 +420,14 @@ export function SchoolBusTripOperationDetailPage({
         (s) => s.stopStatus !== 'DEPARTED' && s.stopStatus !== 'SKIPPED'
       );
       setSelectedStopId(
-        next?.routeStopId ??
-          manifest.stops[manifest.stops.length - 1]?.routeStopId ??
+        next?.routeStopId ||
+          manifest.stops[manifest.stops.length - 1]?.routeStopId ||
           null
       );
     }
   }, [manifest, selectedStopId]);
 
-  // ── Current & Next Stops Inferred ──────────────────────────────────────────
+  // -- Current & Next Stops Inferred ------------------------------------------
   const opSummary = React.useMemo(() => {
     if (!manifest?.stops?.length) return null;
     const stops = manifest.stops;
@@ -467,7 +467,7 @@ export function SchoolBusTripOperationDetailPage({
         const firstNonDone = stops.find(
           (s) => s.stopStatus !== 'DEPARTED' && s.stopStatus !== 'SKIPPED'
         );
-        current = firstNonDone ?? stops[stops.length - 1];
+        current = firstNonDone || stops[stops.length || 1];
       }
       next = stops.find((s) => s.stopStatus === 'PENDING');
     }
@@ -475,7 +475,7 @@ export function SchoolBusTripOperationDetailPage({
     return { total, done, current, next };
   }, [manifest, tripStatus]);
 
-  // ── Derived logic for complete trip and timeline sequence ──────────────────
+  // -- Derived logic for complete trip and timeline sequence ------------------
   const sortedStops = React.useMemo(() => {
     if (!manifest?.stops) return [];
     return [...manifest.stops].sort((a, b) => a.stopOrder - b.stopOrder);
@@ -485,7 +485,7 @@ export function SchoolBusTripOperationDetailPage({
     return (
       sortedStops.find(
         (s) => s.stopStatus !== 'DEPARTED' && s.stopStatus !== 'SKIPPED'
-      ) ?? null
+      ) || null
     );
   }, [sortedStops]);
 
@@ -506,19 +506,19 @@ export function SchoolBusTripOperationDetailPage({
   }, [sortedStops]);
 
   const hasPlannedStudents = React.useMemo(() => {
-    return manifest?.students?.some((st) => st.status === 'PLANNED') ?? false;
+    return manifest?.students?.some((st) => st.status === 'PLANNED') || false;
   }, [manifest?.students]);
 
   const canCompleteTrip =
     tripStatus === 'IN_PROGRESS' && allStopsFinished && !hasPlannedStudents;
 
-  // ── Attendance Workspace Derived States ────────────────────────────────────
+  // -- Attendance Workspace Derived States ------------------------------------
   const selectedStop = React.useMemo(() => {
     if (!manifest?.stops) return null;
-    return manifest.stops.find((s) => s.routeStopId === selectedStopId) ?? null;
+    return manifest.stops.find((s) => s.routeStopId === selectedStopId) || null;
   }, [manifest?.stops, selectedStopId]);
 
-  const stopStatus = selectedStop?.stopStatus ?? null;
+  const stopStatus = selectedStop?.stopStatus || null;
   const isStopActionable = tripIsActive && stopStatus === 'BOARDING';
   const isDepotStop = selectedStop?.locationType === 'DEPOT';
   const isPickupActionStop =
@@ -575,7 +575,7 @@ export function SchoolBusTripOperationDetailPage({
     return filtered;
   }, [manifest, selectedStop, isOutbound, searchQuery]);
 
-  // ── Mutations ──────────────────────────────────────────────────────────────
+  // -- Mutations --------------------------------------------------------------
   const [startTrip, { isLoading: starting }] = useStartTripMutation();
   const [completeTrip, { isLoading: completing }] = useCompleteTripMutation();
   const [cancelTrip, { isLoading: cancelling }] = useCancelTripMutation();
@@ -597,7 +597,7 @@ export function SchoolBusTripOperationDetailPage({
   const [batchAttendance, { isLoading: batchingAttendance }] =
     useBatchAttendanceTripStopMutation();
 
-  // ── Batch selection state ──
+  // -- Batch selection state --
   const [selectedStudentIds, setSelectedStudentIds] = React.useState<Set<number>>(new Set());
 
   const isActing =
@@ -624,12 +624,12 @@ export function SchoolBusTripOperationDetailPage({
       toast.error(
         err?.status === 429
           ? 'System is busy. Please wait a few seconds and try again.'
-          : (err?.data?.message ?? `${label} failed`)
+          : (err?.data?.message || `${label} failed`)
       );
     }
   };
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // -- Actions ----------------------------------------------------------------
   const handleStart = () => act('Start trip', () => startTrip(tripId).unwrap());
   const handleComplete = () =>
     act('Complete trip', () => completeTrip({ id: tripId }).unwrap());
@@ -670,7 +670,7 @@ export function SchoolBusTripOperationDetailPage({
 
   const handleBoard = (s: TripAttendanceStudentItem) => {
     if (!selectedStopId) return;
-    act(`Board ${s.studentName ?? ''}`, () =>
+    act(`Board ${s.studentName || ''}`, () =>
       boardStudent({
         tripId,
         body: { routeStopId: selectedStopId, studentId: s.studentId },
@@ -679,7 +679,7 @@ export function SchoolBusTripOperationDetailPage({
   };
   const handleDropoff = (s: TripAttendanceStudentItem) => {
     if (!selectedStopId) return;
-    act(`Drop-off ${s.studentName ?? ''}`, () =>
+    act(`Drop-off ${s.studentName || ''}`, () =>
       dropoffStudent({
         tripId,
         body: { routeStopId: selectedStopId, studentId: s.studentId },
@@ -688,7 +688,7 @@ export function SchoolBusTripOperationDetailPage({
   };
   const handleAbsent = (s: TripAttendanceStudentItem) => {
     if (!selectedStopId) return;
-    act(`Absent ${s.studentName ?? ''}`, () =>
+    act(`Absent ${s.studentName || ''}`, () =>
       absentStudent({
         tripId,
         body: { routeStopId: selectedStopId, studentId: s.studentId },
@@ -697,7 +697,7 @@ export function SchoolBusTripOperationDetailPage({
   };
   const handleNoShow = (s: TripAttendanceStudentItem) => {
     if (!selectedStopId) return;
-    act(`No-show ${s.studentName ?? ''}`, () =>
+    act(`No-show ${s.studentName || ''}`, () =>
       noShowStudent({
         tripId,
         body: { routeStopId: selectedStopId, studentId: s.studentId },
@@ -706,7 +706,7 @@ export function SchoolBusTripOperationDetailPage({
   };
   const handleNotServed = (s: TripAttendanceStudentItem) => {
     if (!selectedStopId) return;
-    act(`Mark not served for ${s.studentName ?? ''}`, () =>
+    act(`Mark not served for ${s.studentName || ''}`, () =>
       notServedStudent({
         tripId,
         body: { routeStopId: selectedStopId, studentId: s.studentId },
@@ -714,7 +714,7 @@ export function SchoolBusTripOperationDetailPage({
     );
   };
 
-  // ── Batch selection helpers ──
+  // -- Batch selection helpers --
   const toggleStudentSelection = (studentId: number) => {
     setSelectedStudentIds((prev) => {
       const next = new Set(prev);
@@ -803,7 +803,7 @@ export function SchoolBusTripOperationDetailPage({
             {tripIsCompleted && (
               <div className='flex items-center gap-2.5 bg-emerald-50 border border-emerald-100 text-emerald-800 px-4 py-3 rounded-2xl text-xs font-semibold shadow-xs'>
                 <CheckCircle2 className='h-4.5 w-4.5 text-emerald-600 shrink-0' />
-                <span>Trip completed — operations are locked.</span>
+                <span>Trip completed - operations are locked.</span>
               </div>
             )}
 
@@ -843,7 +843,7 @@ export function SchoolBusTripOperationDetailPage({
                       {tripCode}
                     </h3>
                     <p className='text-xs text-slate-400 truncate mt-0.5'>
-                      {routeCode} — {routeName}
+                      {routeCode} - {routeName}
                     </p>
                   </div>
                 </div>
@@ -904,7 +904,7 @@ export function SchoolBusTripOperationDetailPage({
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
                       {manifest?.distanceKm != null
                         ? `${manifest.distanceKm} km`
-                        : '—'}
+                        : '-'}
                     </span>
                   </div>
                 </div>
@@ -918,7 +918,7 @@ export function SchoolBusTripOperationDetailPage({
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
                       {manifest?.durationMin != null
                         ? `${manifest.durationMin} mins`
-                        : '—'}
+                        : '-'}
                     </span>
                   </div>
                 </div>
@@ -960,12 +960,12 @@ export function SchoolBusTripOperationDetailPage({
                       Attendant
                     </span>
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
-                      {trip.attendantName || '—'}
+                      {trip.attendantName || '-'}
                     </span>
                   </div>
                 </div>
 
-                {/* Main operational control actions — only for users who can operate trips */}
+                {/* Main operational control actions - only for users who can operate trips */}
                 <div className='flex flex-col justify-center sm:col-span-2 lg:col-span-1 gap-2'>
                   {access.canOperateTrip &&
                     !tripIsCompleted &&
@@ -1018,7 +1018,7 @@ export function SchoolBusTripOperationDetailPage({
                             <Input
                               value={cancelReason}
                               onChange={(e) => setCancelReason(e.target.value)}
-                              placeholder='Cancellation reason…'
+                              placeholder='Cancellation reason...'
                               className='h-7 text-xs rounded-lg px-2 bg-slate-50'
                             />
                             <div className='flex gap-1 justify-end'>
@@ -1110,13 +1110,13 @@ export function SchoolBusTripOperationDetailPage({
                         <span className='font-bold text-slate-800 truncate max-w-[150px]'>
                           {opSummary.current
                             ? opSummary.current.displayName
-                            : '—'}
+                            : '-'}
                         </span>
                       </div>
                       <div className='flex items-center justify-between'>
                         <span>Next terminal:</span>
                         <span className='font-bold text-slate-800 truncate max-w-[150px]'>
-                          {opSummary.next ? opSummary.next.displayName : '—'}
+                          {opSummary.next ? opSummary.next.displayName : '-'}
                         </span>
                       </div>
                     </div>
@@ -1435,7 +1435,7 @@ export function SchoolBusTripOperationDetailPage({
                             <div className='flex items-center gap-1.5'>
                               <span className='text-slate-400'>Planned:</span>
                               <span className='text-slate-700 font-semibold'>
-                                {stop.plannedArrivalTime || '—'}
+                                {stop.plannedArrivalTime || '-'}
                                 {stop.plannedDepartureTime
                                   ? ` - ${stop.plannedDepartureTime}`
                                   : ''}
@@ -1451,7 +1451,7 @@ export function SchoolBusTripOperationDetailPage({
                                         .split('T')[1]
                                         ?.substring(0, 5) ||
                                       stop.actualArrivalTime
-                                    : '—'}
+                                    : '-'}
                                   {stop.actualDepartureTime
                                     ? ` - ${stop.actualDepartureTime.split('T')[1]?.substring(0, 5) || stop.actualDepartureTime}`
                                     : ''}
@@ -1492,14 +1492,14 @@ export function SchoolBusTripOperationDetailPage({
                               <span className='font-bold text-slate-700'>
                                 {stop.actualBoardedCount}
                               </span>{' '}
-                              • Actual dropped:{' '}
+                              - Actual dropped:{' '}
                               <span className='font-bold text-slate-700'>
                                 {stop.actualDroppedCount}
                               </span>
                             </p>
                           )}
 
-                          {/* Action Buttons — only for users who can operate trips */}
+                          {/* Action Buttons - only for users who can operate trips */}
                           {tripIsActive &&
                             !isFinished &&
                             access.canOperateTrip && (
@@ -1597,7 +1597,7 @@ export function SchoolBusTripOperationDetailPage({
                                           onChange={(e) =>
                                             setSkipReason(e.target.value)
                                           }
-                                          placeholder='Skip reason…'
+                                          placeholder='Skip reason...'
                                           className='h-6 text-[10px] rounded-lg px-1.5 w-24 bg-slate-50'
                                         />
                                         <Button
@@ -1711,7 +1711,7 @@ export function SchoolBusTripOperationDetailPage({
                           </p>
                         </div>
                         {renderFriendlyBadge(
-                          item.eventType ?? item.attendanceType
+                          item.eventType || item.attendanceType
                         )}
                       </div>
                       {item.notes && (
@@ -1752,10 +1752,10 @@ export function SchoolBusTripOperationDetailPage({
               </div>
               <SheetDescription className='text-xs text-slate-400 mt-1 font-semibold'>
                 {selectedStop
-                  ? `${stopTypeLabel(selectedStop)} • Status: ${selectedStop.stopStatus}`
+                  ? `${stopTypeLabel(selectedStop)} - Status: ${selectedStop.stopStatus}`
                   : access.isParentOnly
-                    ? `Route: ${routeCode} · Student Details`
-                    : `Route: ${routeCode} • Direction: ${getFriendlyDirection(trip?.routeDirection)}`}
+                    ? `Route: ${routeCode} - Student Details`
+                    : `Route: ${routeCode} - Direction: ${getFriendlyDirection(trip?.routeDirection)}`}
               </SheetDescription>
             </SheetHeader>
 
@@ -2126,3 +2126,4 @@ export function SchoolBusTripOperationDetailPage({
     </MapMarkerVisibilityProvider>
   );
 }
+

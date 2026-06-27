@@ -2,7 +2,6 @@ package serp.project.school_bus_service.service.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.jpa.domain.Specification;
 import serp.project.school_bus_service.dto.params.StudentParamsRequest;
 import serp.project.school_bus_service.dto.request.StudentUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
@@ -73,26 +72,27 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
 
     @Override
     public PageResponse<StudentResponse> getStudents(StudentParamsRequest params, Long tenantId) {
-        Specification<StudentEntity> spec = BaseSpecification.tenantActiveWithKeyword(tenantId,
-                params == null ? null : params.getKeyword(),
-                "fullName", "studentCode", "grade", "className", "homeAddress",
-                "school.name", "parentProfile.fullName", "pickupPoint.name");
-
+        Long parentProfileId = null;
         if (securityService.isParentOnly()) {
-            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("parentProfile").get("id"), parentProfileId));
+            parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
         } else if (params != null && params.getParentProfileId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("parentProfile").get("id"), params.getParentProfileId()));
+            parentProfileId = params.getParentProfileId();
         }
-
-        if (params != null && params.getSchoolId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("school").get("id"), params.getSchoolId()));
-        }
-
-        return PageResponse.from(studentRepository.findAll(spec,
+        return PageResponse.from(studentRepository.findStudentListItems(
+                tenantId,
+                parentProfileId,
+                params == null ? null : params.getSchoolId(),
+                keywordPattern(params == null ? null : params.getKeyword()),
                 PageableUtils.from(params,
                         Set.of("id", "fullName", "studentCode", "grade", "className", "createdAt", "updatedAt"), "fullName")),
-                mapper::toStudentResponse);
+                response -> response);
+    }
+
+    private String keywordPattern(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return "%" + keyword.trim().toLowerCase() + "%";
     }
 
     @Override

@@ -15,26 +15,57 @@ import java.util.Optional;
 
 public interface TripStudentRepository extends BaseRepository<TripStudentEntity, Long> {
 
-    List<TripStudentEntity> findByTripIdAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(Long tripId,
-            Long tenantId);
+    @Query("""
+        SELECT ts FROM TripStudentEntity ts
+        WHERE ts.trip.id = :tripId
+          AND ts.tenantId = :tenantId
+          AND ts.isDeleted = false
+        ORDER BY ts.subscription.student.fullName ASC
+    """)
+    List<TripStudentEntity> findByTripIdAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(
+            @Param("tripId") Long tripId,
+            @Param("tenantId") Long tenantId);
 
-    List<TripStudentEntity> findByTripIdInAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(Collection<Long> tripIds,
-            Long tenantId);
+    @Query("""
+        SELECT ts FROM TripStudentEntity ts
+        WHERE ts.trip.id IN :tripIds
+          AND ts.tenantId = :tenantId
+          AND ts.isDeleted = false
+        ORDER BY ts.subscription.student.fullName ASC
+    """)
+    List<TripStudentEntity> findByTripIdInAndTenantIdAndIsDeletedFalseOrderByStudentFullNameAsc(
+            @Param("tripIds") Collection<Long> tripIds,
+            @Param("tenantId") Long tenantId);
 
+    @Query("""
+        SELECT ts FROM TripStudentEntity ts
+        WHERE ts.trip.id = :tripId
+          AND ts.subscription.student.id = :studentId
+          AND ts.tenantId = :tenantId
+          AND ts.isDeleted = false
+    """)
     Optional<TripStudentEntity> findByTripIdAndStudentIdAndTenantIdAndIsDeletedFalse(
-            Long tripId,
-            Long studentId,
-            Long tenantId);
+            @Param("tripId") Long tripId,
+            @Param("studentId") Long studentId,
+            @Param("tenantId") Long tenantId);
 
-    boolean existsByTripIdAndStudentParentProfileIdAndIsDeletedFalse(Long tripId, Long parentProfileId);
+    @Query("""
+        SELECT COUNT(ts) > 0 FROM TripStudentEntity ts
+        WHERE ts.trip.id = :tripId
+          AND ts.subscription.student.parentProfile.id = :parentProfileId
+          AND ts.isDeleted = false
+    """)
+    boolean existsByTripIdAndStudentParentProfileIdAndIsDeletedFalse(
+            @Param("tripId") Long tripId,
+            @Param("parentProfileId") Long parentProfileId);
 
     @Query("""
         SELECT ts.status, COUNT(ts) FROM TripStudentEntity ts
         JOIN ts.trip t
         WHERE ts.tenantId = :tenantId AND ts.isDeleted = false AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
         GROUP BY ts.status
     """)
     List<Object[]> countAttendanceByStatusFiltered(
@@ -48,8 +79,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
         SELECT ts.status, COUNT(ts) FROM TripStudentEntity ts
         JOIN ts.trip t
         WHERE ts.tenantId = :tenantId AND ts.isDeleted = false AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND ts.student.parentProfile.id = :parentProfileId
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND ts.subscription.student.parentProfile.id = :parentProfileId
         GROUP BY ts.status
     """)
     List<Object[]> countAttendanceByStatusForParent(
@@ -62,8 +93,14 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
         SELECT ts.status, COUNT(ts) FROM TripStudentEntity ts
         JOIN ts.trip t
         WHERE ts.tenantId = :tenantId AND ts.isDeleted = false AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND t.driver.id = :driverId
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT a FROM RouteAssignmentEntity a
+              WHERE a.route.id = t.route.id
+                AND a.driver.id = :driverId
+                AND a.tenantId = :tenantId
+                AND a.isDeleted = false
+          )
         GROUP BY ts.status
     """)
     List<Object[]> countAttendanceByStatusForDriver(
@@ -76,8 +113,14 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
         SELECT ts.status, COUNT(ts) FROM TripStudentEntity ts
         JOIN ts.trip t
         WHERE ts.tenantId = :tenantId AND ts.isDeleted = false AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND t.attendant.id = :attendantId
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT a FROM RouteAssignmentEntity a
+              WHERE a.route.id = t.route.id
+                AND a.attendant.id = :attendantId
+                AND a.tenantId = :tenantId
+                AND a.isDeleted = false
+          )
         GROUP BY ts.status
     """)
     List<Object[]> countAttendanceByStatusForAttendant(
@@ -91,18 +134,30 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
         JOIN ts.trip t
         WHERE ts.tenantId = :tenantId
           AND ts.isDeleted = false
-          AND ts.student.isDeleted = false
-          AND ts.student.isActive = true
+          AND ts.subscription.student.isDeleted = false
+          AND ts.subscription.student.isActive = true
           AND t.isDeleted = false
           AND t.route.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
           AND (
               :tenantWide = true
-              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
-              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
-              OR (:parentProfileId IS NOT NULL AND ts.student.parentProfile.id = :parentProfileId)
+              OR (:driverProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.driver.id = :driverProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:attendantProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.attendant.id = :attendantProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:parentProfileId IS NOT NULL AND ts.subscription.student.parentProfile.id = :parentProfileId)
           )
         GROUP BY ts.status
     """)
@@ -117,22 +172,34 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
             @Param("parentProfileId") Long parentProfileId);
 
     @Query("""
-        SELECT COUNT(DISTINCT ts.student.id) FROM TripStudentEntity ts
+        SELECT COUNT(DISTINCT ts.subscription.student.id) FROM TripStudentEntity ts
         JOIN ts.trip t
         WHERE ts.tenantId = :tenantId
           AND ts.isDeleted = false
-          AND ts.student.isDeleted = false
-          AND ts.student.isActive = true
+          AND ts.subscription.student.isDeleted = false
+          AND ts.subscription.student.isActive = true
           AND t.isDeleted = false
           AND t.route.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
           AND (
               :tenantWide = true
-              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
-              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
-              OR (:parentProfileId IS NOT NULL AND ts.student.parentProfile.id = :parentProfileId)
+              OR (:driverProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.driver.id = :driverProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:attendantProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.attendant.id = :attendantProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:parentProfileId IS NOT NULL AND ts.subscription.student.parentProfile.id = :parentProfileId)
           )
     """)
     long countDashboardStudents(
@@ -146,22 +213,34 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
             @Param("parentProfileId") Long parentProfileId);
 
     @Query("""
-        SELECT COUNT(DISTINCT ts.student.parentProfile.id) FROM TripStudentEntity ts
+        SELECT COUNT(DISTINCT ts.subscription.student.parentProfile.id) FROM TripStudentEntity ts
         JOIN ts.trip t
         WHERE ts.tenantId = :tenantId
           AND ts.isDeleted = false
-          AND ts.student.isDeleted = false
-          AND ts.student.isActive = true
+          AND ts.subscription.student.isDeleted = false
+          AND ts.subscription.student.isActive = true
           AND t.isDeleted = false
           AND t.route.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
           AND (
               :tenantWide = true
-              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
-              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
-              OR (:parentProfileId IS NOT NULL AND ts.student.parentProfile.id = :parentProfileId)
+              OR (:driverProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.driver.id = :driverProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:attendantProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.attendant.id = :attendantProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:parentProfileId IS NOT NULL AND ts.subscription.student.parentProfile.id = :parentProfileId)
           )
     """)
     long countDashboardParents(

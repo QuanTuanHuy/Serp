@@ -14,6 +14,7 @@ import serp.project.school_bus_service.repository.BusAttendantProfileRepository;
 import serp.project.school_bus_service.repository.DriverProfileRepository;
 import serp.project.school_bus_service.repository.ParentProfileRepository;
 import serp.project.school_bus_service.repository.SchoolRepository;
+import serp.project.school_bus_service.repository.RouteAssignmentRepository;
 import serp.project.school_bus_service.repository.StudentRepository;
 import serp.project.school_bus_service.repository.StudentSubscriptionRepository;
 import serp.project.school_bus_service.repository.TransportRequestRepository;
@@ -21,6 +22,7 @@ import serp.project.school_bus_service.repository.TripExecutionRepository;
 import serp.project.school_bus_service.repository.TripStudentRepository;
 import serp.project.school_bus_service.repository.SchoolBusUserRepository;
 import serp.project.school_bus_service.entity.SchoolBusUserEntity;
+import serp.project.school_bus_service.enums.RouteAssignmentStatus;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.model.DashboardDataScope;
 import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
@@ -30,6 +32,7 @@ import serp.project.school_bus_service.shared.exception.AppException;
 import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,7 +49,10 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
     private final BusAttendantProfileRepository busAttendantProfileRepository;
     private final SchoolBusUserRepository schoolBusUserRepository;
     private final SchoolRepository schoolRepository;
+    private final RouteAssignmentRepository routeAssignmentRepository;
     private final SchoolBusSecurityService securityService;
+    private static final Set<RouteAssignmentStatus> CURRENT_ASSIGNMENT_STATUSES =
+            Set.of(RouteAssignmentStatus.ASSIGNED, RouteAssignmentStatus.CONFIRMED);
 
     public SchoolBusDataScopeServiceImpl(
             TripExecutionRepository tripExecutionRepository,
@@ -59,6 +65,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
             BusAttendantProfileRepository busAttendantProfileRepository,
             SchoolBusUserRepository schoolBusUserRepository,
             SchoolRepository schoolRepository,
+            RouteAssignmentRepository routeAssignmentRepository,
             SchoolBusSecurityService securityService) {
         this.tripExecutionRepository = tripExecutionRepository;
         this.tripStudentRepository = tripStudentRepository;
@@ -70,6 +77,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
         this.busAttendantProfileRepository = busAttendantProfileRepository;
         this.schoolBusUserRepository = schoolBusUserRepository;
         this.schoolRepository = schoolRepository;
+        this.routeAssignmentRepository = routeAssignmentRepository;
         this.securityService = securityService;
     }
 
@@ -85,7 +93,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
 
         if (securityService.isDriver()) {
             Long driverProfileId = getCurrentDriverProfileIdRequired();
-            if (trip.getDriver() == null || !trip.getDriver().getId().equals(driverProfileId)) {
+            if (!hasCurrentDriverAssignment(trip, driverProfileId, tenantId)) {
                 throw new AppException(AppErrorCode.Security.TRIP_NOT_ASSIGNED_TO_DRIVER);
             }
             return;
@@ -93,7 +101,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
 
         if (securityService.isAttendant()) {
             Long attendantProfileId = getCurrentAttendantProfileIdRequired();
-            if (trip.getAttendant() == null || !trip.getAttendant().getId().equals(attendantProfileId)) {
+            if (!hasCurrentAttendantAssignment(trip, attendantProfileId, tenantId)) {
                 throw new AppException(AppErrorCode.Security.TRIP_NOT_ASSIGNED_TO_ATTENDANT);
             }
             return;
@@ -123,7 +131,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
 
         if (securityService.isDriver()) {
             Long driverProfileId = getCurrentDriverProfileIdRequired();
-            if (trip.getDriver() == null || !trip.getDriver().getId().equals(driverProfileId)) {
+            if (!hasCurrentDriverAssignment(trip, driverProfileId, tenantId)) {
                 throw new AppException(AppErrorCode.Security.TRIP_NOT_ASSIGNED_TO_DRIVER);
             }
             return;
@@ -149,7 +157,7 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
 
         if (securityService.isAttendant()) {
             Long attendantProfileId = getCurrentAttendantProfileIdRequired();
-            if (trip.getAttendant() == null || !trip.getAttendant().getId().equals(attendantProfileId)) {
+            if (!hasCurrentAttendantAssignment(trip, attendantProfileId, tenantId)) {
                 throw new AppException(AppErrorCode.Security.TRIP_NOT_ASSIGNED_TO_ATTENDANT);
             }
             return;
@@ -354,5 +362,27 @@ public class SchoolBusDataScopeServiceImpl implements ISchoolBusDataScopeService
         if (scope == null || !scope.getAllowedSchoolIds().contains(schoolId)) {
             throw new AppException(AppErrorCode.Security.FORBIDDEN_DATA_SCOPE);
         }
+    }
+
+    private boolean hasCurrentDriverAssignment(TripExecutionEntity trip, Long driverProfileId, Long tenantId) {
+        if (trip == null || trip.getRoute() == null || trip.getRoute().getId() == null) {
+            return false;
+        }
+        return routeAssignmentRepository.existsCurrentDriverAssignment(
+                trip.getRoute().getId(),
+                tenantId,
+                driverProfileId,
+                CURRENT_ASSIGNMENT_STATUSES);
+    }
+
+    private boolean hasCurrentAttendantAssignment(TripExecutionEntity trip, Long attendantProfileId, Long tenantId) {
+        if (trip == null || trip.getRoute() == null || trip.getRoute().getId() == null) {
+            return false;
+        }
+        return routeAssignmentRepository.existsCurrentAttendantAssignment(
+                trip.getRoute().getId(),
+                tenantId,
+                attendantProfileId,
+                CURRENT_ASSIGNMENT_STATUSES);
     }
 }

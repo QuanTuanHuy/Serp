@@ -23,16 +23,8 @@ import java.time.LocalDateTime;
 public class AttendanceEntity extends BaseModel {
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "route_id")
-    private RoutePlanEntity route;
-
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "student_id")
-    private StudentEntity student;
-
-    @ManyToOne
-    @JoinColumn(name = "trip_id")
-    private TripExecutionEntity trip;
+    @JoinColumn(name = "trip_student_id")
+    private TripStudentEntity tripStudent;
 
     @ManyToOne
     @JoinColumn(name = "route_stop_id")
@@ -62,4 +54,28 @@ public class AttendanceEntity extends BaseModel {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    public RoutePlanEntity getRoute() {
+        return tripStudent != null && tripStudent.getTrip() != null ? tripStudent.getTrip().getRoute() : null;
+    }
+
+    public void setRoute(RoutePlanEntity route) {
+        // Route is derived from tripStudent.trip after normalization.
+    }
+
+    public StudentEntity getStudent() {
+        return tripStudent != null ? tripStudent.getStudent() : null;
+    }
+
+    public void setStudent(StudentEntity student) {
+        // Student is derived from tripStudent.subscription after normalization.
+    }
+
+    public TripExecutionEntity getTrip() {
+        return tripStudent != null ? tripStudent.getTrip() : null;
+    }
+
+    public void setTrip(TripExecutionEntity trip) {
+        // Trip is derived from tripStudent after normalization.
+    }
 }

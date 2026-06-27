@@ -16,7 +16,7 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
 
     /** Count DISTINCT students assigned to a route (excludes double-counting from dual BOARD+DROPOFF entries). */
     @Query("""
-            SELECT COUNT(DISTINCT ps.student.id) FROM RoutePlanStudentEntity ps
+            SELECT COUNT(DISTINCT ps.subscription.student.id) FROM RoutePlanStudentEntity ps
             WHERE ps.route.id = :routeId
               AND ps.isDeleted = false
             """)
@@ -24,7 +24,7 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
 
     /** Count DISTINCT students across all routes in a session (excludes double-counting). */
     @Query("""
-            SELECT COUNT(DISTINCT ps.student.id) FROM RoutePlanStudentEntity ps
+            SELECT COUNT(DISTINCT ps.subscription.student.id) FROM RoutePlanStudentEntity ps
             WHERE ps.route.planningSession.id = :sessionId
               AND ps.isDeleted = false
             """)
@@ -34,7 +34,7 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
     @Query("""
             SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps
             WHERE ps.route.planningSession.id = :sessionId
-              AND ps.student.id = :studentId
+              AND ps.subscription.student.id = :studentId
               AND ps.isDeleted = false
             """)
     boolean existsBySessionAndStudent(@Param("sessionId") Long sessionId,
@@ -78,8 +78,8 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
             SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps
             WHERE ps.route.planningSession.id = :sessionId
               AND ps.route.id <> :routeId
-              AND ps.student.id = :studentId
-              AND ps.route.routeDirection = :direction
+              AND ps.subscription.student.id = :studentId
+              AND ps.route.planningSession.routeDirection = :direction
               AND ps.isDeleted = false
             """)
     boolean existsInOtherRoutesOfSessionAndDirection(
@@ -91,7 +91,7 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
     @Query("""
             SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps
             WHERE ps.route.id = :routeId
-              AND ps.student.id = :studentId
+              AND ps.subscription.student.id = :studentId
               AND ps.isDeleted = false
             """)
     boolean existsByRouteAndStudent(
@@ -101,7 +101,7 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
     @Query("""
             SELECT COUNT(ps) > 0 FROM RoutePlanStudentEntity ps
             WHERE ps.route.id = :routeId
-              AND ps.student.id = :studentId
+              AND ps.subscription.student.id = :studentId
               AND ps.subscription.id = :subscriptionId
               AND ps.isDeleted = false
             """)
@@ -114,7 +114,7 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
             SELECT ps FROM RoutePlanStudentEntity ps
             WHERE ps.route.planningSession.id = :sessionId
               AND ps.route.id <> :routeId
-              AND ps.route.routeDirection = :direction
+              AND ps.route.planningSession.routeDirection = :direction
               AND ps.isDeleted = false
             """)
     List<RoutePlanStudentEntity> findStudentsInOtherRoutesOfSessionAndDirection(

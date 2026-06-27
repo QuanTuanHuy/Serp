@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import {
@@ -31,9 +31,13 @@ import {
   useDeleteDepotMutation,
   useDeleteDriverMutation,
   useGetAttendantsQuery,
+  useGetAttendantByIdQuery,
+  useGetBusByIdQuery,
   useGetBusTypesQuery,
   useGetBusesQuery,
+  useGetDepotByIdQuery,
   useGetDepotsQuery,
+  useGetDriverByIdQuery,
   useGetDriversQuery,
   useUpdateAttendantMutation,
   useUpdateBusMutation,
@@ -49,9 +53,12 @@ import {
   DepotFormDialog,
   DriverFormDialog,
 } from '../components/SchoolBusMasterDataForms';
-import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
+import {
+  SchoolBusReadOnlyDetailDialog,
+  type SchoolBusDetailSection,
+} from '../components/SchoolBusReadOnlyDetailDialog';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
@@ -66,13 +73,21 @@ import {
 import type {
   SchoolBusAccountUser,
   SchoolBusAttendant,
+  SchoolBusAttendantUpsertRequest,
   SchoolBusBus,
+  SchoolBusBusUpsertRequest,
   SchoolBusDepot,
+  SchoolBusDepotUpsertRequest,
   SchoolBusDriver,
+  SchoolBusDriverUpsertRequest,
 } from '../types';
-import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
+import {
+  getPageItems,
+  SCHOOL_BUS_OPTION_QUERY,
+  SCHOOL_BUS_PAGE_QUERY_OPTIONS,
+} from '../utils';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function UnassignedBadge({ label = 'Unassigned' }: { label?: string }) {
   return (
@@ -98,16 +113,23 @@ type FleetDeleteTarget =
   | { type: 'depot'; entity: SchoolBusDepot }
   | null;
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+type FleetViewTarget =
+  | { type: 'bus'; id: number }
+  | { type: 'driver'; id: number }
+  | { type: 'attendant'; id: number }
+  | { type: 'depot'; id: number }
+  | null;
+
+// -- Main Page -----------------------------------------------------------------
 
 export function SchoolBusFleetPage() {
   const currentUser = useAppSelector(selectUserProfile);
   const organizationId = currentUser?.organizationId;
 
-  // ─── Active Tab ─────────────────────────────────────────────────
+  // --- Active Tab -------------------------------------------------
   const [activeTab, setActiveTab] = React.useState('buses');
 
-  // ─── Pagination ─────────────────────────────────────────────────
+  // --- Pagination -------------------------------------------------
   const busPagination = useSchoolBusPagination({
     page: 0,
     size: 10,
@@ -133,20 +155,26 @@ export function SchoolBusFleetPage() {
     sortDirection: 'ASC',
   });
 
-  // ─── Queries ────────────────────────────────────────────────────
+  // --- Queries ----------------------------------------------------
   const { data: busesData, isLoading: loadingBuses } = useGetBusesQuery(
-    busPagination.params
+    busPagination.params,
+    { ...SCHOOL_BUS_PAGE_QUERY_OPTIONS, skip: activeTab !== 'buses' }
   );
   const { data: driversData, isLoading: loadingDrivers } = useGetDriversQuery(
-    driverPagination.params
+    driverPagination.params,
+    { ...SCHOOL_BUS_PAGE_QUERY_OPTIONS, skip: activeTab !== 'drivers' }
   );
   const { data: attendantsData, isLoading: loadingAttendants } =
-    useGetAttendantsQuery(attendantPagination.params);
+    useGetAttendantsQuery(
+      attendantPagination.params,
+      { ...SCHOOL_BUS_PAGE_QUERY_OPTIONS, skip: activeTab !== 'attendants' }
+    );
   const { data: depotsPageData, isLoading: loadingDepots } = useGetDepotsQuery(
-    depotPagination.params
+    depotPagination.params,
+    { ...SCHOOL_BUS_PAGE_QUERY_OPTIONS, skip: activeTab !== 'depots' }
   );
 
-  // ─── Dialog state ───────────────────────────────────────────────
+  // --- Dialog state -----------------------------------------------
   const [busDialogOpen, setBusDialogOpen] = React.useState(false);
   const [driverDialogOpen, setDriverDialogOpen] = React.useState(false);
   const [attendantDialogOpen, setAttendantDialogOpen] = React.useState(false);
@@ -176,7 +204,7 @@ export function SchoolBusFleetPage() {
     { skip: !busDialogOpen && !depotDialogOpen && activeTab !== 'buses' }
   );
 
-  // ─── Mutations ──────────────────────────────────────────────────
+  // --- Mutations --------------------------------------------------
   const [createBus, { isLoading: creatingBus }] = useCreateBusMutation();
   const [updateBus, { isLoading: updatingBus }] = useUpdateBusMutation();
   const [deleteBus, { isLoading: deletingBus }] = useDeleteBusMutation();
@@ -196,7 +224,7 @@ export function SchoolBusFleetPage() {
   const [updateDepot, { isLoading: updatingDepot }] = useUpdateDepotMutation();
   const [deleteDepot, { isLoading: deletingDepot }] = useDeleteDepotMutation();
 
-  // ─── Derived data ───────────────────────────────────────────────
+  // --- Derived data -----------------------------------------------
   const buses = getPageItems(busesData?.data);
   const drivers = getPageItems(driversData?.data);
   const attendants = getPageItems(attendantsData?.data);
@@ -207,7 +235,7 @@ export function SchoolBusFleetPage() {
   const busTypes = busTypesData?.data || [];
   const depots = getPageItems(depotsData?.data);
 
-  // ─── Stats ──────────────────────────────────────────────────────
+  // --- Stats ------------------------------------------------------
   const availableBuses = buses.filter(
     (b) => b.status === 'AVAILABLE' || b.status === 'ACTIVE'
   ).length;
@@ -218,7 +246,7 @@ export function SchoolBusFleetPage() {
     (a) => a.isActive !== false && a.status !== 'ON_LEAVE'
   ).length;
 
-  // ─── Filter state (per tab) ─────────────────────────────────────
+  // --- Filter state (per tab) -------------------------------------
   const [busSearch, setBusSearch] = React.useState('');
   const [busStatusFilter, setBusStatusFilter] = React.useState('');
   const [busDepotFilter, setBusDepotFilter] = React.useState('');
@@ -299,17 +327,102 @@ export function SchoolBusFleetPage() {
     return result;
   }, [depotsPage, depotSearch, depotCoordsFilter]);
 
-  // ─── Editing state ──────────────────────────────────────────────
-  const [editingBus, setEditingBus] = React.useState<SchoolBusBus | null>(null);
-  const [editingDriver, setEditingDriver] =
-    React.useState<SchoolBusDriver | null>(null);
-  const [editingAttendant, setEditingAttendant] =
-    React.useState<SchoolBusAttendant | null>(null);
-  const [editingDepot, setEditingDepot] = React.useState<SchoolBusDepot | null>(
+  // --- Editing state ----------------------------------------------
+  const [editingBusId, setEditingBusId] = React.useState<number | null>(null);
+  const [editingDriverId, setEditingDriverId] = React.useState<number | null>(
     null
   );
+  const [editingAttendantId, setEditingAttendantId] = React.useState<
+    number | null
+  >(null);
+  const [editingDepotId, setEditingDepotId] = React.useState<number | null>(
+    null
+  );
+  const [viewTarget, setViewTarget] = React.useState<FleetViewTarget>(null);
   const [deleteTarget, setDeleteTarget] =
     React.useState<FleetDeleteTarget>(null);
+
+  const selectedBusId =
+    editingBusId || (viewTarget?.type === 'bus' ? viewTarget.id : null);
+  const selectedDriverId =
+    editingDriverId || (viewTarget?.type === 'driver' ? viewTarget.id : null);
+  const selectedAttendantId =
+    editingAttendantId ||
+    (viewTarget?.type === 'attendant' ? viewTarget.id : null);
+  const selectedDepotId =
+    editingDepotId || (viewTarget?.type === 'depot' ? viewTarget.id : null);
+
+  const {
+    data: selectedBusData,
+    isFetching: loadingSelectedBus,
+    isError: selectedBusError,
+  } = useGetBusByIdQuery(selectedBusId || 0, { skip: !selectedBusId });
+  const {
+    data: selectedDriverData,
+    isFetching: loadingSelectedDriver,
+    isError: selectedDriverError,
+  } = useGetDriverByIdQuery(selectedDriverId || 0, {
+    skip: !selectedDriverId,
+  });
+  const {
+    data: selectedAttendantData,
+    isFetching: loadingSelectedAttendant,
+    isError: selectedAttendantError,
+  } = useGetAttendantByIdQuery(selectedAttendantId || 0, {
+    skip: !selectedAttendantId,
+  });
+  const {
+    data: selectedDepotData,
+    isFetching: loadingSelectedDepot,
+    isError: selectedDepotError,
+  } = useGetDepotByIdQuery(selectedDepotId || 0, { skip: !selectedDepotId });
+
+  const editingBus = editingBusId ? (selectedBusData?.data || null) : null;
+  const editingDriver = editingDriverId
+    ? (selectedDriverData?.data || null)
+    : null;
+  const editingAttendant = editingAttendantId
+    ? (selectedAttendantData?.data || null)
+    : null;
+  const editingDepot = editingDepotId ? (selectedDepotData?.data || null) : null;
+  const viewingBus =
+    viewTarget?.type === 'bus' ? (selectedBusData?.data || null) : null;
+  const viewingDriver =
+    viewTarget?.type === 'driver' ? (selectedDriverData?.data || null) : null;
+  const viewingAttendant =
+    viewTarget?.type === 'attendant'
+      ? (selectedAttendantData?.data || null)
+      : null;
+  const viewingDepot =
+    viewTarget?.type === 'depot' ? (selectedDepotData?.data || null) : null;
+  const fleetViewTitle = getFleetViewTitle(viewTarget);
+  const fleetViewLoading =
+    viewTarget?.type === 'bus'
+      ? loadingSelectedBus
+      : viewTarget?.type === 'driver'
+        ? loadingSelectedDriver
+        : viewTarget?.type === 'attendant'
+          ? loadingSelectedAttendant
+          : viewTarget?.type === 'depot'
+            ? loadingSelectedDepot
+            : false;
+  const fleetViewError =
+    viewTarget?.type === 'bus'
+      ? selectedBusError
+      : viewTarget?.type === 'driver'
+        ? selectedDriverError
+        : viewTarget?.type === 'attendant'
+          ? selectedAttendantError
+          : viewTarget?.type === 'depot'
+            ? selectedDepotError
+            : false;
+  const fleetViewSections = getFleetViewSections({
+    bus: viewingBus,
+    driver: viewingDriver,
+    attendant: viewingAttendant,
+    depot: viewingDepot,
+    type: viewTarget?.type || null,
+  });
 
   const driverDialogUsers = React.useMemo(
     () =>
@@ -330,59 +443,61 @@ export function SchoolBusFleetPage() {
     [accountUsers, attendantOptions, editingAttendant]
   );
 
-  // ─── Handlers ───────────────────────────────────────────────────
-  const handleSaveBus = async (values: any) => {
+  // --- Handlers ---------------------------------------------------
+  const handleSaveBus = async (values: SchoolBusBusUpsertRequest) => {
     try {
-      const response = editingBus
-        ? await updateBus({ id: editingBus.id, body: values }).unwrap()
+      const response = editingBusId
+        ? await updateBus({ id: editingBusId, body: values }).unwrap()
         : await createBus(values).unwrap();
       toast.success(response.message || 'Bus saved');
       setBusDialogOpen(false);
-      setEditingBus(null);
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save bus');
+      setEditingBusId(null);
+    } catch {
+      toast.error('Failed to save bus');
     }
   };
 
-  const handleSaveDriver = async (values: any) => {
+  const handleSaveDriver = async (values: SchoolBusDriverUpsertRequest) => {
     try {
-      const response = editingDriver
-        ? await updateDriver({ id: editingDriver.id, body: values }).unwrap()
+      const response = editingDriverId
+        ? await updateDriver({ id: editingDriverId, body: values }).unwrap()
         : await createDriver(values).unwrap();
       toast.success(response.message || 'Driver saved');
       setDriverDialogOpen(false);
-      setEditingDriver(null);
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save driver');
+      setEditingDriverId(null);
+    } catch {
+      toast.error('Failed to save driver');
     }
   };
 
-  const handleSaveAttendant = async (values: any) => {
+  const handleSaveAttendant = async (
+    values: SchoolBusAttendantUpsertRequest
+  ) => {
     try {
-      const response = editingAttendant
+      const response = editingAttendantId
         ? await updateAttendant({
-            id: editingAttendant.id,
+            id: editingAttendantId,
             body: values,
           }).unwrap()
         : await createAttendant(values).unwrap();
       toast.success(response.message || 'Attendant saved');
       setAttendantDialogOpen(false);
-      setEditingAttendant(null);
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save attendant');
+      setEditingAttendantId(null);
+    } catch {
+      toast.error('Failed to save attendant');
     }
   };
 
-  const handleSaveDepot = async (values: any) => {
+  const handleSaveDepot = async (values: SchoolBusDepotUpsertRequest) => {
     try {
-      const response = editingDepot
-        ? await updateDepot({ id: editingDepot.id, body: values }).unwrap()
+      const response = editingDepotId
+        ? await updateDepot({ id: editingDepotId, body: values }).unwrap()
         : await createDepot(values).unwrap();
       toast.success(response.message || 'Depot saved');
       setDepotDialogOpen(false);
-      setEditingDepot(null);
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save depot');
+      setEditingDepotId(null);
+    } catch {
+      toast.error('Failed to save depot');
     }
   };
 
@@ -403,12 +518,12 @@ export function SchoolBusFleetPage() {
         toast.success(response.message || 'Depot deleted');
       }
       setDeleteTarget(null);
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Delete failed');
+    } catch {
+      toast.error('Delete failed');
     }
   };
 
-  // ─── Table definitions ──────────────────────────────────────────
+  // --- Table definitions ------------------------------------------
 
   // Helper to format friendly bus type
   const formatBusType = (type?: string | null) => {
@@ -422,7 +537,7 @@ export function SchoolBusFleetPage() {
     return friendlyMap[type] || type.replace(/_/g, ' ').toLowerCase();
   };
 
-  // ─── Table definitions ──────────────────────────────────────────
+  // --- Table definitions ------------------------------------------
 
   const busColumns: SchoolBusTableColumn<SchoolBusBus>[] = [
     {
@@ -491,8 +606,7 @@ export function SchoolBusFleetPage() {
             variant='outline'
             className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
             onClick={() => {
-              setEditingBus(bus);
-              setBusDialogOpen(true);
+              setViewTarget({ type: 'bus', id: bus.id });
             }}
           >
             <Eye className='h-3.5 w-3.5' />
@@ -502,7 +616,7 @@ export function SchoolBusFleetPage() {
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
             onClick={() => {
-              setEditingBus(bus);
+              setEditingBusId(bus.id);
               setBusDialogOpen(true);
             }}
           >
@@ -614,8 +728,7 @@ export function SchoolBusFleetPage() {
             variant='outline'
             className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
             onClick={() => {
-              setEditingDriver(driver);
-              setDriverDialogOpen(true);
+              setViewTarget({ type: 'driver', id: driver.id });
             }}
           >
             <Eye className='h-3.5 w-3.5' />
@@ -625,7 +738,7 @@ export function SchoolBusFleetPage() {
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
             onClick={() => {
-              setEditingDriver(driver);
+              setEditingDriverId(driver.id);
               setDriverDialogOpen(true);
             }}
           >
@@ -722,8 +835,7 @@ export function SchoolBusFleetPage() {
             variant='outline'
             className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
             onClick={() => {
-              setEditingAttendant(attendant);
-              setAttendantDialogOpen(true);
+              setViewTarget({ type: 'attendant', id: attendant.id });
             }}
           >
             <Eye className='h-3.5 w-3.5' />
@@ -733,7 +845,7 @@ export function SchoolBusFleetPage() {
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
             onClick={() => {
-              setEditingAttendant(attendant);
+              setEditingAttendantId(attendant.id);
               setAttendantDialogOpen(true);
             }}
           >
@@ -856,8 +968,7 @@ export function SchoolBusFleetPage() {
             variant='outline'
             className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
             onClick={() => {
-              setEditingDepot(depot);
-              setDepotDialogOpen(true);
+              setViewTarget({ type: 'depot', id: depot.id });
             }}
           >
             <Eye className='h-3.5 w-3.5' />
@@ -867,7 +978,7 @@ export function SchoolBusFleetPage() {
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
             onClick={() => {
-              setEditingDepot(depot);
+              setEditingDepotId(depot.id);
               setDepotDialogOpen(true);
             }}
           >
@@ -911,13 +1022,13 @@ export function SchoolBusFleetPage() {
     </div>
   );
 
-  // ─── Render ─────────────────────────────────────────────────────
+  // --- Render -----------------------------------------------------
 
   return (
     <>
       <SchoolBusPageShell
         title='Fleet & crew status'
-        description='Operational fleet overview — vehicle availability, crew licensing, and depot configuration.'
+        description='Operational fleet overview - vehicle availability, crew licensing, and depot configuration.'
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
@@ -939,7 +1050,7 @@ export function SchoolBusFleetPage() {
               <DropdownMenuContent align='end'>
                 <DropdownMenuItem
                   onClick={() => {
-                    setEditingDriver(null);
+                    setEditingDriverId(null);
                     setDriverDialogOpen(true);
                   }}
                 >
@@ -947,7 +1058,7 @@ export function SchoolBusFleetPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    setEditingAttendant(null);
+                    setEditingAttendantId(null);
                     setAttendantDialogOpen(true);
                   }}
                 >
@@ -955,7 +1066,7 @@ export function SchoolBusFleetPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    setEditingDepot(null);
+                    setEditingDepotId(null);
                     setDepotDialogOpen(true);
                   }}
                 >
@@ -966,7 +1077,7 @@ export function SchoolBusFleetPage() {
             <Button
               className='rounded-full'
               onClick={() => {
-                setEditingBus(null);
+                setEditingBusId(null);
                 setBusDialogOpen(true);
               }}
             >
@@ -988,14 +1099,14 @@ export function SchoolBusFleetPage() {
             <SchoolBusMetricCard
               label='Available drivers'
               value={availableDrivers}
-              hint={`${drivers.length} total • ${drivers.length - availableDrivers} unavailable`}
+              hint={`${drivers.length} total - ${drivers.length - availableDrivers} unavailable`}
               icon={UserCog}
               tone='linked'
             />
             <SchoolBusMetricCard
               label='Available attendants'
               value={availableAttendants}
-              hint={`${attendants.length} total • ${attendants.length - availableAttendants} unavailable`}
+              hint={`${attendants.length} total - ${attendants.length - availableAttendants} unavailable`}
               icon={ShieldCheck}
               tone='success'
             />
@@ -1127,13 +1238,13 @@ export function SchoolBusFleetPage() {
         </div>
       </SchoolBusPageShell>
 
-      {/* ─── Dialogs ─────────────────────────────────────────────── */}
+      {/* --- Dialogs ----------------------------------------------- */}
 
       <BusFormDialog
-        open={busDialogOpen}
+        open={busDialogOpen && (!editingBusId || Boolean(editingBus))}
         onOpenChange={(open) => {
           setBusDialogOpen(open);
-          if (!open) setEditingBus(null);
+          if (!open) setEditingBusId(null);
         }}
         initialData={editingBus}
         busTypes={busTypes}
@@ -1144,10 +1255,10 @@ export function SchoolBusFleetPage() {
       />
 
       <DriverFormDialog
-        open={driverDialogOpen}
+        open={driverDialogOpen && (!editingDriverId || Boolean(editingDriver))}
         onOpenChange={(open) => {
           setDriverDialogOpen(open);
-          if (!open) setEditingDriver(null);
+          if (!open) setEditingDriverId(null);
         }}
         initialData={editingDriver}
         accountUsers={driverDialogUsers}
@@ -1157,10 +1268,13 @@ export function SchoolBusFleetPage() {
       />
 
       <AttendantFormDialog
-        open={attendantDialogOpen}
+        open={
+          attendantDialogOpen &&
+          (!editingAttendantId || Boolean(editingAttendant))
+        }
         onOpenChange={(open) => {
           setAttendantDialogOpen(open);
-          if (!open) setEditingAttendant(null);
+          if (!open) setEditingAttendantId(null);
         }}
         initialData={editingAttendant}
         accountUsers={attendantDialogUsers}
@@ -1170,14 +1284,26 @@ export function SchoolBusFleetPage() {
       />
 
       <DepotFormDialog
-        open={depotDialogOpen}
+        open={depotDialogOpen && (!editingDepotId || Boolean(editingDepot))}
         onOpenChange={(open) => {
           setDepotDialogOpen(open);
-          if (!open) setEditingDepot(null);
+          if (!open) setEditingDepotId(null);
         }}
         initialData={editingDepot}
         isLoading={creatingDepot || updatingDepot}
         onSubmit={handleSaveDepot}
+      />
+
+      <SchoolBusReadOnlyDetailDialog
+        open={Boolean(viewTarget)}
+        onOpenChange={(open) => {
+          if (!open) setViewTarget(null);
+        }}
+        title={fleetViewTitle}
+        description='Read-only fleet and crew information loaded from the detail API.'
+        isLoading={fleetViewLoading}
+        isError={fleetViewError}
+        sections={fleetViewSections}
       />
 
       <SchoolBusDeleteDialog
@@ -1204,7 +1330,124 @@ export function SchoolBusFleetPage() {
   );
 }
 
-// ── Helper: filter account users for crew assignment ──────────────────────────
+function getFleetViewTitle(viewTarget: FleetViewTarget) {
+  if (viewTarget?.type === 'bus') return 'Bus detail';
+  if (viewTarget?.type === 'driver') return 'Driver detail';
+  if (viewTarget?.type === 'attendant') return 'Attendant detail';
+  if (viewTarget?.type === 'depot') return 'Depot detail';
+  return 'Fleet detail';
+}
+
+function getFleetViewSections({
+  type,
+  bus,
+  driver,
+  attendant,
+  depot,
+}: {
+  type: Exclude<FleetViewTarget, null>['type'] | null;
+  bus: SchoolBusBus | null;
+  driver: SchoolBusDriver | null;
+  attendant: SchoolBusAttendant | null;
+  depot: SchoolBusDepot | null;
+}): SchoolBusDetailSection[] {
+  if (type === 'bus') {
+    return [
+      {
+        title: 'Bus information',
+        fields: [
+          { label: 'Plate number', value: bus?.plateNumber },
+          { label: 'Bus type', value: bus?.busType },
+          { label: 'Capacity', value: bus?.capacity },
+          { label: 'Status', value: bus?.status },
+          { label: 'Active', value: bus?.isActive === false ? 'No' : 'Yes' },
+        ],
+      },
+      {
+        title: 'Assignment defaults',
+        fields: [
+          { label: 'Home depot', value: bus?.homeDepotName },
+          { label: 'Home depot ID', value: bus?.homeDepotId },
+        ],
+      },
+    ];
+  }
+
+  if (type === 'driver') {
+    return [
+      {
+        title: 'Account link',
+        fields: [
+          { label: 'Account user ID', value: driver?.accountUserId || driver?.userId },
+          { label: 'Account email', value: driver?.user?.email },
+        ],
+      },
+      {
+        title: 'Driver information',
+        fields: [
+          { label: 'Full name', value: driver?.fullName },
+          { label: 'Phone', value: driver?.phone },
+          { label: 'Status', value: driver?.status },
+          { label: 'Active', value: driver?.isActive === false ? 'No' : 'Yes' },
+        ],
+      },
+    ];
+  }
+
+  if (type === 'attendant') {
+    return [
+      {
+        title: 'Account link',
+        fields: [
+          {
+            label: 'Account user ID',
+            value: attendant?.accountUserId || attendant?.userId,
+          },
+          { label: 'Account email', value: attendant?.user?.email },
+        ],
+      },
+      {
+        title: 'Attendant information',
+        fields: [
+          { label: 'Full name', value: attendant?.fullName },
+          { label: 'Phone', value: attendant?.phone },
+          { label: 'Status', value: attendant?.status },
+          {
+            label: 'Active',
+            value: attendant?.isActive === false ? 'No' : 'Yes',
+          },
+        ],
+      },
+    ];
+  }
+
+  if (type === 'depot') {
+    return [
+      {
+        title: 'Depot information',
+        fields: [
+          { label: 'Depot code', value: depot?.code },
+          { label: 'Depot name', value: depot?.name },
+          { label: 'Contact phone', value: depot?.contactPhone },
+          { label: 'Active', value: depot?.isActive === false ? 'No' : 'Yes' },
+          { label: 'Address', value: depot?.address, fullWidth: true },
+          { label: 'Description', value: depot?.description, fullWidth: true },
+        ],
+      },
+      {
+        title: 'Coordinates',
+        fields: [
+          { label: 'Latitude', value: depot?.latitude },
+          { label: 'Longitude', value: depot?.longitude },
+        ],
+      },
+    ];
+  }
+
+  return [];
+}
+
+// -- Helper: filter account users for crew assignment --------------------------
 
 function buildAvailableCrewAccountUsers<
   TProfile extends { id: number; userId: number; isActive?: boolean | null },

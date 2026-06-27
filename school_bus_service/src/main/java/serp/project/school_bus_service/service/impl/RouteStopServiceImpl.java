@@ -25,11 +25,14 @@ import serp.project.school_bus_service.enums.RouteStopPurpose;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.service.IPickupPointService;
 import serp.project.school_bus_service.repository.RouteStopRepository;
+import serp.project.school_bus_service.service.IDepotService;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
 import serp.project.school_bus_service.service.IRouteGeometryService;
+import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.service.IRoutePlanningSessionService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
+import serp.project.school_bus_service.service.ISchoolService;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
@@ -51,9 +54,12 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     private final IRouteService routeService;
     private final IRoutePlanStudentService routePlanStudentService;
     private final IPickupPointService pickupPointService;
+    private final ISchoolService schoolService;
+    private final IDepotService depotService;
     private final IRoutePlanningSessionService planningSessionService;
     private final IStudentSubscriptionService subscriptionService;
     private final IRouteGeometryService routeGeometryService;
+    private final IRouteDispatchService routeDispatchService;
     private final SchoolBusMapper mapper;
     private final MessageCommon messageCommon;
 
@@ -61,18 +67,24 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
             @Lazy IRouteService routeService,
             IRoutePlanStudentService routePlanStudentService,
             IPickupPointService pickupPointService,
+            ISchoolService schoolService,
+            IDepotService depotService,
             @Lazy IRoutePlanningSessionService planningSessionService,
             IStudentSubscriptionService subscriptionService,
             @Lazy IRouteGeometryService routeGeometryService,
+            @Lazy IRouteDispatchService routeDispatchService,
             SchoolBusMapper mapper,
             MessageCommon messageCommon) {
         this.routeStopRepository = routeStopRepository;
         this.routeService = routeService;
         this.routePlanStudentService = routePlanStudentService;
         this.pickupPointService = pickupPointService;
+        this.schoolService = schoolService;
+        this.depotService = depotService;
         this.planningSessionService = planningSessionService;
         this.subscriptionService = subscriptionService;
         this.routeGeometryService = routeGeometryService;
+        this.routeDispatchService = routeDispatchService;
         this.mapper = mapper;
         this.messageCommon = messageCommon;
     }
@@ -91,8 +103,8 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
         requireEditable(route);
 
-        List<RouteStopEntity> allStops = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
+        List<RouteStopEntity> allStops = hydrateLocations(routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId), tenantId);
 
         List<RouteStopEntity> terminals = allStops.stream()
                 .filter(s -> s.getStopPurpose() != null && s.getStopPurpose().isTerminal()).toList();
@@ -136,7 +148,8 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
         recalculateRouteDistance(route, tenantId);
-        return routeStopRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId)
+        return hydrateLocations(routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId), tenantId)
                 .stream().map(mapper::toRouteStopResponse).toList();
     }
 
@@ -150,8 +163,8 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
 
         PickupPointEntity pickupPoint = pickupPointService.getPickupPoint(request.getPickupPointId(), tenantId);
 
-        List<RouteStopEntity> existingStops = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
+        List<RouteStopEntity> existingStops = hydrateLocations(routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId), tenantId);
 
         boolean duplicate = existingStops.stream()
                 .filter(s -> s.getPickupPoint() != null)
@@ -229,8 +242,8 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         PickupPointEntity dropoffPoint = subscription.getDropoffPoint();
 
         // Load current stops
-        List<RouteStopEntity> existingStops = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
+        List<RouteStopEntity> existingStops = hydrateLocations(routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId), tenantId);
 
         // Find or auto-create the relevant stop (pickup for OUTBOUND, dropoff for
         // RETURN)
@@ -294,6 +307,7 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         requireSelectedBusCapacity(route, routeId);
 
         RouteStopEntity stop = routeStopRepository.findByIdAndTenantIdAndIsDeletedFalse(stopId, tenantId)
+                .map(entity -> hydrateLocation(entity, tenantId))
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND,
                         messageCommon.getMessage(AppErrorCode.NOT_FOUND)));
         if (!stop.getRoute().getId().equals(routeId)) {
@@ -318,13 +332,14 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
                     session.getId(), routeId, student.getId(), direction);
             if (assignedInOtherRoute) {
                 throw new AppException(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
-                        messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED, student.getFullName()));
+                        messageCommon.getMessage(AppErrorCode.RouteStop.STUDENT_ALREADY_ASSIGNED,
+                                student.getFullName()));
             }
         }
 
         // Find terminal stop
-        List<RouteStopEntity> existingStops = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
+        List<RouteStopEntity> existingStops = hydrateLocations(routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId), tenantId);
         RouteStopEntity terminalStop = existingStops.stream()
                 .filter(s -> s.getStopPurpose() == (direction == RouteDirection.OUTBOUND
                         ? RouteStopPurpose.END_TERMINAL
@@ -373,6 +388,7 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         requireEditable(route);
 
         RouteStopEntity stop = routeStopRepository.findByIdAndTenantIdAndIsDeletedFalse(stopId, tenantId)
+                .map(entity -> hydrateLocation(entity, tenantId))
                 .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND,
                         messageCommon.getMessage(AppErrorCode.NOT_FOUND)));
         if (!stop.getRoute().getId().equals(routeId)) {
@@ -492,8 +508,8 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
         updateRouteStudentCount(route, routeId, actorId);
 
         // Normalize remaining active stops to avoid gaps in stop order
-        List<RouteStopEntity> remainingStops = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
+        List<RouteStopEntity> remainingStops = hydrateLocations(routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId), tenantId);
         saveNormalizedStops(remainingStops);
 
         recalculateRouteDistance(route, tenantId);
@@ -578,14 +594,15 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     }
 
     private void requireSelectedBusCapacity(RoutePlanEntity route, Long routeId) {
-        if (route.getSelectedBus() == null) {
+        Integer capacity = routeDispatchService.findAssignmentEntityByRoute(routeId, route.getTenantId())
+                .map(assignment -> assignment.getBus().getCapacity())
+                .orElse(null);
+        if (capacity == null && route.getSelectedBus() != null) {
+            capacity = route.getSelectedBus().getCapacity();
+        }
+        if (capacity == null) {
             throw new AppException(AppErrorCode.Bus.SELECTED_BUS_REQUIRED,
                     messageCommon.getMessage(AppErrorCode.Bus.SELECTED_BUS_REQUIRED));
-        }
-        Integer capacity = route.getSelectedBus().getCapacity();
-        if (capacity == null) {
-            throw new AppException(AppErrorCode.Bus.CAPACITY_NOT_CONFIGURED,
-                    messageCommon.getMessage(AppErrorCode.Bus.CAPACITY_NOT_CONFIGURED));
         }
         long currentStudentCount = routePlanStudentService.countDistinctStudentsByRoute(routeId);
         if (currentStudentCount + 1 > capacity) {
@@ -612,12 +629,15 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
 
     @Override
     public List<RouteStopEntity> findByRoute(Long routeId, Long tenantId) {
-        return routeStopRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId);
+        return hydrateLocations(
+                routeStopRepository.findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(routeId, tenantId),
+                tenantId);
     }
 
     @Override
     public Optional<RouteStopEntity> findRouteStop(Long stopId, Long tenantId) {
-        return routeStopRepository.findByIdAndTenantIdAndIsDeletedFalse(stopId, tenantId);
+        return routeStopRepository.findByIdAndTenantIdAndIsDeletedFalse(stopId, tenantId)
+                .map(stop -> hydrateLocation(stop, tenantId));
     }
 
     @Override
@@ -639,8 +659,8 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
     @Override
     @Transactional
     public void updateTerminalStops(RoutePlanEntity route, Long tenantId, Long actorId) {
-        List<RouteStopEntity> stops = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(route.getId(), tenantId);
+        List<RouteStopEntity> stops = hydrateLocations(routeStopRepository
+                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(route.getId(), tenantId), tenantId);
 
         RouteStopEntity startTerminal = stops.stream()
                 .filter(s -> s.getStopPurpose() == RouteStopPurpose.START_TERMINAL)
@@ -718,5 +738,24 @@ public class RouteStopServiceImpl extends AbstractBaseService<RouteStopEntity, L
 
     private void recalculateRouteDistance(RoutePlanEntity route, Long tenantId) {
         routeGeometryService.recalculateGeometry(route, tenantId);
+    }
+
+    private List<RouteStopEntity> hydrateLocations(List<RouteStopEntity> stops, Long tenantId) {
+        return stops.stream()
+                .map(stop -> hydrateLocation(stop, tenantId))
+                .toList();
+    }
+
+    @Override
+    public RouteStopEntity hydrateLocation(RouteStopEntity stop, Long tenantId) {
+        if (stop == null || stop.getLocationType() == null || stop.getLocationId() == null) {
+            return stop;
+        }
+        switch (stop.getLocationType()) {
+            case PICKUP_POINT -> stop.setPickupPoint(pickupPointService.getPickupPoint(stop.getLocationId(), tenantId));
+            case SCHOOL -> stop.setSchool(schoolService.getSchool(stop.getLocationId(), tenantId));
+            case DEPOT -> stop.setDepot(depotService.getDepot(stop.getLocationId(), tenantId));
+        }
+        return stop;
     }
 }

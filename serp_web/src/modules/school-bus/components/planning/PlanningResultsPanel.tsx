@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -50,7 +50,7 @@ import type {
   CreateRouteInSessionRequest,
 } from '../../types';
 
-/* ── Create Route Dialog ──────────────────────────────────────────────── */
+/* -- Create Route Dialog ------------------------------------------------ */
 
 type LocationType = 'SCHOOL' | 'DEPOT';
 type DirectionType = 'OUTBOUND' | 'RETURN';
@@ -77,7 +77,7 @@ function CreateRoutePanel({
 }) {
   const [open, setOpen] = useState(false);
 
-  const initDir = (session.routeDirection as DirectionType) ?? 'OUTBOUND';
+  const initDir = (session.routeDirection as DirectionType) || 'OUTBOUND';
   const [form, setForm] = useState<CreateRouteFormState>({
     routeName: '',
     routeDirection: initDir,
@@ -111,7 +111,7 @@ function CreateRoutePanel({
 
   // Fetch depots for selectors
   const { data: depotsData } = useGetDepotsQuery({ page: 0, size: 100 });
-  const depots = depotsData?.data?.items ?? [];
+  const depots = depotsData?.data?.items || [];
   const hasDepots = depots.length > 0;
   const selectedDepotId =
     initDir === 'OUTBOUND' ? form.startDepotId : form.endDepotId;
@@ -126,7 +126,7 @@ function CreateRoutePanel({
       : undefined,
     { skip: !selectedDepotId }
   );
-  const buses = busesData?.data?.items ?? [];
+  const buses = busesData?.data?.items || [];
   const selectedBus = buses.find((b) => Number(b.id) === Number(form.busId));
 
   const needsStartDepot = form.startLocationType === 'DEPOT';
@@ -221,14 +221,14 @@ function CreateRoutePanel({
               <div className='w-full rounded-xl border border-slate-150 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-700 shadow-none'>
                 {initDir === 'OUTBOUND' ? (
                   <span>
-                    OUTBOUND - Depot ➔ School{' '}
+                    OUTBOUND - Depot {'->'} School{' '}
                     <span className='text-[10px] font-medium text-slate-400 ml-1'>
                       (Inherited from session context)
                     </span>
                   </span>
                 ) : (
                   <span>
-                    RETURN - School ➔ Depot{' '}
+                    RETURN - School {'->'} Depot{' '}
                     <span className='text-[10px] font-medium text-slate-400 ml-1'>
                       (Inherited from session context)
                     </span>
@@ -271,7 +271,7 @@ function CreateRoutePanel({
                   </div>
                 ) : (
                   <p className='text-[11px] text-amber-600 font-medium'>
-                    ⚠️ No depots available. Please create a depot first.
+                    Warning: No depots available. Please create a depot first.
                   </p>
                 )
               ) : (
@@ -312,7 +312,7 @@ function CreateRoutePanel({
                   </div>
                 ) : (
                   <p className='text-[11px] text-amber-600 font-medium'>
-                    ⚠️ No depots available. Please create a depot first.
+                    Warning: No depots available. Please create a depot first.
                   </p>
                 )
               ) : (
@@ -431,7 +431,7 @@ function CreateRoutePanel({
             {((needsStartDepot && form.startDepotId === '') ||
               (needsEndDepot && form.endDepotId === '')) && (
               <p className='text-[11px] text-amber-600 font-semibold'>
-                ⚠️ Depot is required to create this route.
+                Warning: Depot is required to create this route.
               </p>
             )}
           </div>
@@ -461,7 +461,7 @@ function CreateRoutePanel({
   );
 }
 
-/* ── Session Route Card ──────────────────────────────────────────────────── */
+/* -- Session Route Card ---------------------------------------------------- */
 
 function SessionRouteCard({
   route,
@@ -488,10 +488,10 @@ function SessionRouteCard({
     'IN_PROGRESS',
     'COMPLETED',
   ].includes(route.status);
-  const studentCount = route.plannedStudentCount ?? 0;
-  const capacity = route.busCapacity ?? route.assignedBusCapacity ?? null;
+  const studentCount = route.plannedStudentCount || 0;
+  const capacity = route.busCapacity || null;
   const depotName =
-    route.startDepotName ??
+    route.startDepotName ||
     (route.startLocationType === 'DEPOT'
       ? route.startLocationName
       : route.endLocationName);
@@ -506,7 +506,7 @@ function SessionRouteCard({
     Boolean(route.busId) &&
     capacity != null &&
     studentCount < capacity;
-  const handleAddStudents = () => (onAddStudents ?? onSelect)(route.id);
+  const handleAddStudents = () => (onAddStudents || onSelect)(route.id);
 
   return (
     <div
@@ -567,7 +567,7 @@ function SessionRouteCard({
         <div className='flex items-center gap-1.5 min-w-0'>
           <span className='text-slate-400 font-medium'>Bus:</span>
           <span className='font-bold text-slate-700 truncate'>
-            {route.busPlateNumber ?? 'Not selected'}
+            {route.busPlateNumber || 'Not selected'}
           </span>
         </div>
         <div className='flex items-center gap-1.5 justify-end'>
@@ -579,20 +579,20 @@ function SessionRouteCard({
         <div className='flex items-center gap-1.5 min-w-0'>
           <span className='text-slate-400 font-medium'>Depot:</span>
           <span className='font-bold text-slate-700 truncate'>
-            {depotName ?? 'N/A'}
+            {depotName || 'N/A'}
           </span>
         </div>
         <div className='flex items-center gap-1.5 justify-end'>
           <span className='text-slate-400 font-medium'>Stops:</span>
           <span className='font-bold text-slate-700'>
-            {route.stopsCount ?? 0}
+            {route.stopsCount || 0}
           </span>
         </div>
         <div className='col-span-2 flex items-center gap-1.5 min-w-0 border-t border-slate-200/40 pt-1.5 mt-0.5'>
           <span className='text-slate-400 font-medium'>Staff:</span>
           <span className='font-semibold text-slate-700 truncate'>
             {route.driverName && route.attendantName ? (
-              `Driver: ${route.driverName} · Attendant: ${route.attendantName}`
+              `Driver: ${route.driverName} - Attendant: ${route.attendantName}`
             ) : route.driverName ? (
               `Driver: ${route.driverName} (No attendant)`
             ) : route.attendantName ? (
@@ -757,7 +757,7 @@ function SessionRouteCard({
   );
 }
 
-/* ── Route Card ─────────────────────────────────────────────────────────── */
+/* -- Route Card ----------------------------------------------------------- */
 
 function RouteCard({
   route,
@@ -817,7 +817,7 @@ function RouteCard({
         <div className='flex items-center gap-1.5 min-w-0'>
           <span className='text-slate-400 font-medium'>Capacity:</span>
           <span className='font-bold text-slate-700'>
-            {route.requiredCapacity ?? '-'}
+            {route.requiredCapacity || '-'}
           </span>
         </div>
         <div className='flex items-center gap-1.5 justify-end'>
@@ -843,7 +843,7 @@ function RouteCard({
         <div className='flex items-center gap-1.5 min-w-0'>
           <span className='text-slate-400 font-medium'>Stops:</span>
           <span className='font-bold text-slate-700'>
-            {route.stopCount ?? 0}
+            {route.stopCount || 0}
           </span>
         </div>
       </div>
@@ -895,7 +895,7 @@ function RouteCard({
   );
 }
 
-/* ── Route Detail Panel ─────────────────────────────────────────────────── */
+/* -- Route Detail Panel --------------------------------------------------- */
 
 function RouteDetailPanel({
   routeId,
@@ -913,7 +913,7 @@ function RouteDetailPanel({
     useRemoveRouteStudentMutation();
   const detail = routeDetail?.data;
 
-  // ── Confirm dialogs ──────────────────────────────────────────────────
+  // -- Confirm dialogs --------------------------------------------------
   const stopConfirm = useSchoolBusConfirm({
     onConfirm: async () => {
       const stopId = stopConfirm.confirmState.payload as number;
@@ -921,7 +921,7 @@ function RouteDetailPanel({
         await removeStop({ routeId, stopId, sessionId }).unwrap();
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message ?? 'Failed to remove stop');
+        toast.error(err?.data?.message || 'Failed to remove stop');
       }
     },
     isLoading: removingStop,
@@ -943,7 +943,7 @@ function RouteDetailPanel({
         }).unwrap();
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message ?? 'Failed to remove student');
+        toast.error(err?.data?.message || 'Failed to remove student');
       }
     },
     isLoading: removingStudent,
@@ -956,8 +956,8 @@ function RouteDetailPanel({
       </div>
     );
 
-  const stops = detail.stops ?? [];
-  const students = detail.students ?? [];
+  const stops = detail.stops || [];
+  const students = detail.students || [];
   const editable = ![
     'COMPLETED',
     'IN_PROGRESS',
@@ -966,7 +966,7 @@ function RouteDetailPanel({
   ].includes(detail.route.status);
 
   const swap = async (i: number, j: number) => {
-    // Only swap middle stops — find their indices in the full stops array
+    // Only swap middle stops - find their indices in the full stops array
     const middleStops = stops.filter(
       (s) =>
         s.stopPurpose !== 'START_TERMINAL' && s.stopPurpose !== 'END_TERMINAL'
@@ -981,7 +981,7 @@ function RouteDetailPanel({
       }).unwrap();
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
-      toast.error(err?.data?.message ?? 'Failed to reorder stops');
+      toast.error(err?.data?.message || 'Failed to reorder stops');
     }
   };
 
@@ -1048,7 +1048,7 @@ function RouteDetailPanel({
                       startTerminal?.schoolName ||
                       'Start Depot/School'}
                   </span>
-                  <span className='text-slate-400'>➔</span>
+                  <span className='text-slate-400'>{'->'}</span>
                   <span className='bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100'>
                     {endTerminal?.depotName ||
                       endTerminal?.schoolName ||
@@ -1088,7 +1088,7 @@ function RouteDetailPanel({
                       {stop.pickupPointName || `Stop #${stop.id}`}
                     </span>
                     <span className='text-[10px] text-slate-450'>
-                      {stop.estimatedStudentCount ?? 0} students
+                      {stop.estimatedStudentCount || 0} students
                     </span>
                     {editable && (
                       <div
@@ -1162,7 +1162,7 @@ function RouteDetailPanel({
                               size='icon'
                               className='h-6 w-6 text-red-500 hover:text-red-700'
                               onClick={() =>
-                                delStudent(ps.studentId, ps.subscriptionId ?? 0)
+                                delStudent(ps.studentId, ps.subscriptionId || 0)
                               }
                               disabled={anyLoading}
                             >
@@ -1252,7 +1252,7 @@ function RouteDetailPanel({
   );
 }
 
-/* ── Main Results Panel ─────────────────────────────────────────────────── */
+/* -- Main Results Panel --------------------------------------------------- */
 
 interface PlanningResultsPanelProps {
   preview: SchoolBusPlanningPreview | null;
@@ -1342,7 +1342,7 @@ export function PlanningResultsPanel({
         }
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message ?? 'Failed to delete route');
+        toast.error(err?.data?.message || 'Failed to delete route');
       }
     },
     isLoading: deletingRoute,
@@ -1363,18 +1363,18 @@ export function PlanningResultsPanel({
         );
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message ?? 'Greedy Fill failed');
+        toast.error(err?.data?.message || 'Greedy Fill failed');
         throw e;
       }
     },
     isLoading: greedyFilling,
   });
 
-  const schoolId = Number(preview?.schoolId ?? form?.schoolId) || 0;
+  const schoolId = Number(preview?.schoolId || form?.schoolId) || 0;
   const { data: schoolData } = useGetSchoolByIdQuery(schoolId, {
     skip: !schoolId,
   });
-  const currentSchool = schoolData?.data ?? null;
+  const currentSchool = schoolData?.data || null;
 
   const scheduleId = 0; // schedule removed (Phase 3)
   // scheduleData query removed (Phase 3)
@@ -1401,7 +1401,7 @@ export function PlanningResultsPanel({
           <span className='text-xs font-bold'>Student Demand</span>
           <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
             {preview && !isPreviewStale
-              ? `Total ${preview.summary?.totalSubscriptions ?? preview.totalEligibleStudents} • Eligible ${preview.summary?.eligibleStudents ?? preview.totalEligibleStudents} • Points ${preview.summary?.pointCount ?? preview.totalEligiblePickupPoints}`
+              ? `Total ${preview.summary?.totalSubscriptions || preview.totalEligibleStudents} || Eligible ${preview.summary?.eligibleStudents || preview.totalEligibleStudents} || Points ${preview.summary?.pointCount || preview.totalEligiblePickupPoints}`
               : isPreviewStale
                 ? 'Out of date'
                 : 'No preview'}
@@ -1486,8 +1486,8 @@ export function PlanningResultsPanel({
               !isPreviewStale &&
               (() => {
                 const summary = preview?.summary;
-                const eligibleDemands = preview?.eligibleDemands ?? [];
-                const points = preview?.points ?? [];
+                const eligibleDemands = preview?.eligibleDemands || [];
+                const points = preview?.points || [];
 
                 if (preview.existingSessionId) {
                   return (
@@ -1534,14 +1534,14 @@ export function PlanningResultsPanel({
 
                 // Derived variables for display
                 const totalSubs =
-                  summary?.totalSubscriptions ?? preview.totalEligibleStudents;
+                  summary?.totalSubscriptions || preview.totalEligibleStudents;
                 const eligibleCount =
-                  summary?.eligibleStudents ?? preview.totalEligibleStudents;
+                  summary?.eligibleStudents || preview.totalEligibleStudents;
                 const pointsCount =
-                  summary?.pointCount ?? preview.totalEligiblePickupPoints;
+                  summary?.pointCount || preview.totalEligiblePickupPoints;
 
                 const currentDirection =
-                  preview?.routeDirection ?? form?.routeDirection;
+                  preview?.routeDirection || form?.routeDirection;
 
                 return (
                   <div className='p-5 space-y-4 bg-white rounded-2xl'>
@@ -1658,7 +1658,7 @@ export function PlanningResultsPanel({
                                         <span className='font-bold'>
                                           {d.studentCode}
                                         </span>
-                                        <span>•</span>
+                                        <span>-</span>
                                         <span>
                                           {d.tripOption === 'ONE_WAY'
                                             ? 'One Way'
@@ -1750,17 +1750,17 @@ export function PlanningResultsPanel({
                       (() => {
                         // 1. School Info
                         const schName =
-                          preview?.schoolName ?? currentSchool?.name ?? '-';
+                          preview?.schoolName || currentSchool?.name || '-';
                         const schCode =
-                          preview?.schoolCode ?? currentSchool?.code ?? '-';
+                          preview?.schoolCode || currentSchool?.code || '-';
                         const schAddr =
-                          preview?.schoolAddress ??
-                          currentSchool?.address ??
+                          preview?.schoolAddress ||
+                          currentSchool?.address ||
                           '-';
 
                         // 3. Active Days
                         const pActiveDays = preview?.activeDays;
-                        const rawActiveDays = pActiveDays ?? [];
+                        const rawActiveDays = pActiveDays || [];
                         const activeDaysSet = new Set(
                           rawActiveDays.map((d: string) => d.toUpperCase())
                         );
@@ -1785,7 +1785,7 @@ export function PlanningResultsPanel({
                         };
 
                         // Check if service date matches schedule days
-                        const sDate = preview?.serviceDate ?? form?.serviceDate;
+                        const sDate = preview?.serviceDate || form?.serviceDate;
                         let dateMatchText = '';
                         let dateMatchColor = '';
                         if (sDate) {
@@ -1818,13 +1818,13 @@ export function PlanningResultsPanel({
                           ? formatDate(sDate)
                           : '-';
                         const dirVal =
-                          preview?.direction ?? form?.routeDirection;
+                          preview?.direction || form?.routeDirection;
                         const dirLabel =
                           dirVal === 'OUTBOUND'
-                            ? 'Home ➔ School'
+                            ? 'Home -> School'
                             : dirVal === 'RETURN'
-                              ? 'School ➔ Home'
-                              : (dirVal ?? '-');
+                              ? 'School -> Home'
+                              : (dirVal || '-');
                         const hasContext = !!(
                           form?.schoolId || preview?.schoolId
                         );
@@ -1897,8 +1897,8 @@ export function PlanningResultsPanel({
                                   <span>
                                     {dateMatchText ===
                                     'Service date matches schedule day'
-                                      ? '✓'
-                                      : '⚠️'}
+                                      ? 'OK'
+                                      : 'Warning:'}
                                   </span>
                                   <span>{dateMatchText}</span>
                                 </div>
@@ -2046,7 +2046,7 @@ export function PlanningResultsPanel({
                 >
                   <ManualDemandAssignPanel
                     selectedRoute={
-                      sessionRoutes.find((r) => r.id === selectedRouteId) ??
+                      sessionRoutes.find((r) => r.id === selectedRouteId) ||
                       null
                     }
                     eligibleStudents={eligibleStudents}
@@ -2062,7 +2062,7 @@ export function PlanningResultsPanel({
         {selectedRouteId && rightPanelTab === 'route-builder' && (
           <RouteDetailPanel
             routeId={selectedRouteId}
-            sessionId={activeSession?.id ?? 0}
+            sessionId={activeSession?.id || 0}
           />
         )}
       </div>

@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import serp.project.school_bus_service.enums.RouteDirection;
@@ -25,50 +26,32 @@ import java.time.LocalTime;
 @Setter
 public class RoutePlanEntity extends BaseModel {
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "school_id")
-    private SchoolEntity school;
+    @Transient
+    private BusEntity selectedBus;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "route_direction", nullable = false)
-    private RouteDirection routeDirection;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "start_location_type", nullable = false)
+    @Transient
     private RouteLocationType startLocationType;
 
-    @ManyToOne
-    @JoinColumn(name = "start_school_id")
+    @Transient
     private SchoolEntity startSchool;
 
-    @ManyToOne
-    @JoinColumn(name = "start_depot_id")
+    @Transient
     private DepotEntity startDepot;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "end_location_type", nullable = false)
+    @Transient
     private RouteLocationType endLocationType;
 
-    @ManyToOne
-    @JoinColumn(name = "end_school_id")
+    @Transient
     private SchoolEntity endSchool;
 
-    @ManyToOne
-    @JoinColumn(name = "end_depot_id")
+    @Transient
     private DepotEntity endDepot;
-
-    @ManyToOne
-    @JoinColumn(name = "selected_bus_id")
-    private BusEntity selectedBus;
 
     @Column(name = "route_code", nullable = false)
     private String routeCode;
 
     @Column(name = "route_name", nullable = false)
     private String routeName;
-
-    @Column(name = "service_date", nullable = false)
-    private LocalDate serviceDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -82,9 +65,6 @@ public class RoutePlanEntity extends BaseModel {
 
     @Column(name = "planned_student_count", nullable = false)
     private Integer plannedStudentCount = 0;
-
-    @Column(name = "assigned_bus_capacity")
-    private Integer assignedBusCapacity;
 
     @Column(name = "version_no", nullable = false)
     private Integer versionNo = 1;
@@ -124,7 +104,7 @@ public class RoutePlanEntity extends BaseModel {
 
 
     /** The planning session this route belongs to (null for legacy/standalone routes). */
-    @ManyToOne
+    @ManyToOne(optional = false)
     @JoinColumn(name = "planning_session_id")
     private RoutePlanningSessionEntity planningSession;
 
@@ -141,4 +121,28 @@ public class RoutePlanEntity extends BaseModel {
 
     @org.hibernate.annotations.Formula("COALESCE(updated_at, created_at)")
     private LocalDateTime lastModifiedDate;
+
+    public SchoolEntity getSchool() {
+        return planningSession != null ? planningSession.getSchool() : null;
+    }
+
+    public void setSchool(SchoolEntity school) {
+        // School is derived from planningSession after normalization.
+    }
+
+    public LocalDate getServiceDate() {
+        return planningSession != null ? planningSession.getServiceDate() : null;
+    }
+
+    public void setServiceDate(LocalDate serviceDate) {
+        // Service date is derived from planningSession after normalization.
+    }
+
+    public RouteDirection getRouteDirection() {
+        return planningSession != null ? planningSession.getRouteDirection() : null;
+    }
+
+    public void setRouteDirection(RouteDirection routeDirection) {
+        // Route direction is derived from planningSession after normalization.
+    }
 }

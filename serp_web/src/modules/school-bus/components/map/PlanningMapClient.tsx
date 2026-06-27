@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect } from 'react';
 import { Marker, Polyline, Popup, useMap } from 'react-leaflet';
@@ -20,7 +20,7 @@ import type {
 } from '../../types';
 import { useMapMarkerVisibility } from './MapMarkerVisibilityContext';
 
-// ── Auto-fit bounds when markers / fitKey change ──────────────────────────────
+// -- Auto-fit bounds when markers / fitKey change ------------------------------
 
 interface FitBoundsProps {
   positions: [number, number][];
@@ -41,7 +41,7 @@ function FitBounds({ positions, fitKey }: FitBoundsProps) {
   return null;
 }
 
-// ── Invalidate Map Size ──────────────────────────────────────────────────────
+// -- Invalidate Map Size ------------------------------------------------------
 
 function MapInvalidator({ trigger }: { trigger?: number | boolean }) {
   const map = useMap();
@@ -54,7 +54,7 @@ function MapInvalidator({ trigger }: { trigger?: number | boolean }) {
   return null;
 }
 
-// ── Props ────────────────────────────────────────────────────────────────────
+// -- Props --------------------------------------------------------------------
 
 interface PlanningPickupPoint {
   pickupPointId: number;
@@ -102,7 +102,7 @@ export interface PlanningMapClientProps {
   selectedRoute?: SchoolBusRoute | null;
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// -- Component ----------------------------------------------------------------
 
 export default function PlanningMapClient({
   school,
@@ -155,7 +155,7 @@ export default function PlanningMapClient({
     return [];
   };
 
-  // Route stop positions (in order) — used for polyline + "fit route"
+  // Route stop positions (in order) - used for polyline + "fit route"
   const sortedStops = [...selectedRouteStops]
     .filter((s) => {
       const lat =
@@ -182,7 +182,7 @@ export default function PlanningMapClient({
           (p) =>
             typeof p.latitude === 'number' && typeof p.longitude === 'number'
         )
-        .map((p) => [p.latitude, p.longitude] as [number, number]) ?? []
+        .map((p) => [p.latitude, p.longitude] as [number, number]) || []
     ).length >= 2
       ? (selectedRoutePath?.coordinates
           ?.filter(
@@ -230,9 +230,9 @@ export default function PlanningMapClient({
             <Popup>
               <div>
                 <p className='text-xs font-semibold text-slate-700'>
-                  🎓 School
+                   School
                 </p>
-                <p className='font-medium'>{school.name ?? 'School'}</p>
+                <p className='font-medium'>{school.name || 'School'}</p>
               </div>
             </Popup>
           </Marker>
@@ -252,7 +252,7 @@ export default function PlanningMapClient({
               <Popup>
                 <div>
                   <p className='text-xs font-semibold text-amber-700'>
-                    🏭 Depot
+                     Depot
                   </p>
                   <p className='font-medium'>{d.name}</p>
                   {d.address && (
@@ -264,7 +264,7 @@ export default function PlanningMapClient({
           );
         })}
 
-      {/* Pickup point markers — with student-count badge */}
+      {/* Pickup point markers - with student-count badge */}
       {isVisible('pickup') &&
         pickupPoints.map((pp) => {
           if (
@@ -281,7 +281,7 @@ export default function PlanningMapClient({
               <Popup>
                 <div>
                   <p className='text-xs font-semibold text-sky-700'>
-                    📍 Pickup point
+                     Pickup point
                   </p>
                   <p className='font-medium'>{pp.pickupPointName}</p>
                   <p className='text-xs text-slate-500'>
@@ -323,12 +323,12 @@ export default function PlanningMapClient({
                       Stop {idx + 1}
                     </p>
                     <p className='font-medium'>
-                      {stop.pickupPointName ??
-                        stop.displayName ??
+                      {stop.pickupPointName ||
+                        stop.displayName ||
                         `Stop #${stop.id}`}
                     </p>
                     <p className='text-xs text-slate-500'>
-                      {stop.estimatedStudentCount ?? 0} student(s)
+                      {stop.estimatedStudentCount || 0} student(s)
                     </p>
                   </div>
                 </Popup>
@@ -336,7 +336,7 @@ export default function PlanningMapClient({
             );
           })}
 
-      {/* Route polyline — real road geometry if available, else straight-line fallback */}
+      {/* Route polyline - real road geometry if available, else straight-line fallback */}
       {resolvedLinePositions.length >= 2 && (
         <Polyline
           positions={resolvedLinePositions}
@@ -398,3 +398,4 @@ export default function PlanningMapClient({
     </div>
   );
 }
+

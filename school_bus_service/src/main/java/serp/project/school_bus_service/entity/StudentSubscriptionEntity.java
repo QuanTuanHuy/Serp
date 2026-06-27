@@ -24,10 +24,6 @@ public class StudentSubscriptionEntity extends BaseModel {
     @JoinColumn(name = "student_id")
     private StudentEntity student;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "school_id")
-    private SchoolEntity school;
-
     @ManyToOne
     @JoinColumn(name = "pickup_point_id")
     private PickupPointEntity pickupPoint;
@@ -78,5 +74,12 @@ public class StudentSubscriptionEntity extends BaseModel {
     @ManyToOne
     @JoinColumn(name = "source_request_id")
     private TransportRequestEntity sourceRequest;
-}
 
+    public SchoolEntity getSchool() {
+        return student != null ? student.getSchool() : null;
+    }
+
+    public void setSchool(SchoolEntity school) {
+        // School is derived from student after normalization.
+    }
+}

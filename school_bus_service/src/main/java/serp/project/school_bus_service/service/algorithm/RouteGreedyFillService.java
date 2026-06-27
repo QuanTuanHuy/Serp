@@ -17,6 +17,7 @@ import serp.project.school_bus_service.enums.RouteGeometrySource;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.RouteStopPurpose;
+import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.service.IRouteGeometryService;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
 import serp.project.school_bus_service.service.IRoutePlanningSessionService;
@@ -71,6 +72,7 @@ public class RouteGreedyFillService {
     private final ISchoolPickupPointService schoolPickupPointService;
     private final ITripExecutionService tripExecutionService;
     private final IRouteGeometryService routeGeometryService;
+    private final IRouteDispatchService routeDispatchService;
 
     public RouteGreedyFillService(IRoutePlanningSessionService planningSessionService,
                                   IRouteService routeService,
@@ -79,7 +81,8 @@ public class RouteGreedyFillService {
                                   IStudentSubscriptionService subscriptionService,
                                   ISchoolPickupPointService schoolPickupPointService,
                                   ITripExecutionService tripExecutionService,
-                                  IRouteGeometryService routeGeometryService) {
+                                  IRouteGeometryService routeGeometryService,
+                                  IRouteDispatchService routeDispatchService) {
         this.planningSessionService = planningSessionService;
         this.routeService = routeService;
         this.routeStopService = routeStopService;
@@ -88,6 +91,7 @@ public class RouteGreedyFillService {
         this.schoolPickupPointService = schoolPickupPointService;
         this.tripExecutionService = tripExecutionService;
         this.routeGeometryService = routeGeometryService;
+        this.routeDispatchService = routeDispatchService;
     }
 
     /**
@@ -109,7 +113,7 @@ public class RouteGreedyFillService {
         GreedyFillRouteRequest resolvedRequest = request == null ? new GreedyFillRouteRequest() : request;
         RouteContext context = loadAndValidateRouteForGreedyFill(
                 sessionId, routeId, resolvedRequest, tenantId);
-        CapacityState capacity = calculateRemainingCapacity(context.getRoute());
+        CapacityState capacity = calculateRemainingCapacity(context.getRoute(), tenantId);
         CandidateResolution candidates = resolveEligibleUnassignedCandidates(context, tenantId);
         List<StopDemand> demands = groupCandidatesByServicePoint(candidates.getAssignable(), context.getDirection());
         SelectionResult selection = selectStopDemands(
@@ -215,12 +219,17 @@ public class RouteGreedyFillService {
      * Next:
      * - The caller resolves eligible unassigned student demand.
      */
-    private CapacityState calculateRemainingCapacity(RoutePlanEntity route) {
-        if (route.getSelectedBus() == null) {
+    private CapacityState calculateRemainingCapacity(RoutePlanEntity route, Long tenantId) {
+        Integer capacity = routeDispatchService.findAssignmentEntityByRoute(route.getId(), tenantId)
+                .map(assignment -> assignment.getBus().getCapacity())
+                .orElse(null);
+        if (capacity == null && route.getSelectedBus() != null) {
+            capacity = route.getSelectedBus().getCapacity();
+        }
+        if (capacity == null) {
             throw new AppException(AppErrorCode.Bus.SELECTED_BUS_REQUIRED,
                     "Route must have a selected bus before running Greedy Fill.");
         }
-        Integer capacity = route.getSelectedBus().getCapacity();
         if (capacity == null || capacity <= 0) {
             throw new AppException(AppErrorCode.Bus.CAPACITY_NOT_CONFIGURED,
                     "The selected bus must have a positive capacity.");
@@ -527,7 +536,6 @@ public class RouteGreedyFillService {
         RoutePlanEntity route = context.getRoute();
         route.setPlannedStudentCount(totalAssigned);
         route.setRequiredCapacity(totalAssigned);
-        route.setAssignedBusCapacity(capacity);
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
         PersistenceResult result = new PersistenceResult();

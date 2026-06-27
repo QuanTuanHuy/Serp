@@ -1,4 +1,4 @@
-export interface ApiResponse<T> {
+﻿export interface ApiResponse<T> {
   code: number;
   status: string;
   message: string;
@@ -75,6 +75,7 @@ export interface SchoolBusParent extends SchoolBusBaseRecord {
   phone?: string | null;
   email?: string | null;
   address?: string | null;
+  studentCount?: number | null;
   user?: SchoolBusAccountUser | null;
 }
 
@@ -268,7 +269,6 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   plannedDistanceKm?: number | null;
   plannedDurationMin?: number | null;
   plannedStudentCount?: number | null;
-  assignedBusCapacity?: number | null;
   busId?: number | null;
   busPlateNumber?: string | null;
   busName?: string | null;
@@ -764,7 +764,7 @@ export interface SchoolBusMapLocation {
   addressParts?: SchoolBusMapAddressParts;
 }
 
-// --- School ↔ Pickup Point link ---
+// --- School <-> Pickup Point link ---
 
 export interface SchoolBusSchoolPickupPoint extends SchoolBusBaseRecord {
   schoolId: number;
@@ -784,7 +784,7 @@ export interface SchoolBusSchoolPickupPointUpsertRequest {
   isActive?: boolean;
 }
 
-// ── Planning Session ──────────────────────────────────────────────────────
+// -- Planning Session ------------------------------------------------------
 
 export type PlanningSessionStatus =
   | 'DRAFT'
@@ -901,7 +901,7 @@ export interface SchoolBusPlanningPreview {
   createDisabledReason?: string | null;
 }
 
-// ── Requests ─────────────────────────────────────────────────────────────
+// -- Requests -------------------------------------------------------------
 
 export interface PlanningSessionCreateRequest {
   schoolId: number;
@@ -983,3 +983,4 @@ export interface SchoolBusDropdownOption {
   description?: string;
   metadata?: Record<string, any>;
 }
+

@@ -97,7 +97,9 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
     @Override
     public PageResponse<AttendanceResponse> getAttendance(AttendanceParamsRequest params, Long tenantId) {
         return PageResponse.from(attendanceRepository.findAll(
-                spec(tenantId, params == null ? null : params.getKeyword(), "route.routeCode", "student.fullName",
+                spec(tenantId, params == null ? null : params.getKeyword(),
+                        "tripStudent.trip.route.routeCode",
+                        "tripStudent.subscription.student.fullName",
                         "attendanceType", "status", "notes"),
                 pageable(params, Set.of("id", "recordedAt", "attendanceType", "status", "createdAt", "updatedAt"),
                         "recordedAt")),
@@ -265,10 +267,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
         AttendanceEntity attendance = new AttendanceEntity();
         attendance.markCreated(tenantId, actor(actorId));
-        attendance.setRoute(trip.getRoute());
-        attendance.setTrip(trip);
+        attendance.setTripStudent(tripStudent);
         attendance.setRouteStop(routeStop);
-        attendance.setStudent(tripStudent.getStudent());
         attendance.setAttendanceType(eventType == AttendanceEventType.DROPPED_OFF
                 ? AttendanceType.CHECKED_OUT
                 : AttendanceType.CHECKED_IN);
@@ -331,10 +331,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                                      RouteStopEntity routeStop, String reason, Long tenantId, Long actorId) {
         AttendanceEntity attendance = new AttendanceEntity();
         attendance.markCreated(tenantId, actor(null)); // system actor
-        attendance.setRoute(trip.getRoute());
-        attendance.setTrip(trip);
+        attendance.setTripStudent(student);
         attendance.setRouteStop(routeStop);
-        attendance.setStudent(student.getStudent());
         attendance.setAttendanceType(AttendanceType.CHECKED_IN);
         attendance.setEventType(AttendanceEventType.NOT_SERVED);
         attendance.setEventSource(EventSource.SYSTEM);
@@ -435,10 +433,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
             AttendanceEntity attendance = new AttendanceEntity();
             attendance.markCreated(tenantId, actor(actorId));
-            attendance.setRoute(trip.getRoute());
-            attendance.setTrip(trip);
+            attendance.setTripStudent(tripStudent);
             attendance.setRouteStop(routeStop);
-            attendance.setStudent(tripStudent.getStudent());
             attendance.setAttendanceType(eventType == AttendanceEventType.DROPPED_OFF
                     ? AttendanceType.CHECKED_OUT : AttendanceType.CHECKED_IN);
             attendance.setEventType(eventType);
@@ -541,16 +537,20 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         }
 
         java.util.List<TripAttendanceManifestResponse.TripAttendanceStopItem> stops = stopLogs.stream()
-                .sorted(java.util.Comparator.comparing(serp.project.school_bus_service.entity.TripStopLogEntity::getStopOrder))
+                .sorted(java.util.Comparator.comparing(sl -> sl.getRouteStop().getStopOrder()))
                 .map(sl -> {
                     TripAttendanceManifestResponse.TripAttendanceStopItem item =
                             new TripAttendanceManifestResponse.TripAttendanceStopItem();
                     RouteStopEntity rs = sl.getRouteStop();
+                    routeStopService.hydrateLocation(rs, tenantId);
                     item.setRouteStopId(rs.getId());
-                    item.setStopOrder(sl.getStopOrder());
+                    item.setStopOrder(rs.getStopOrder());
                     item.setLocationType(rs.getLocationType() != null ? rs.getLocationType().name() : null);
                     item.setStopPurpose(rs.getStopPurpose() != null ? rs.getStopPurpose().name() : null);
                     item.setDisplayName(rs.getDisplayName());
+                    item.setLocationId(rs.getLocationId());
+                    item.setLocationName(rs.getDisplayName());
+                    item.setLocationAddress(resolveRouteStopAddress(rs));
                     item.setStopStatus(sl.getStatus().name());
                     item.setActualBoardedCount(sl.getActualBoardedCount() != null ? sl.getActualBoardedCount() : 0);
                     item.setActualDroppedCount(sl.getActualDroppedCount() != null ? sl.getActualDroppedCount() : 0);
@@ -637,6 +637,19 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         response.setStudents(students);
         return response;
 
+    }
+
+    private String resolveRouteStopAddress(RouteStopEntity stop) {
+        if (stop.getPickupPoint() != null) {
+            return stop.getPickupPoint().getAddress();
+        }
+        if (stop.getSchool() != null) {
+            return stop.getSchool().getAddress();
+        }
+        if (stop.getDepot() != null) {
+            return stop.getDepot().getAddress();
+        }
+        return null;
     }
 
     @Override

@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 /**
- * WindowFormDialog — REMOVED in Phase 3 (school bus simplification).
+ * WindowFormDialog - REMOVED in Phase 3 (school bus simplification).
  * Pickup point time windows are no longer supported.
  * This stub remains to avoid breaking imports.
  */
@@ -12,3 +12,4 @@ export function WindowFormDialog(_props: {
 }) {
   return null;
 }
+

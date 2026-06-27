@@ -1,7 +1,10 @@
 package serp.project.school_bus_service.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
 import serp.project.school_bus_service.enums.SubscriptionStatus;
 import serp.project.school_bus_service.enums.TripOption;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
@@ -12,6 +15,74 @@ import java.util.List;
 
 public interface StudentSubscriptionRepository extends BaseRepository<StudentSubscriptionEntity, Long> {
 
+    @Query(value = """
+            SELECT new serp.project.school_bus_service.dto.response.StudentSubscriptionResponse(
+                sub.id, sub.tenantId, sub.isActive, sub.isDeleted, sub.createdAt, sub.createdBy, sub.updatedAt, sub.updatedBy,
+                sub.subscriptionCode,
+                student.id, student.fullName, student.studentCode, parent.fullName,
+                school.id, school.name, school.code,
+                pickup.id, pickup.name, pickup.code,
+                dropoff.id, dropoff.name, dropoff.code,
+                sub.tripOption,
+                sub.monday, sub.tuesday, sub.wednesday, sub.thursday, sub.friday, sub.saturday, sub.sunday,
+                sub.effectiveFrom, sub.effectiveTo, sub.status,
+                source.id, source.requestCode
+            )
+            FROM StudentSubscriptionEntity sub
+            JOIN sub.student student
+            JOIN student.school school
+            JOIN student.parentProfile parent
+            LEFT JOIN sub.pickupPoint pickup
+            LEFT JOIN sub.dropoffPoint dropoff
+            LEFT JOIN sub.sourceRequest source
+            WHERE sub.tenantId = :tenantId
+              AND sub.isDeleted = false
+              AND (:parentProfileId IS NULL OR parent.id = :parentProfileId)
+              AND (:schoolId IS NULL OR school.id = :schoolId)
+              AND (:studentId IS NULL OR student.id = :studentId)
+              AND (:status IS NULL OR sub.status = :status)
+              AND (:tripOption IS NULL OR sub.tripOption = :tripOption)
+              AND (
+                  :keywordPattern IS NULL
+                  OR LOWER(sub.subscriptionCode) LIKE :keywordPattern
+                  OR LOWER(student.fullName) LIKE :keywordPattern
+                  OR LOWER(school.name) LIKE :keywordPattern
+                  OR LOWER(STR(sub.status)) LIKE :keywordPattern
+                  OR LOWER(STR(sub.tripOption)) LIKE :keywordPattern
+              )
+            """,
+            countQuery = """
+            SELECT COUNT(sub)
+            FROM StudentSubscriptionEntity sub
+            JOIN sub.student student
+            JOIN student.school school
+            JOIN student.parentProfile parent
+            WHERE sub.tenantId = :tenantId
+              AND sub.isDeleted = false
+              AND (:parentProfileId IS NULL OR parent.id = :parentProfileId)
+              AND (:schoolId IS NULL OR school.id = :schoolId)
+              AND (:studentId IS NULL OR student.id = :studentId)
+              AND (:status IS NULL OR sub.status = :status)
+              AND (:tripOption IS NULL OR sub.tripOption = :tripOption)
+              AND (
+                  :keywordPattern IS NULL
+                  OR LOWER(sub.subscriptionCode) LIKE :keywordPattern
+                  OR LOWER(student.fullName) LIKE :keywordPattern
+                  OR LOWER(school.name) LIKE :keywordPattern
+                  OR LOWER(STR(sub.status)) LIKE :keywordPattern
+                  OR LOWER(STR(sub.tripOption)) LIKE :keywordPattern
+              )
+            """)
+    Page<StudentSubscriptionResponse> findSubscriptionListItems(
+            @Param("tenantId") Long tenantId,
+            @Param("parentProfileId") Long parentProfileId,
+            @Param("schoolId") Long schoolId,
+            @Param("studentId") Long studentId,
+            @Param("status") SubscriptionStatus status,
+            @Param("tripOption") TripOption tripOption,
+            @Param("keywordPattern") String keywordPattern,
+            Pageable pageable);
+
     List<StudentSubscriptionEntity> findByStudentIdAndTenantIdAndIsDeletedFalse(Long studentId, Long tenantId);
 
     @Query("""
@@ -19,7 +90,7 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
              JOIN FETCH s.student
              LEFT JOIN FETCH s.pickupPoint
              LEFT JOIN FETCH s.dropoffPoint
-             WHERE s.school.id = :schoolId
+             WHERE s.student.school.id = :schoolId
                AND s.tenantId = :tenantId
                AND s.isDeleted = false
             """)
@@ -27,10 +98,18 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
             @Param("schoolId") Long schoolId,
             @Param("tenantId") Long tenantId);
 
+    @Query("""
+            SELECT s FROM StudentSubscriptionEntity s
+             JOIN FETCH s.student st
+             WHERE st.school.id = :schoolId
+               AND s.tenantId = :tenantId
+               AND s.status = :status
+               AND s.isDeleted = false
+            """)
     List<StudentSubscriptionEntity> findBySchoolIdAndTenantIdAndStatusAndIsDeletedFalse(
-            Long schoolId,
-            Long tenantId,
-            SubscriptionStatus status);
+            @Param("schoolId") Long schoolId,
+            @Param("tenantId") Long tenantId,
+            @Param("status") SubscriptionStatus status);
 
     List<StudentSubscriptionEntity> findByStudentIdAndTripOptionAndTenantIdAndStatusAndIsDeletedFalse(
             Long studentId,
@@ -53,7 +132,7 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
              JOIN FETCH s.student st
              LEFT JOIN FETCH s.pickupPoint
              LEFT JOIN FETCH s.dropoffPoint
-             WHERE s.school.id = :schoolId
+             WHERE st.school.id = :schoolId
                AND s.tenantId = :tenantId
                AND s.isDeleted = false
                AND s.status = serp.project.school_bus_service.enums.SubscriptionStatus.ACTIVE

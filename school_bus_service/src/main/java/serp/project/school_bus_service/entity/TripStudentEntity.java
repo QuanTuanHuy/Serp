@@ -21,10 +21,6 @@ public class TripStudentEntity extends BaseModel {
     @JoinColumn(name = "trip_id")
     private TripExecutionEntity trip;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "student_id")
-    private StudentEntity student;
-
     @ManyToOne
     @JoinColumn(name = "pickup_stop_id")
     private RouteStopEntity pickupStop;
@@ -43,5 +39,12 @@ public class TripStudentEntity extends BaseModel {
 
     @Column(columnDefinition = "TEXT")
     private String note;
-}
 
+    public StudentEntity getStudent() {
+        return subscription != null ? subscription.getStudent() : null;
+    }
+
+    public void setStudent(StudentEntity student) {
+        // Student is derived from subscription after normalization.
+    }
+}

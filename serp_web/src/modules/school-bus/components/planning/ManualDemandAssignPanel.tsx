@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { UserPlus, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -13,7 +13,7 @@ interface ManualDemandAssignPanelProps {
   selectedRoute: SchoolBusRoute | null;
   /** All eligible students for the current session */
   eligibleStudents: SchoolBusEligibleStudent[];
-  /** Session ID — used for cache invalidation */
+  /** Session ID - used for cache invalidation */
   sessionId: number;
   /** Loading state for eligible students query */
   loadingEligible?: boolean;
@@ -50,7 +50,7 @@ export function ManualDemandAssignPanel({
       setTimeout(() => setLastAssigned(null), 2000);
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
-      setError(err?.data?.message ?? 'Failed to assign student');
+      setError(err?.data?.message || 'Failed to assign student');
     } finally {
       setLoadingStudentId(null);
     }
@@ -75,15 +75,14 @@ export function ManualDemandAssignPanel({
     return (
       <div className='rounded-2xl border border-amber-100 bg-amber-50/40 px-4 py-4 text-center'>
         <p className='text-sm font-medium text-amber-700'>
-          Route is {selectedRoute.status} — no further edits allowed
+          Route is {selectedRoute.status} - no further edits allowed
         </p>
       </div>
     );
   }
 
-  const routeCapacity =
-    selectedRoute.busCapacity ?? selectedRoute.assignedBusCapacity ?? null;
-  const routeStudentCount = selectedRoute.plannedStudentCount ?? 0;
+  const routeCapacity = selectedRoute.busCapacity || null;
+  const routeStudentCount = selectedRoute.plannedStudentCount || 0;
 
   if (!selectedRoute.busId || routeCapacity == null) {
     return (
@@ -278,10 +277,10 @@ export function ManualDemandAssignPanel({
                 </div>
                 <p className='mt-0.5 text-[10px] truncate text-slate-450 flex items-center gap-1'>
                   {hasPoint ? (
-                    <span>📍 {point ?? '—'}</span>
+                    <span> {point || '-'}</span>
                   ) : (
                     <span className='text-amber-600'>
-                      ⚠️ No {direction === 'OUTBOUND' ? 'pickup' : 'dropoff'}{' '}
+                      Warning: No {direction === 'OUTBOUND' ? 'pickup' : 'dropoff'}{' '}
                       point
                     </span>
                   )}

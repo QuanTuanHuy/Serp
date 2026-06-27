@@ -44,15 +44,23 @@ public interface SchoolRepository extends BaseRepository<SchoolEntity, Long> {
               AND (
                   EXISTS (
                       SELECT t FROM TripExecutionEntity t
-                      WHERE t.route.school.id = s.id
-                        AND t.driver.id = :driverProfileId
+                      WHERE t.route.planningSession.school.id = s.id
+                        AND EXISTS (
+                            SELECT assignment FROM RouteAssignmentEntity assignment
+                            WHERE assignment.route.id = t.route.id
+                              AND assignment.driver.id = :driverProfileId
+                              AND assignment.tenantId = :tenantId
+                              AND assignment.isDeleted = false
+                              AND assignment.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                                        serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
+                        )
                         AND t.tenantId = :tenantId
                         AND t.isDeleted = false
                         AND t.route.isDeleted = false
                   )
                   OR EXISTS (
                       SELECT a FROM RouteAssignmentEntity a
-                      WHERE a.route.school.id = s.id
+                      WHERE a.route.planningSession.school.id = s.id
                         AND a.driver.id = :driverProfileId
                         AND a.tenantId = :tenantId
                         AND a.isDeleted = false
@@ -75,15 +83,23 @@ public interface SchoolRepository extends BaseRepository<SchoolEntity, Long> {
               AND (
                   EXISTS (
                       SELECT t FROM TripExecutionEntity t
-                      WHERE t.route.school.id = s.id
-                        AND t.attendant.id = :attendantProfileId
+                      WHERE t.route.planningSession.school.id = s.id
+                        AND EXISTS (
+                            SELECT assignment FROM RouteAssignmentEntity assignment
+                            WHERE assignment.route.id = t.route.id
+                              AND assignment.attendant.id = :attendantProfileId
+                              AND assignment.tenantId = :tenantId
+                              AND assignment.isDeleted = false
+                              AND assignment.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                                        serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
+                        )
                         AND t.tenantId = :tenantId
                         AND t.isDeleted = false
                         AND t.route.isDeleted = false
                   )
                   OR EXISTS (
                       SELECT a FROM RouteAssignmentEntity a
-                      WHERE a.route.school.id = s.id
+                      WHERE a.route.planningSession.school.id = s.id
                         AND a.attendant.id = :attendantProfileId
                         AND a.tenantId = :tenantId
                         AND a.isDeleted = false

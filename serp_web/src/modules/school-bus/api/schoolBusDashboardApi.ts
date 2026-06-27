@@ -3,6 +3,7 @@ import { createApiResponseTransform } from '@/lib/store/api/utils';
 import type {
   ApiResponse,
   ChartItemDto,
+  DashboardOperationsResponse,
   DashboardSummary,
   SchoolBusDropdownOption,
 } from '../types';
@@ -35,6 +36,15 @@ export const schoolBusDashboardApi = api.injectEndpoints({
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<DashboardSummary>(),
       providesTags: [{ type: 'schoolBus/Dashboard', id: 'SUMMARY' }],
+    }),
+    getDashboardOperations: builder.query<
+      ApiResponse<DashboardOperationsResponse>,
+      SchoolBusDashboardQueryParams
+    >({
+      query: (args) => dashboardQuery('/dashboard/operations', args),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<DashboardOperationsResponse>(),
+      providesTags: [{ type: 'schoolBus/Dashboard', id: 'OPERATIONS' }],
     }),
     getDashboardTripStatus: builder.query<
       ApiResponse<ChartItemDto[]>,
@@ -100,6 +110,7 @@ export const schoolBusDashboardApi = api.injectEndpoints({
 
 export const {
   useGetDashboardSummaryQuery,
+  useGetDashboardOperationsQuery,
   useGetDashboardTripStatusQuery,
   useGetDashboardAttendanceStatusQuery,
   useGetDashboardRouteReadinessQuery,

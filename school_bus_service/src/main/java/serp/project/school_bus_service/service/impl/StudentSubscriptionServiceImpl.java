@@ -90,25 +90,28 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
 
     @Override
     public PageResponse<StudentSubscriptionResponse> getSubscriptions(StudentSubscriptionParamsRequest params, Long tenantId) {
-        Specification<StudentSubscriptionEntity> spec = spec(tenantId, params == null ? null : params.getKeyword(),
-                "subscriptionCode", "student.fullName", "school.name", "status", "tripOption");
-        // Parent data scope: filter to subscriptions belonging to current parent's students
+        Long parentProfileId = null;
         if (securityService.isParentOnly()) {
-            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("student").get("parentProfile").get("id"), parentProfileId));
+            parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
         }
-        if (params != null && params.getSchoolId() != null)
-            spec = spec.and((r, q, cb) -> cb.equal(r.get("school").get("id"), params.getSchoolId()));
-        if (params != null && params.getStudentId() != null)
-            spec = spec.and((r, q, cb) -> cb.equal(r.get("student").get("id"), params.getStudentId()));
-        if (params != null && params.getStatus() != null)
-            spec = spec.and((r, q, cb) -> cb.equal(r.get("status"), SubscriptionStatus.parse(params.getStatus())));
-        if (params != null && params.getTripOption() != null)
-            spec = spec.and((r, q, cb) -> cb.equal(r.get("tripOption"), TripOption.parse(params.getTripOption())));
-        return PageResponse.from(subscriptionRepository.findAll(spec,
+        return PageResponse.from(subscriptionRepository.findSubscriptionListItems(
+                tenantId,
+                parentProfileId,
+                params == null ? null : params.getSchoolId(),
+                params == null ? null : params.getStudentId(),
+                params == null || params.getStatus() == null ? null : SubscriptionStatus.parse(params.getStatus()),
+                params == null || params.getTripOption() == null ? null : TripOption.parse(params.getTripOption()),
+                keywordPattern(params == null ? null : params.getKeyword()),
                 pageable(params, Set.of("id", "subscriptionCode", "effectiveFrom", "effectiveTo", "status",
                         "createdAt", "updatedAt"), "createdAt")),
-                mapper::toStudentSubscriptionResponse);
+                response -> response);
+    }
+
+    private String keywordPattern(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return "%" + keyword.trim().toLowerCase() + "%";
     }
 
     @Override

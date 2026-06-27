@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
@@ -51,7 +51,7 @@ import type {
 } from '../types';
 import { SCHOOL_BUS_OPTION_QUERY } from '../utils';
 
-// ── Map empty-state component ─────────────────────────────────────────────────
+// -- Map empty-state component -------------------------------------------------
 
 type MapEmptyStep = 'pick-school' | 'preview' | 'no-coords' | null;
 
@@ -88,7 +88,7 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
         <p className='text-sm font-semibold text-slate-600'>Map is ready</p>
         <p className='mt-1 text-xs text-slate-400 max-w-[220px]'>
           {step === 'no-coords'
-            ? 'School has no coordinates — add lat/lng to the school record to see it on the map.'
+            ? 'School has no coordinates - add lat/lng to the school record to see it on the map.'
             : 'Complete the steps below to load markers.'}
         </p>
       </div>
@@ -105,7 +105,7 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
                     : 'bg-slate-100 text-slate-700 ring-1 ring-slate-200'
                 }`}
               >
-                {s.done ? '✓' : i + 1}
+                {s.done ? 'OK' : i + 1}
               </span>
               <span
                 className={`text-xs leading-5 ${s.done ? 'text-slate-400 line-through' : 'font-medium text-slate-600'}`}
@@ -147,7 +147,7 @@ export default function SchoolBusRoutePlanningPage() {
   const [selectedRouteId, setSelectedRouteId] = useState<number | null>(null);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
 
-  // ── Fit controls ───────────────────────────────────────────────────────────
+  // -- Fit controls -----------------------------------------------------------
   const [fitTarget, setFitTarget] = useState<'all' | 'route'>('all');
   const [fitKey, setFitKey] = useState(0);
 
@@ -161,7 +161,7 @@ export default function SchoolBusRoutePlanningPage() {
     setFitKey((k) => k + 1);
   }, []);
 
-  // ── API mutations ──────────────────────────────────────────────────────────
+  // -- API mutations ----------------------------------------------------------
   const [previewMutation, { isLoading: previewing }] =
     usePreviewPlanningDemandMutation();
   const [createSession, { isLoading: creating }] =
@@ -173,61 +173,61 @@ export default function SchoolBusRoutePlanningPage() {
   const [createRouteInSession, { isLoading: creatingRoute }] =
     useCreateRouteInSessionMutation();
 
-  // ── Session queries ────────────────────────────────────────────────────────
+  // -- Session queries --------------------------------------------------------
   const { data: sessionsData } = useGetPlanningSessionsQueryQuery();
-  const sessions = sessionsData?.data ?? [];
+  const sessions = sessionsData?.data || [];
 
   const { data: liveSessionData, refetch: refetchSession } =
-    useGetPlanningSessionQuery(activeSessionId ?? 0, {
+    useGetPlanningSessionQuery(activeSessionId || 0, {
       skip: !activeSessionId,
       pollingInterval: 0,
     });
   const activeSession: SchoolBusPlanningSession | null =
-    liveSessionData?.data ??
-    sessions.find((s) => s.id === activeSessionId) ??
+    liveSessionData?.data ||
+    sessions.find((s) => s.id === activeSessionId) ||
     null;
 
   const {
     data: sessionRoutesData,
     isFetching: fetchingRoutes,
     refetch: refetchRoutes,
-  } = useGetSessionRoutesQuery(activeSessionId ?? 0, {
+  } = useGetSessionRoutesQuery(activeSessionId || 0, {
     skip: !activeSessionId,
   });
-  const sessionRoutes = sessionRoutesData?.data ?? [];
+  const sessionRoutes = sessionRoutesData?.data || [];
 
   const { data: eligibleStudentsData, isFetching: fetchingEligible } =
-    useGetSessionEligibleStudentsQuery(activeSessionId ?? 0, {
+    useGetSessionEligibleStudentsQuery(activeSessionId || 0, {
       skip: !activeSessionId,
     });
-  const eligibleStudents = eligibleStudentsData?.data ?? [];
+  const eligibleStudents = eligibleStudentsData?.data || [];
 
-  // ── School + depots for map ────────────────────────────────────────────────
+  // -- School + depots for map ------------------------------------------------
   const schoolIdNum = Number(form.schoolId) || 0;
   const { data: schoolData } = useGetSchoolByIdQuery(schoolIdNum, {
     skip: !schoolIdNum,
   });
-  const school = schoolData?.data ?? null;
+  const school = schoolData?.data || null;
 
   const { data: depotsData } = useGetDepotsQuery({
     ...SCHOOL_BUS_OPTION_QUERY,
   });
-  const depots = depotsData?.data?.items ?? [];
+  const depots = depotsData?.data?.items || [];
 
-  // ── Route detail for map (stops + polyline) ────────────────────────────────
+  // -- Route detail for map (stops + polyline) --------------------------------
   const { data: selectedRouteDetailData } = useGetRouteByIdQuery(
-    selectedRouteId ?? 0,
+    selectedRouteId || 0,
     { skip: !selectedRouteId }
   );
-  const selectedRouteStops = selectedRouteDetailData?.data?.stops ?? [];
-  const selectedRoute = selectedRouteDetailData?.data?.route ?? null;
+  const selectedRouteStops = selectedRouteDetailData?.data?.stops || [];
+  const selectedRoute = selectedRouteDetailData?.data?.route || null;
 
-  // ── Route path (actual road geometry) ─────────────────────────────────────
+  // -- Route path (actual road geometry) -------------------------------------
   const { data: selectedRoutePathData } = useGetRoutePathQuery(
-    selectedRouteId ?? 0,
+    selectedRouteId || 0,
     { skip: !selectedRouteId }
   );
-  const selectedRoutePath = selectedRoutePathData?.data ?? null;
+  const selectedRoutePath = selectedRoutePathData?.data || null;
 
   const clearSessionQueryParams = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -346,7 +346,7 @@ export default function SchoolBusRoutePlanningPage() {
     }
   }, [queryRouteId, sessionRoutes, fetchingRoutes, activeSessionId]);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // -- Handlers ---------------------------------------------------------------
   const handlePreview = useCallback(async () => {
     if (!form.schoolId || !form.serviceDate) {
       toast.error('Please fill School and Service Date');
@@ -381,7 +381,7 @@ export default function SchoolBusRoutePlanningPage() {
       toast.success(`Session #${res.data.id} created`);
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
-      toast.error(err?.data?.message ?? 'Failed to create session');
+      toast.error(err?.data?.message || 'Failed to create session');
     }
   }, [form, createSession]);
 
@@ -406,7 +406,7 @@ export default function SchoolBusRoutePlanningPage() {
         }
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message ?? 'Failed to create route');
+        toast.error(err?.data?.message || 'Failed to create route');
       }
     },
     [activeSession, createRouteInSession, refetchSession, refetchRoutes]
@@ -470,7 +470,7 @@ export default function SchoolBusRoutePlanningPage() {
                         {issue.message}
                         {issue.suggestedFix && (
                           <div className='text-rose-900 font-bold mt-0.5 bg-rose-50/50 px-1.5 py-0.5 rounded border border-rose-100/45'>
-                            💡 Fix: {issue.suggestedFix}
+                             Fix: {issue.suggestedFix}
                           </div>
                         )}
                       </li>
@@ -483,7 +483,7 @@ export default function SchoolBusRoutePlanningPage() {
           { duration: 10000 }
         );
       } else {
-        toast.error(err?.data?.message ?? 'Publish failed');
+        toast.error(err?.data?.message || 'Publish failed');
       }
     }
   }, [activeSession, publishSession]);
@@ -507,7 +507,7 @@ export default function SchoolBusRoutePlanningPage() {
     }
   }, [activeSession, cancelSession]);
 
-  // ── Route selection with auto-focus map ───────────────────────────────────
+  // -- Route selection with auto-focus map -----------------------------------
   const handleSelectRoute = useCallback((id: number | null) => {
     setSelectedRouteId((prev) => (prev === id ? null : id));
     if (id) {
@@ -570,8 +570,8 @@ export default function SchoolBusRoutePlanningPage() {
     toast.success('Workspace reset to new session planning context');
   }, [clearSessionQueryParams]);
 
-  // ── Derived values ─────────────────────────────────────────────────────────
-  const unassignedStudents = activeSession?.totalUnassignedStudents ?? 0;
+  // -- Derived values ---------------------------------------------------------
+  const unassignedStudents = activeSession?.totalUnassignedStudents || 0;
   const isPreviewContextMatch =
     preview !== null &&
     Number(preview.schoolId) === Number(form.schoolId) &&
@@ -592,7 +592,7 @@ export default function SchoolBusRoutePlanningPage() {
     | SchoolBusPlanningPickupPoint
   )[] = preview?.points
     ? preview.points
-    : (preview?.eligiblePickupPoints ?? []);
+    : (preview?.eligiblePickupPoints || []);
   const mapPickupPoints = rawPickupPoints.map((pp) => ({
     pickupPointId: 'pointId' in pp ? pp.pointId : pp.pickupPointId,
     pickupPointName: 'pointName' in pp ? pp.pointName : pp.pickupPointName,
@@ -647,13 +647,13 @@ export default function SchoolBusRoutePlanningPage() {
     </AlertDialog>
   );
 
-  // ── EXPANDED MODE ──────────────────────────────────────────────────────────
+  // -- EXPANDED MODE ----------------------------------------------------------
   if (isMapExpanded) {
     return (
       <MapMarkerVisibilityProvider>
-        {/* Fixed full-viewport overlay — prevents any body scroll */}
+        {/* Fixed full-viewport overlay - prevents any body scroll */}
         <div className='school-bus-shell fixed inset-0 z-[900] flex overflow-hidden bg-background/90 text-foreground backdrop-blur-[1px]'>
-          {/* Left panel — own scroll, no page scroll */}
+          {/* Left panel - own scroll, no page scroll */}
           <div className='flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-border bg-card text-card-foreground shadow-xl'>
             <div className='shrink-0 border-b border-border bg-muted/40 px-4 py-3'>
               <p className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
@@ -696,7 +696,7 @@ export default function SchoolBusRoutePlanningPage() {
             </div>
           </div>
 
-          {/* Map — fills all remaining space */}
+          {/* Map - fills all remaining space */}
           <div className='relative flex flex-1 flex-col overflow-hidden'>
             {/* KPI bar */}
             {activeSession && (
@@ -744,7 +744,7 @@ export default function SchoolBusRoutePlanningPage() {
     );
   }
 
-  // ── NORMAL MODE — 3-column dispatch workspace ──────────────────────────────
+  // -- NORMAL MODE - 3-column dispatch workspace ------------------------------
   return (
     <MapMarkerVisibilityProvider>
       <SchoolBusPageShell
@@ -766,7 +766,7 @@ export default function SchoolBusRoutePlanningPage() {
             {sessionError && (
               <div className='flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-800 shadow-sm'>
                 <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700 text-[10px] font-extrabold border border-red-200'>
-                  ⚠️
+                  Warning:
                 </span>
                 <span>{sessionError}</span>
               </div>
@@ -774,7 +774,7 @@ export default function SchoolBusRoutePlanningPage() {
             {routeError && (
               <div className='flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-850 shadow-sm'>
                 <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-[10px] font-extrabold border border-amber-200'>
-                  ⚠️
+                  Warning:
                 </span>
                 <span>{routeError}</span>
               </div>
@@ -782,19 +782,19 @@ export default function SchoolBusRoutePlanningPage() {
           </div>
         )}
 
-        {/* Workspace container — fills remaining viewport height below the compact hero */}
+        {/* Workspace container - fills remaining viewport height below the compact hero */}
         <div
           className='flex overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.06)]'
           style={{ height: 'calc(100vh - 175px)', minHeight: '580px' }}
         >
-          {/* ── Left panel: Context + Session (340px) ──────────────────────── */}
+          {/* -- Left panel: Context + Session (340px) ------------------------ */}
           <div className='flex w-[340px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
             <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5'>
               <p className='text-[10px] font-extrabold uppercase tracking-widest text-slate-400'>
                 Workspace Controls
               </p>
             </div>
-            {/* Scrollable inner area — left panel scrolls independently */}
+            {/* Scrollable inner area - left panel scrolls independently */}
             <div className='flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/20'>
               <PlanningContextPanel
                 form={form}
@@ -826,9 +826,9 @@ export default function SchoolBusRoutePlanningPage() {
             </div>
           </div>
 
-          {/* ── Center: Map (flex-1) ─────────────────────────────────────────── */}
+          {/* -- Center: Map (flex-1) ------------------------------------------- */}
           <div className='relative flex flex-1 flex-col overflow-hidden'>
-            {/* KPI bar — only when session is active */}
+            {/* KPI bar - only when session is active */}
             {activeSession && (
               <DispatchKpiCards
                 eligible={activeSession.totalEligibleStudents}
@@ -879,7 +879,7 @@ export default function SchoolBusRoutePlanningPage() {
             </div>
           </div>
 
-          {/* ── Right panel: Routes + Detail (400px) ────────────────────────── */}
+          {/* -- Right panel: Routes + Detail (400px) -------------------------- */}
           <div className='flex w-[400px] shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-white'>
             <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5'>
               <p className='text-[10px] font-extrabold uppercase tracking-widest text-slate-400'>
@@ -914,3 +914,4 @@ export default function SchoolBusRoutePlanningPage() {
     </MapMarkerVisibilityProvider>
   );
 }
+

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -35,7 +35,7 @@ export function SchoolBusRequestFormPage({
     });
 
   // For Admin/Dispatcher: fetch all parents for the dropdown.
-  // For Parent role: skip the query — backend resolves identity from token.
+  // For Parent role: skip the query - backend resolves identity from token.
   const { data: parentsData } = useGetParentDropdownOptionsQuery(undefined, {
     skip: access.isParentOnly,
   });
@@ -56,11 +56,11 @@ export function SchoolBusRequestFormPage({
 
   // Derive current parent's parentProfileId from their student list.
   // The User type does not carry parentProfileId directly;
-  // students always reference their parent — so we borrow it from there.
+  // students always reference their parent - so we borrow it from there.
   const students = getPageItems(studentsData?.data);
   const currentParentId: number | undefined =
     access.isParentOnly && students.length > 0
-      ? (students[0].parentProfileId ?? undefined)
+      ? (students[0].parentProfileId || undefined)
       : undefined;
 
   const handleSubmit = async (
@@ -142,3 +142,4 @@ export function SchoolBusRequestFormPage({
     </SchoolBusPageShell>
   );
 }
+

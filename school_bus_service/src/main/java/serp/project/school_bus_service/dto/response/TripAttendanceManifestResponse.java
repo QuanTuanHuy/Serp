@@ -34,6 +34,9 @@ public class TripAttendanceManifestResponse {
         private String stopPurpose;
         /** Human-readable stop name. */
         private String displayName;
+        private Long locationId;
+        private String locationName;
+        private String locationAddress;
         private String stopStatus;
         private Double latitude;
         private Double longitude;

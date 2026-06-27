@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -34,7 +34,7 @@ import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
-import { formatDate, getPageItems } from '../utils';
+import { formatDate, getPageItems, SCHOOL_BUS_PAGE_QUERY_OPTIONS } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import { schoolBusUi } from '../theme';
 
@@ -109,7 +109,7 @@ export function SchoolBusTripsPage() {
     data,
     isLoading,
     refetch: refetchTrips,
-  } = useGetTripsQuery(pagination.params);
+  } = useGetTripsQuery(pagination.params, SCHOOL_BUS_PAGE_QUERY_OPTIONS);
   const [startTrip] = useStartTripMutation();
   const [arriveTripStop] = useArriveTripStopMutation();
   const [departTripStop] = useDepartTripStopMutation();
@@ -241,7 +241,7 @@ export function SchoolBusTripsPage() {
       toast.error(
         error?.status === 429
           ? 'System is busy. Please wait a few seconds and try again.'
-          : (error?.data?.message ?? `${label} failed`)
+          : (error?.data?.message || `${label} failed`)
       );
     }
   };
@@ -262,7 +262,7 @@ export function SchoolBusTripsPage() {
               {trip.tripCode}
             </span>
             <span className='text-[10px] text-slate-400 font-normal mt-0.5'>
-              {getFriendlyDirection(trip.routeDirection)} ·{' '}
+              {getFriendlyDirection(trip.routeDirection)} -{' '}
               {formatDate(trip.serviceDate)}
             </span>
           </div>
@@ -299,7 +299,7 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'startEnd',
-      header: 'Start → End',
+      header: 'Start -> End',
       render: (trip) => {
         const StartIcon =
           trip.startLocationType === 'SCHOOL'
@@ -337,7 +337,7 @@ export function SchoolBusTripsPage() {
                 {trip.startLocationName || 'N/A'}
               </span>
               <span className='text-slate-400 font-normal shrink-0 mx-0.5'>
-                →
+                {'->'}
               </span>
               <div
                 className={cn(
@@ -352,7 +352,7 @@ export function SchoolBusTripsPage() {
               </span>
             </div>
             <span className='text-[10px] text-slate-500 font-medium'>
-              {formatLocationType(trip.startLocationType)} →{' '}
+              {formatLocationType(trip.startLocationType)} {'->'}{' '}
               {formatLocationType(trip.endLocationType)}
             </span>
           </div>
@@ -423,14 +423,14 @@ export function SchoolBusTripsPage() {
       key: 'stopsCount',
       header: 'Stop Progress',
       render: (trip) => {
-        const totalStops = trip.stops?.length ?? 0;
+        const totalStops = trip.stops?.length || 0;
         const completedStops =
           trip.status === 'COMPLETED'
             ? totalStops
             : trip.stops
               ? (() => {
                   const sortedStops = [...trip.stops].sort(
-                    (a: any, b: any) => (a.stopOrder ?? 0) - (b.stopOrder ?? 0)
+                    (a: any, b: any) => (a.stopOrder || 0) - (b.stopOrder || 0)
                   );
                   return sortedStops.filter((s: any, idx: number) => {
                     const isFirst = idx === 0;
@@ -725,7 +725,7 @@ export function SchoolBusTripsPage() {
       title={access.isParentOnly ? 'Student Trip Tracking' : 'Trip Operations'}
       description={
         access.isParentOnly
-          ? 'Track your student’s trips in real time.'
+          ? "Track your student's trips in real time."
           : 'Trips are operational snapshots created from planned routes. Use this page to start trips and process stop arrival/departure order.'
       }
       breadcrumb={
@@ -750,7 +750,7 @@ export function SchoolBusTripsPage() {
           <div className='flex items-center justify-end -mb-3'>
             <span className='text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 shrink-0'>
               <span className='inline-flex h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5 animate-pulse' />
-              Auto-refreshes every 20s • Last updated: {lastUpdated}
+              Auto-refreshes every 20s - Last updated: {lastUpdated}
             </span>
           </div>
         )}
@@ -759,7 +759,7 @@ export function SchoolBusTripsPage() {
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
             label={access.isParentOnly ? 'Total Tracking Trips' : 'Trips'}
-            value={data?.data?.totalElements ?? 0}
+            value={data?.data?.totalElements || 0}
             hint={
               access.isParentOnly
                 ? 'All historical & current student trips'

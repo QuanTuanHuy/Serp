@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
@@ -35,7 +35,12 @@ import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { schoolBusUi } from '../theme';
-import { formatDate, formatDateTime, getPageItems } from '../utils';
+import {
+  SCHOOL_BUS_PAGE_QUERY_OPTIONS,
+  formatDate,
+  formatDateTime,
+  getPageItems,
+} from '../utils';
 
 const routeStatusMap: Record<string, { label: string; className: string }> = {
   PUBLISHED: {
@@ -94,13 +99,16 @@ export function SchoolBusDispatchPage() {
     sortBy: 'lastModifiedDate',
     sortDirection: 'DESC',
   });
-  const { data, isLoading } = useGetRoutesQuery(pagination.params);
+  const { data, isLoading } = useGetRoutesQuery(
+    pagination.params,
+    SCHOOL_BUS_PAGE_QUERY_OPTIONS
+  );
   const [selectedRouteId, setSelectedRouteId] = React.useState<number | null>(
     null
   );
   const routes = getPageItems(data?.data);
 
-  // Route-level status — reflects planning/dispatch state, NOT execution state
+  // Route-level status - reflects planning/dispatch state, NOT execution state
   const plannedRoutes = routes.filter((route) =>
     ['PLANNED', 'ASSIGNED'].includes(route.status)
   ).length;
@@ -216,18 +224,23 @@ export function SchoolBusDispatchPage() {
               />
             ) : (
               <div className='space-y-4'>
-                {prioritizedRoutes.map((route) => (
-                  <div
-                    key={route.id}
-                    className={cn(
-                      schoolBusUi.interactiveCard,
-                      'p-5 cursor-pointer relative transition-all duration-200 flex flex-col gap-4',
-                      selectedRouteId === route.id
-                        ? 'border-l-4 border-l-[#C81E3A] border-y-slate-300 border-r-slate-300 bg-slate-50/50 ring-1 ring-slate-100 shadow-sm'
-                        : ''
-                    )}
-                    onClick={() => setSelectedRouteId(route.id)}
-                  >
+                {prioritizedRoutes.map((route) => {
+                  const hasBus = Boolean(route.busId);
+                  const hasDriver = Boolean(route.driverId);
+                  const hasAttendant = Boolean(route.attendantId);
+
+                  return (
+                    <div
+                      key={route.id}
+                      className={cn(
+                        schoolBusUi.interactiveCard,
+                        'p-5 cursor-pointer relative transition-all duration-200 flex flex-col gap-4',
+                        selectedRouteId === route.id
+                          ? 'border-l-4 border-l-[#C81E3A] border-y-slate-300 border-r-slate-300 bg-slate-50/50 ring-1 ring-slate-100 shadow-sm'
+                          : ''
+                      )}
+                      onClick={() => setSelectedRouteId(route.id)}
+                    >
                     {/* Header: Code, Name and Status */}
                     <div className='flex flex-wrap items-center justify-between gap-3'>
                       <div className='flex items-center gap-2.5 min-w-0'>
@@ -312,56 +325,36 @@ export function SchoolBusDispatchPage() {
                       <span
                         className={cn(
                           'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
-                          route.status === 'ASSIGNED' ||
-                            route.status === 'TRIP_CREATED' ||
-                            route.status === 'IN_PROGRESS' ||
-                            route.status === 'COMPLETED'
+                          hasBus
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                             : 'bg-amber-50 text-amber-700 border-amber-100'
                         )}
                       >
-                        {route.status === 'ASSIGNED' ||
-                        route.status === 'TRIP_CREATED' ||
-                        route.status === 'IN_PROGRESS' ||
-                        route.status === 'COMPLETED'
-                          ? '✓ Bus assigned'
-                          : '⚠ Missing bus'}
+                        {hasBus ? 'OK Bus assigned' : 'Warning: Missing bus'}
                       </span>
                       <span
                         className={cn(
                           'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
-                          route.status === 'ASSIGNED' ||
-                            route.status === 'TRIP_CREATED' ||
-                            route.status === 'IN_PROGRESS' ||
-                            route.status === 'COMPLETED'
+                          hasDriver
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                             : 'bg-amber-50 text-amber-700 border-amber-100'
                         )}
                       >
-                        {route.status === 'ASSIGNED' ||
-                        route.status === 'TRIP_CREATED' ||
-                        route.status === 'IN_PROGRESS' ||
-                        route.status === 'COMPLETED'
-                          ? '✓ Driver assigned'
-                          : '⚠ Missing driver'}
+                        {hasDriver
+                          ? 'OK Driver assigned'
+                          : 'Warning: Missing driver'}
                       </span>
                       <span
                         className={cn(
                           'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
-                          route.status === 'ASSIGNED' ||
-                            route.status === 'TRIP_CREATED' ||
-                            route.status === 'IN_PROGRESS' ||
-                            route.status === 'COMPLETED'
+                          hasAttendant
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                             : 'bg-amber-50 text-amber-750 border-amber-100'
                         )}
                       >
-                        {route.status === 'ASSIGNED' ||
-                        route.status === 'TRIP_CREATED' ||
-                        route.status === 'IN_PROGRESS' ||
-                        route.status === 'COMPLETED'
-                          ? '✓ Attendant assigned'
-                          : '⚠ Missing attendant'}
+                        {hasAttendant
+                          ? 'OK Attendant assigned'
+                          : 'Warning: Missing attendant'}
                       </span>
                     </div>
 
@@ -371,13 +364,13 @@ export function SchoolBusDispatchPage() {
                         <span>
                           Distance:{' '}
                           <strong className='text-slate-700'>
-                            {route.plannedDistanceKm ?? 0} km
+                            {route.plannedDistanceKm || 0} km
                           </strong>
                         </span>
                         <span>
                           Duration:{' '}
                           <strong className='text-slate-700'>
-                            {route.plannedDurationMin ?? 0} mins
+                            {route.plannedDurationMin || 0} mins
                           </strong>
                         </span>
                         {route.startedAt && (
@@ -449,8 +442,9 @@ export function SchoolBusDispatchPage() {
                         </Button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
 
                 <div className='pt-2'>
                   <SchoolBusPaginationBar
@@ -590,7 +584,7 @@ export function SchoolBusDispatchPage() {
                             </p>
                             <p className='font-bold text-slate-800 mt-0.5'>
                               {selectedRouteDetail.data.route
-                                .plannedDistanceKm ?? 0}{' '}
+                                .plannedDistanceKm || 0}{' '}
                               km
                             </p>
                           </div>
@@ -600,7 +594,7 @@ export function SchoolBusDispatchPage() {
                             </p>
                             <p className='font-bold text-slate-800 mt-0.5'>
                               {selectedRouteDetail.data.route
-                                .plannedDurationMin ?? 0}{' '}
+                                .plannedDurationMin || 0}{' '}
                               mins
                             </p>
                           </div>
@@ -613,7 +607,7 @@ export function SchoolBusDispatchPage() {
                       {selectedRouteMissingCoordinates > 0 && (
                         <div className='rounded-lg border border-amber-200 bg-amber-50/50 p-2.5 text-xs text-amber-700 leading-normal'>
                           <p className='font-semibold'>
-                            ⚠️ {selectedRouteMissingCoordinates} stop(s) missing
+                            Warning: {selectedRouteMissingCoordinates} stop(s) missing
                             coordinates.
                           </p>
                           <p className='text-[10px] text-amber-600 mt-0.5'>
@@ -642,3 +636,4 @@ export function SchoolBusDispatchPage() {
     </SchoolBusPageShell>
   );
 }
+

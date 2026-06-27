@@ -13,11 +13,27 @@ export function useSchoolBusPagination(
   const [params, setParams] = React.useState<SchoolBusListParams>(initial);
 
   const setPage = React.useCallback((page: number) => {
-    setParams((current) => ({ ...current, page: Math.max(page, 0) }));
+    const nextPage = Math.max(page, 0);
+    setParams((current) =>
+      current.page === nextPage ? current : { ...current, page: nextPage }
+    );
   }, []);
 
   const setKeyword = React.useCallback((keyword: string) => {
-    setParams((current) => ({ ...current, keyword, page: 0 }));
+    const normalizedKeyword = keyword.trim();
+    setParams((current) => {
+      const currentKeyword = current.keyword ?? '';
+      if (currentKeyword === normalizedKeyword && current.page === 0) {
+        return current;
+      }
+
+      if (!normalizedKeyword) {
+        const { keyword: _keyword, ...paramsWithoutKeyword } = current;
+        return { ...paramsWithoutKeyword, page: 0 };
+      }
+
+      return { ...current, keyword: normalizedKeyword, page: 0 };
+    });
   }, []);
 
   return { params, setParams, setPage, setKeyword };

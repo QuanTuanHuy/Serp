@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect } from 'react';
 import { Marker, Polyline, Popup, useMap } from 'react-leaflet';
@@ -12,7 +12,7 @@ import {
 import type { TripAttendanceStopItem } from '../../types';
 import { createSchoolBusMarkerIcon, createStopNumberIcon } from './mapIcons';
 
-// ── Auto-fit bounds ───────────────────────────────────────────────────────────
+// -- Auto-fit bounds -----------------------------------------------------------
 interface FitBoundsProps {
   positions: [number, number][];
 }
@@ -29,7 +29,7 @@ function FitBounds({ positions }: FitBoundsProps) {
   return null;
 }
 
-// ── Map size invalidator ──────────────────────────────────────────────────────
+// -- Map size invalidator ------------------------------------------------------
 function MapInvalidator({ trigger }: { trigger?: number | boolean }) {
   const map = useMap();
   useEffect(() => {
@@ -187,7 +187,7 @@ export default function TripMapClient({
         center={initialCenter}
         zoom={initialZoom}
         className={
-          className ??
+          className ||
           'h-[420px] w-full rounded-2xl overflow-hidden border border-slate-200'
         }
       >
@@ -246,12 +246,12 @@ export default function TripMapClient({
               <Popup>
                 <div className='space-y-1 text-xs'>
                   <p className='font-semibold text-slate-800'>
-                    {isCurrent && tripIsActive && '🚌 Current stop: '}
-                    {isNext && '📍 Next stop: '}
-                    {stop.displayName ?? `Stop #${stop.routeStopId}`}
+                    {isCurrent && tripIsActive && ' Current stop: '}
+                    {isNext && ' Next stop: '}
+                    {stop.displayName || `Stop #${stop.routeStopId}`}
                   </p>
                   <p className='text-[10px] text-slate-400 font-medium'>
-                    Order: #{stop.stopOrder} • {purposeLabel}
+                    Order: #{stop.stopOrder} - {purposeLabel}
                   </p>
                   <p className='text-slate-500'>
                     Status:{' '}
@@ -283,3 +283,4 @@ export default function TripMapClient({
     </div>
   );
 }
+

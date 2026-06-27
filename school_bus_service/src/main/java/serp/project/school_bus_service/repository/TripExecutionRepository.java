@@ -4,6 +4,8 @@ import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.shared.base.BaseRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,20 +19,51 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
 
     Optional<TripExecutionEntity> findByRouteIdAndTenantIdAndIsDeletedFalse(Long routeId, Long tenantId);
 
-    List<TripExecutionEntity> findByTenantIdAndServiceDateAndIsDeletedFalseOrderByIdDesc(Long tenantId,
-            LocalDate serviceDate);
+    @Query("""
+        SELECT t FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId
+          AND t.isDeleted = false
+          AND (:dateFrom IS NULL OR t.route.planningSession.serviceDate >= :dateFrom)
+          AND (:dateTo IS NULL OR t.route.planningSession.serviceDate <= :dateTo)
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:routeId IS NULL OR t.route.id = :routeId)
+          AND (:tripId IS NULL OR t.id = :tripId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
+          AND (:status IS NULL OR t.status = :status)
+    """)
+    Page<TripExecutionEntity> findReportTrips(
+            @Param("tenantId") Long tenantId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo,
+            @Param("schoolId") Long schoolId,
+            @Param("routeId") Long routeId,
+            @Param("tripId") Long tripId,
+            @Param("direction") RouteDirection direction,
+            @Param("status") TripStatus status,
+            Pageable pageable);
+
+    @Query("""
+        SELECT t FROM TripExecutionEntity t
+        WHERE t.tenantId = :tenantId
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND t.isDeleted = false
+        ORDER BY t.id DESC
+    """)
+    List<TripExecutionEntity> findByTenantIdAndServiceDateAndIsDeletedFalseOrderByIdDesc(
+            @Param("tenantId") Long tenantId,
+            @Param("serviceDate") LocalDate serviceDate);
 
     long countByTenantIdAndStatusAndIsDeletedFalse(Long tenantId, TripStatus status);
 
-    @Query("SELECT MAX(t.serviceDate) FROM TripExecutionEntity t WHERE t.tenantId = :tenantId AND t.isDeleted = false")
+    @Query("SELECT MAX(t.route.planningSession.serviceDate) FROM TripExecutionEntity t WHERE t.tenantId = :tenantId AND t.isDeleted = false")
     Optional<LocalDate> findLatestServiceDate(@Param("tenantId") Long tenantId);
 
     @Query("""
         SELECT t.status, COUNT(t) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
         GROUP BY t.status
     """)
     List<Object[]> countTripsByStatusFiltered(
@@ -41,13 +74,13 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
     );
 
     @Query("""
-        SELECT t.serviceDate, COUNT(t) FROM TripExecutionEntity t
+        SELECT t.route.planningSession.serviceDate, COUNT(t) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate >= :fromDate AND t.serviceDate <= :toDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
-        GROUP BY t.serviceDate
-        ORDER BY t.serviceDate ASC
+          AND t.route.planningSession.serviceDate >= :fromDate AND t.route.planningSession.serviceDate <= :toDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
+        GROUP BY t.route.planningSession.serviceDate
+        ORDER BY t.route.planningSession.serviceDate ASC
     """)
     List<Object[]> countTripsByDateFiltered(
         @Param("tenantId") Long tenantId,
@@ -58,12 +91,12 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
     );
 
     @Query("""
-        SELECT t.routeDirection, COUNT(t) FROM TripExecutionEntity t
+        SELECT t.route.planningSession.routeDirection, COUNT(t) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
-        GROUP BY t.routeDirection
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
+        GROUP BY t.route.planningSession.routeDirection
     """)
     List<Object[]> countTripsByDirectionFiltered(
         @Param("tenantId") Long tenantId,
@@ -75,9 +108,9 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
     @Query("""
         SELECT t FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
     """)
     List<TripExecutionEntity> findTripsFiltered(
         @Param("tenantId") Long tenantId,
@@ -89,11 +122,11 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
     @Query("""
         SELECT t FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
+          AND t.route.planningSession.serviceDate = :serviceDate
           AND EXISTS (
               SELECT ts FROM TripStudentEntity ts
               WHERE ts.trip.id = t.id
-                AND ts.student.parentProfile.id = :parentProfileId
+                AND ts.subscription.student.parentProfile.id = :parentProfileId
                 AND ts.isDeleted = false
           )
     """)
@@ -106,11 +139,11 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
     @Query("""
         SELECT t.status, COUNT(t) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
+          AND t.route.planningSession.serviceDate = :serviceDate
           AND EXISTS (
               SELECT ts FROM TripStudentEntity ts
               WHERE ts.trip.id = t.id
-                AND ts.student.parentProfile.id = :parentProfileId
+                AND ts.subscription.student.parentProfile.id = :parentProfileId
                 AND ts.isDeleted = false
           )
         GROUP BY t.status
@@ -124,8 +157,14 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
     @Query("""
         SELECT t FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND t.driver.id = :driverId
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT a FROM RouteAssignmentEntity a
+              WHERE a.route.id = t.route.id
+                AND a.driver.id = :driverId
+                AND a.tenantId = :tenantId
+                AND a.isDeleted = false
+          )
     """)
     List<TripExecutionEntity> findTripsByDriverAndDate(
         @Param("tenantId") Long tenantId,
@@ -136,8 +175,14 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
     @Query("""
         SELECT t.status, COUNT(t) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND t.driver.id = :driverId
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT a FROM RouteAssignmentEntity a
+              WHERE a.route.id = t.route.id
+                AND a.driver.id = :driverId
+                AND a.tenantId = :tenantId
+                AND a.isDeleted = false
+          )
         GROUP BY t.status
     """)
     List<Object[]> countTripsByStatusForDriver(
@@ -149,8 +194,14 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
     @Query("""
         SELECT t FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND t.attendant.id = :attendantId
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT a FROM RouteAssignmentEntity a
+              WHERE a.route.id = t.route.id
+                AND a.attendant.id = :attendantId
+                AND a.tenantId = :tenantId
+                AND a.isDeleted = false
+          )
     """)
     List<TripExecutionEntity> findTripsByAttendantAndDate(
         @Param("tenantId") Long tenantId,
@@ -161,8 +212,14 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
     @Query("""
         SELECT t.status, COUNT(t) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND t.attendant.id = :attendantId
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND EXISTS (
+              SELECT a FROM RouteAssignmentEntity a
+              WHERE a.route.id = t.route.id
+                AND a.attendant.id = :attendantId
+                AND a.tenantId = :tenantId
+                AND a.isDeleted = false
+          )
         GROUP BY t.status
     """)
     List<Object[]> countTripsByStatusForAttendant(
@@ -176,23 +233,35 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
             Long tenantId);
 
     @Query("""
-        SELECT MAX(t.serviceDate) FROM TripExecutionEntity t
+        SELECT MAX(t.route.planningSession.serviceDate) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
           AND t.route.isDeleted = false
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
           AND (
               :tenantWide = true
-              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
-              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
+              OR (:driverProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.driver.id = :driverProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:attendantProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.attendant.id = :attendantProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
               OR (:parentProfileId IS NOT NULL AND EXISTS (
                   SELECT ts FROM TripStudentEntity ts
                   WHERE ts.trip.id = t.id
-                    AND ts.student.parentProfile.id = :parentProfileId
+                    AND ts.subscription.student.parentProfile.id = :parentProfileId
                     AND ts.tenantId = :tenantId
                     AND ts.isDeleted = false
-                    AND ts.student.isDeleted = false
-                    AND ts.student.isActive = true
+                    AND ts.subscription.student.isDeleted = false
+                    AND ts.subscription.student.isActive = true
               ))
           )
     """)
@@ -209,21 +278,33 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
         SELECT t.status, COUNT(t) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
           AND t.route.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
           AND (
               :tenantWide = true
-              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
-              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
+              OR (:driverProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.driver.id = :driverProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:attendantProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.attendant.id = :attendantProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
               OR (:parentProfileId IS NOT NULL AND EXISTS (
                   SELECT ts FROM TripStudentEntity ts
                   WHERE ts.trip.id = t.id
-                    AND ts.student.parentProfile.id = :parentProfileId
+                    AND ts.subscription.student.parentProfile.id = :parentProfileId
                     AND ts.tenantId = :tenantId
                     AND ts.isDeleted = false
-                    AND ts.student.isDeleted = false
-                    AND ts.student.isActive = true
+                    AND ts.subscription.student.isDeleted = false
+                    AND ts.subscription.student.isActive = true
               ))
           )
         GROUP BY t.status
@@ -239,28 +320,40 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
             @Param("parentProfileId") Long parentProfileId);
 
     @Query("""
-        SELECT t.serviceDate, COUNT(t) FROM TripExecutionEntity t
+        SELECT t.route.planningSession.serviceDate, COUNT(t) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
           AND t.route.isDeleted = false
-          AND t.serviceDate BETWEEN :fromDate AND :toDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND t.route.planningSession.serviceDate BETWEEN :fromDate AND :toDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
           AND (
               :tenantWide = true
-              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
-              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
+              OR (:driverProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.driver.id = :driverProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:attendantProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.attendant.id = :attendantProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
               OR (:parentProfileId IS NOT NULL AND EXISTS (
                   SELECT ts FROM TripStudentEntity ts
                   WHERE ts.trip.id = t.id
-                    AND ts.student.parentProfile.id = :parentProfileId
+                    AND ts.subscription.student.parentProfile.id = :parentProfileId
                     AND ts.tenantId = :tenantId
                     AND ts.isDeleted = false
-                    AND ts.student.isDeleted = false
-                    AND ts.student.isActive = true
+                    AND ts.subscription.student.isDeleted = false
+                    AND ts.subscription.student.isActive = true
               ))
           )
-        GROUP BY t.serviceDate
-        ORDER BY t.serviceDate ASC
+        GROUP BY t.route.planningSession.serviceDate
+        ORDER BY t.route.planningSession.serviceDate ASC
     """)
     List<Object[]> countDashboardTripsByDate(
             @Param("tenantId") Long tenantId,
@@ -274,24 +367,36 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
             @Param("parentProfileId") Long parentProfileId);
 
     @Query("""
-        SELECT COUNT(DISTINCT t.route.school.id) FROM TripExecutionEntity t
+        SELECT COUNT(DISTINCT t.route.planningSession.school.id) FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId AND t.isDeleted = false
           AND t.route.isDeleted = false
-          AND t.serviceDate = :serviceDate
-          AND (:schoolId IS NULL OR t.route.school.id = :schoolId)
-          AND (:direction IS NULL OR t.routeDirection = :direction)
+          AND t.route.planningSession.serviceDate = :serviceDate
+          AND (:schoolId IS NULL OR t.route.planningSession.school.id = :schoolId)
+          AND (:direction IS NULL OR t.route.planningSession.routeDirection = :direction)
           AND (
               :tenantWide = true
-              OR (:driverProfileId IS NOT NULL AND t.driver.id = :driverProfileId)
-              OR (:attendantProfileId IS NOT NULL AND t.attendant.id = :attendantProfileId)
+              OR (:driverProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.driver.id = :driverProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
+              OR (:attendantProfileId IS NOT NULL AND EXISTS (
+                  SELECT a FROM RouteAssignmentEntity a
+                  WHERE a.route.id = t.route.id
+                    AND a.attendant.id = :attendantProfileId
+                    AND a.tenantId = :tenantId
+                    AND a.isDeleted = false
+              ))
               OR (:parentProfileId IS NOT NULL AND EXISTS (
                   SELECT ts FROM TripStudentEntity ts
                   WHERE ts.trip.id = t.id
-                    AND ts.student.parentProfile.id = :parentProfileId
+                    AND ts.subscription.student.parentProfile.id = :parentProfileId
                     AND ts.tenantId = :tenantId
                     AND ts.isDeleted = false
-                    AND ts.student.isDeleted = false
-                    AND ts.student.isActive = true
+                    AND ts.subscription.student.isDeleted = false
+                    AND ts.subscription.student.isActive = true
               ))
           )
     """)

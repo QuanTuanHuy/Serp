@@ -27,6 +27,7 @@ import serp.project.school_bus_service.enums.TripOption;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.RequestStudentEntity;
 import serp.project.school_bus_service.entity.PickupPointEntity;
+import serp.project.school_bus_service.entity.SchoolEntity;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
 import serp.project.school_bus_service.entity.StudentEntity;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
@@ -102,19 +103,18 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
 
     @Override
     public PageResponse<TransportRequestResponse> getTransportRequests(TransportRequestParamsRequest params, Long tenantId) {
-        // Parent data scope: filter by current parent profile
-        Specification<TransportRequestEntity> baseSpec = spec(tenantId, params == null ? null : params.getKeyword(), "parentProfile.fullName", "school.name",
-                        "requestType", "status", "notes");
+        Long parentProfileId = null;
         if (securityService.isParentOnly()) {
-            Long parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
-            baseSpec = baseSpec.and((root, query, cb) -> cb.equal(root.get("parentProfile").get("id"), parentProfileId));
+            parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
         }
 
-        PageResponse<TransportRequestResponse> response = PageResponse.from(transportRequestRepository.findAll(
-                baseSpec,
+        PageResponse<TransportRequestResponse> response = PageResponse.from(transportRequestRepository.findTransportRequestListItems(
+                tenantId,
+                parentProfileId,
+                keywordPattern(params == null ? null : params.getKeyword()),
                 pageable(params, Set.of("id", "requestType", "status", "effectiveFrom", "effectiveTo", "createdAt",
                         "updatedAt"), "createdAt")),
-                mapper::toTransportRequestResponse);
+                item -> item);
 
         List<TransportRequestResponse> items = response.getItems();
         if (items != null && !items.isEmpty()) {
@@ -126,6 +126,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                             row -> ((Number) row[1]).intValue()
                     ));
             items.forEach(item -> item.setStudentCount(countMap.getOrDefault(item.getId(), 0)));
+            applySchoolSummaries(items, requestIds, tenantId);
         }
 
         return response;
@@ -135,8 +136,9 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     public TransportRequestDetailResponse getTransportRequest(Long id, Long tenantId) {
         schoolBusDataScopeService.assertCanAccessTransportRequest(id);
         TransportRequestEntity request = findById(transportRequestRepository, id, tenantId);
-        return mapper.toTransportRequestDetailResponse(request,
-                requestStudentRepository.findByRequestIdAndTenantIdAndIsDeletedFalse(id, tenantId));
+        List<RequestStudentEntity> students = requestStudentRepository.findByRequestIdAndTenantIdAndIsDeletedFalse(id, tenantId);
+        hydrateRequestSchool(request, students);
+        return mapper.toTransportRequestDetailResponse(request, students);
     }
 
     @Override
@@ -245,9 +247,10 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                                 "Pickup point '" + pickup.getName() + "' is missing coordinates for student #"
                                         + rs.getStudent().getId() + ". Configure coordinates on the pickup point before approving.");
                     }
-                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), pickup.getId(), tenantId)
+                    SchoolEntity school = resolveSchool(entity, requestStudents);
+                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(school.getId(), pickup.getId(), tenantId)
                             .orElseThrow(() -> new AppException(AppErrorCode.Request.INVALID_STATE,
-                                    "Pickup point '" + pickup.getName() + "' is not linked to school '" + entity.getSchool().getName() + "'"));
+                                    "Pickup point '" + pickup.getName() + "' is not linked to school '" + school.getName() + "'"));
                 }
 
                 if (needsDropoff) {
@@ -262,9 +265,10 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                                 "Drop-off point '" + dropoff.getName() + "' is missing coordinates for student #"
                                         + rs.getStudent().getId() + ". Configure coordinates on the drop-off point before approving.");
                     }
-                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(entity.getSchool().getId(), dropoff.getId(), tenantId)
+                    SchoolEntity school = resolveSchool(entity, requestStudents);
+                    schoolPickupPointService.findLinkBySchoolAndPickupPoint(school.getId(), dropoff.getId(), tenantId)
                             .orElseThrow(() -> new AppException(AppErrorCode.Request.INVALID_STATE,
-                                    "Drop-off point '" + dropoff.getName() + "' is not linked to school '" + entity.getSchool().getName() + "'"));
+                                    "Drop-off point '" + dropoff.getName() + "' is not linked to school '" + school.getName() + "'"));
                 }
             }
         }
@@ -327,7 +331,7 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     public boolean hasApprovedRequestForStudent(Long studentId, Long schoolId, LocalDate serviceDate, Long tenantId) {
         return requestStudentRepository.findByStudentIdAndTenantIdAndIsDeletedFalse(studentId, tenantId).stream()
                 .map(RequestStudentEntity::getRequest)
-                .filter(request -> request.getSchool().getId().equals(schoolId))
+                .filter(request -> requestHasSchool(request, schoolId, tenantId))
                 .filter(request -> request.getStatus() == RequestStatus.APPROVED)
                 .anyMatch(request -> !serviceDate.isBefore(request.getEffectiveFrom())
                         && (request.getEffectiveTo() == null || !serviceDate.isAfter(request.getEffectiveTo())));
@@ -576,6 +580,13 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         return BaseSpecification.tenantActiveWithKeyword(tenantId, keyword, fields);
     }
 
+    private String keywordPattern(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return "%" + keyword.trim().toLowerCase() + "%";
+    }
+
     private Pageable pageable(
             BaseParamsRequest params,
             Set<String> allowedSorts,
@@ -611,8 +622,62 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
     private TransportRequestResponse toResponse(TransportRequestEntity entity) {
         TransportRequestResponse response = mapper.toTransportRequestResponse(entity);
         if (response != null) {
-            response.setStudentCount(requestStudentRepository.findByRequestIdAndTenantIdAndIsDeletedFalse(entity.getId(), entity.getTenantId()).size());
+            List<RequestStudentEntity> students = requestStudentRepository.findByRequestIdAndTenantIdAndIsDeletedFalse(entity.getId(), entity.getTenantId());
+            hydrateRequestSchool(entity, students);
+            response = mapper.toTransportRequestResponse(entity);
+            response.setStudentCount(students.size());
         }
         return response;
+    }
+
+    private void applySchoolSummaries(List<TransportRequestResponse> items, List<Long> requestIds, Long tenantId) {
+        Map<Long, Object[]> schoolMap = requestStudentRepository.findSchoolSummariesByRequestIds(requestIds, tenantId)
+                .stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> row, (first, ignored) -> first));
+        items.forEach(item -> {
+            Object[] row = schoolMap.get(item.getId());
+            if (row == null) {
+                return;
+            }
+            item.setSchoolId((Long) row[1]);
+            item.setSchoolName((String) row[2]);
+            item.setSchoolLatitude((Double) row[3]);
+            item.setSchoolLongitude((Double) row[4]);
+        });
+    }
+
+    private void hydrateRequestSchool(TransportRequestEntity request, List<RequestStudentEntity> students) {
+        if (request == null || request.getSchool() != null || students == null) {
+            return;
+        }
+        students.stream()
+                .map(RequestStudentEntity::getStudent)
+                .filter(student -> student != null && student.getSchool() != null)
+                .findFirst()
+                .ifPresent(student -> request.setSchool(student.getSchool()));
+    }
+
+    private SchoolEntity resolveSchool(TransportRequestEntity request, List<RequestStudentEntity> students) {
+        hydrateRequestSchool(request, students);
+        if (request.getSchool() == null) {
+            throw new AppException(AppErrorCode.Request.INVALID_STATE,
+                    "Cannot resolve school from transport request students.");
+        }
+        return request.getSchool();
+    }
+
+    private boolean requestHasSchool(TransportRequestEntity request, Long schoolId, Long tenantId) {
+        if (request == null || schoolId == null) {
+            return false;
+        }
+        if (request.getSchool() != null) {
+            return schoolId.equals(request.getSchool().getId());
+        }
+        return requestStudentRepository.findByRequestIdAndTenantIdAndIsDeletedFalse(request.getId(), tenantId)
+                .stream()
+                .map(RequestStudentEntity::getStudent)
+                .anyMatch(student -> student != null
+                        && student.getSchool() != null
+                        && schoolId.equals(student.getSchool().getId()));
     }
 }

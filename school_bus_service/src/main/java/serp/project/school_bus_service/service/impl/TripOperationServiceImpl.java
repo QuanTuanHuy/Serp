@@ -106,7 +106,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         tripExecutionService.save(trip);
 
         stops.stream()
-                .min(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .min(Comparator.comparingInt(this::routeStopOrder))
                 .ifPresent(startTerminal -> {
                     boolean isReturn = trip.getRouteDirection() == RouteDirection.RETURN;
                     startTerminal.setStatus(isReturn ? TripStopStatus.BOARDING : TripStopStatus.ARRIVED);
@@ -138,7 +138,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         // Ensure next pending stop
         TripStopLogEntity next = tripStopLogService.findByTrip(trip.getId(), tenantId).stream()
                 .filter(stop -> stop.getStatus() == TripStopStatus.PENDING)
-                .min(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .min(Comparator.comparingInt(this::routeStopOrder))
                 .orElseThrow(() -> new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE)));
         if (!next.getId().equals(stopLog.getId())) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Trip.INVALID_STATE));
@@ -151,7 +151,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         tripStopLogService.save(stopLog);
 
         List<TripStopLogEntity> stops = tripStopLogService.findByTrip(tripId, tenantId).stream()
-                .sorted(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .sorted(Comparator.comparingInt(this::routeStopOrder))
                 .toList();
         boolean isLastStop = !stops.isEmpty() && stops.get(stops.size() - 1).getId().equals(stopLog.getId());
 
@@ -235,7 +235,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         // Ensure next active/current stop
         TripStopLogEntity firstUnfinished = tripStopLogService.findByTrip(tripId, tenantId).stream()
                 .filter(stop -> stop.getStatus() != TripStopStatus.DEPARTED && stop.getStatus() != TripStopStatus.SKIPPED)
-                .min(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .min(Comparator.comparingInt(this::routeStopOrder))
                 .orElseThrow(() -> new AppException(AppErrorCode.Trip.INVALID_STATE, "No active stops to depart."));
         if (!firstUnfinished.getId().equals(stopLog.getId())) {
             throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Cannot depart stop because there are earlier unfinished stops.");
@@ -355,7 +355,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         // All stops except the last stop (end terminal) must be DEPARTED or SKIPPED.
         // The last stop (end terminal) must be ARRIVED or DEPARTED.
         List<TripStopLogEntity> stops = tripStopLogService.findByTrip(tripId, tenantId).stream()
-                .sorted(Comparator.comparingInt(TripStopLogEntity::getStopOrder))
+                .sorted(Comparator.comparingInt(this::routeStopOrder))
                 .toList();
 
         for (int i = 0; i < stops.size(); i++) {
@@ -580,5 +580,12 @@ public class TripOperationServiceImpl implements ITripOperationService {
             BatchAttendanceRequest request, Long tenantId, Long actorId) {
         schoolBusDataScopeService.assertCanMarkAttendance(tripId);
         return attendanceService.batchUpdateAttendance(tripId, routeStopId, request, tenantId, actorId);
+    }
+
+    private int routeStopOrder(TripStopLogEntity log) {
+        if (log == null || log.getRouteStop() == null || log.getRouteStop().getStopOrder() == null) {
+            return Integer.MAX_VALUE;
+        }
+        return log.getRouteStop().getStopOrder();
     }
 }

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ export interface BreadcrumbItem {
   icon?: ReactNode;
   /** If provided, clicking scrolls the element with this id into view. */
   sectionId?: string;
-  /** Marks this crumb as the current page — non-clickable, visually distinct. */
+  /** Marks this crumb as the current page - non-clickable, visually distinct. */
   current?: boolean;
 }
 
@@ -125,3 +125,4 @@ export function SchoolBusBreadcrumb({
     </nav>
   );
 }
+
