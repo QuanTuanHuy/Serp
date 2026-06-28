@@ -11,7 +11,11 @@ import { usePathname } from 'next/navigation';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { cn, getIconComponent } from '@/shared/utils';
 import type { SidebarMenuItem } from '@/shared/hooks';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/shared/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -37,7 +41,7 @@ const renderDropdownItems = (subItems: SidebarMenuItem[]) => {
     if (childHasChildren) {
       return (
         <DropdownMenuSub key={child.id}>
-          <DropdownMenuSubTrigger className="cursor-pointer">
+          <DropdownMenuSubTrigger className='cursor-pointer'>
             <span>{child.name}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
@@ -48,7 +52,7 @@ const renderDropdownItems = (subItems: SidebarMenuItem[]) => {
     }
     return (
       <DropdownMenuItem key={child.id} asChild>
-        <Link href={child.href} className="w-full cursor-pointer">
+        <Link href={child.href} className='w-full cursor-pointer'>
           {child.name}
         </Link>
       </DropdownMenuItem>
@@ -107,7 +111,9 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
         <span
           className={cn(
             'transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap',
-            isCollapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[200px] opacity-100'
+            isCollapsed
+              ? 'max-w-0 opacity-0 pointer-events-none'
+              : 'max-w-[200px] opacity-100'
           )}
         >
           {item.name}
@@ -135,10 +141,8 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
     if (!hasChildren) {
       return (
         <Tooltip>
-          <TooltipTrigger asChild>
-            {itemLink}
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={12}>
+          <TooltipTrigger asChild>{itemLink}</TooltipTrigger>
+          <TooltipContent side='right' sideOffset={12}>
             {item.name}
           </TooltipContent>
         </Tooltip>
@@ -146,10 +150,13 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
     } else {
       return (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            {itemLink}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="right" align="start" sideOffset={12} className="w-56">
+          <DropdownMenuTrigger asChild>{itemLink}</DropdownMenuTrigger>
+          <DropdownMenuContent
+            side='right'
+            align='start'
+            sideOffset={12}
+            className='w-56'
+          >
             <DropdownMenuLabel>{item.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {renderDropdownItems(item.children!)}
@@ -169,7 +176,9 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
         <div
           className={cn(
             'mt-1 space-y-1 pl-4 overflow-hidden transition-all duration-300 ease-in-out',
-            isExpanded && !isCollapsed ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+            isExpanded && !isCollapsed
+              ? 'max-h-96 opacity-100'
+              : 'max-h-0 opacity-0'
           )}
         >
           {item.children!.map((child) => (
