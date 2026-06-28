@@ -39,6 +39,8 @@ import {
 import { cn, getAvatarColor } from '@/shared/utils';
 import { UserSearch } from './UserSearch';
 import type { ChannelMember } from '../types';
+import { OnlineStatusIndicator } from './OnlineStatusIndicator';
+import type { UserPresenceResponse } from '../api/presence.api';
 
 interface ChannelMembersPanelProps {
   open: boolean;
@@ -118,21 +120,30 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
     skip: !open,
   });
 
-  // Build a set of online user IDs from presence data
-  const onlineUserIds = React.useMemo(() => {
-    const ids = new Set<string>();
+  // Build a map of user presence from presence data
+  const presenceMap = React.useMemo(() => {
+    const map = new Map<string, UserPresenceResponse>();
     const statusGroups = presenceResponse?.data?.statusGroups;
     if (statusGroups) {
       Object.values(statusGroups).forEach((users) => {
         users.forEach((u) => {
-          if (u.isOnline) {
-            ids.add(String(u.userId));
-          }
+          map.set(String(u.userId), u);
         });
       });
     }
-    return ids;
+    return map;
   }, [presenceResponse]);
+
+  const mapUserStatus = (status?: string): 'online' | 'busy' | 'offline' => {
+    switch (status) {
+      case 'ONLINE':
+        return 'online';
+      case 'BUSY':
+        return 'busy';
+      default:
+        return 'offline';
+    }
+  };
 
   const members = membersResponse?.data || [];
   const memberIds = members.map((m) => m.userId);
@@ -295,11 +306,19 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
                             {getUserInitials(userName)}
                           </AvatarFallback>
                         </Avatar>
-                        {onlineUserIds.has(member.userId) && (
-                          <div className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center'>
-                            <CircleDot className='h-2.5 w-2.5 text-emerald-500 fill-emerald-500' />
-                          </div>
-                        )}
+                        {(() => {
+                          const userPresence = presenceMap.get(member.userId);
+                          const presenceStatus = userPresence ? mapUserStatus(userPresence.status) : 'offline';
+                          return (
+                            <div className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border border-slate-100 dark:border-slate-800'>
+                              <OnlineStatusIndicator
+                                status={presenceStatus}
+                                size='sm'
+                                showPulse={presenceStatus === 'online'}
+                              />
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       <div className='flex-1 min-w-0'>
@@ -314,6 +333,19 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
                           </p>
                           {getRoleIcon(member.role)}
                         </div>
+                        {(() => {
+                          const userPresence = presenceMap.get(member.userId);
+                          return (
+                            userPresence?.statusMessage && (
+                              <p
+                                className='text-xs text-slate-500 dark:text-slate-400 italic truncate mt-0.5 max-w-[250px]'
+                                title={userPresence.statusMessage}
+                              >
+                                &ldquo;{userPresence.statusMessage}&rdquo;
+                              </p>
+                            )
+                          );
+                        })()}
                         <div className='flex items-center gap-2 mt-0.5'>
                           {getRoleBadge(member.role)}
                           {member.user?.email && (
