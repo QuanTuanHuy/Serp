@@ -167,3 +167,6 @@ export {
   TableCell,
   TableCaption,
 } from './table';
+
+// Popover Components
+export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from './popover';
