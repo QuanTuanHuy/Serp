@@ -22,7 +22,7 @@ import {
   Textarea,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { CRMDatePicker } from '../shared';
+import { CRMDatePicker, CRMUserSelect } from '../shared';
 import { toLocalDateInputValue } from '../../utils';
 import type {
   Activity,
@@ -332,21 +332,23 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
 
               <div className='space-y-2'>
                 <Label htmlFor='assignedTo'>Assigned To</Label>
-                <Input
-                  id='assignedTo'
-                  type='number'
-                  {...register('assignedTo')}
-                  placeholder='Enter user ID'
-                  className={errors.assignedTo ? 'border-destructive' : ''}
-                  disabled={isLoading}
+                <Controller
+                  name='assignedTo'
+                  control={control}
+                  render={({ field }) => (
+                    <CRMUserSelect
+                      id='assignedTo'
+                      value={field.value}
+                      onChange={field.onChange}
+                      fallbackUserName={activity.assignedToName}
+                      disabled={isLoading}
+                      className={errors.assignedTo ? 'border-destructive' : ''}
+                    />
+                  )}
                 />
-                {errors.assignedTo ? (
+                {errors.assignedTo && (
                   <p className='text-sm text-destructive'>
                     {errors.assignedTo.message}
-                  </p>
-                ) : (
-                  <p className='text-xs text-muted-foreground'>
-                    Current assignee: {activity.assignedToName || 'Unassigned'}
                   </p>
                 )}
               </div>
