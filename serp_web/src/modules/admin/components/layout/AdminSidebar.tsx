@@ -26,6 +26,11 @@ import { cn } from '@/shared/utils';
 import { useAdminSidebar } from '../../contexts/AdminSidebarContext';
 import { Button } from '@/shared/components/ui/button';
 import { MODULE_ICONS } from '@/shared/constants/moduleIcons';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/shared/components/ui/tooltip';
 
 interface NavigationItem {
   name: string;
@@ -102,15 +107,20 @@ export const AdminSidebar: React.FC = () => {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-30 h-screen border-r bg-background transition-all duration-300',
+        'fixed left-0 top-0 z-30 h-screen border-r bg-background flex flex-col transition-[width] duration-300 ease-in-out',
         isCollapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Logo/Brand */}
-      <div className='flex h-16 items-center border-b px-3 justify-between'>
+      <div
+        className={cn(
+          'flex h-16 items-center border-b px-3 transition-all duration-300',
+          isCollapsed ? 'justify-center' : 'justify-between'
+        )}
+      >
         <Link
           href='/home'
-          className='flex items-center space-x-3 group transition-colors'
+          className='flex items-center space-x-3 group transition-colors overflow-hidden'
           onMouseEnter={() => setIsModuleHovered(true)}
           onMouseLeave={() => setIsModuleHovered(false)}
         >
@@ -124,45 +134,54 @@ export const AdminSidebar: React.FC = () => {
           </div>
 
           {/* Module name */}
-          {!isCollapsed && (
-            <span className='text-sm font-semibold group-hover:text-primary transition-colors'>
-              Admin
-            </span>
-          )}
+          <span
+            className={cn(
+              'text-sm font-semibold group-hover:text-primary transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap',
+              isCollapsed
+                ? 'max-w-0 opacity-0 pointer-events-none'
+                : 'max-w-[150px] opacity-100'
+            )}
+          >
+            Admin
+          </span>
         </Link>
 
-        {/* Toggle Button - Only show when not collapsed */}
-        {!isCollapsed && (
-          <Button
-            variant='ghost'
-            size='icon'
-            className='h-8 w-8'
-            onClick={toggleSidebar}
-          >
-            <PanelLeftClose className='h-4 w-4' />
-          </Button>
-        )}
+        {/* Toggle Button - Repositioned to header */}
+        <Button
+          variant='ghost'
+          size='icon'
+          className={cn(
+            'h-8 w-8 transition-all duration-300',
+            isCollapsed ? 'hidden' : 'block' // Show normally in header when open
+          )}
+          onClick={toggleSidebar}
+          title='Collapse sidebar'
+        >
+          <PanelLeftClose className='h-4 w-4' />
+        </Button>
       </div>
 
       {/* Navigation */}
-      <nav className='flex-1 space-y-1 p-2'>
-        {/* Expand button when collapsed */}
+      <nav className='flex-1 space-y-1 p-2 overflow-y-auto'>
+        {/* Expand button when collapsed, centered */}
         {isCollapsed && (
-          <Button
-            variant='ghost'
-            size='icon'
-            className='w-full mt-4'
-            onClick={toggleSidebar}
-            title='Expand sidebar'
-          >
-            <PanelLeftOpen className='h-4 w-4' />
-          </Button>
+          <div className='flex justify-center py-2'>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-8 w-8'
+              onClick={toggleSidebar}
+              title='Expand sidebar'
+            >
+              <PanelLeftOpen className='h-4 w-4' />
+            </Button>
+          </div>
         )}
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
 
-          return (
+          const itemLink = (
             <Link
               key={item.href}
               href={item.href}
@@ -173,7 +192,6 @@ export const AdminSidebar: React.FC = () => {
                   : 'text-muted-foreground',
                 isCollapsed && 'justify-center'
               )}
-              title={isCollapsed ? item.name : undefined}
             >
               <div className='flex items-center space-x-3'>
                 <Icon
@@ -184,7 +202,16 @@ export const AdminSidebar: React.FC = () => {
                       : 'text-muted-foreground group-hover:text-accent-foreground'
                   )}
                 />
-                {!isCollapsed && <span>{item.name}</span>}
+                <span
+                  className={cn(
+                    'transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap',
+                    isCollapsed
+                      ? 'max-w-0 opacity-0 pointer-events-none'
+                      : 'max-w-[200px] opacity-100'
+                  )}
+                >
+                  {item.name}
+                </span>
               </div>
 
               {active && !isCollapsed && (
@@ -192,21 +219,39 @@ export const AdminSidebar: React.FC = () => {
               )}
             </Link>
           );
+
+          if (isCollapsed) {
+            return (
+              <Tooltip key={item.href}>
+                <TooltipTrigger asChild>{itemLink}</TooltipTrigger>
+                <TooltipContent side='right' sideOffset={12}>
+                  {item.name}
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+
+          return itemLink;
         })}
       </nav>
 
-      {/* Footer Info */}
-      {!isCollapsed && (
-        <div className='border-t p-4'>
-          <div className='rounded-lg bg-muted p-3 text-xs text-muted-foreground'>
-            <p className='font-medium'>System Admin Panel</p>
-            <p className='mt-1'>
-              Logged in as{' '}
-              <span className='font-semibold'>System Administrator</span>
-            </p>
-          </div>
+      {/* Footer Info with Transition */}
+      <div
+        className={cn(
+          'border-t p-4 transition-all duration-300 ease-in-out overflow-hidden',
+          isCollapsed
+            ? 'max-h-0 p-0 opacity-0 border-t-0'
+            : 'max-h-32 opacity-100'
+        )}
+      >
+        <div className='rounded-lg bg-muted p-3 text-xs text-muted-foreground'>
+          <p className='font-medium'>System Admin Panel</p>
+          <p className='mt-1'>
+            Logged in as{' '}
+            <span className='font-semibold'>System Administrator</span>
+          </p>
         </div>
-      )}
+      </div>
     </aside>
   );
 };

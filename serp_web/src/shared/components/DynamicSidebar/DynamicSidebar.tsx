@@ -42,16 +42,21 @@ export const DynamicSidebar: React.FC<DynamicSidebarProps> = ({
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-30 h-screen border-r bg-background transition-all duration-300',
+        'fixed left-0 top-0 z-30 h-screen border-r bg-background flex flex-col transition-[width] duration-300 ease-in-out',
         isCollapsed ? 'w-16' : 'w-64',
         className
       )}
     >
       {/* Logo/Brand */}
-      <div className='flex h-16 items-center border-b px-3 justify-between'>
+      <div
+        className={cn(
+          'flex h-16 items-center border-b px-3 transition-all duration-300',
+          isCollapsed ? 'justify-center' : 'justify-between'
+        )}
+      >
         <Link
           href='/home'
-          className='flex items-center space-x-3 group transition-colors'
+          className='flex items-center space-x-3 group transition-colors overflow-hidden'
           onMouseEnter={() => setIsModuleHovered(true)}
           onMouseLeave={() => setIsModuleHovered(false)}
         >
@@ -73,39 +78,48 @@ export const DynamicSidebar: React.FC<DynamicSidebarProps> = ({
           </div>
 
           {/* Module name */}
-          {!isCollapsed && (
-            <span className='text-sm font-semibold group-hover:text-primary transition-colors'>
-              {currentModule?.moduleName || moduleCode}
-            </span>
-          )}
+          <span
+            className={cn(
+              'text-sm font-semibold group-hover:text-primary transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap',
+              isCollapsed
+                ? 'max-w-0 opacity-0 pointer-events-none'
+                : 'max-w-[150px] opacity-100'
+            )}
+          >
+            {currentModule?.moduleName || moduleCode}
+          </span>
         </Link>
 
-        {/* Toggle Button - Only show when not collapsed */}
-        {!isCollapsed && (
-          <Button
-            variant='ghost'
-            size='icon'
-            className='h-8 w-8'
-            onClick={toggleSidebar}
-          >
-            <PanelLeftClose className='h-4 w-4' />
-          </Button>
-        )}
+        {/* Toggle Button - Repositioned to header */}
+        <Button
+          variant='ghost'
+          size='icon'
+          className={cn(
+            'h-8 w-8 transition-all duration-300',
+            isCollapsed ? 'hidden' : 'block' // Show normally in header when open
+          )}
+          onClick={toggleSidebar}
+          title='Collapse sidebar'
+        >
+          <PanelLeftClose className='h-4 w-4' />
+        </Button>
       </div>
 
       {/* Navigation */}
-      <nav className='flex-1 space-y-1 p-2 overflow-y-auto max-h-[calc(100vh-8rem)]'>
-        {/* Expand button when collapsed */}
+      <nav className='flex-1 space-y-1 p-2 overflow-y-auto'>
+        {/* Expand button when collapsed, centered */}
         {isCollapsed && (
-          <Button
-            variant='ghost'
-            size='icon'
-            className='w-full mt-4'
-            onClick={toggleSidebar}
-            title='Expand sidebar'
-          >
-            <PanelLeftOpen className='h-4 w-4' />
-          </Button>
+          <div className='flex justify-center py-2'>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-8 w-8'
+              onClick={toggleSidebar}
+              title='Expand sidebar'
+            >
+              <PanelLeftOpen className='h-4 w-4' />
+            </Button>
+          </div>
         )}
 
         {/* Loading State */}
@@ -181,17 +195,24 @@ export const DynamicSidebar: React.FC<DynamicSidebarProps> = ({
         )}
       </nav>
 
-      {/* Footer Info */}
-      {!isCollapsed && currentModule && (
-        <div className='border-t p-4'>
+      {/* Footer Info with Transition */}
+      <div
+        className={cn(
+          'border-t p-4 transition-all duration-300 ease-in-out overflow-hidden',
+          isCollapsed
+            ? 'max-h-0 p-0 opacity-0 border-t-0'
+            : 'max-h-32 opacity-100'
+        )}
+      >
+        {currentModule && (
           <div className='rounded-lg bg-muted p-3 text-xs text-muted-foreground'>
             <p className='font-medium'>{currentModule.moduleName}</p>
-            <p className='mt-1'>
+            <p className='mt-1 overflow-hidden text-ellipsis'>
               {currentModule.moduleDescription || 'Module Description'}
             </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </aside>
   );
 };

@@ -1,37 +1,163 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Conversation details sidebar for Discuss
-*/
+# Channel Management Integration Implementation Plan
 
-'use client';
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-import React, { useMemo, useState } from 'react';
+**Goal:** Integrate channel editing (name & description), archiving, deleting, and leaving capabilities from `discuss_service` into the `serp_web` frontend UI.
+
+**Architecture:** We use RTK Query mutations (`updateChannel`, `archiveChannel`, `deleteChannel`, `leaveChannel`) in `ConversationDetailsSidebar` and leverage `useGetChannelQuery` in `ChatWindow` for live caching and reactivity. Termination actions (Archive, Delete, Leave) bubble up to the parent page via callbacks to deselect the closed channel.
+
+**Tech Stack:** React 19, TypeScript, Next.js 15, RTK Query.
+
+---
+
+### Task 1: Parent-Child Callback Wiring for Closing Channels
+
+**Files:**
+- Modify: `serp_web/src/app/discuss/page.tsx`
+- Modify: `serp_web/src/modules/discuss/components/ChatWindow.tsx`
+
+- [ ] **Step 1: Update page.tsx to support handleChannelClose callback**
+
+Modify `serp_web/src/app/discuss/page.tsx` around lines 43-48 to add the close callback:
+
+```typescript
+  const handleChannelClose = () => {
+    setSelectedChannel(null);
+  };
+```
+
+Pass the callback to `<ChatWindow>`:
+
+```tsx
+        {/* Main Content Area */}
+        <div className='flex-1 flex items-center justify-center'>
+          {selectedChannel ? (
+            <ChatWindow
+              channel={selectedChannel}
+              currentUserId={currentUserId}
+              currentUserName={user?.fullName}
+              currentUserAvatarUrl={user?.avatarUrl}
+              onChannelClose={handleChannelClose}
+              className='w-full h-full'
+            />
+          ) : (
+```
+
+- [ ] **Step 2: Update ChatWindow.tsx props and pass callback to Sidebar**
+
+Modify `serp_web/src/modules/discuss/components/ChatWindow.tsx` around lines 53-60:
+
+```typescript
+interface ChatWindowProps {
+  channel: Channel;
+  currentUserId: string;
+  currentUserName?: string;
+  currentUserAvatarUrl?: string;
+  className?: string;
+  onChannelClose?: () => void;
+}
+```
+
+Update details sidebar invocation inside `ChatWindow.tsx` around lines 800-840:
+
+```tsx
+      <ConversationDetailsSidebar
+        channel={channel}
+        currentUserId={currentUserId}
+        open={detailsSidebarOpen}
+        onOpenChange={setDetailsSidebarOpen}
+        onClose={onChannelClose}
+      />
+```
+
+- [ ] **Step 3: Verify build compiles without issues**
+
+Run command in `serp_web`:
+`npm run type-check`
+Expected: Successful compilation without TypeScript errors.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/app/discuss/page.tsx src/modules/discuss/components/ChatWindow.tsx
+git commit -m "feat: add channel close callback wiring between Page and ChatWindow"
+```
+
+---
+
+### Task 2: Enable Live Channel Synchronization in ChatWindow
+
+**Files:**
+- Modify: `serp_web/src/modules/discuss/components/ChatWindow.tsx`
+
+- [ ] **Step 1: Import useGetChannelQuery in ChatWindow.tsx**
+
+Modify imports in `serp_web/src/modules/discuss/components/ChatWindow.tsx` around lines 38-49:
+
+```typescript
 import {
-  Badge,
-  Button,
-  ScrollArea,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Input,
-  Textarea,
-} from '@/shared/components/ui';
-import {
-  File as FileIcon,
-  FileText,
-  Image,
-  Info,
-  Loader2,
-  Users,
-  X,
-  Edit2,
-  Save,
-  Trash2,
-  Archive,
-  LogOut,
-} from 'lucide-react';
-import { cn } from '@/shared/utils';
+  useGetMessagesQuery,
+  useLazyGetMessagesBeforeQuery,
+  useLazyGetMessagesAroundQuery,
+  useSendMessageMutation,
+  useSendMessageWithFilesMutation,
+  useEditMessageMutation,
+  useDeleteMessageMutation,
+  useAddReactionMutation,
+  useRemoveReactionMutation,
+  useGetChannelPresenceQuery,
+  useGetChannelQuery,
+} from '../api/discussApi';
+```
+
+- [ ] **Step 2: Query live channel state in ChatWindow component**
+
+Call the hook at the top of the component in `serp_web/src/modules/discuss/components/ChatWindow.tsx` around line 125:
+
+```typescript
+  // Live channel details sync
+  const { data: liveChannelResponse } = useGetChannelQuery(channel.id);
+  const liveChannel = liveChannelResponse?.data || channel;
+```
+
+- [ ] **Step 3: Replace old channel prop references with liveChannel**
+
+In `ChatWindow.tsx`, replace `channel.name`, `channel.description`, `channel.avatarUrl`, `channel.memberCount` with `liveChannel.name`, `liveChannel.description`, `liveChannel.avatarUrl`, `liveChannel.memberCount` respectively inside the JSX, and pass `liveChannel` to the sidebar:
+
+```tsx
+      <ConversationDetailsSidebar
+        channel={liveChannel}
+        currentUserId={currentUserId}
+        open={detailsSidebarOpen}
+        onOpenChange={setDetailsSidebarOpen}
+        onClose={onChannelClose}
+      />
+```
+
+- [ ] **Step 4: Verify type safety**
+
+Run: `npm run type-check`
+Expected: Compile SUCCESS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/modules/discuss/components/ChatWindow.tsx
+git commit -m "feat: implement live channel sync using useGetChannelQuery in ChatWindow"
+```
+
+---
+
+### Task 3: Implement Inline Editing and Danger Zone in Sidebar
+
+**Files:**
+- Modify: `serp_web/src/modules/discuss/components/ConversationDetailsSidebar.tsx`
+
+- [ ] **Step 1: Import mutations and update props interface**
+
+Modify imports and interface in `serp_web/src/modules/discuss/components/ConversationDetailsSidebar.tsx` around lines 28-40:
+
+```typescript
 import {
   useLazyGetAttachmentDownloadUrlQuery,
   useGetChannelAttachmentsQuery,
@@ -42,6 +168,9 @@ import {
 } from '../api/discussApi';
 import type { Attachment, Channel } from '../types';
 import { ChannelMembersPanel } from './ChannelMembersPanel';
+import { Edit2, Save, Trash2, Archive, LogOut } from 'lucide-react';
+import { Input } from '@/shared/components/ui/input';
+import { Textarea } from '@/shared/components/ui/textarea';
 
 interface ConversationDetailsSidebarProps {
   channel: Channel;
@@ -50,79 +179,13 @@ interface ConversationDetailsSidebarProps {
   onOpenChange: (open: boolean) => void;
   onClose?: () => void;
 }
+```
 
-const formatDate = (value?: string) => {
-  if (!value) return '—';
-  const date = new Date(Number.isNaN(Number(value)) ? value : Number(value));
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-};
+- [ ] **Step 2: Add inline edit states and fetch mutations**
 
-const formatFileSize = (bytes?: number) => {
-  if (!bytes) return '0 B';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
+Inside the `ConversationDetailsSidebar` component body (around line 110):
 
-const getFileIcon = (attachment: Attachment) => {
-  if (attachment.fileType?.startsWith('image/')) return Image;
-  if (attachment.fileType === 'application/pdf') return FileText;
-  return FileIcon;
-};
-
-function FileRow({ attachment }: { attachment: Attachment }) {
-  const [trigger, { isFetching }] = useLazyGetAttachmentDownloadUrlQuery();
-
-  const handleOpen = async () => {
-    try {
-      const response = await trigger(attachment.id).unwrap();
-      if (response?.data?.downloadUrl) {
-        window.open(response.data.downloadUrl, '_blank', 'noopener,noreferrer');
-      }
-    } catch (err) {
-      console.error('Failed to open file:', err);
-    }
-  };
-
-  const Icon = getFileIcon(attachment);
-
-  return (
-    <div className='flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700'>
-      <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40'>
-        <Icon className='h-5 w-5 text-violet-600 dark:text-violet-300' />
-      </div>
-      <div className='min-w-0 flex-1'>
-        <p className='truncate text-sm font-medium text-slate-900 dark:text-slate-100'>
-          {attachment.fileName}
-        </p>
-        <p className='text-xs text-slate-500 dark:text-slate-400'>
-          {formatFileSize(attachment.fileSize)} ·{' '}
-          {formatDate(attachment.createdAt)}
-        </p>
-      </div>
-      <Button
-        variant='ghost'
-        size='sm'
-        disabled={isFetching}
-        onClick={handleOpen}
-      >
-        {isFetching ? <Loader2 className='h-4 w-4 animate-spin' /> : 'Open'}
-      </Button>
-    </div>
-  );
-}
-
-export const ConversationDetailsSidebar: React.FC<
-  ConversationDetailsSidebarProps
-> = ({ channel, currentUserId, open, onOpenChange, onClose }) => {
-  const [memberDialogOpen, setMemberDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
-
+```typescript
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(channel.name);
   const [editDescription, setEditDescription] = useState(channel.description || '');
@@ -139,19 +202,6 @@ export const ConversationDetailsSidebar: React.FC<
     setIsEditing(false);
   }, [channel]);
 
-  const { data: filesResponse, isLoading: filesLoading } =
-    useGetChannelAttachmentsQuery(
-      { channelId: channel.id, pagination: { page: 1, limit: 30 } },
-      { skip: !open }
-    );
-
-  const files = filesResponse?.data?.items ?? [];
-
-  const channelTypeLabel = useMemo(
-    () => channel.type.charAt(0) + channel.type.slice(1).toLowerCase(),
-    [channel.type]
-  );
-
   const currentUserMember = channel.members?.find(
     (m) => String(m.userId) === String(currentUserId)
   );
@@ -162,7 +212,13 @@ export const ConversationDetailsSidebar: React.FC<
 
   const canLeave =
     channel.type !== 'DIRECT' && currentUserMember?.role !== 'OWNER';
+```
 
+- [ ] **Step 3: Implement Update, Archive, Delete, and Leave handlers**
+
+Add handlers inside the component:
+
+```typescript
   const handleSave = async () => {
     if (!editName.trim()) {
       alert('Channel name cannot be empty');
@@ -218,48 +274,16 @@ export const ConversationDetailsSidebar: React.FC<
       alert('Failed to leave channel');
     }
   };
+```
 
-  return (
-    <aside
-      className={cn(
-        'fixed inset-y-0 right-0 z-40 w-full max-w-sm translate-x-full border-l border-slate-200 bg-white shadow-xl transition-transform duration-200 dark:border-slate-700 dark:bg-slate-900 lg:static lg:z-auto lg:w-96 lg:max-w-none lg:shadow-none',
-        open ? 'translate-x-0' : 'lg:hidden'
-      )}
-    >
-      <div className='flex h-full flex-col'>
-        <div className='flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700'>
-          <div>
-            <h3 className='font-semibold text-slate-900 dark:text-slate-100'>
-              Conversation details
-            </h3>
-            <p className='truncate text-sm text-slate-500 dark:text-slate-400'>
-              {channel.name}
-            </p>
-          </div>
-          <Button
-            aria-label='Close conversation details'
-            variant='ghost'
-            size='sm'
-            onClick={() => onOpenChange(false)}
-          >
-            <X className='h-5 w-5' />
-          </Button>
-        </div>
+- [ ] **Step 4: Update the Overview Tab UI**
 
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className='flex min-h-0 flex-1 flex-col'
-        >
-          <TabsList className='mx-4 mt-4 grid grid-cols-3'>
-            <TabsTrigger value='overview'>Overview</TabsTrigger>
-            <TabsTrigger value='members'>Members</TabsTrigger>
-            <TabsTrigger value='files'>Files</TabsTrigger>
-          </TabsList>
+Modify the JSX in the Overview tab of `ConversationDetailsSidebar.tsx` around lines 166-189:
 
-          <ScrollArea className='min-h-0 flex-1 px-4 py-4'>
+```tsx
             <TabsContent value='overview' className='mt-0 space-y-6'>
               {isEditing ? (
+                // Edit Mode
                 <div className='space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/25'>
                   <div className='space-y-1.5'>
                     <label className='text-xs font-semibold uppercase tracking-wider text-slate-500'>
@@ -299,7 +323,7 @@ export const ConversationDetailsSidebar: React.FC<
                       size='sm'
                       onClick={handleSave}
                       disabled={isUpdating || !editName.trim()}
-                      className='bg-violet-600 hover:bg-violet-700 text-white'
+                      className='bg-violet-600 hover:bg-violet-700'
                     >
                       {isUpdating && <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' />}
                       Save
@@ -307,6 +331,7 @@ export const ConversationDetailsSidebar: React.FC<
                   </div>
                 </div>
               ) : (
+                // View Mode
                 <div className='space-y-4'>
                   <div className='flex items-center justify-between gap-3'>
                     <div className='flex items-center gap-3 min-w-0'>
@@ -413,55 +438,24 @@ export const ConversationDetailsSidebar: React.FC<
                         className='w-full justify-start text-red-600 hover:text-red-700 border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20'
                       >
                         <Trash2 className='mr-2 h-4 w-4' />
-                        Delete Channel
+                        Delete Channel vĩnh viễn
                       </Button>
                     </>
                   )}
                 </div>
               )}
             </TabsContent>
+```
 
-            <TabsContent value='members' className='mt-0 space-y-3'>
-              <Button
-                variant='outline'
-                className='w-full justify-start gap-2'
-                onClick={() => setMemberDialogOpen(true)}
-              >
-                <Users className='h-4 w-4' />
-                Manage members
-              </Button>
-              <p className='text-sm text-slate-500 dark:text-slate-400'>
-                Member management opens the existing member panel while this
-                sidebar owns conversation details.
-              </p>
-            </TabsContent>
+- [ ] **Step 5: Verify build compiles without issues**
 
-            <TabsContent value='files' className='mt-0 space-y-3'>
-              {filesLoading && (
-                <div className='flex items-center justify-center py-8'>
-                  <Loader2 className='h-5 w-5 animate-spin text-slate-500' />
-                </div>
-              )}
-              {!filesLoading && files.length === 0 && (
-                <p className='rounded-lg border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500 dark:border-slate-700'>
-                  No files have been shared in this conversation yet.
-                </p>
-              )}
-              {files.map((attachment) => (
-                <FileRow key={attachment.id} attachment={attachment} />
-              ))}
-            </TabsContent>
-          </ScrollArea>
-        </Tabs>
-      </div>
+Run command in `serp_web`:
+`npm run type-check`
+Expected: Compile SUCCESS.
 
-      <ChannelMembersPanel
-        open={memberDialogOpen}
-        onOpenChange={setMemberDialogOpen}
-        channelId={channel.id}
-        channelName={channel.name}
-        currentUserId={currentUserId}
-      />
-    </aside>
-  );
-};
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/modules/discuss/components/ConversationDetailsSidebar.tsx
+git commit -m "feat: implement inline editing, archive, delete, and leave channel actions in sidebar"
+```

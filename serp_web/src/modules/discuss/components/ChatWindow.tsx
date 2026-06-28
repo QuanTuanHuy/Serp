@@ -46,6 +46,7 @@ import {
   useAddReactionMutation,
   useRemoveReactionMutation,
   useGetChannelPresenceQuery,
+  useGetChannelQuery,
 } from '../api/discussApi';
 import type { Channel, Message, Attachment } from '../types';
 import type { UserStatus } from '../api/presence.api';
@@ -56,6 +57,7 @@ interface ChatWindowProps {
   currentUserName?: string;
   currentUserAvatarUrl?: string;
   className?: string;
+  onChannelClose?: () => void;
 }
 
 const getChannelIcon = (type: Channel['type']) => {
@@ -79,11 +81,12 @@ const getUserInitials = (name: string) => {
 };
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
-  channel,
+  channel: initialChannel,
   currentUserId,
   currentUserName,
   currentUserAvatarUrl,
   className,
+  onChannelClose,
 }) => {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -110,8 +113,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // Refs for stable references in callbacks
   const isNearBottomRef = useRef(true);
   const isInitialLoadRef = useRef(true);
-  const prevChannelIdRef = useRef(channel.id);
+  const prevChannelIdRef = useRef(initialChannel.id);
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Live channel details sync
+  const { data: liveChannelResponse } = useGetChannelQuery(initialChannel.id);
+  const channel = liveChannelResponse?.data || initialChannel;
 
   // Initial load - always page 1 for latest messages
   const {
@@ -119,7 +126,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     isLoading: isInitialLoading,
     isError,
   } = useGetMessagesQuery({
-    channelId: channel.id,
+    channelId: initialChannel.id,
     pagination: { page: 1, limit: 50 },
   });
 
@@ -133,7 +140,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const isLoading = isInitialLoading || isLoadingMore;
 
   // Presence query for channel
-  const { data: presenceData } = useGetChannelPresenceQuery(channel.id);
+  const { data: presenceData } = useGetChannelPresenceQuery(initialChannel.id);
 
   // Helper: map backend UserStatus to FE OnlineStatus
   const mapUserStatus = (status: UserStatus): 'online' | 'busy' | 'offline' => {
@@ -164,8 +171,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // Combines the old channel-change reset and messagesResponse sync to avoid
   // the flash of "No messages yet" when switching channels.
   useEffect(() => {
-    const isChannelChange = prevChannelIdRef.current !== channel.id;
-    prevChannelIdRef.current = channel.id;
+    const isChannelChange = prevChannelIdRef.current !== initialChannel.id;
+    prevChannelIdRef.current = initialChannel.id;
 
     if (isChannelChange) {
       // Reset pagination/UI state on channel change
@@ -224,7 +231,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       // Channel changed but no cached data yet (loading state)
       setAllMessages([]);
     }
-  }, [channel.id, messagesResponse]);
+  }, [initialChannel.id, messagesResponse]);
 
   // Sync isNearBottom to ref
   useEffect(() => {
@@ -238,9 +245,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Register active channel with WebSocket context
   useEffect(() => {
-    wsApi.setActiveChannel(channel.id);
+    wsApi.setActiveChannel(initialChannel.id);
     return () => wsApi.setActiveChannel(undefined);
-  }, [channel.id, wsApi]);
+  }, [initialChannel.id, wsApi]);
 
   // Register onMessage callback for real-time message handling
   useEffect(() => {
@@ -883,6 +890,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         currentUserId={currentUserId}
         open={detailsSidebarOpen}
         onOpenChange={setDetailsSidebarOpen}
+        onClose={onChannelClose}
       />
     </div>
   );

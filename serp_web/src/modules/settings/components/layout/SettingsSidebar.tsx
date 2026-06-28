@@ -21,6 +21,11 @@ import {
 import { cn } from '@/shared/utils';
 import { useSettingsSidebar } from '../../contexts/SettingsSidebarContext';
 import { Button } from '@/shared/components/ui/button';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/shared/components/ui/tooltip';
 
 interface NavigationItem {
   name: string;
@@ -42,12 +47,6 @@ const navigationItems: NavigationItem[] = [
     icon: Users,
     description: 'Manage organization users',
   },
-  // {
-  //   name: 'Roles',
-  //   href: '/settings/roles',
-  //   icon: Shield,
-  //   description: 'Configure roles and permissions',
-  // },
   {
     name: 'Departments',
     href: '/settings/departments',
@@ -60,24 +59,6 @@ const navigationItems: NavigationItem[] = [
     icon: Puzzle,
     description: 'Manage module access',
   },
-  // {
-  //   name: 'Subscription',
-  //   href: '/settings/subscription',
-  //   icon: CreditCard,
-  //   description: 'Subscription and billing',
-  // },
-  // {
-  //   name: 'Security',
-  //   href: '/settings/security',
-  //   icon: Shield,
-  //   description: 'Security settings and audit logs',
-  // },
-  // {
-  //   name: 'Integrations',
-  //   href: '/settings/integrations',
-  //   icon: Webhook,
-  //   description: 'Third-party integrations',
-  // },
 ];
 
 export const SettingsSidebar: React.FC = () => {
@@ -95,15 +76,20 @@ export const SettingsSidebar: React.FC = () => {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-30 h-screen border-r bg-background transition-all duration-300',
+        'fixed left-0 top-0 z-30 h-screen border-r bg-background flex flex-col transition-[width] duration-300 ease-in-out',
         isCollapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Logo/Brand */}
-      <div className='flex h-16 items-center border-b px-3 justify-between'>
+      <div
+        className={cn(
+          'flex h-16 items-center border-b px-3 transition-all duration-300',
+          isCollapsed ? 'justify-center' : 'justify-between'
+        )}
+      >
         <Link
           href='/home'
-          className='flex items-center space-x-3 group transition-colors'
+          className='flex items-center space-x-3 group transition-colors overflow-hidden'
           onMouseEnter={() => setIsModuleHovered(true)}
           onMouseLeave={() => setIsModuleHovered(false)}
         >
@@ -117,45 +103,54 @@ export const SettingsSidebar: React.FC = () => {
           </div>
 
           {/* Module name */}
-          {!isCollapsed && (
-            <span className='text-sm font-semibold group-hover:text-purple-600 transition-colors'>
-              Settings
-            </span>
-          )}
+          <span
+            className={cn(
+              'text-sm font-semibold group-hover:text-purple-600 transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap',
+              isCollapsed
+                ? 'max-w-0 opacity-0 pointer-events-none'
+                : 'max-w-[150px] opacity-100'
+            )}
+          >
+            Settings
+          </span>
         </Link>
 
-        {/* Toggle Button - Only show when not collapsed */}
-        {!isCollapsed && (
-          <Button
-            variant='ghost'
-            size='icon'
-            className='h-8 w-8'
-            onClick={toggleSidebar}
-          >
-            <PanelLeftClose className='h-4 w-4' />
-          </Button>
-        )}
+        {/* Toggle Button - Repositioned to header */}
+        <Button
+          variant='ghost'
+          size='icon'
+          className={cn(
+            'h-8 w-8 transition-all duration-300',
+            isCollapsed ? 'hidden' : 'block' // Show normally in header when open
+          )}
+          onClick={toggleSidebar}
+          title='Collapse sidebar'
+        >
+          <PanelLeftClose className='h-4 w-4' />
+        </Button>
       </div>
 
       {/* Navigation */}
-      <nav className='flex-1 space-y-1 p-2'>
-        {/* Expand button when collapsed */}
+      <nav className='flex-1 space-y-1 p-2 overflow-y-auto'>
+        {/* Expand button when collapsed, centered */}
         {isCollapsed && (
-          <Button
-            variant='ghost'
-            size='icon'
-            className='w-full mt-4'
-            onClick={toggleSidebar}
-            title='Expand sidebar'
-          >
-            <PanelLeftOpen className='h-4 w-4' />
-          </Button>
+          <div className='flex justify-center py-2'>
+            <Button
+              variant='ghost'
+              size='icon'
+              className='h-8 w-8'
+              onClick={toggleSidebar}
+              title='Expand sidebar'
+            >
+              <PanelLeftOpen className='h-4 w-4' />
+            </Button>
+          </div>
         )}
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
 
-          return (
+          const itemLink = (
             <Link
               key={item.href}
               href={item.href}
@@ -166,7 +161,6 @@ export const SettingsSidebar: React.FC = () => {
                   : 'text-muted-foreground',
                 isCollapsed && 'justify-center'
               )}
-              title={isCollapsed ? item.name : undefined}
             >
               <div className='flex items-center space-x-3'>
                 <Icon
@@ -177,7 +171,16 @@ export const SettingsSidebar: React.FC = () => {
                       : 'text-muted-foreground group-hover:text-accent-foreground'
                   )}
                 />
-                {!isCollapsed && <span>{item.name}</span>}
+                <span
+                  className={cn(
+                    'transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap',
+                    isCollapsed
+                      ? 'max-w-0 opacity-0 pointer-events-none'
+                      : 'max-w-[200px] opacity-100'
+                  )}
+                >
+                  {item.name}
+                </span>
               </div>
 
               {active && !isCollapsed && (
@@ -185,23 +188,41 @@ export const SettingsSidebar: React.FC = () => {
               )}
             </Link>
           );
+
+          if (isCollapsed) {
+            return (
+              <Tooltip key={item.href}>
+                <TooltipTrigger asChild>{itemLink}</TooltipTrigger>
+                <TooltipContent side='right' sideOffset={12}>
+                  {item.name}
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+
+          return itemLink;
         })}
       </nav>
 
-      {/* Footer Info */}
-      {!isCollapsed && (
-        <div className='border-t p-4'>
-          <div className='rounded-lg bg-purple-50 dark:bg-purple-950 p-3 text-xs text-muted-foreground'>
-            <p className='font-medium text-purple-900 dark:text-purple-100'>
-              Organization Settings
-            </p>
-            <p className='mt-1'>
-              Logged in as{' '}
-              <span className='font-semibold'>Organization Admin</span>
-            </p>
-          </div>
+      {/* Footer Info with Transition */}
+      <div
+        className={cn(
+          'border-t p-4 transition-all duration-300 ease-in-out overflow-hidden',
+          isCollapsed
+            ? 'max-h-0 p-0 opacity-0 border-t-0'
+            : 'max-h-32 opacity-100'
+        )}
+      >
+        <div className='rounded-lg bg-purple-50 dark:bg-purple-950 p-3 text-xs text-muted-foreground'>
+          <p className='font-medium text-purple-900 dark:text-purple-100'>
+            Organization Settings
+          </p>
+          <p className='mt-1'>
+            Logged in as{' '}
+            <span className='font-semibold'>Organization Admin</span>
+          </p>
         </div>
-      )}
+      </div>
     </aside>
   );
 };
