@@ -50,6 +50,8 @@ import {
   useGetLeadsQuery,
   useGetOpportunitiesQuery,
 } from '../../api/crmApi';
+import { CRMDatePicker } from '../shared';
+import { toLocalDateInputValue } from '../../utils';
 
 export interface QuickActivityFormData {
   type: ActivityType;
@@ -345,11 +347,13 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                 <Calendar className='h-4 w-4 text-muted-foreground' />
                 Date
               </Label>
-              <Input
+              <CRMDatePicker
                 id='scheduledDate'
-                type='date'
                 value={formData.scheduledDate}
-                onChange={(e) => handleChange('scheduledDate', e.target.value)}
+                onChange={(date) =>
+                  handleChange('scheduledDate', date ? toLocalDateInputValue(date) : '')
+                }
+                disabled={isLoading}
               />
             </div>
 
