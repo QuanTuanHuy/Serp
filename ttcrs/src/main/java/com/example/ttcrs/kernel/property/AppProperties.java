@@ -8,5 +8,5 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "app.ttcrs")
 @Data
 public class AppProperties {
-    private Long driverRoleId;
+    private String driverRoleName;
 }

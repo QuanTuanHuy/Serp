@@ -405,6 +405,24 @@ export interface UpdateLocationPayload {
   lng?: number;
 }
 
+// -------------------------------------------------------------------------
+// Location Import
+// -------------------------------------------------------------------------
+
+export interface LocationImportError {
+  row: number;
+  field: string;
+  message: string;
+}
+
+export interface LocationImportResult {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  errors: LocationImportError[];
+  createdLocations: LocationItem[];
+}
+
 export interface UpdateContainerPayload {
   status?: VehicleStatus;
   currentLocationCode?: string;

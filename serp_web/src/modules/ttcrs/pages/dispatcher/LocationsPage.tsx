@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Plus,
+  Upload,
   Loader2,
   AlertCircle,
   MapPin,
@@ -35,7 +36,11 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { useGetDispatcherLocationsQuery } from '../../api/ttcrsApi';
-import { CreateLocationDialog, LocationDetailSheet } from '../../components';
+import {
+  CreateLocationDialog,
+  LocationDetailSheet,
+  ImportLocationsDialog,
+} from '../../components';
 import type { LocationItem, LocationType } from '../../types';
 
 // -------------------------------------------------------------------------
@@ -149,6 +154,7 @@ export function LocationsPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<LocationItem | null>(
     null
   );
@@ -255,15 +261,27 @@ export function LocationsPage() {
           />
         </div>
 
-        <Button
-          id='locations-create-btn'
-          variant='outline'
-          size='sm'
-          onClick={() => setIsCreateOpen(true)}
-        >
-          <Plus className='h-4 w-4' />
-          Create a new location
-        </Button>
+        <div className='flex items-center gap-2'>
+          <Button
+            id='locations-import-btn'
+            variant='outline'
+            size='sm'
+            onClick={() => setIsImportOpen(true)}
+          >
+            <Upload className='h-4 w-4' />
+            Import from Excel
+          </Button>
+
+          <Button
+            id='locations-create-btn'
+            variant='outline'
+            size='sm'
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus className='h-4 w-4' />
+            Create a new location
+          </Button>
+        </div>
       </div>
 
       {/* ---- Main card ---- */}
@@ -445,6 +463,13 @@ export function LocationsPage() {
         open={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSuccess={() => setIsCreateOpen(false)}
+      />
+
+      {/* ---- Import Locations Dialog ---- */}
+      <ImportLocationsDialog
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onSuccess={() => setIsImportOpen(false)}
       />
 
       {/* ---- Location Detail Sheet ---- */}
