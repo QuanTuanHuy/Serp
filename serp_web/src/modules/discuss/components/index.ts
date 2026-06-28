@@ -25,3 +25,4 @@ export {
 } from './OnlineStatusIndicator';
 export type { OnlineStatus } from './OnlineStatusIndicator';
 export { ConversationDetailsSidebar } from './ConversationDetailsSidebar';
+export { UserProfileCard } from './UserProfileCard';

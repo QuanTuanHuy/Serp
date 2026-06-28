@@ -18,6 +18,8 @@ import {
   Textarea,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
+import { CRMDatePicker } from '../shared';
+import { toLocalDateInputValue } from '../../utils';
 import type {
   CreateLeadRequest,
   Lead,
@@ -334,11 +336,12 @@ export const LeadForm: React.FC<LeadFormProps> = ({
             </div>
             <div className='space-y-2'>
               <Label htmlFor='followUpDate'>Follow-up Date</Label>
-              <Input
+              <CRMDatePicker
                 id='followUpDate'
-                type='date'
                 value={formData.followUpDate}
-                onChange={(e) => updateField('followUpDate', e.target.value)}
+                onChange={(date) =>
+                  updateField('followUpDate', date ? toLocalDateInputValue(date) : '')
+                }
                 disabled={isLoading}
               />
             </div>

@@ -3,7 +3,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { selectOrganizationId } from '@/modules/account/store';
@@ -26,6 +26,8 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { useGetAccountsQuery, useGetLeadsQuery } from '../../api/crmApi';
+import { formatCurrency, toLocalDateInputValue } from '../../utils';
+import { CRMDatePicker } from '../shared';
 import type {
   CreateOpportunityRequest,
   Opportunity,
@@ -154,6 +156,7 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
   const {
     register,
     handleSubmit,
+    control,
     watch,
     reset,
     formState: { errors, isSubmitting },
@@ -385,14 +388,20 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
 
               <div className='space-y-2'>
                 <Label htmlFor='expectedCloseDate'>Expected Close Date *</Label>
-                <Input
-                  id='expectedCloseDate'
-                  type='date'
-                  {...register('expectedCloseDate')}
-                  className={
-                    errors.expectedCloseDate ? 'border-destructive' : ''
-                  }
-                  disabled={isLoading}
+                <Controller
+                  name='expectedCloseDate'
+                  control={control}
+                  render={({ field }) => (
+                    <CRMDatePicker
+                      id='expectedCloseDate'
+                      value={field.value}
+                      onChange={(date) =>
+                        field.onChange(date ? toLocalDateInputValue(date) : '')
+                      }
+                      disabled={isLoading}
+                      className={errors.expectedCloseDate ? 'border-destructive' : ''}
+                    />
+                  )}
                 />
                 {errors.expectedCloseDate && (
                   <p className='text-sm text-destructive'>
@@ -410,7 +419,7 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
               <div>
                 <p className='text-sm text-muted-foreground'>Weighted Value</p>
                 <p className='text-xl font-semibold'>
-                  ${weightedValue.toLocaleString()}
+                  {formatCurrency(weightedValue)}
                 </p>
               </div>
             </div>
