@@ -33,8 +33,9 @@ import {
   Trash2,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
-import { ExportDropdown } from '../../components/shared';
+import { ExportDropdown, CRMDatePicker } from '../../components/shared';
 import { QuickAddActivityDialog } from '../../components/dialogs';
+import { toLocalDateInputValue } from '../../utils';
 import { ACTIVITY_EXPORT_COLUMNS } from '../../utils/export';
 import {
   useCreateActivityMutation,
@@ -493,14 +494,12 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
                 <label className='text-sm font-medium mb-1.5 block'>
                   Due Date From
                 </label>
-                <input
-                  type='date'
+                <CRMDatePicker
                   value={dueDateFrom}
-                  onChange={(e) => {
-                    setDueDateFrom(e.target.value);
+                  onChange={(date) => {
+                    setDueDateFrom(date ? toLocalDateInputValue(date) : '');
                     setCurrentPage(1);
                   }}
-                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 />
               </div>
 
@@ -508,14 +507,12 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
                 <label className='text-sm font-medium mb-1.5 block'>
                   Due Date To
                 </label>
-                <input
-                  type='date'
+                <CRMDatePicker
                   value={dueDateTo}
-                  onChange={(e) => {
-                    setDueDateTo(e.target.value);
+                  onChange={(date) => {
+                    setDueDateTo(date ? toLocalDateInputValue(date) : '');
                     setCurrentPage(1);
                   }}
-                  className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
                 />
               </div>
 
