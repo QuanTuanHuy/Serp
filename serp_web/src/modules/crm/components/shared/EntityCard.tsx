@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
+import { formatCurrency } from '../../utils';
 import type {
   Customer,
   Lead,
@@ -132,7 +133,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
         <div className='flex items-center justify-between'>
           <StatusBadge status={customer.status} />
           <span className='text-xs text-gray-500'>
-            ${customer.totalValue?.toLocaleString() || '0'}
+            {formatCurrency(customer.totalValue || 0)}
           </span>
         </div>
         <div className='mt-2 flex items-center gap-2 text-xs text-gray-500'>
@@ -189,7 +190,7 @@ export const EntityCard: React.FC<EntityCardProps> = ({
         <div className='flex items-center justify-between'>
           <StatusBadge status={opportunity.stage} />
           <span className='text-sm font-semibold text-green-600'>
-            ${opportunity.value?.toLocaleString() || '0'}
+            {formatCurrency(opportunity.value || 0)}
           </span>
         </div>
         <div className='mt-2 flex items-center gap-2 text-xs text-gray-500'>
