@@ -26,6 +26,7 @@ import {
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { useGetAccountsQuery, useGetLeadsQuery } from '../../api/crmApi';
+import { formatCurrency } from '../../utils';
 import type {
   CreateOpportunityRequest,
   Opportunity,
@@ -410,7 +411,7 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
               <div>
                 <p className='text-sm text-muted-foreground'>Weighted Value</p>
                 <p className='text-xl font-semibold'>
-                  ${weightedValue.toLocaleString()}
+                  {formatCurrency(weightedValue)}
                 </p>
               </div>
             </div>
