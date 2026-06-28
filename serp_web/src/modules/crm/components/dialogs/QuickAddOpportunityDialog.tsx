@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useGetAccountsQuery } from '../../api/crmApi';
+import { formatCurrency } from '../../utils';
 import type { CreateOpportunityRequest, OpportunityStage } from '../../types';
 
 export interface QuickOpportunityFormData {
@@ -319,7 +320,7 @@ export const QuickAddOpportunityDialog: React.FC<
                 {STAGE_PROBABILITY[formData.stage]}%
               </div>
               <p className='text-xs text-muted-foreground'>
-                Weighted value: ${weightedValue.toLocaleString()}
+                Weighted value: {formatCurrency(weightedValue)}
               </p>
             </div>
           </div>
