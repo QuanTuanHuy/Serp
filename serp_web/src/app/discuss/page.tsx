@@ -46,6 +46,10 @@ function DiscussContent() {
     console.log('Selected channel:', channel);
   };
 
+  const handleChannelClose = () => {
+    setSelectedChannel(null);
+  };
+
   return (
     <WebSocketProvider value={wsApi}>
       <div className='flex h-screen bg-slate-50 dark:bg-slate-900'>
@@ -65,6 +69,7 @@ function DiscussContent() {
               currentUserId={currentUserId}
               currentUserName={user?.fullName}
               currentUserAvatarUrl={user?.avatarUrl}
+              onChannelClose={handleChannelClose}
               className='w-full h-full'
             />
           ) : (
