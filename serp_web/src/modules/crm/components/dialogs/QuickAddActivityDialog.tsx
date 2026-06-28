@@ -50,7 +50,7 @@ import {
   useGetLeadsQuery,
   useGetOpportunitiesQuery,
 } from '../../api/crmApi';
-import { CRMDatePicker } from '../shared';
+import { CRMDatePicker, CRMUserSelect } from '../shared';
 import { toLocalDateInputValue } from '../../utils';
 
 export interface QuickActivityFormData {
@@ -445,17 +445,13 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
           <div className='space-y-2'>
             <Label className='flex items-center gap-2'>
               <Users className='h-4 w-4 text-muted-foreground' />
-              Assigned To (Optional)
+              Assigned To
             </Label>
-            <Input
-              type='number'
+            <CRMUserSelect
               value={formData.assignedTo}
-              onChange={(e) => handleChange('assignedTo', e.target.value)}
-              placeholder='Enter user ID'
+              onChange={(v) => handleChange('assignedTo', v)}
+              disabled={isLoading}
             />
-            <p className='text-xs text-muted-foreground'>
-              Leave empty to assign to yourself
-            </p>
           </div>
 
           {/* Location (for meetings) */}

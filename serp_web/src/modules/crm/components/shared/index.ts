@@ -3,6 +3,7 @@
 export { StatusBadge } from './StatusBadge';
 export { PriorityBadge } from './PriorityBadge';
 export { CRMDatePicker, CRMDateRangePicker, CRMDateTimePicker } from './CRMDatePicker';
+export { CRMUserSelect } from './CRMUserSelect';
 export { EntityCard } from './EntityCard';
 export { SearchInput } from './SearchInput';
 export { ActionMenu, EditAction, DeleteAction } from './ActionMenu';

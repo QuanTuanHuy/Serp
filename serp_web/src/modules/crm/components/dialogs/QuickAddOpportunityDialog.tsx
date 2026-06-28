@@ -36,7 +36,7 @@ import {
 import { cn } from '@/shared/utils';
 import { useGetAccountsQuery } from '../../api/crmApi';
 import { formatCurrency, toLocalDateInputValue } from '../../utils';
-import { CRMDatePicker } from '../shared';
+import { CRMDatePicker, CRMUserSelect } from '../shared';
 import type { CreateOpportunityRequest, OpportunityStage } from '../../types';
 
 export interface QuickOpportunityFormData {
@@ -277,11 +277,10 @@ export const QuickAddOpportunityDialog: React.FC<
                 <User className='h-4 w-4 text-muted-foreground' />
                 Assigned To
               </Label>
-              <Input
+              <CRMUserSelect
                 id='assignedTo'
                 value={formData.assignedTo || ''}
-                onChange={(e) => handleChange('assignedTo', e.target.value)}
-                placeholder='Optional assignee user ID'
+                onChange={(v) => handleChange('assignedTo', v)}
                 disabled={isLoading}
               />
             </div>

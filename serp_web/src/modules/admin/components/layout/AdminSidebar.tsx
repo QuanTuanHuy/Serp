@@ -120,7 +120,10 @@ export const AdminSidebar: React.FC = () => {
       >
         <Link
           href='/home'
-          className='flex items-center space-x-3 group transition-colors overflow-hidden'
+          className={cn(
+            'flex items-center group transition-colors overflow-hidden',
+            !isCollapsed && 'space-x-3'
+          )}
           onMouseEnter={() => setIsModuleHovered(true)}
           onMouseLeave={() => setIsModuleHovered(false)}
         >
@@ -193,7 +196,9 @@ export const AdminSidebar: React.FC = () => {
                 isCollapsed && 'justify-center'
               )}
             >
-              <div className='flex items-center space-x-3'>
+              <div
+                className={cn('flex items-center', !isCollapsed && 'space-x-3')}
+              >
                 <Icon
                   className={cn(
                     'h-5 w-5 transition-colors flex-shrink-0',

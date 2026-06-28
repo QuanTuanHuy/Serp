@@ -18,7 +18,7 @@ import {
   Textarea,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { CRMDatePicker } from '../shared';
+import { CRMDatePicker, CRMUserSelect } from '../shared';
 import { toLocalDateInputValue } from '../../utils';
 import type {
   CreateLeadRequest,
@@ -326,11 +326,11 @@ export const LeadForm: React.FC<LeadFormProps> = ({
               </Select>
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='assignedTo'>Assigned User ID</Label>
-              <Input
+              <Label htmlFor='assignedTo'>Assigned To</Label>
+              <CRMUserSelect
                 id='assignedTo'
                 value={formData.assignedTo}
-                onChange={(e) => updateField('assignedTo', e.target.value)}
+                onChange={(v) => updateField('assignedTo', v)}
                 disabled={isLoading}
               />
             </div>

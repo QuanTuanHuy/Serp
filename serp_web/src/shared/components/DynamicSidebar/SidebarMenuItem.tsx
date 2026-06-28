@@ -99,7 +99,7 @@ export const SidebarMenuItemComponent: React.FC<SidebarMenuItemProps> = ({
       )}
       title={undefined} // Handled by Radix Tooltip
     >
-      <div className='flex items-center space-x-3'>
+      <div className={cn('flex items-center', !isCollapsed && 'space-x-3')}>
         <Icon
           className={cn(
             'h-5 w-5 transition-colors flex-shrink-0',
