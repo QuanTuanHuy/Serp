@@ -724,20 +724,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         : otherUser?.lastSeenText || 'Offline';
 
                       return (
-                        <span className='flex items-center gap-1.5'>
-                          <OnlineStatusIndicator status={status} size='sm' />
+                        <span className='flex items-center gap-1.5 min-w-0'>
+                          <OnlineStatusIndicator status={status} size='sm' showPulse={status === 'online'} />
                           <span
                             className={cn(
-                              'font-medium',
+                              'font-medium truncate',
                               status === 'online'
                                 ? 'text-emerald-600 dark:text-emerald-400'
                                 : status === 'busy'
-                                  ? 'text-amber-600 dark:text-amber-400'
+                                  ? 'text-rose-600 dark:text-rose-400'
                                   : 'text-slate-500 dark:text-slate-400'
                             )}
                           >
                             {statusText}
                           </span>
+                          {otherUser?.statusMessage && (
+                            <span
+                              className='text-xs text-slate-400 dark:text-slate-500 italic truncate max-w-[250px]'
+                              title={otherUser.statusMessage}
+                            >
+                              - &ldquo;{otherUser.statusMessage}&rdquo;
+                            </span>
+                          )}
                         </span>
                       );
                     })()
