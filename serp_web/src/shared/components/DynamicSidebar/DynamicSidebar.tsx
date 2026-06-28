@@ -42,7 +42,7 @@ export const DynamicSidebar: React.FC<DynamicSidebarProps> = ({
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-30 h-screen border-r bg-background transition-[width] duration-300 ease-in-out',
+        'fixed left-0 top-0 z-30 h-screen border-r bg-background flex flex-col transition-[width] duration-300 ease-in-out',
         isCollapsed ? 'w-16' : 'w-64',
         className
       )}
@@ -106,7 +106,7 @@ export const DynamicSidebar: React.FC<DynamicSidebarProps> = ({
       </div>
 
       {/* Navigation */}
-      <nav className='flex-1 space-y-1 p-2 overflow-y-auto max-h-[calc(100vh-8rem)]'>
+      <nav className='flex-1 space-y-1 p-2 overflow-y-auto'>
         {/* Expand button when collapsed, centered */}
         {isCollapsed && (
           <div className='flex justify-center py-2'>
