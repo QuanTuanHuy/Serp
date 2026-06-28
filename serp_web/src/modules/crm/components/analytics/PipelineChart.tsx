@@ -8,6 +8,7 @@ import {
   Skeleton,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
+import { formatCurrency } from '../../utils';
 import {
   BarChart,
   Bar,
@@ -60,7 +61,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <p className='text-sm text-muted-foreground'>
             Value:{' '}
             <span className='font-medium text-emerald-600 dark:text-emerald-400'>
-              ${payload[0].payload.totalValue.toLocaleString()}
+              {formatCurrency(payload[0].payload.totalValue)}
             </span>
           </p>
         )}
@@ -203,23 +204,21 @@ export const PipelineChart: React.FC<PipelineChartProps> = ({
             <div className='text-center p-3 bg-muted/50 rounded-lg'>
               <p className='text-sm text-muted-foreground'>Total Value</p>
               <p className='text-xl font-bold text-emerald-600 dark:text-emerald-400'>
-                $
-                {data
-                  .reduce((sum, item) => sum + item.value, 0)
-                  .toLocaleString()}
+                {formatCurrency(
+                  data.reduce((sum, item) => sum + item.value, 0)
+                )}
               </p>
             </div>
             <div className='text-center p-3 bg-muted/50 rounded-lg col-span-2 md:col-span-1'>
               <p className='text-sm text-muted-foreground'>Avg Deal Size</p>
               <p className='text-xl font-bold text-primary'>
-                $
-                {(
+                {formatCurrency(
                   data.reduce((sum, item) => sum + item.value, 0) /
-                  Math.max(
-                    data.reduce((sum, item) => sum + item.count, 0),
-                    1
-                  )
-                ).toLocaleString()}
+                    Math.max(
+                      data.reduce((sum, item) => sum + item.count, 0),
+                      1
+                    )
+                )}
               </p>
             </div>
           </div>
