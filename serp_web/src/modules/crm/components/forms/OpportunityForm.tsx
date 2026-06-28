@@ -6,9 +6,7 @@ import { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { selectOrganizationId } from '@/modules/account/store';
-import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
-import { useAppSelector } from '@/shared/hooks';
+
 import {
   Button,
   Input,
@@ -27,7 +25,7 @@ import {
 import { cn } from '@/shared/utils';
 import { useGetAccountsQuery, useGetLeadsQuery } from '../../api/crmApi';
 import { formatCurrency, toLocalDateInputValue } from '../../utils';
-import { CRMDatePicker } from '../shared';
+import { CRMDatePicker, CRMUserSelect } from '../shared';
 import type {
   CreateOpportunityRequest,
   Opportunity,
@@ -119,23 +117,6 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
   className,
 }) => {
   const isEditing = !!opportunity;
-  const organizationId = useAppSelector(selectOrganizationId);
-  const { data: orgUsersResponse, isLoading: isOrgUsersLoading } =
-    useGetOrganizationUsersQuery(
-      {
-        organizationId: organizationId as number,
-        page: 0,
-        pageSize: 100,
-        status: 'ACTIVE',
-      },
-      { skip: !organizationId }
-    );
-  const orgUsers = orgUsersResponse?.data?.items ?? [];
-
-  const formatOrgUserLabel = (u: (typeof orgUsers)[number]) => {
-    const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
-    return name || u.email || `User #${u.id}`;
-  };
 
   const { data: accountsResponse, isLoading: isAccountsLoading } =
     useGetAccountsQuery({
@@ -176,14 +157,6 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
 
   const watchedStage = watch('stage');
   const estimatedValue = watch('estimatedValue') || 0;
-  const assignedToValue = watch('assignedTo')?.trim() ?? '';
-  const showOrphanAssignee =
-    Boolean(assignedToValue) &&
-    !orgUsers.some((u) => String(u.id) === assignedToValue);
-  const orphanAssigneeLabel =
-    opportunity?.assignedTo === assignedToValue && opportunity.assignedToName
-      ? opportunity.assignedToName
-      : `User #${assignedToValue}`;
 
   const stageProbability: Record<OpportunityStage, number> = {
     PROSPECTING: 10,
@@ -330,42 +303,19 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
 
               <div className='space-y-2'>
                 <Label htmlFor='assignedTo'>Assigned To</Label>
-                <Select
-                  disabled={isLoading || isOrgUsersLoading || !organizationId}
-                  value={assignedToValue ? assignedToValue : '_none'}
-                  onValueChange={(v) =>
-                    setValue('assignedTo', v === '_none' ? '' : v, {
-                      shouldValidate: true,
-                    })
-                  }
-                >
-                  <SelectTrigger id='assignedTo'>
-                    <SelectValue
-                      placeholder={
-                        isOrgUsersLoading ? 'Loading users…' : 'Unassigned'
-                      }
+                <Controller
+                  name='assignedTo'
+                  control={control}
+                  render={({ field }) => (
+                    <CRMUserSelect
+                      id='assignedTo'
+                      value={field.value}
+                      onChange={field.onChange}
+                      fallbackUserName={opportunity?.assignedToName}
+                      disabled={isLoading}
                     />
-                  </SelectTrigger>
-                  <SelectContent position='popper' className='max-h-60'>
-                    <SelectItem value='_none'>Unassigned</SelectItem>
-                    {showOrphanAssignee && (
-                      <SelectItem value={assignedToValue}>
-                        {orphanAssigneeLabel}
-                      </SelectItem>
-                    )}
-                    {orgUsers.map((u) => (
-                      <SelectItem key={u.id} value={String(u.id)}>
-                        {formatOrgUserLabel(u)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {!organizationId && (
-                  <p className='text-xs text-muted-foreground'>
-                    Your profile does not include an organization yet; assignees
-                    cannot be loaded.
-                  </p>
-                )}
+                  )}
+                />
               </div>
 
               <div className='space-y-2'>
