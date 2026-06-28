@@ -56,7 +56,10 @@ export const DynamicSidebar: React.FC<DynamicSidebarProps> = ({
       >
         <Link
           href='/home'
-          className='flex items-center space-x-3 group transition-colors overflow-hidden'
+          className={cn(
+            'flex items-center group transition-colors overflow-hidden',
+            !isCollapsed && 'space-x-3'
+          )}
           onMouseEnter={() => setIsModuleHovered(true)}
           onMouseLeave={() => setIsModuleHovered(false)}
         >
