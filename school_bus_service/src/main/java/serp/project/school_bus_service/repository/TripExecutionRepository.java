@@ -4,6 +4,7 @@ import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.dto.response.TripExecutionListItemResponse;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
+import serp.project.school_bus_service.repository.projection.TripOperationHeaderProjection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,55 @@ import java.util.Optional;
 public interface TripExecutionRepository extends BaseRepository<TripExecutionEntity, Long> {
 
     Optional<TripExecutionEntity> findByRouteIdAndTenantIdAndIsDeletedFalse(Long routeId, Long tenantId);
+
+    @Query(value = """
+            SELECT t.id AS tripId,
+                   t.trip_code AS tripCode,
+                   r.id AS routeId,
+                   r.route_code AS routeCode,
+                   r.route_name AS routeName,
+                   ps.route_direction AS routeDirection,
+                   t.status AS tripStatus,
+                   ps.service_date AS serviceDate,
+                   bus.plate_number AS busPlateNumber,
+                   driver.full_name AS driverName,
+                   attendant.full_name AS attendantName,
+                   t.cancellation_reason AS cancellationReason,
+                   r.geometry_path AS routeGeometry,
+                   r.planned_distance_km AS distanceKm,
+                   r.planned_duration_min AS durationMin
+              FROM public.school_bus_trip_execution t
+              JOIN public.school_bus_route_plan r
+                ON r.id = t.route_id
+               AND r.is_deleted = false
+              JOIN public.school_bus_route_planning_session ps
+                ON ps.id = r.planning_session_id
+               AND ps.is_deleted = false
+              LEFT JOIN LATERAL (
+                    SELECT assignment.bus_id,
+                           assignment.driver_id,
+                           assignment.attendant_id
+                      FROM public.school_bus_route_assignment assignment
+                     WHERE assignment.route_id = r.id
+                       AND assignment.tenant_id = :tenantId
+                       AND assignment.is_deleted = false
+                       AND assignment.status IN ('ASSIGNED', 'CONFIRMED')
+                     ORDER BY assignment.assigned_at DESC, assignment.id DESC
+                     LIMIT 1
+              ) current_assignment ON true
+              LEFT JOIN public.school_bus_bus bus
+                ON bus.id = current_assignment.bus_id
+              LEFT JOIN public.school_bus_driver_profile driver
+                ON driver.id = current_assignment.driver_id
+              LEFT JOIN public.school_bus_attendant_profile attendant
+                ON attendant.id = current_assignment.attendant_id
+             WHERE t.id = :tripId
+               AND t.tenant_id = :tenantId
+               AND t.is_deleted = false
+            """, nativeQuery = true)
+    Optional<TripOperationHeaderProjection> findOperationHeaderByTripId(
+            @Param("tripId") Long tripId,
+            @Param("tenantId") Long tenantId);
 
     @Query(value = """
         SELECT new serp.project.school_bus_service.dto.response.TripExecutionListItemResponse(

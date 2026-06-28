@@ -370,6 +370,13 @@ export interface SchoolBusRouteDetail {
   assignment: SchoolBusRouteAssignment | null;
 }
 
+export interface SchoolBusRouteMapDetail {
+  route: SchoolBusRoute;
+  stops: SchoolBusRouteStop[];
+  assignment: SchoolBusRouteAssignment | null;
+  path: SchoolBusRoutePath | null;
+}
+
 export interface SchoolBusAttendance extends SchoolBusBaseRecord {
   routeId: number;
   routeCode: string;
@@ -501,6 +508,17 @@ export interface SchoolBusTripStudent extends SchoolBusBaseRecord {
     nextStopName?: string | null;
     nextStopStatus?: string | null;
   }
+
+export interface SchoolBusTripOperationAction {
+  tripId: number;
+  tripStatus?: string | null;
+  routeStopId?: number | null;
+  stopStatus?: string | null;
+  actualArrivalTime?: string | null;
+  actualDepartureTime?: string | null;
+  updatedAt?: string | null;
+  message?: string | null;
+}
   
   export interface SchoolBusCapacityUtilization {
   tripId: number;
@@ -569,6 +587,26 @@ export interface SchoolBusTripAttendanceManifest {
   summary: SchoolBusTripAttendanceSummary;
   stops: TripAttendanceStopItem[];
   students: TripAttendanceStudentItem[];
+}
+
+export interface SchoolBusTripOperationOverview {
+  tripId: number;
+  tripCode?: string | null;
+  routeId?: number | null;
+  routeCode?: string | null;
+  routeName?: string | null;
+  routeDirection?: string | null;
+  tripStatus: string;
+  serviceDate?: string | null;
+  busPlateNumber?: string | null;
+  driverName?: string | null;
+  attendantName?: string | null;
+  routeGeometry?: string | null;
+  distanceKm?: number | null;
+  durationMin?: number | null;
+  cancellationReason?: string | null;
+  summary: SchoolBusTripAttendanceSummary;
+  stops: TripAttendanceStopItem[];
 }
 
 export interface DashboardSummary {

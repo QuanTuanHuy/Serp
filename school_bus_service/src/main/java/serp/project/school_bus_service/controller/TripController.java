@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.school_bus_service.dto.params.TripExecutionParamsRequest;
 import serp.project.school_bus_service.dto.request.BatchAttendanceRequest;
@@ -25,6 +26,8 @@ import serp.project.school_bus_service.dto.response.TripExecutionResponse;
 import serp.project.school_bus_service.dto.response.TripStopLogResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceManifestResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
+import serp.project.school_bus_service.dto.response.TripOperationActionResponse;
+import serp.project.school_bus_service.dto.response.TripOperationOverviewResponse;
 import serp.project.school_bus_service.dto.response.TripStudentResponse;
 import serp.project.school_bus_service.service.IAttendanceService;
 import serp.project.school_bus_service.service.ITripExecutionService;
@@ -75,13 +78,13 @@ public class TripController extends AbstractBaseController {
 
     @PostMapping("/{id}/start")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
-    public ResponseEntity<GeneralResponse<TripExecutionResponse>> startTrip(@PathVariable Long id) {
+    public ResponseEntity<GeneralResponse<TripOperationActionResponse>> startTrip(@PathVariable Long id) {
         return ok("Started trip", tripOperationService.startTrip(id, getCurrentTenantId(), getCurrentUserId()));
     }
 
     @PostMapping("/{id}/arrive-stop/{routeStopId}")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
-    public ResponseEntity<GeneralResponse<TripExecutionResponse>> arriveStop(
+    public ResponseEntity<GeneralResponse<TripOperationActionResponse>> arriveStop(
             @PathVariable Long id,
             @PathVariable Long routeStopId) {
         return ok("Arrived route stop",
@@ -90,7 +93,7 @@ public class TripController extends AbstractBaseController {
 
     @PostMapping("/{id}/start-boarding/{routeStopId}")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
-    public ResponseEntity<GeneralResponse<TripExecutionResponse>> startBoarding(
+    public ResponseEntity<GeneralResponse<TripOperationActionResponse>> startBoarding(
             @PathVariable Long id,
             @PathVariable Long routeStopId) {
         return ok("Started boarding at route stop",
@@ -99,7 +102,7 @@ public class TripController extends AbstractBaseController {
 
     @PostMapping("/{id}/depart-stop/{routeStopId}")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
-    public ResponseEntity<GeneralResponse<TripExecutionResponse>> departStop(
+    public ResponseEntity<GeneralResponse<TripOperationActionResponse>> departStop(
             @PathVariable Long id,
             @PathVariable Long routeStopId) {
         return ok("Departed route stop",
@@ -108,7 +111,7 @@ public class TripController extends AbstractBaseController {
 
     @PostMapping("/{id}/skip-stop/{routeStopId}")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
-    public ResponseEntity<GeneralResponse<TripExecutionResponse>> skipStop(
+    public ResponseEntity<GeneralResponse<TripOperationActionResponse>> skipStop(
             @PathVariable Long id,
             @PathVariable Long routeStopId,
             @Valid @RequestBody SkipStopRequest request) {
@@ -118,7 +121,7 @@ public class TripController extends AbstractBaseController {
 
     @PostMapping("/{id}/complete")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
-    public ResponseEntity<GeneralResponse<TripExecutionResponse>> completeTrip(
+    public ResponseEntity<GeneralResponse<TripOperationActionResponse>> completeTrip(
             @PathVariable Long id,
             @RequestBody(required = false) CompleteTripRequest request) {
         return ok("Completed trip",
@@ -127,7 +130,7 @@ public class TripController extends AbstractBaseController {
 
     @PostMapping("/{id}/cancel")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.operate')")
-    public ResponseEntity<GeneralResponse<TripExecutionResponse>> cancelTrip(
+    public ResponseEntity<GeneralResponse<TripOperationActionResponse>> cancelTrip(
             @PathVariable Long id,
             @Valid @RequestBody CancelTripRequest request) {
         return ok("Cancelled trip",
@@ -150,6 +153,15 @@ public class TripController extends AbstractBaseController {
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
     public ResponseEntity<GeneralResponse<List<AttendanceResponse>>> getTripAttendance(@PathVariable Long id) {
         return ok("Fetched trip attendance", attendanceService.getTripAttendance(id, getCurrentTenantId()));
+    }
+
+    @GetMapping("/{id}/attendance/recent")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
+    public ResponseEntity<GeneralResponse<List<AttendanceResponse>>> getRecentTripAttendance(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "24") int size) {
+        return ok("Fetched recent trip attendance",
+                attendanceService.getRecentTripAttendance(id, getCurrentTenantId(), size));
     }
 
     @PostMapping("/{id}/attendance/board")
@@ -203,6 +215,23 @@ public class TripController extends AbstractBaseController {
             @PathVariable Long id) {
         return ok("Fetched trip attendance manifest",
                 attendanceService.getTripAttendanceManifest(id, getCurrentTenantId()));
+    }
+
+    @GetMapping("/{id}/operation-overview")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
+    public ResponseEntity<GeneralResponse<TripOperationOverviewResponse>> getTripOperationOverview(
+            @PathVariable Long id) {
+        return ok("Fetched trip operation overview",
+                attendanceService.getTripOperationOverview(id, getCurrentTenantId()));
+    }
+
+    @GetMapping("/{id}/attendance-students")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.attendance.read')")
+    public ResponseEntity<GeneralResponse<List<TripAttendanceManifestResponse.TripAttendanceStudentItem>>> getTripAttendanceStudents(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long routeStopId) {
+        return ok("Fetched trip attendance students",
+                attendanceService.getTripAttendanceStudents(id, routeStopId, getCurrentTenantId()));
     }
 
     @GetMapping("/{id}/attendance/summary")

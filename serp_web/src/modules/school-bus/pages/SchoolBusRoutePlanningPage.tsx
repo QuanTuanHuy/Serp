@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -37,8 +37,7 @@ import {
   useGetSessionRoutesQuery,
   useCreateRouteInSessionMutation,
   useGetSessionEligibleStudentsQuery,
-  useGetRouteByIdQuery,
-  useGetRoutePathQuery,
+  useGetRouteMapQuery,
   useGetSchoolByIdQuery,
   useGetDepotsQuery,
 } from '../api/schoolBusApi';
@@ -156,11 +155,6 @@ export default function SchoolBusRoutePlanningPage() {
     setFitKey((k) => k + 1);
   }, []);
 
-  const handleFitRoute = useCallback(() => {
-    setFitTarget('route');
-    setFitKey((k) => k + 1);
-  }, []);
-
   // -- API mutations ----------------------------------------------------------
   const [previewMutation, { isLoading: previewing }] =
     usePreviewPlanningDemandMutation();
@@ -214,20 +208,37 @@ export default function SchoolBusRoutePlanningPage() {
   });
   const depots = depotsData?.data?.items || [];
 
-  // -- Route detail for map (stops + polyline) --------------------------------
-  const { data: selectedRouteDetailData } = useGetRouteByIdQuery(
+  // -- Route map detail (stops + polyline) ------------------------------------
+  const { data: selectedRouteMapData } = useGetRouteMapQuery(
     selectedRouteId || 0,
-    { skip: !selectedRouteId }
+    { skip: !selectedRouteId, refetchOnMountOrArgChange: true }
   );
-  const selectedRouteStops = selectedRouteDetailData?.data?.stops || [];
-  const selectedRoute = selectedRouteDetailData?.data?.route || null;
+  const selectedRouteStops = selectedRouteMapData?.data?.stops || [];
+  const selectedRoute = selectedRouteMapData?.data?.route || null;
+  const selectedRoutePath = selectedRouteMapData?.data?.path || null;
 
-  // -- Route path (actual road geometry) -------------------------------------
-  const { data: selectedRoutePathData } = useGetRoutePathQuery(
-    selectedRouteId || 0,
-    { skip: !selectedRouteId }
+  const selectedRouteInActiveSession = useMemo(
+    () =>
+      selectedRouteId
+        ? sessionRoutes.find((route) => route.id === selectedRouteId) || null
+        : null,
+    [selectedRouteId, sessionRoutes]
   );
-  const selectedRoutePath = selectedRoutePathData?.data || null;
+  const hasValidSelectedRoute =
+    !!activeSessionId && !!selectedRouteId && !!selectedRouteInActiveSession;
+  const mapSelectedRouteStops = hasValidSelectedRoute
+    ? selectedRouteStops
+    : [];
+  const mapSelectedRoutePath = hasValidSelectedRoute ? selectedRoutePath : null;
+  const mapSelectedRoute = hasValidSelectedRoute ? selectedRoute : null;
+  const canFitSelectedRoute =
+    hasValidSelectedRoute && mapSelectedRouteStops.length > 0;
+
+  const handleFitRoute = useCallback(() => {
+    if (!canFitSelectedRoute) return;
+    setFitTarget('route');
+    setFitKey((k) => k + 1);
+  }, [canFitSelectedRoute]);
 
   const clearSessionQueryParams = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -246,6 +257,21 @@ export default function SchoolBusRoutePlanningPage() {
     }
   }, [router, pathname, searchParams]);
 
+  const preserveSessionQueryParams = useCallback(
+    (sessionId: number, routeId?: number | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('sessionId', String(sessionId));
+      if (routeId) {
+        params.set('routeId', String(routeId));
+      } else {
+        params.delete('routeId');
+      }
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname);
+    },
+    [router, pathname, searchParams]
+  );
+
   // Check session context alignment when planning context changes
   React.useEffect(() => {
     if (!isHydrated) return;
@@ -262,9 +288,6 @@ export default function SchoolBusRoutePlanningPage() {
         setPreview(null);
         clearSessionQueryParams();
       }
-    } else if (querySessionId || queryRouteId) {
-      clearSessionQueryParams();
-      setPreview(null);
     }
   }, [
     form.schoolId,
@@ -274,8 +297,6 @@ export default function SchoolBusRoutePlanningPage() {
     activeSessionId,
     isHydrated,
     clearSessionQueryParams,
-    querySessionId,
-    queryRouteId,
   ]);
 
   // Reset selected route when active session changes
@@ -353,6 +374,7 @@ export default function SchoolBusRoutePlanningPage() {
       return;
     }
     try {
+      setSelectedRouteId(null);
       const res = await previewMutation({
         schoolId: Number(form.schoolId),
         serviceDate: form.serviceDate,
@@ -371,6 +393,8 @@ export default function SchoolBusRoutePlanningPage() {
 
   const handleCreateSession = useCallback(async () => {
     try {
+      setSelectedRouteId(null);
+      setFitTarget('all');
       const res = await createSession({
         schoolId: Number(form.schoolId),
         serviceDate: form.serviceDate,
@@ -387,7 +411,7 @@ export default function SchoolBusRoutePlanningPage() {
 
   const handleCreateManualRoute = useCallback(
     async (req: CreateRouteInSessionRequest) => {
-      if (!activeSession) return;
+      if (!activeSession) return false;
       try {
         const res = await createRouteInSession({
           sessionId: activeSession.id,
@@ -404,9 +428,11 @@ export default function SchoolBusRoutePlanningPage() {
           setFitTarget('route');
           setFitKey((k) => k + 1);
         }
+        return true;
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
         toast.error(err?.data?.message || 'Failed to create route');
+        return false;
       }
     },
     [activeSession, createRouteInSession, refetchSession, refetchRoutes]
@@ -414,8 +440,24 @@ export default function SchoolBusRoutePlanningPage() {
 
   const handlePublish = useCallback(async () => {
     if (!activeSession) return;
+    const sessionId = activeSession.id;
+    const routeId = selectedRouteId;
     try {
-      await publishSession(activeSession.id).unwrap();
+      const response = await publishSession(sessionId).unwrap();
+      const publishedSession = response.data;
+      setActiveSessionId(sessionId);
+      setRightPanelTab('route-builder');
+      setSelectedRouteId(routeId);
+      if (publishedSession) {
+        setForm({
+          schoolId: String(publishedSession.schoolId),
+          serviceDate: publishedSession.serviceDate,
+          routeDirection: publishedSession.routeDirection,
+        });
+      }
+      preserveSessionQueryParams(sessionId, routeId);
+      void refetchSession();
+      void refetchRoutes();
       toast.success('Session published!');
     } catch (e: unknown) {
       const err = e as {
@@ -486,7 +528,14 @@ export default function SchoolBusRoutePlanningPage() {
         toast.error(err?.data?.message || 'Publish failed');
       }
     }
-  }, [activeSession, publishSession]);
+  }, [
+    activeSession,
+    selectedRouteId,
+    publishSession,
+    preserveSessionQueryParams,
+    refetchSession,
+    refetchRoutes,
+  ]);
 
   const handleCancel = useCallback(() => {
     if (!activeSession) return;
@@ -566,6 +615,8 @@ export default function SchoolBusRoutePlanningPage() {
     setActiveSessionId(null);
     setSelectedRouteId(null);
     setPreview(null);
+    setFitTarget('all');
+    setFitKey((k) => k + 1);
     clearSessionQueryParams();
     toast.success('Workspace reset to new session planning context');
   }, [clearSessionQueryParams]);
@@ -587,20 +638,24 @@ export default function SchoolBusRoutePlanningPage() {
     unassignedStudents === 0;
 
   // Map pickup points from preview (or from greedy result when preview was skipped)
-  const rawPickupPoints: (
-    | PlanningPointResponse
-    | SchoolBusPlanningPickupPoint
-  )[] = preview?.points
-    ? preview.points
-    : (preview?.eligiblePickupPoints || []);
-  const mapPickupPoints = rawPickupPoints.map((pp) => ({
-    pickupPointId: 'pointId' in pp ? pp.pointId : pp.pickupPointId,
-    pickupPointName: 'pointName' in pp ? pp.pointName : pp.pickupPointName,
-    latitude: pp.latitude,
-    longitude: pp.longitude,
-    studentCount: pp.studentCount,
-    pointRole: 'pointRole' in pp ? pp.pointRole : undefined,
-  }));
+  const rawPickupPoints = useMemo<
+    (PlanningPointResponse | SchoolBusPlanningPickupPoint)[]
+  >(
+    () => (preview?.points ? preview.points : (preview?.eligiblePickupPoints || [])),
+    [preview?.eligiblePickupPoints, preview?.points]
+  );
+  const mapPickupPoints = useMemo(
+    () =>
+      rawPickupPoints.map((pp) => ({
+        pickupPointId: 'pointId' in pp ? pp.pointId : pp.pickupPointId,
+        pickupPointName: 'pointName' in pp ? pp.pointName : pp.pickupPointName,
+        latitude: pp.latitude,
+        longitude: pp.longitude,
+        studentCount: pp.studentCount,
+        pointRole: 'pointRole' in pp ? pp.pointRole : undefined,
+      })),
+    [rawPickupPoints]
+  );
 
   const hasMapData =
     (school != null && typeof school.latitude === 'number') ||
@@ -716,9 +771,9 @@ export default function SchoolBusRoutePlanningPage() {
                 <PlanningMap
                   school={school}
                   pickupPoints={mapPickupPoints}
-                  selectedRouteStops={selectedRouteStops}
-                  selectedRoutePath={selectedRoutePath}
-                  selectedRoute={selectedRoute}
+                  selectedRouteStops={mapSelectedRouteStops}
+                  selectedRoutePath={mapSelectedRoutePath}
+                  selectedRoute={mapSelectedRoute}
                   depots={depots}
                   fitTarget={fitTarget}
                   fitKey={fitKey}
@@ -734,7 +789,7 @@ export default function SchoolBusRoutePlanningPage() {
               onFitAll={handleFitAll}
               onFitRoute={handleFitRoute}
               canFitAll={canFitAll}
-              canFitRoute={!!selectedRouteId && selectedRouteStops.length > 0}
+              canFitRoute={canFitSelectedRoute}
               fitRouteLabel='Fit Route'
             />
           </div>
@@ -850,9 +905,9 @@ export default function SchoolBusRoutePlanningPage() {
                   <PlanningMap
                     school={school}
                     pickupPoints={mapPickupPoints}
-                    selectedRouteStops={selectedRouteStops}
-                    selectedRoutePath={selectedRoutePath}
-                    selectedRoute={selectedRoute}
+                    selectedRouteStops={mapSelectedRouteStops}
+                    selectedRoutePath={mapSelectedRoutePath}
+                    selectedRoute={mapSelectedRoute}
                     depots={depots}
                     fitTarget={fitTarget}
                     fitKey={fitKey}
@@ -868,7 +923,7 @@ export default function SchoolBusRoutePlanningPage() {
                 onFitAll={handleFitAll}
                 onFitRoute={handleFitRoute}
                 canFitAll={canFitAll}
-                canFitRoute={!!selectedRouteId && selectedRouteStops.length > 0}
+                canFitRoute={canFitSelectedRoute}
                 fitRouteLabel='Fit Route'
               />
               {!hasMapData && (
@@ -897,7 +952,8 @@ export default function SchoolBusRoutePlanningPage() {
                 selectedRouteId={selectedRouteId}
                 onSelectRoute={handleSelectRoute}
                 onCreateManualRoute={handleCreateManualRoute}
-                creatingRoute={creatingRoute || fetchingRoutes}
+                creatingRoute={creatingRoute}
+                refreshingRoutes={fetchingRoutes}
                 form={form}
                 rightPanelTab={rightPanelTab}
                 onTabChange={setRightPanelTab}
@@ -914,4 +970,3 @@ export default function SchoolBusRoutePlanningPage() {
     </MapMarkerVisibilityProvider>
   );
 }
-

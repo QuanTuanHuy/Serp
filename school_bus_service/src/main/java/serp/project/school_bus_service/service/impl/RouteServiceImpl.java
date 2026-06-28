@@ -12,6 +12,7 @@ import serp.project.school_bus_service.dto.request.*;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
+import serp.project.school_bus_service.dto.response.RouteMapResponse;
 import serp.project.school_bus_service.dto.response.RoutePathResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanListItemResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
@@ -143,8 +144,29 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     }
 
     @Override
+    public RouteMapResponse getRouteMap(Long id, Long tenantId) {
+        RoutePlanEntity route = findById(routePlanRepository, id, tenantId);
+        populateRouteDerivedFields(route, tenantId);
+
+        RouteMapResponse response = new RouteMapResponse();
+        response.setRoute(toRoutePlanResponse(route, tenantId));
+        response.setStops(routeStopService.findByRoute(id, tenantId).stream()
+                .map(mapper::toRouteStopResponse)
+                .toList());
+        response.setAssignment(routeDispatchService.findAssignmentEntityByRoute(id, tenantId)
+                .map(mapper::toRouteAssignmentResponse)
+                .orElse(null));
+        response.setPath(buildRoutePath(route));
+        return response;
+    }
+
+    @Override
     public RoutePathResponse getRoutePath(Long id, Long tenantId) {
         RoutePlanEntity route = findById(routePlanRepository, id, tenantId);
+        return buildRoutePath(route);
+    }
+
+    private RoutePathResponse buildRoutePath(RoutePlanEntity route) {
         RoutePathResponse response = new RoutePathResponse();
         response.setRouteId(route.getId());
         response.setDistanceKm(route.getPlannedDistanceKm());

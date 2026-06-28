@@ -97,6 +97,21 @@ public interface RouteAssignmentRepository extends BaseRepository<RouteAssignmen
             @Param("tenantId") Long tenantId,
             @Param("routeIds") Collection<Long> routeIds);
 
+    @Query(value = """
+            SELECT b.capacity
+              FROM public.school_bus_route_assignment a
+              JOIN public.school_bus_bus b ON b.id = a.bus_id
+             WHERE a.route_id = :routeId
+               AND a.tenant_id = :tenantId
+               AND a.is_deleted = false
+               AND a.status IN ('ASSIGNED', 'CONFIRMED')
+             ORDER BY a.assigned_at DESC, a.id DESC
+             LIMIT 1
+            """, nativeQuery = true)
+    Optional<Integer> findCurrentBusCapacity(
+            @Param("routeId") Long routeId,
+            @Param("tenantId") Long tenantId);
+
     @Query("""
             SELECT a FROM RouteAssignmentEntity a
             WHERE a.route.id IN :routeIds

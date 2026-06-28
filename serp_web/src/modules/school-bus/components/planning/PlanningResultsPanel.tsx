@@ -70,13 +70,15 @@ function CreateRoutePanel({
   session,
   onSubmit,
   submitting,
+  open,
+  onOpenChange,
 }: {
   session: SchoolBusPlanningSession;
-  onSubmit: (req: CreateRouteInSessionRequest) => void;
+  onSubmit: (req: CreateRouteInSessionRequest) => Promise<boolean> | boolean;
   submitting?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
-
   const initDir = (session.routeDirection as DirectionType) || 'OUTBOUND';
   const [form, setForm] = useState<CreateRouteFormState>({
     routeName: '',
@@ -138,7 +140,7 @@ function CreateRoutePanel({
     (!needsEndDepot || form.endDepotId !== '') &&
     form.busId !== '';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     const req: CreateRouteInSessionRequest = {
@@ -156,16 +158,18 @@ function CreateRoutePanel({
     else req.startDepotId = Number(form.startDepotId);
     if (form.endLocationType === 'SCHOOL') req.endSchoolId = session.schoolId;
     else req.endDepotId = Number(form.endDepotId);
-    onSubmit(req);
-    setOpen(false);
-    setForm((p) => ({
-      ...p,
-      routeName: '',
-      startDepotId: '',
-      endDepotId: '',
-      busId: '',
-      planningNotes: '',
-    }));
+    const created = await onSubmit(req);
+    if (created) {
+      onOpenChange(false);
+      setForm((p) => ({
+        ...p,
+        routeName: '',
+        startDepotId: '',
+        endDepotId: '',
+        busId: '',
+        planningNotes: '',
+      }));
+    }
   };
 
   const inputCls =
@@ -178,7 +182,7 @@ function CreateRoutePanel({
       <Button
         size='sm'
         variant='outline'
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => onOpenChange(!open)}
         className='w-full rounded-full border-red-250 text-[#C81E3A] hover:bg-[#FDECEF]/50 gap-1.5 text-xs font-semibold'
       >
         <Plus className='h-3.5 w-3.5' />
@@ -441,7 +445,7 @@ function CreateRoutePanel({
               type='button'
               size='sm'
               variant='ghost'
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               className='text-slate-500 hover:text-slate-900'
             >
               Cancel
@@ -904,7 +908,9 @@ function RouteDetailPanel({
   routeId: number;
   sessionId: number;
 }) {
-  const { data: routeDetail, isLoading } = useGetRouteByIdQuery(routeId);
+  const { data: routeDetail, isLoading } = useGetRouteByIdQuery(routeId, {
+    refetchOnMountOrArgChange: true,
+  });
   const [reorderStops, { isLoading: reorderingStops }] =
     useReorderRouteStopsMutation();
   const [removeStop, { isLoading: removingStop }] =
@@ -1263,8 +1269,9 @@ interface PlanningResultsPanelProps {
   loadingEligible?: boolean;
   selectedRouteId: number | null;
   onSelectRoute: (id: number | null) => void;
-  onCreateManualRoute: (req: CreateRouteInSessionRequest) => void;
+  onCreateManualRoute: (req: CreateRouteInSessionRequest) => Promise<boolean> | boolean;
   creatingRoute?: boolean;
+  refreshingRoutes?: boolean;
   form?: any;
   rightPanelTab: 'demand-preview' | 'route-builder';
   onTabChange: (tab: 'demand-preview' | 'route-builder') => void;
@@ -1283,6 +1290,7 @@ export function PlanningResultsPanel({
   onSelectRoute,
   onCreateManualRoute,
   creatingRoute,
+  refreshingRoutes,
   form,
   rightPanelTab,
   onTabChange,
@@ -1296,6 +1304,7 @@ export function PlanningResultsPanel({
   const [pendingAssignScrollRouteId, setPendingAssignScrollRouteId] = useState<
     number | null
   >(null);
+  const [createRouteBuilderOpen, setCreateRouteBuilderOpen] = useState(false);
   const manualAssignPanelRef = React.useRef<HTMLDivElement>(null);
 
   const [deleteRoute, { isLoading: deletingRoute }] =
@@ -1965,11 +1974,19 @@ export function PlanningResultsPanel({
                       <Route className='h-4 w-4 text-blue-600 shrink-0' />
                       Routes ({sessionRoutes.length})
                     </h3>
+                    {refreshingRoutes && !creatingRoute && (
+                      <span className='inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400'>
+                        <Loader2 className='h-3 w-3 animate-spin' />
+                        Refreshing
+                      </span>
+                    )}
                   </div>
                   <CreateRoutePanel
                     session={activeSession}
                     onSubmit={onCreateManualRoute}
                     submitting={creatingRoute}
+                    open={createRouteBuilderOpen}
+                    onOpenChange={setCreateRouteBuilderOpen}
                   />
                   {creatingRoute ? (
                     <div className='flex flex-col items-center justify-center py-10 px-4 text-center bg-slate-50/50 border border-slate-200 rounded-2xl shadow-sm space-y-3 min-h-[160px] animate-pulse'>

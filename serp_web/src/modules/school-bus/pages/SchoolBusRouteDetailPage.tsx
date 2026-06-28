@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Calendar,
   Clock3,
+  Loader2,
   MapPin,
   Users,
 } from 'lucide-react';
@@ -27,8 +28,7 @@ import {
   useGetAttendantDropdownOptionsQuery,
   useGetBusesQuery,
   useGetDriverDropdownOptionsQuery,
-  useGetRoutePathQuery,
-  useGetRouteByIdQuery,
+  useGetRouteMapQuery,
 } from '../api/schoolBusApi';
 import { RouteAssignmentDialog } from '../components/SchoolBusWorkflowForms';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -57,8 +57,8 @@ export function SchoolBusRouteDetailPage({
   const {
     data,
     isLoading,
-    refetch: refetchRoute,
-  } = useGetRouteByIdQuery(routeId);
+    isFetching,
+  } = useGetRouteMapQuery(routeId, { refetchOnMountOrArgChange: true });
   const { data: driversData } = useGetDriverDropdownOptionsQuery();
 
   const { data: attendantsData } = useGetAttendantDropdownOptionsQuery();
@@ -72,8 +72,6 @@ export function SchoolBusRouteDetailPage({
     useCreateTripFromRouteMutation();
   const [assignmentOpen, setAssignmentOpen] = React.useState(false);
   const [fitKey, setFitKey] = React.useState(0);
-  const { data: routePathData, refetch: refetchPath } =
-    useGetRoutePathQuery(routeId);
 
   const detail = data?.data;
 
@@ -129,7 +127,7 @@ export function SchoolBusRouteDetailPage({
     detail.assignment?.busCapacity ||
     route.busCapacity;
   const plannedStudentCount =
-    route.plannedStudentCount || detail.students.length || 0;
+    route.plannedStudentCount || 0;
   const stopsCount = route.stopsCount || detail.stops.length;
   const driverName = detail.assignment?.driverName || route.driverName;
   const attendantName = detail.assignment?.attendantName || route.attendantName;
@@ -574,23 +572,33 @@ export function SchoolBusRouteDetailPage({
                 )}
               </div>
               <div className='w-full bg-slate-50'>
-                <SchoolBusMapWorkspace
-                  flat
-                  mapHeightClassName='h-[420px]'
-                  map={
-                    <RouteMap
-                      route={detail.route}
-                      stops={detail.stops}
-                      assignment={detail.assignment}
-                      routePath={routePathData?.data}
-                      className='h-full w-full'
-                      fitKey={fitKey}
-                    />
-                  }
-                  legend={<SchoolBusMapLegend />}
-                  onFitAll={() => setFitKey((k) => k + 1)}
-                  canFitAll={true}
-                />
+                <div className='relative'>
+                  {isFetching && (
+                    <div className='absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]'>
+                      <div className='flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm'>
+                        <Loader2 className='h-4 w-4 animate-spin text-[#C81E3A]' />
+                        Updating route map...
+                      </div>
+                    </div>
+                  )}
+                  <SchoolBusMapWorkspace
+                    flat
+                    mapHeightClassName='h-[420px]'
+                    map={
+                      <RouteMap
+                        route={detail.route}
+                        stops={detail.stops}
+                        assignment={detail.assignment}
+                        routePath={detail.path}
+                        className='h-full w-full'
+                        fitKey={fitKey}
+                      />
+                    }
+                    legend={<SchoolBusMapLegend />}
+                    onFitAll={() => setFitKey((k) => k + 1)}
+                    canFitAll={true}
+                  />
+                </div>
               </div>
             </div>
 

@@ -161,6 +161,28 @@ public interface AttendanceRepository extends BaseRepository<AttendanceEntity, L
 
     @Query("""
         SELECT a FROM AttendanceEntity a
+        JOIN FETCH a.tripStudent ts
+        JOIN FETCH ts.trip t
+        JOIN FETCH t.route r
+        JOIN FETCH ts.subscription sub
+        JOIN FETCH sub.student student
+        WHERE t.id = :tripId
+          AND a.tenantId = :tenantId
+          AND a.isDeleted = false
+          AND ts.isDeleted = false
+          AND sub.isDeleted = false
+          AND student.isDeleted = false
+          AND (:parentProfileId IS NULL OR student.parentProfile.id = :parentProfileId)
+        ORDER BY a.recordedAt DESC
+    """)
+    List<AttendanceEntity> findRecentByTripId(
+            @Param("tripId") Long tripId,
+            @Param("tenantId") Long tenantId,
+            @Param("parentProfileId") Long parentProfileId,
+            Pageable pageable);
+
+    @Query("""
+        SELECT a FROM AttendanceEntity a
         WHERE a.tripStudent.trip.id = :tripId
           AND a.tripStudent.subscription.student.id = :studentId
           AND a.tenantId = :tenantId

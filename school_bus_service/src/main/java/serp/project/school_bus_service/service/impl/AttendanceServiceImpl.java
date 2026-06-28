@@ -1,5 +1,6 @@
 package serp.project.school_bus_service.service.impl;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import serp.project.school_bus_service.dto.request.TripAttendanceActionRequest;
 import serp.project.school_bus_service.dto.response.BatchAttendanceResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceManifestResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
+import serp.project.school_bus_service.dto.response.TripOperationOverviewResponse;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
@@ -37,6 +39,13 @@ import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.entity.TripStopLogEntity;
 import serp.project.school_bus_service.entity.TripStudentEntity;
 import serp.project.school_bus_service.repository.AttendanceRepository;
+import serp.project.school_bus_service.repository.TripExecutionRepository;
+import serp.project.school_bus_service.repository.TripStopLogRepository;
+import serp.project.school_bus_service.repository.TripStudentRepository;
+import serp.project.school_bus_service.repository.projection.TripOperationHeaderProjection;
+import serp.project.school_bus_service.repository.projection.TripOperationStopProjection;
+import serp.project.school_bus_service.repository.projection.TripAttendanceStudentProjection;
+import serp.project.school_bus_service.repository.projection.TripStudentStatusCountProjection;
 import serp.project.school_bus_service.shared.auth.SchoolBusSecurityService;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
@@ -54,6 +63,9 @@ import java.util.Set;
 public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity, Long> implements IAttendanceService {
 
     private final AttendanceRepository attendanceRepository;
+    private final TripExecutionRepository tripExecutionRepository;
+    private final TripStudentRepository tripStudentRepository;
+    private final TripStopLogRepository tripStopLogRepository;
     private final ITripExecutionService tripExecutionService;
     private final IRouteStopService routeStopService;
     private final ITripStudentService tripStudentService;
@@ -67,6 +79,9 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
 
     public AttendanceServiceImpl(
             AttendanceRepository attendanceRepository,
+            TripExecutionRepository tripExecutionRepository,
+            TripStudentRepository tripStudentRepository,
+            TripStopLogRepository tripStopLogRepository,
             @Lazy ITripExecutionService tripExecutionService,
             IRouteStopService routeStopService,
             ITripStudentService tripStudentService,
@@ -77,6 +92,9 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
             SchoolBusSecurityService securityService,
             ISchoolBusDomainNotificationService domainNotificationService) {
         this.attendanceRepository = attendanceRepository;
+        this.tripExecutionRepository = tripExecutionRepository;
+        this.tripStudentRepository = tripStudentRepository;
+        this.tripStopLogRepository = tripStopLogRepository;
         this.tripExecutionService = tripExecutionService;
         this.routeStopService = routeStopService;
         this.tripStudentService = tripStudentService;
@@ -119,6 +137,24 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                     .toList();
         }
         return attendances.stream()
+                .map(mapper::toAttendanceResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AttendanceResponse> getRecentTripAttendance(Long tripId, Long tenantId, int size) {
+        int normalizedSize = Math.max(1, Math.min(size, 100));
+        schoolBusDataScopeService.assertCanAccessAttendance(tripId);
+        Long parentProfileId = securityService.isParentOnly()
+                ? schoolBusDataScopeService.getCurrentParentProfileIdRequired()
+                : null;
+        return attendanceRepository.findRecentByTripId(
+                        tripId,
+                        tenantId,
+                        parentProfileId,
+                        PageRequest.of(0, normalizedSize))
+                .stream()
                 .map(mapper::toAttendanceResponse)
                 .toList();
     }
@@ -396,7 +432,8 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
                 TripStudentStatus.NO_SHOW, TripStudentStatus.DROPPED_OFF,
                 TripStudentStatus.NOT_SERVED);
 
-        List<TripStudentEntity> allTripStudents = tripStudentService.findByTrip(tripId, tenantId);
+        List<TripStudentEntity> allTripStudents =
+                tripStudentRepository.findByTripIdAndStudentIds(tripId, request.getStudentIds(), tenantId);
         java.util.Map<Long, TripStudentEntity> studentMap = allTripStudents.stream()
                 .collect(java.util.stream.Collectors.toMap(
                         ts -> ts.getStudent().getId(), ts -> ts, (a, b) -> a));
@@ -637,6 +674,126 @@ public class AttendanceServiceImpl extends AbstractBaseService<AttendanceEntity,
         response.setStudents(students);
         return response;
 
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TripOperationOverviewResponse getTripOperationOverview(Long tripId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessAttendance(tripId);
+        Long parentProfileId = securityService.isParentOnly()
+                ? schoolBusDataScopeService.getCurrentParentProfileIdRequired()
+                : null;
+        TripOperationHeaderProjection header = tripExecutionRepository
+                .findOperationHeaderByTripId(tripId, tenantId)
+                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND,
+                        messageCommon.getMessage(AppErrorCode.NOT_FOUND)));
+
+        TripOperationOverviewResponse response = new TripOperationOverviewResponse();
+        response.setTripId(header.getTripId());
+        response.setTripCode(header.getTripCode());
+        response.setRouteId(header.getRouteId());
+        response.setRouteCode(header.getRouteCode());
+        response.setRouteName(header.getRouteName());
+        response.setRouteDirection(header.getRouteDirection());
+        response.setTripStatus(header.getTripStatus());
+        response.setServiceDate(header.getServiceDate() != null ? header.getServiceDate().toString() : null);
+        response.setBusPlateNumber(header.getBusPlateNumber());
+        response.setDriverName(header.getDriverName());
+        response.setAttendantName(header.getAttendantName());
+        response.setCancellationReason(header.getCancellationReason());
+        response.setRouteGeometry(header.getRouteGeometry());
+        response.setDistanceKm(header.getDistanceKm());
+        response.setDurationMin(header.getDurationMin());
+        response.setSummary(buildOverviewSummary(tripId, tenantId, parentProfileId));
+        response.setStops(buildOverviewStops(tripId, tenantId, parentProfileId));
+        return response;
+    }
+
+    private TripAttendanceSummaryResponse buildOverviewSummary(Long tripId, Long tenantId, Long parentProfileId) {
+        TripAttendanceSummaryResponse summary = new TripAttendanceSummaryResponse();
+        for (TripStudentStatusCountProjection row : tripStudentRepository.countStatusByTripIdForOperationOverview(
+                tripId, tenantId, parentProfileId)) {
+            int total = row.getTotal() == null ? 0 : row.getTotal();
+            String status = row.getStatus();
+            if (TripStudentStatus.PLANNED.name().equals(status)) {
+                summary.setPlanned(total);
+            } else if (TripStudentStatus.BOARDED.name().equals(status)) {
+                summary.setBoarded(total);
+            } else if (TripStudentStatus.DROPPED_OFF.name().equals(status)) {
+                summary.setDroppedOff(total);
+            } else if (TripStudentStatus.ABSENT.name().equals(status)) {
+                summary.setAbsent(total);
+            } else if (TripStudentStatus.NO_SHOW.name().equals(status)) {
+                summary.setNoShow(total);
+            } else if (TripStudentStatus.NOT_SERVED.name().equals(status)) {
+                summary.setNotServed(total);
+            }
+            summary.setTotalStudents(summary.getTotalStudents() + total);
+        }
+        return summary;
+    }
+
+    private List<TripAttendanceManifestResponse.TripAttendanceStopItem> buildOverviewStops(
+            Long tripId, Long tenantId, Long parentProfileId) {
+        return tripStopLogRepository.findOperationStopsByTripId(tripId, tenantId, parentProfileId).stream()
+                .map(this::toOverviewStopItem)
+                .toList();
+    }
+
+    private TripAttendanceManifestResponse.TripAttendanceStopItem toOverviewStopItem(TripOperationStopProjection row) {
+        TripAttendanceManifestResponse.TripAttendanceStopItem item =
+                new TripAttendanceManifestResponse.TripAttendanceStopItem();
+        item.setRouteStopId(row.getRouteStopId());
+        item.setStopOrder(row.getStopOrder());
+        item.setLocationType(row.getLocationType());
+        item.setStopPurpose(row.getStopPurpose());
+        item.setDisplayName(row.getLocationName());
+        item.setLocationId(row.getLocationId());
+        item.setLocationName(row.getLocationName());
+        item.setLocationAddress(row.getLocationAddress());
+        item.setLatitude(row.getLatitude());
+        item.setLongitude(row.getLongitude());
+        item.setStopStatus(row.getStopStatus());
+        item.setActualBoardedCount(row.getActualBoardedCount() == null ? 0 : row.getActualBoardedCount());
+        item.setActualDroppedCount(row.getActualDroppedCount() == null ? 0 : row.getActualDroppedCount());
+        item.setActualArrivalTime(row.getActualArrivalTime());
+        item.setActualDepartureTime(row.getActualDepartureTime());
+        int plannedBoardingCount = row.getPlannedBoardingCount() == null ? 0 : row.getPlannedBoardingCount();
+        int plannedDropoffCount = row.getPlannedDropoffCount() == null ? 0 : row.getPlannedDropoffCount();
+        item.setPlannedBoardingCount(plannedBoardingCount);
+        item.setPlannedDropoffCount(plannedDropoffCount);
+        item.setStudentCount(plannedBoardingCount + plannedDropoffCount);
+        return item;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TripAttendanceManifestResponse.TripAttendanceStudentItem> getTripAttendanceStudents(
+            Long tripId, Long routeStopId, Long tenantId) {
+        schoolBusDataScopeService.assertCanAccessAttendance(tripId);
+        Long parentProfileId = securityService.isParentOnly()
+                ? schoolBusDataScopeService.getCurrentParentProfileIdRequired()
+                : null;
+        return tripStudentRepository.findAttendanceStudentsForTrip(tripId, tenantId, routeStopId, parentProfileId)
+                .stream()
+                .map(this::toAttendanceStudentItem)
+                .toList();
+    }
+
+    private TripAttendanceManifestResponse.TripAttendanceStudentItem toAttendanceStudentItem(
+            TripAttendanceStudentProjection projection) {
+        TripAttendanceManifestResponse.TripAttendanceStudentItem item =
+                new TripAttendanceManifestResponse.TripAttendanceStudentItem();
+        item.setTripStudentId(projection.getTripStudentId());
+        item.setStudentId(projection.getStudentId());
+        item.setStudentName(projection.getStudentName());
+        item.setStudentCode(projection.getStudentCode());
+        item.setStatus(projection.getStatus());
+        item.setPickupStopId(projection.getPickupStopId());
+        item.setDropoffStopId(projection.getDropoffStopId());
+        item.setSubscriptionId(projection.getSubscriptionId());
+        item.setNote(projection.getNote());
+        return item;
     }
 
     private String resolveRouteStopAddress(RouteStopEntity stop) {

@@ -21,8 +21,7 @@ import {
 import { cn } from '@/shared/utils';
 import { Button, Badge } from '@/shared/components/ui';
 import {
-  useGetRoutePathQuery,
-  useGetRouteByIdQuery,
+  useGetRouteMapQuery,
   useGetRoutesQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -117,22 +116,14 @@ export function SchoolBusDispatchPage() {
 
   const prioritizedRoutes = routes;
   const {
-    data: selectedRouteDetail,
-    isLoading: isRouteDetailLoading,
-    isFetching: isRouteDetailFetching,
-  } = useGetRouteByIdQuery(
+    data: selectedRouteMap,
+    isLoading: isRouteMapLoading,
+    isFetching: isRouteMapFetching,
+  } = useGetRouteMapQuery(
     selectedRouteId as number,
-    { skip: !selectedRouteId }
+    { skip: !selectedRouteId, refetchOnMountOrArgChange: true }
   );
-  const {
-    data: selectedRoutePath,
-    isLoading: isRoutePathLoading,
-    isFetching: isRoutePathFetching,
-  } = useGetRoutePathQuery(
-    selectedRouteId as number,
-    { skip: !selectedRouteId }
-  );
-  const selectedRouteData = selectedRouteDetail?.data;
+  const selectedRouteData = selectedRouteMap?.data;
   const isSelectedRouteDetailCurrent =
     selectedRouteId != null && selectedRouteData?.route?.id === selectedRouteId;
   const routePreviewData = isSelectedRouteDetailCurrent
@@ -140,11 +131,11 @@ export function SchoolBusDispatchPage() {
     : null;
   const isRoutePreviewInitialLoading =
     Boolean(selectedRouteId) &&
-    (isRouteDetailLoading || !isSelectedRouteDetailCurrent);
+    (isRouteMapLoading || !isSelectedRouteDetailCurrent);
   const isRoutePreviewRefreshing =
     Boolean(selectedRouteId) &&
     Boolean(routePreviewData) &&
-    (isRouteDetailFetching || isRoutePathLoading || isRoutePathFetching);
+    isRouteMapFetching;
 
   // Middle stops that lack coordinates (terminals use route-level coords instead)
   const selectedRouteMissingCoordinates =
@@ -503,8 +494,7 @@ export function SchoolBusDispatchPage() {
                   Loading route preview...
                 </h3>
                 <p className='text-xs text-slate-500 max-w-[260px] mt-1'>
-                  Preparing route detail, stops, and map path for the selected
-                  route.
+                  Preparing stops and map path for the selected route.
                 </p>
                 <div className='mt-6 w-full max-w-sm space-y-2'>
                   <div className='h-3 rounded-full bg-slate-200/80 animate-pulse' />
@@ -530,7 +520,7 @@ export function SchoolBusDispatchPage() {
                       route={routePreviewData.route}
                       stops={routePreviewData.stops}
                       assignment={routePreviewData.assignment}
-                      routePath={selectedRoutePath?.data}
+                      routePath={routePreviewData.path}
                       className='h-full w-full'
                     />
                   }

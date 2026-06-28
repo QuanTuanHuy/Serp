@@ -118,27 +118,7 @@ export default function PlanningMapClient({
 }: PlanningMapClientProps) {
   const { isVisible } = useMapMarkerVisibility();
 
-  // Build list of all known positions for auto-fit ("fit all")
-  const allPositions: [number, number][] = [];
-
-  if (
-    typeof school?.latitude === 'number' &&
-    typeof school?.longitude === 'number'
-  ) {
-    allPositions.push([school.latitude, school.longitude]);
-  }
-  for (const pp of pickupPoints) {
-    if (typeof pp.latitude === 'number' && typeof pp.longitude === 'number') {
-      allPositions.push([pp.latitude, pp.longitude]);
-    }
-  }
-  for (const d of depots) {
-    if (typeof d.latitude === 'number' && typeof d.longitude === 'number') {
-      allPositions.push([d.latitude, d.longitude]);
-    }
-  }
-
-  const parseGeometryPath = (
+  const parseGeometryPath = React.useCallback((
     geometryPathStr?: string | null
   ): [number, number][] => {
     if (!geometryPathStr) return [];
@@ -153,57 +133,90 @@ export default function PlanningMapClient({
       console.error('Failed to parse geometryPath:', e);
     }
     return [];
-  };
+  }, []);
+
+  // Build list of all known positions for auto-fit ("fit all")
+  const allPositions = React.useMemo<[number, number][]>(() => {
+    const positions: [number, number][] = [];
+    if (
+      typeof school?.latitude === 'number' &&
+      typeof school?.longitude === 'number'
+    ) {
+      positions.push([school.latitude, school.longitude]);
+    }
+    for (const pp of pickupPoints) {
+      if (typeof pp.latitude === 'number' && typeof pp.longitude === 'number') {
+        positions.push([pp.latitude, pp.longitude]);
+      }
+    }
+    for (const d of depots) {
+      if (typeof d.latitude === 'number' && typeof d.longitude === 'number') {
+        positions.push([d.latitude, d.longitude]);
+      }
+    }
+    return positions;
+  }, [school?.latitude, school?.longitude, pickupPoints, depots]);
 
   // Route stop positions (in order) - used for polyline + "fit route"
-  const sortedStops = [...selectedRouteStops]
-    .filter((s) => {
-      const lat =
-        typeof s.latitude === 'number' ? s.latitude : s.pickupPointLatitude;
-      const lon =
-        typeof s.longitude === 'number' ? s.longitude : s.pickupPointLongitude;
-      return typeof lat === 'number' && typeof lon === 'number';
-    })
-    .sort((a, b) => a.stopOrder - b.stopOrder);
+  const sortedStops = React.useMemo(
+    () =>
+      [...selectedRouteStops]
+        .filter((s) => {
+          const lat =
+            typeof s.latitude === 'number' ? s.latitude : s.pickupPointLatitude;
+          const lon =
+            typeof s.longitude === 'number'
+              ? s.longitude
+              : s.pickupPointLongitude;
+          return typeof lat === 'number' && typeof lon === 'number';
+        })
+        .sort((a, b) => a.stopOrder - b.stopOrder),
+    [selectedRouteStops]
+  );
 
-  const routeLinePositions: [number, number][] = sortedStops.map((s) => {
-    const lat =
-      typeof s.latitude === 'number' ? s.latitude : s.pickupPointLatitude;
-    const lon =
-      typeof s.longitude === 'number' ? s.longitude : s.pickupPointLongitude;
-    return [lat as number, lon as number];
-  });
+  const routeLinePositions = React.useMemo<[number, number][]>(
+    () =>
+      sortedStops.map((s) => {
+        const lat =
+          typeof s.latitude === 'number' ? s.latitude : s.pickupPointLatitude;
+        const lon =
+          typeof s.longitude === 'number' ? s.longitude : s.pickupPointLongitude;
+        return [lat as number, lon as number];
+      }),
+    [sortedStops]
+  );
 
   // Use actual road geometry when available; skip polyline if no real geometry
-  const actualPathCoordinates: [number, number][] =
-    (
+  const actualPathCoordinates = React.useMemo<[number, number][]>(() => {
+    const pathCoordinates =
       selectedRoutePath?.coordinates
         ?.filter(
           (p) =>
             typeof p.latitude === 'number' && typeof p.longitude === 'number'
         )
-        .map((p) => [p.latitude, p.longitude] as [number, number]) || []
-    ).length >= 2
-      ? (selectedRoutePath?.coordinates
-          ?.filter(
-            (p) =>
-              typeof p.latitude === 'number' && typeof p.longitude === 'number'
-          )
-          .map((p) => [p.latitude, p.longitude] as [number, number]) as [
-          number,
-          number,
-        ][])
+        .map((p) => [p.latitude, p.longitude] as [number, number]) || [];
+    return pathCoordinates.length >= 2
+      ? pathCoordinates
       : parseGeometryPath(selectedRoute?.geometryPath);
+  }, [
+    parseGeometryPath,
+    selectedRoute?.geometryPath,
+    selectedRoutePath?.coordinates,
+  ]);
   const hasRealGeometry = actualPathCoordinates.length >= 2;
-  const resolvedLinePositions = hasRealGeometry
-    ? actualPathCoordinates
-    : routeLinePositions;
+  const resolvedLinePositions = React.useMemo(
+    () => (hasRealGeometry ? actualPathCoordinates : routeLinePositions),
+    [actualPathCoordinates, hasRealGeometry, routeLinePositions]
+  );
 
   // Positions passed to FitBounds depend on fitTarget
-  const fitPositions: [number, number][] =
-    fitTarget === 'route' && resolvedLinePositions.length > 0
-      ? resolvedLinePositions
-      : allPositions;
+  const fitPositions = React.useMemo<[number, number][]>(
+    () =>
+      fitTarget === 'route' && resolvedLinePositions.length > 0
+        ? resolvedLinePositions
+        : allPositions,
+    [allPositions, fitTarget, resolvedLinePositions]
+  );
 
   const defaultCenter: [number, number] = [
     SCHOOL_BUS_MAP_DEFAULT_CENTER.lat,
@@ -398,4 +411,3 @@ export default function PlanningMapClient({
     </div>
   );
 }
-

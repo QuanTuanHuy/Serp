@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
 import serp.project.school_bus_service.enums.RouteDirection;
+import serp.project.school_bus_service.repository.projection.RoutePlanStudentAssignmentProjection;
+import serp.project.school_bus_service.repository.projection.RouteStopStudentCountProjection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
 import java.util.List;
@@ -121,4 +123,62 @@ public interface RoutePlanStudentRepository extends BaseRepository<RoutePlanStud
             @Param("sessionId") Long sessionId,
             @Param("routeId") Long routeId,
             @Param("direction") RouteDirection direction);
+
+    @Query(value = """
+            SELECT rps.route_id AS routeId,
+                   sub.student_id AS studentId,
+                   rps.subscription_id AS subscriptionId,
+                   rps.pickup_stop_id AS pickupStopId,
+                   rps.dropoff_stop_id AS dropoffStopId
+              FROM public.school_bus_route_plan_student rps
+              JOIN public.school_bus_student_subscription sub ON sub.id = rps.subscription_id
+             WHERE rps.route_id = :routeId
+               AND rps.is_deleted = false
+            """, nativeQuery = true)
+    List<RoutePlanStudentAssignmentProjection> findAssignmentKeysByRoute(@Param("routeId") Long routeId);
+
+    @Query(value = """
+            SELECT rps.route_id AS routeId,
+                   sub.student_id AS studentId,
+                   rps.subscription_id AS subscriptionId,
+                   rps.pickup_stop_id AS pickupStopId,
+                   rps.dropoff_stop_id AS dropoffStopId
+              FROM public.school_bus_route_plan_student rps
+              JOIN public.school_bus_route_plan route ON route.id = rps.route_id
+              JOIN public.school_bus_route_planning_session session ON session.id = route.planning_session_id
+              JOIN public.school_bus_student_subscription sub ON sub.id = rps.subscription_id
+             WHERE session.id = :sessionId
+               AND route.id <> :routeId
+               AND session.route_direction = :direction
+               AND rps.is_deleted = false
+            """, nativeQuery = true)
+    List<RoutePlanStudentAssignmentProjection> findOtherAssignmentKeysInSessionAndDirection(
+            @Param("sessionId") Long sessionId,
+            @Param("routeId") Long routeId,
+            @Param("direction") String direction);
+
+    @Query(value = """
+            SELECT stop_id AS routeStopId,
+                   CAST(SUM(boarding_count) AS INTEGER) AS boardingCount,
+                   CAST(SUM(dropoff_count) AS INTEGER) AS dropoffCount
+              FROM (
+                    SELECT rps.pickup_stop_id AS stop_id,
+                           1 AS boarding_count,
+                           0 AS dropoff_count
+                      FROM public.school_bus_route_plan_student rps
+                     WHERE rps.route_id = :routeId
+                       AND rps.is_deleted = false
+                       AND rps.pickup_stop_id IS NOT NULL
+                    UNION ALL
+                    SELECT rps.dropoff_stop_id AS stop_id,
+                           0 AS boarding_count,
+                           1 AS dropoff_count
+                      FROM public.school_bus_route_plan_student rps
+                     WHERE rps.route_id = :routeId
+                       AND rps.is_deleted = false
+                       AND rps.dropoff_stop_id IS NOT NULL
+                   ) counts
+             GROUP BY stop_id
+            """, nativeQuery = true)
+    List<RouteStopStudentCountProjection> countStudentsByRouteStops(@Param("routeId") Long routeId);
 }

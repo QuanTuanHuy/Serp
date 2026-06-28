@@ -25,17 +25,17 @@ import {
 import { toast } from 'sonner';
 import type { Client, StompSubscription } from '@stomp/stompjs';
 import {
+  schoolBusApi,
   useArriveTripStopMutation,
   useCancelTripMutation,
   useCompleteTripMutation,
   useDepartTripStopMutation,
-  useGetTripAttendanceManifestQuery,
-  useGetTripAttendanceQuery,
-  useGetTripByIdQuery,
+  useGetTripAttendanceStudentsQuery,
+  useGetTripOperationOverviewQuery,
+  useGetTripRecentAttendanceQuery,
   useSkipTripStopMutation,
   useStartTripMutation,
   useStartBoardingTripStopMutation,
-  useGetRoutePathQuery,
   useAbsentTripStudentMutation,
   useBoardTripStudentMutation,
   useDropoffTripStudentMutation,
@@ -43,6 +43,7 @@ import {
   useNotServedTripStudentMutation,
   useBatchAttendanceTripStopMutation,
 } from '../api/schoolBusApi';
+import { useAppDispatch } from '@/lib/store';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
@@ -57,10 +58,12 @@ import {
   SheetDescription,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
-import { formatDate, formatDateTime, getPageItems } from '../utils';
+import { formatDate, formatDateTime } from '../utils';
 import type {
+  ApiResponse,
   TripAttendanceStopItem,
   TripAttendanceStudentItem,
+  SchoolBusTripOperationAction,
 } from '../types';
 import { TripMap } from '../components/map/TripMap';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
@@ -241,6 +244,7 @@ export function SchoolBusTripOperationDetailPage({
   tripId,
 }: SchoolBusTripOperationDetailPageProps) {
   const access = useSchoolBusAccess();
+  const dispatch = useAppDispatch();
   // -- State ------------------------------------------------------------------
   const [selectedStopId, setSelectedStopId] = React.useState<number | null>(
     null
@@ -259,31 +263,32 @@ export function SchoolBusTripOperationDetailPage({
   const [isSyncDelayed, setIsSyncDelayed] = React.useState(false);
 
   // -- Queries ----------------------------------------------------------------
-  const { data: tripData, isLoading: tripLoading } =
-    useGetTripByIdQuery(tripId);
-
   const {
-    data: manifestData,
-    isLoading: manifestLoading,
-    refetch: refetchManifest,
-  } = useGetTripAttendanceManifestQuery(tripId);
+    data: overviewData,
+    refetch: refetchOverview,
+  } = useGetTripOperationOverviewQuery(tripId, {
+    refetchOnMountOrArgChange: true,
+  });
   const { data: eventsData, refetch: refetchEvents } =
-    useGetTripAttendanceQuery(tripId);
-  // Parents do not have the planning.read permission required by the route path
-  // endpoint, so we skip the call entirely. The map falls back to the geometry
-  // embedded in the attendance manifest which contains the same road data.
-  const { data: routePathData } = useGetRoutePathQuery(
-    manifestData?.data?.routeId as number,
-    { skip: !manifestData?.data?.routeId || access.isParentOnly }
+    useGetTripRecentAttendanceQuery(
+      { tripId, size: 24 },
+      { refetchOnMountOrArgChange: true }
+    );
+  const {
+    data: drawerStudentsData,
+    isFetching: loadingDrawerStudents,
+  } = useGetTripAttendanceStudentsQuery(
+    { tripId, routeStopId: selectedStopId },
+    { skip: !isAttendanceDrawerOpen, refetchOnMountOrArgChange: true }
   );
 
   // -- Derived ----------------------------------------------------------------
-  const trip = tripData?.data || null;
-  const manifest = manifestData?.data || null;
+  const manifest = overviewData?.data || null;
   const summary = manifest?.summary || null;
   const restEvents = eventsData?.data || [];
 
-  const tripStatus = manifest?.tripStatus || trip?.status || null;
+  const drawerStudents = drawerStudentsData?.data || [];
+  const tripStatus = manifest?.tripStatus || null;
   const tripIsActive = [
     'IN_PROGRESS',
     'BOARDING',
@@ -293,10 +298,10 @@ export function SchoolBusTripOperationDetailPage({
   const tripIsCompleted = tripStatus === 'COMPLETED';
   const tripIsCancelled = tripStatus === 'CANCELLED';
   const isOutbound =
-    (manifest?.routeDirection || trip?.routeDirection) === 'OUTBOUND';
-  const tripCode = manifest?.tripCode || trip?.tripCode || `Trip #${tripId}`;
-  const routeCode = manifest?.routeCode || trip?.routeCode || '';
-  const routeName = (manifest as any)?.routeName || trip?.routeName || '';
+    manifest?.routeDirection === 'OUTBOUND';
+  const tripCode = manifest?.tripCode || `Trip #${tripId}`;
+  const routeCode = manifest?.routeCode || '';
+  const routeName = manifest?.routeName || '';
 
   // -- Polling implementation -------------------------------------------------
   const isRefreshingRef = React.useRef(false);
@@ -312,7 +317,7 @@ export function SchoolBusTripOperationDetailPage({
           forceAttendance ||
           now - lastAttendanceRefreshRef.current >= ATTENDANCE_POLL_INTERVAL_MS;
 
-        const manifestResult = await refetchManifest();
+        const overviewResult = await refetchOverview();
         const attendanceResult = shouldRefreshAttendance
           ? await refetchEvents()
           : undefined;
@@ -322,7 +327,7 @@ export function SchoolBusTripOperationDetailPage({
         }
 
         const manifestBackoff = getRateLimitBackoffMs(
-          manifestResult.error as PollingError | undefined
+          overviewResult.error as PollingError | undefined
         );
         const attendanceBackoff = getRateLimitBackoffMs(
           attendanceResult?.error as PollingError | undefined
@@ -338,7 +343,7 @@ export function SchoolBusTripOperationDetailPage({
           return;
         }
 
-        if (!manifestResult.error) {
+        if (!overviewResult.error) {
           setLastUpdated(new Date().toLocaleTimeString());
           setIsSyncDelayed(false);
           setPollInterval(
@@ -349,7 +354,7 @@ export function SchoolBusTripOperationDetailPage({
         isRefreshingRef.current = false;
       }
     },
-    [refetchManifest, refetchEvents, tripIsActive]
+    [refetchOverview, refetchEvents, tripIsActive]
   );
 
   // Track page visibility
@@ -385,10 +390,10 @@ export function SchoolBusTripOperationDetailPage({
   ]);
 
   React.useEffect(() => {
-    if (tripData || manifestData) {
+    if (overviewData) {
       setLastUpdated(new Date().toLocaleTimeString());
     }
-  }, [tripData, manifestData]);
+  }, [overviewData]);
 
   React.useEffect(() => {
     if (!isSyncDelayed && !tripIsCompleted && !tripIsCancelled) {
@@ -506,8 +511,8 @@ export function SchoolBusTripOperationDetailPage({
   }, [sortedStops]);
 
   const hasPlannedStudents = React.useMemo(() => {
-    return manifest?.students?.some((st) => st.status === 'PLANNED') || false;
-  }, [manifest?.students]);
+    return (summary?.planned || 0) > 0;
+  }, [summary?.planned]);
 
   const canCompleteTrip =
     tripStatus === 'IN_PROGRESS' && allStopsFinished && !hasPlannedStudents;
@@ -533,35 +538,8 @@ export function SchoolBusTripOperationDetailPage({
       isOutbound);
 
   const studentsAtStop = React.useMemo<TripAttendanceStudentItem[]>(() => {
-    if (!manifest || !selectedStop) return [];
-    const { stopPurpose, locationType, routeStopId } = selectedStop;
-    if (locationType === 'DEPOT') return [];
-
-    let filtered: TripAttendanceStudentItem[] = [];
-
-    if (stopPurpose === 'PICKUP') {
-      filtered = manifest.students.filter(
-        (s) => s.pickupStopId === routeStopId
-      );
-    } else if (stopPurpose === 'DROPOFF') {
-      filtered = manifest.students.filter(
-        (s) => s.dropoffStopId === routeStopId
-      );
-    } else if (
-      stopPurpose === 'END_TERMINAL' &&
-      locationType === 'SCHOOL' &&
-      isOutbound
-    ) {
-      filtered = manifest.students.filter(
-        (s) => s.status === 'BOARDED' || s.status === 'DROPPED_OFF'
-      );
-    } else if (
-      stopPurpose === 'START_TERMINAL' &&
-      locationType === 'SCHOOL' &&
-      !isOutbound
-    ) {
-      filtered = manifest.students.filter((s) => s.status === 'PLANNED');
-    }
+    if (!selectedStop) return [];
+    let filtered = drawerStudents;
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
@@ -573,7 +551,7 @@ export function SchoolBusTripOperationDetailPage({
     }
 
     return filtered;
-  }, [manifest, selectedStop, isOutbound, searchQuery]);
+  }, [drawerStudents, selectedStop, searchQuery]);
 
   // -- Mutations --------------------------------------------------------------
   const [startTrip, { isLoading: starting }] = useStartTripMutation();
@@ -615,10 +593,48 @@ export function SchoolBusTripOperationDetailPage({
     markingNotServed ||
     batchingAttendance;
 
-  const act = async (label: string, fn: () => Promise<unknown>) => {
+  const patchTripOperationOverview = React.useCallback(
+    (action?: SchoolBusTripOperationAction | null) => {
+      if (!action) return;
+
+      dispatch(
+        schoolBusApi.util.updateQueryData(
+          'getTripOperationOverview',
+          tripId,
+          (draft) => {
+            if (!draft?.data) return;
+            if (action.tripStatus) {
+              draft.data.tripStatus = action.tripStatus;
+            }
+
+            if (action.routeStopId == null) return;
+            const stop = draft.data.stops?.find(
+              (item) => item.routeStopId === action.routeStopId
+            );
+            if (!stop) return;
+
+            if (action.stopStatus) {
+              stop.stopStatus = action.stopStatus;
+            }
+            if (action.actualArrivalTime) {
+              stop.actualArrivalTime = action.actualArrivalTime;
+            }
+            if (action.actualDepartureTime) {
+              stop.actualDepartureTime = action.actualDepartureTime;
+            }
+          }
+        )
+      );
+      setLastUpdated(new Date().toLocaleTimeString());
+    },
+    [dispatch, tripId]
+  );
+
+  const act = async <T,>(label: string, fn: () => Promise<T>) => {
     try {
-      await fn();
+      const result = await fn();
       toast.success(`${label} completed`);
+      return result;
     } catch (e: unknown) {
       const err = e as { status?: number; data?: { message?: string } };
       toast.error(
@@ -626,18 +642,30 @@ export function SchoolBusTripOperationDetailPage({
           ? 'System is busy. Please wait a few seconds and try again.'
           : (err?.data?.message || `${label} failed`)
       );
+      return undefined;
     }
   };
 
   // -- Actions ----------------------------------------------------------------
-  const handleStart = () => act('Start trip', () => startTrip(tripId).unwrap());
+  const extractAction = (
+    response?: ApiResponse<SchoolBusTripOperationAction>
+  ) => response?.data || null;
+
+  const handleStart = () => {
+    void act('Start trip', () => startTrip(tripId).unwrap()).then((response) => {
+      patchTripOperationOverview(extractAction(response));
+    });
+  };
   const handleComplete = () =>
     act('Complete trip', () => completeTrip({ id: tripId }).unwrap());
   const handleStartBoarding = (stopId: number) => {
-    act('Start boarding', async () => {
-      await startBoardingStop({ tripId, routeStopId: stopId }).unwrap();
+    void act('Start boarding', async () => {
+      const response = await startBoardingStop({ tripId, routeStopId: stopId }).unwrap();
       setSelectedStopId(stopId);
       setIsAttendanceDrawerOpen(true);
+      return response;
+    }).then((response) => {
+      patchTripOperationOverview(extractAction(response));
     });
   };
   const handleCancel = () => {
@@ -650,14 +678,18 @@ export function SchoolBusTripOperationDetailPage({
   };
 
   const handleArrive = (stopId: number) => {
-    act('Arrive stop', () =>
+    void act('Arrive stop', () =>
       arriveStop({ tripId, routeStopId: stopId }).unwrap()
-    );
+    ).then((response) => {
+      patchTripOperationOverview(extractAction(response));
+    });
   };
   const handleDepart = (stopId: number) => {
-    act('Depart stop', () =>
+    void act('Depart stop', () =>
       departStop({ tripId, routeStopId: stopId }).unwrap()
-    );
+    ).then((response) => {
+      patchTripOperationOverview(extractAction(response));
+    });
   };
   const handleSkip = (stopId: number) => {
     if (!skipReason.trim()) return;
@@ -813,7 +845,6 @@ export function SchoolBusTripOperationDetailPage({
                 <span>
                   Trip cancelled. Reason:{' '}
                   {(manifest as any)?.cancellationReason ||
-                    trip?.cancellationReason ||
                     'N/A'}
                 </span>
               </div>
@@ -831,7 +862,7 @@ export function SchoolBusTripOperationDetailPage({
           </div>
 
           {/* Trip Summary Card */}
-          {trip && (
+          {manifest && (
             <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
               <div className='flex items-center justify-between pb-3 border-b border-slate-100'>
                 <div className='flex items-center gap-2.5 min-w-0'>
@@ -878,7 +909,7 @@ export function SchoolBusTripOperationDetailPage({
                       Service Date
                     </span>
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
-                      {formatDate(trip.serviceDate || '')}
+                      {formatDate(manifest.serviceDate || '')}
                     </span>
                   </div>
                 </div>
@@ -890,7 +921,7 @@ export function SchoolBusTripOperationDetailPage({
                       Direction
                     </span>
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
-                      {getFriendlyDirection(trip.routeDirection)}
+                      {getFriendlyDirection(manifest.routeDirection)}
                     </span>
                   </div>
                 </div>
@@ -929,9 +960,9 @@ export function SchoolBusTripOperationDetailPage({
                     <span className='text-slate-400 text-[10px] font-semibold uppercase tracking-wider'>
                       Bus Vehicle
                     </span>
-                    {trip.busPlateNumber ? (
+                    {manifest.busPlateNumber ? (
                       <span className='font-mono font-bold text-slate-800 bg-slate-50 border border-slate-200/80 rounded px-1.5 py-0.2 mt-0.5 w-fit'>
-                        {trip.busPlateNumber}
+                        {manifest.busPlateNumber}
                       </span>
                     ) : (
                       <span className='font-bold text-amber-600 mt-0.5'>
@@ -948,7 +979,7 @@ export function SchoolBusTripOperationDetailPage({
                       Driver
                     </span>
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
-                      {trip.driverName || 'No driver assigned'}
+                      {manifest.driverName || 'No driver assigned'}
                     </span>
                   </div>
                 </div>
@@ -960,7 +991,7 @@ export function SchoolBusTripOperationDetailPage({
                       Attendant
                     </span>
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
-                      {trip.attendantName || '-'}
+                      {manifest.attendantName || '-'}
                     </span>
                   </div>
                 </div>
@@ -1210,7 +1241,6 @@ export function SchoolBusTripOperationDetailPage({
                 tripStatus={tripStatus || ''}
                 isOutbound={isOutbound}
                 routeGeometry={manifest?.routeGeometry}
-                routePath={routePathData?.data}
                 className='h-full w-full'
               />
             </div>
@@ -1264,67 +1294,33 @@ export function SchoolBusTripOperationDetailPage({
                       stop.stopPurpose === 'START_TERMINAL';
                     const isEndTerminal = stop.stopPurpose === 'END_TERMINAL';
                     const isServiceStop = !isStartTerminal && !isEndTerminal;
+                    const stopIsPickupAction =
+                      stop.stopPurpose === 'PICKUP' ||
+                      (stop.stopPurpose === 'START_TERMINAL' &&
+                        stop.locationType === 'SCHOOL' &&
+                        !isOutbound);
+                    const stopIsDropoffAction =
+                      stop.stopPurpose === 'DROPOFF' ||
+                      (stop.stopPurpose === 'END_TERMINAL' &&
+                        stop.locationType === 'SCHOOL' &&
+                        isOutbound);
 
-                    // Check which students are assigned to this stop for boarding/drop-off
-                    const stopStudents = (() => {
-                      if (!manifest?.students) return [];
-                      const {
-                        stopPurpose: purpose,
-                        locationType: type,
-                        routeStopId: stopId,
-                      } = stop;
-                      if (type === 'DEPOT') return [];
-                      if (purpose === 'PICKUP') {
-                        return manifest.students.filter(
-                          (s) => s.pickupStopId === stopId
-                        );
-                      }
-                      if (purpose === 'DROPOFF') {
-                        return manifest.students.filter(
-                          (s) => s.dropoffStopId === stopId
-                        );
-                      }
-                      if (
-                        purpose === 'END_TERMINAL' &&
-                        type === 'SCHOOL' &&
-                        isOutbound
-                      ) {
-                        return manifest.students;
-                      }
-                      if (
-                        purpose === 'START_TERMINAL' &&
-                        type === 'SCHOOL' &&
-                        !isOutbound
-                      ) {
-                        return manifest.students;
-                      }
-                      return [];
-                    })();
-
-                    const hasStudents = stopStudents.length > 0;
-
-                    // Count pending students requiring check at this stop
-                    const pendingStudents = stopStudents.filter((st) => {
-                      const { stopPurpose: purpose, locationType: type } = stop;
-                      if (
-                        purpose === 'PICKUP' ||
-                        (purpose === 'START_TERMINAL' &&
-                          type === 'SCHOOL' &&
-                          !isOutbound)
-                      ) {
-                        return st.status === 'PLANNED';
-                      }
-                      if (
-                        purpose === 'DROPOFF' ||
-                        (purpose === 'END_TERMINAL' &&
-                          type === 'SCHOOL' &&
-                          isOutbound)
-                      ) {
-                        return st.status === 'BOARDED';
-                      }
-                      return false;
-                    });
-                    const pendingCount = pendingStudents.length;
+                    const boardingPending = Math.max(
+                      (stop.plannedBoardingCount || 0) -
+                        (stop.actualBoardedCount || 0),
+                      0
+                    );
+                    const dropoffPending = Math.max(
+                      (stop.plannedDropoffCount || 0) -
+                        (stop.actualDroppedCount || 0),
+                      0
+                    );
+                    const hasStudents = (stop.studentCount || 0) > 0;
+                    const pendingCount = stopIsPickupAction
+                      ? boardingPending
+                      : stopIsDropoffAction
+                        ? dropoffPending
+                        : 0;
                     const attendanceResolved = pendingCount === 0;
 
                     const showArrive = isPending && !isStartTerminal;
@@ -1598,11 +1594,11 @@ export function SchoolBusTripOperationDetailPage({
                                             setSkipReason(e.target.value)
                                           }
                                           placeholder='Skip reason...'
-                                          className='h-6 text-[10px] rounded-lg px-1.5 w-24 bg-slate-50'
+                                          className='h-7 w-32 rounded-lg border-slate-200 bg-white px-2 text-[10px] font-normal text-slate-650 placeholder:text-slate-400 shadow-none focus-visible:ring-1 focus-visible:ring-[#C81E3A]/20'
                                         />
                                         <Button
                                           size='sm'
-                                          className='h-6 text-[9px] rounded-lg bg-red-650 hover:bg-red-700 text-white font-bold px-1.5'
+                                          className='h-7 rounded-lg bg-[#C81E3A] px-2.5 text-[10px] font-semibold text-white shadow-none hover:bg-[#B31B34] disabled:opacity-50 disabled:cursor-not-allowed border-0'
                                           onClick={() =>
                                             handleSkip(stop.routeStopId)
                                           }
@@ -1615,7 +1611,7 @@ export function SchoolBusTripOperationDetailPage({
                                         <Button
                                           size='sm'
                                           variant='ghost'
-                                          className='h-6 text-[9px] px-1 rounded-lg'
+                                          className='h-7 rounded-lg px-2 text-[10px] font-semibold text-slate-600 shadow-none hover:bg-slate-50 hover:text-slate-700'
                                           onClick={() => setShowSkipForm(false)}
                                         >
                                           Back
@@ -1755,7 +1751,7 @@ export function SchoolBusTripOperationDetailPage({
                   ? `${stopTypeLabel(selectedStop)} - Status: ${selectedStop.stopStatus}`
                   : access.isParentOnly
                     ? `Route: ${routeCode} - Student Details`
-                    : `Route: ${routeCode} - Direction: ${getFriendlyDirection(trip?.routeDirection)}`}
+                    : `Route: ${routeCode} - Direction: ${getFriendlyDirection(manifest?.routeDirection)}`}
               </SheetDescription>
             </SheetHeader>
 
@@ -1880,7 +1876,11 @@ export function SchoolBusTripOperationDetailPage({
 
             {/* Main Content Area */}
             <div className='flex-1 overflow-y-auto min-h-0 pr-1'>
-              {selectedStop ? (
+              {loadingDrawerStudents ? (
+                <div className='py-12 text-center text-slate-400 text-xs font-semibold'>
+                  Loading student records...
+                </div>
+              ) : selectedStop ? (
                 /* Stop Specific Student List */
                 studentsAtStop.length === 0 ? (
                   <div className='py-12 text-center text-slate-400 text-xs font-semibold'>
@@ -2006,7 +2006,7 @@ export function SchoolBusTripOperationDetailPage({
               ) : (
                 /* Grouped All Students View */
                 (() => {
-                  const students = manifest?.students || [];
+                  const students = drawerStudents;
                   const stops = manifest?.stops || [];
 
                   // Group students by stop (either pickup or dropoff depending on the stop type)
@@ -2126,4 +2126,3 @@ export function SchoolBusTripOperationDetailPage({
     </MapMarkerVisibilityProvider>
   );
 }
-

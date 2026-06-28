@@ -8,6 +8,7 @@ import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
 import serp.project.school_bus_service.enums.SubscriptionStatus;
 import serp.project.school_bus_service.enums.TripOption;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
+import serp.project.school_bus_service.repository.projection.GreedyFillCandidateProjection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
 import java.time.LocalDate;
@@ -157,6 +158,62 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
             @Param("serviceDate") LocalDate serviceDate,
             @Param("dayIndex") int dayIndex,
             @Param("allowedTripOptions") List<TripOption> allowedTripOptions,
+            @Param("isOutbound") boolean isOutbound);
+
+    /**
+     * Projection for route greedy-fill. It keeps the candidate read path small and
+     * avoids loading full subscription/student/point entity graphs.
+     */
+    @Query(value = """
+            SELECT sub.id AS subscriptionId,
+                   st.id AS studentId,
+                   point.id AS pointId,
+                   point.name AS pointName,
+                   point.latitude AS latitude,
+                   point.longitude AS longitude,
+                   point.usage_type AS usageType,
+                   point.is_active AS pointActive,
+                   point.is_deleted AS pointDeleted,
+                   CASE WHEN spp.id IS NULL THEN false ELSE true END AS linkedToSchool
+              FROM public.school_bus_student_subscription sub
+              JOIN public.school_bus_student st ON st.id = sub.student_id
+              LEFT JOIN public.school_bus_pickup_point point
+                     ON point.id = CASE
+                         WHEN :isOutbound = true THEN sub.pickup_point_id
+                         ELSE sub.dropoff_point_id
+                     END
+              LEFT JOIN public.school_bus_school_pickup_point spp
+                     ON spp.school_id = st.school_id
+                    AND spp.pickup_point_id = point.id
+                    AND spp.tenant_id = :tenantId
+                    AND spp.is_deleted = false
+                    AND spp.is_active = true
+             WHERE st.school_id = :schoolId
+               AND sub.tenant_id = :tenantId
+               AND sub.is_deleted = false
+               AND sub.status = 'ACTIVE'
+               AND sub.effective_from <= :serviceDate
+               AND (sub.effective_to IS NULL OR sub.effective_to >= :serviceDate)
+               AND st.is_deleted = false
+               AND st.is_active = true
+               AND (:dayIndex = 1 AND sub.is_monday = true
+                 OR :dayIndex = 2 AND sub.is_tuesday = true
+                 OR :dayIndex = 3 AND sub.is_wednesday = true
+                 OR :dayIndex = 4 AND sub.is_thursday = true
+                 OR :dayIndex = 5 AND sub.is_friday = true
+                 OR :dayIndex = 6 AND sub.is_saturday = true
+                 OR :dayIndex = 7 AND sub.is_sunday = true)
+               AND sub.trip_option IN (:allowedTripOptions)
+               AND ((:isOutbound = true AND sub.pickup_point_id IS NOT NULL)
+                 OR (:isOutbound = false AND sub.dropoff_point_id IS NOT NULL))
+             ORDER BY sub.id ASC
+            """, nativeQuery = true)
+    List<GreedyFillCandidateProjection> findGreedyFillCandidates(
+            @Param("schoolId") Long schoolId,
+            @Param("tenantId") Long tenantId,
+            @Param("serviceDate") LocalDate serviceDate,
+            @Param("dayIndex") int dayIndex,
+            @Param("allowedTripOptions") List<String> allowedTripOptions,
             @Param("isOutbound") boolean isOutbound);
 
     /**
