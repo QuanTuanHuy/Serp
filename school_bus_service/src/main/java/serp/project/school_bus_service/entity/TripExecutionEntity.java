@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import serp.project.school_bus_service.enums.RouteDirection;
@@ -27,13 +28,6 @@ public class TripExecutionEntity extends BaseModel {
     @ManyToOne(optional = false)
     @JoinColumn(name = "route_id")
     private RoutePlanEntity route;
-
-    @Column(name = "service_date", nullable = false)
-    private LocalDate serviceDate;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "route_direction", nullable = false)
-    private RouteDirection routeDirection;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -64,42 +58,57 @@ public class TripExecutionEntity extends BaseModel {
     @Column(name = "cancellation_reason", columnDefinition = "TEXT")
     private String cancellationReason;
 
-
-
-    @ManyToOne
-    @JoinColumn(name = "bus_id")
+    @Transient
     private BusEntity bus;
 
-    @ManyToOne
-    @JoinColumn(name = "driver_id")
+    @Transient
     private DriverProfileEntity driver;
 
-    @ManyToOne
-    @JoinColumn(name = "attendant_id")
+    @Transient
     private BusAttendantProfileEntity attendant;
 
-    @Column(name = "route_geometry_path", columnDefinition = "TEXT")
+    @Transient
     private String routeGeometryPath;
 
-    @Column(name = "start_location_type")
+    @Transient
     private String startLocationType;
 
-    @ManyToOne
-    @JoinColumn(name = "start_school_id")
+    @Transient
     private SchoolEntity startSchool;
 
-    @ManyToOne
-    @JoinColumn(name = "start_depot_id")
+    @Transient
     private DepotEntity startDepot;
 
-    @Column(name = "end_location_type")
+    @Transient
     private String endLocationType;
 
-    @ManyToOne
-    @JoinColumn(name = "end_school_id")
+    @Transient
     private SchoolEntity endSchool;
 
-    @ManyToOne
-    @JoinColumn(name = "end_depot_id")
+    @Transient
     private DepotEntity endDepot;
+
+    public LocalDate getServiceDate() {
+        return route != null ? route.getServiceDate() : null;
+    }
+
+    public void setServiceDate(LocalDate serviceDate) {
+        // Service date is derived from route.planningSession after normalization.
+    }
+
+    public RouteDirection getRouteDirection() {
+        return route != null ? route.getRouteDirection() : null;
+    }
+
+    public void setRouteDirection(RouteDirection routeDirection) {
+        // Route direction is derived from route.planningSession after normalization.
+    }
+
+    public String getRouteGeometryPath() {
+        return routeGeometryPath != null ? routeGeometryPath : (route != null ? route.getGeometryPath() : null);
+    }
+
+    public void setRouteGeometryPath(String routeGeometryPath) {
+        this.routeGeometryPath = routeGeometryPath;
+    }
 }

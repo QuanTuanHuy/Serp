@@ -75,7 +75,7 @@ export function SchoolBusTopbar({
   };
 
   useEffect(() => {
-    const container = scrollContainerRef?.current ?? null;
+    const container = scrollContainerRef?.current || null;
     let last = container
       ? container.scrollTop
       : typeof window !== 'undefined'
@@ -102,7 +102,7 @@ export function SchoolBusTopbar({
       }
     };
 
-    const el: HTMLElement | Window = container ?? window;
+    const el: HTMLElement | Window = container || window;
     el.addEventListener('scroll', onScroll, {
       passive: true,
     } as EventListenerOptions);

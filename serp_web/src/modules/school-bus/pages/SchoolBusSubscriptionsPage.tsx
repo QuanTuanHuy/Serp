@@ -28,7 +28,12 @@ import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
-import { formatDate, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
+import {
+  formatDate,
+  getPageItems,
+  SCHOOL_BUS_OPTION_QUERY,
+  SCHOOL_BUS_PAGE_QUERY_OPTIONS,
+} from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 export function SchoolBusSubscriptionsPage() {
@@ -41,7 +46,8 @@ export function SchoolBusSubscriptionsPage() {
     sortDirection: 'DESC',
   });
   const { data, isLoading } = useGetSchoolBusSubscriptionsQuery(
-    pagination.params
+    pagination.params,
+    SCHOOL_BUS_PAGE_QUERY_OPTIONS
   );
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
   const subscriptions = getPageItems(data?.data);
@@ -330,7 +336,7 @@ export function SchoolBusSubscriptionsPage() {
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
             label='Subscriptions'
-            value={data?.data?.totalElements ?? 0}
+            value={data?.data?.totalElements || 0}
             hint={
               access.isParentOnly
                 ? 'Transport services for your children'

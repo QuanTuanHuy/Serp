@@ -492,12 +492,6 @@ public class DashboardServiceImpl implements IDashboardService {
             RouteAssignmentEntity assignment,
             TripExecutionEntity trip) {
         DashboardResourceAssignment resourceAssignment = new DashboardResourceAssignment();
-        if (route.getStatus() == RouteStatus.TRIP_CREATED) {
-            resourceAssignment.setBusMissing(trip == null || trip.getBus() == null);
-            resourceAssignment.setDriverMissing(trip == null || trip.getDriver() == null);
-            resourceAssignment.setAttendantMissing(trip == null || trip.getAttendant() == null);
-            return resourceAssignment;
-        }
         resourceAssignment.setBusMissing(assignment == null || assignment.getBus() == null);
         resourceAssignment.setDriverMissing(assignment == null || assignment.getDriver() == null);
         resourceAssignment.setAttendantMissing(assignment == null || assignment.getAttendant() == null);

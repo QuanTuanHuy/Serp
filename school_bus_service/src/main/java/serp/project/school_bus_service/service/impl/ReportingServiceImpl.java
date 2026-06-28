@@ -1,10 +1,9 @@
 package serp.project.school_bus_service.service.impl;
 
-import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import serp.project.school_bus_service.dto.params.ReportFilterParamsRequest;
+import serp.project.school_bus_service.dto.request.BaseParamsRequest;
 import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.CapacityUtilizationReportResponse;
 import serp.project.school_bus_service.dto.response.OperationalReportResponse;
@@ -14,17 +13,27 @@ import serp.project.school_bus_service.service.IReportingService;
 import serp.project.school_bus_service.service.ITransportRequestService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IAttendanceService;
+import serp.project.school_bus_service.service.IRouteDispatchService;
 import serp.project.school_bus_service.enums.RequestStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
-import serp.project.school_bus_service.entity.AttendanceEntity;
+import serp.project.school_bus_service.entity.BusAttendantProfileEntity;
+import serp.project.school_bus_service.entity.BusEntity;
+import serp.project.school_bus_service.entity.DriverProfileEntity;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.repository.AttendanceRepository;
+import serp.project.school_bus_service.repository.RouteAssignmentRepository;
 import serp.project.school_bus_service.repository.TripExecutionRepository;
+import serp.project.school_bus_service.repository.projection.RouteAssignmentSummaryProjection;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
 
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ReportingServiceImpl implements IReportingService {
@@ -33,7 +42,9 @@ public class ReportingServiceImpl implements IReportingService {
     private final IRouteService routeService;
     private final TripExecutionRepository tripExecutionRepository;
     private final AttendanceRepository attendanceRepository;
+    private final RouteAssignmentRepository routeAssignmentRepository;
     private final IAttendanceService attendanceService;
+    private final IRouteDispatchService routeDispatchService;
     private final SchoolBusMapper mapper;
 
 
@@ -42,13 +53,17 @@ public class ReportingServiceImpl implements IReportingService {
             IRouteService routeService,
             TripExecutionRepository tripExecutionRepository,
             AttendanceRepository attendanceRepository,
+            RouteAssignmentRepository routeAssignmentRepository,
             IAttendanceService attendanceService,
+            IRouteDispatchService routeDispatchService,
             SchoolBusMapper mapper) {
         this.transportRequestService = transportRequestService;
         this.routeService = routeService;
         this.tripExecutionRepository = tripExecutionRepository;
         this.attendanceRepository = attendanceRepository;
+        this.routeAssignmentRepository = routeAssignmentRepository;
         this.attendanceService = attendanceService;
+        this.routeDispatchService = routeDispatchService;
         this.mapper = mapper;
     }
 
@@ -92,32 +107,76 @@ public class ReportingServiceImpl implements IReportingService {
 
     @Override
     public PageResponse<TripExecutionResponse> getTripsReport(ReportFilterParamsRequest params, Long tenantId) {
-        return PageResponse.from(tripExecutionRepository.findAll(
-                tripSpec(params, tenantId),
-                pageable(params, Set.of("id", "tripCode", "serviceDate", "status", "createdAt"), "serviceDate")),
-                trip -> mapper.toTripExecutionResponse(trip, null, null));
+        var page = tripExecutionRepository.findReportTrips(
+                tenantId,
+                params == null ? null : params.getDateFrom(),
+                params == null ? null : params.getDateTo(),
+                params == null ? null : params.getSchoolId(),
+                params == null ? null : params.getRouteId(),
+                params == null ? null : params.getTripId(),
+                parseDirection(params == null ? null : params.getDirection()),
+                parseTripStatus(params == null ? null : params.getTripStatus()),
+                pageable(params, Set.of("id", "tripCode", "status", "createdAt",
+                        "route.planningSession.serviceDate",
+                        "route.planningSession.routeDirection"), "route.planningSession.serviceDate"));
+        Map<Long, RouteAssignmentSummaryProjection> assignments = assignmentSummariesByRoute(page.getContent(), tenantId);
+        return PageResponse.from(page, trip -> {
+            applyAssignmentSummary(trip, assignments.get(trip.getRoute().getId()));
+            return mapper.toTripExecutionResponse(trip, null, null);
+        });
     }
 
     @Override
     public PageResponse<AttendanceResponse> getAttendanceReport(ReportFilterParamsRequest params, Long tenantId) {
-        return PageResponse.from(attendanceRepository.findAll(
-                attendanceSpec(params, tenantId),
-                pageable(params, Set.of("id", "recordedAt", "createdAt"), "recordedAt")),
-                mapper::toAttendanceResponse);
+        LocalDateTime from = params == null || params.getDateFrom() == null
+                ? null
+                : params.getDateFrom().atStartOfDay();
+        LocalDateTime to = params == null || params.getDateTo() == null
+                ? null
+                : params.getDateTo().plusDays(1).atStartOfDay();
+        Long tripId = params == null ? null : params.getTripId();
+        Long routeId = params == null ? null : params.getRouteId();
+        Pageable pageable = attendancePageable(params);
+        if (from != null && to != null) {
+            return PageResponse.from(attendanceRepository.findReportAttendanceBetween(
+                    tenantId, tripId, routeId, from, to, pageable), mapper::toAttendanceResponse);
+        }
+        if (from != null) {
+            return PageResponse.from(attendanceRepository.findReportAttendanceFrom(
+                    tenantId, tripId, routeId, from, pageable), mapper::toAttendanceResponse);
+        }
+        if (to != null) {
+            return PageResponse.from(attendanceRepository.findReportAttendanceTo(
+                    tenantId, tripId, routeId, to, pageable), mapper::toAttendanceResponse);
+        }
+        return PageResponse.from(attendanceRepository.findReportAttendance(
+                tenantId, tripId, routeId, pageable), mapper::toAttendanceResponse);
     }
 
     @Override
     public PageResponse<CapacityUtilizationReportResponse> getCapacityUtilization(ReportFilterParamsRequest params,
             Long tenantId) {
-        return PageResponse.from(tripExecutionRepository.findAll(
-                tripSpec(params, tenantId),
-                pageable(params, Set.of("id", "tripCode", "serviceDate", "status", "createdAt"), "serviceDate")),
+        var page = tripExecutionRepository.findReportTrips(
+                tenantId,
+                params == null ? null : params.getDateFrom(),
+                params == null ? null : params.getDateTo(),
+                params == null ? null : params.getSchoolId(),
+                params == null ? null : params.getRouteId(),
+                params == null ? null : params.getTripId(),
+                parseDirection(params == null ? null : params.getDirection()),
+                parseTripStatus(params == null ? null : params.getTripStatus()),
+                pageable(params, Set.of("id", "tripCode", "status", "createdAt",
+                        "route.planningSession.serviceDate",
+                        "route.planningSession.routeDirection"), "route.planningSession.serviceDate"));
+        Map<Long, RouteAssignmentSummaryProjection> assignments = assignmentSummariesByRoute(page.getContent(), tenantId);
+        return PageResponse.from(
+                page,
                 trip -> {
+                    applyAssignmentSummary(trip, assignments.get(trip.getRoute().getId()));
                     int plannedStudents = trip.getRoute().getPlannedStudentCount() == null
                             ? 0
                             : trip.getRoute().getPlannedStudentCount();
-                    Integer capacity = trip.getBus() == null ? trip.getRoute().getAssignedBusCapacity()
-                            : trip.getBus().getCapacity();
+                    Integer capacity = trip.getBus() == null ? null : trip.getBus().getCapacity();
                     int safeCapacity = capacity == null ? 0 : capacity;
                     double utilization = safeCapacity == 0 ? 0D : (plannedStudents * 100D / safeCapacity);
                     return new CapacityUtilizationReportResponse(
@@ -130,65 +189,122 @@ public class ReportingServiceImpl implements IReportingService {
                 });
     }
 
-    private Specification<TripExecutionEntity> tripSpec(ReportFilterParamsRequest params, Long tenantId) {
-        Specification<TripExecutionEntity> spec = (root, query, cb) -> cb.and(
-                cb.equal(root.get("tenantId"), tenantId),
-                cb.isFalse(root.get("isDeleted")));
-        if (params == null) {
-            return spec;
-        }
-        if (params.getDateFrom() != null) {
-            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("serviceDate"), params.getDateFrom()));
-        }
-        if (params.getDateTo() != null) {
-            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("serviceDate"), params.getDateTo()));
-        }
-        if (params.getSchoolId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.join("route", JoinType.INNER).get("school").get("id"),
-                    params.getSchoolId()));
-        }
-        if (params.getRouteId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("route").get("id"), params.getRouteId()));
-        }
-        if (params.getTripId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("id"), params.getTripId()));
-        }
-        if (params.getDirection() != null) {
-            RouteDirection direction = RouteDirection.valueOf(params.getDirection().toUpperCase());
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("routeDirection"), direction));
-        }
-        if (params.getTripStatus() != null) {
-            TripStatus status = TripStatus.valueOf(params.getTripStatus().toUpperCase());
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
-        }
-        return spec;
+    private RouteDirection parseDirection(String value) {
+        return value == null || value.isBlank() ? null : RouteDirection.valueOf(value.toUpperCase());
     }
 
-    private Specification<AttendanceEntity> attendanceSpec(ReportFilterParamsRequest params, Long tenantId) {
-        Specification<AttendanceEntity> spec = (root, query, cb) -> cb.and(
-                cb.equal(root.get("tenantId"), tenantId),
-                cb.isFalse(root.get("isDeleted")));
-        if (params == null) {
-            return spec;
-        }
-        if (params.getTripId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("trip").get("id"), params.getTripId()));
-        }
-        if (params.getRouteId() != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("route").get("id"), params.getRouteId()));
-        }
-        if (params.getDateFrom() != null) {
-            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("recordedAt"),
-                    params.getDateFrom().atStartOfDay()));
-        }
-        if (params.getDateTo() != null) {
-            spec = spec.and((root, query, cb) -> cb.lessThan(root.get("recordedAt"),
-                    params.getDateTo().plusDays(1).atStartOfDay()));
-        }
-        return spec;
+    private TripStatus parseTripStatus(String value) {
+        return value == null || value.isBlank() ? null : TripStatus.valueOf(value.toUpperCase());
     }
 
-    private Pageable pageable(ReportFilterParamsRequest params, Set<String> allowedSorts, String defaultSortBy) {
-        return PageableUtils.from(params, allowedSorts, defaultSortBy);
+    private void populateAssignment(TripExecutionEntity trip, Long tenantId) {
+        if (trip == null || trip.getRoute() == null || trip.getRoute().getId() == null) {
+            return;
+        }
+        routeDispatchService.findAssignmentEntityByRoute(trip.getRoute().getId(), tenantId)
+                .ifPresent(assignment -> {
+                    trip.setBus(assignment.getBus());
+                    trip.setDriver(assignment.getDriver());
+                    trip.setAttendant(assignment.getAttendant());
+                });
+    }
+
+    private Map<Long, RouteAssignmentSummaryProjection> assignmentSummariesByRoute(List<TripExecutionEntity> trips,
+                                                                                    Long tenantId) {
+        List<Long> routeIds = trips.stream()
+                .filter(trip -> trip.getRoute() != null)
+                .map(trip -> trip.getRoute().getId())
+                .distinct()
+                .toList();
+        if (routeIds.isEmpty()) {
+            return Map.of();
+        }
+        return routeAssignmentRepository.findCurrentSummariesByRouteIds(tenantId, routeIds)
+                .stream()
+                .collect(Collectors.toMap(RouteAssignmentSummaryProjection::getRouteId, java.util.function.Function.identity()));
+    }
+
+    private void applyAssignmentSummary(TripExecutionEntity trip, RouteAssignmentSummaryProjection summary) {
+        if (trip == null || summary == null) {
+            return;
+        }
+        if (summary.getBusId() != null) {
+            BusEntity bus = new BusEntity();
+            bus.setId(summary.getBusId());
+            bus.setPlateNumber(summary.getBusPlateNumber());
+            bus.setCapacity(summary.getBusCapacity());
+            bus.setStatus(summary.getBusStatus());
+            trip.setBus(bus);
+        }
+        if (summary.getDriverId() != null) {
+            DriverProfileEntity driver = new DriverProfileEntity();
+            driver.setId(summary.getDriverId());
+            driver.setFullName(summary.getDriverName());
+            trip.setDriver(driver);
+        }
+        if (summary.getAttendantId() != null) {
+            BusAttendantProfileEntity attendant = new BusAttendantProfileEntity();
+            attendant.setId(summary.getAttendantId());
+            attendant.setFullName(summary.getAttendantName());
+            trip.setAttendant(attendant);
+        }
+    }
+
+    private Pageable pageable(BaseParamsRequest params, Set<String> allowedSorts, String defaultSortBy) {
+        BaseParamsRequest sortParams = params;
+        Set<String> effectiveAllowedSorts = allowedSorts;
+        String mappedSortBy = mapReportSort(params == null ? null : params.getSortBy());
+        if (mappedSortBy != null) {
+            sortParams = copyParamsWithSort(params, mappedSortBy);
+            effectiveAllowedSorts = new HashSet<>(allowedSorts);
+            effectiveAllowedSorts.add(mappedSortBy);
+        }
+        return PageableUtils.from(sortParams, effectiveAllowedSorts, defaultSortBy);
+    }
+
+    private Pageable attendancePageable(BaseParamsRequest params) {
+        Set<String> allowedSorts = Set.of("id", "recordedAt", "createdAt");
+        BaseParamsRequest sortParams = params;
+        Set<String> effectiveAllowedSorts = allowedSorts;
+        String mappedSortBy = mapAttendanceSort(params == null ? null : params.getSortBy());
+        if (mappedSortBy != null) {
+            sortParams = copyParamsWithSort(params, mappedSortBy);
+            effectiveAllowedSorts = new HashSet<>(allowedSorts);
+            effectiveAllowedSorts.add(mappedSortBy);
+        }
+        return PageableUtils.from(sortParams, effectiveAllowedSorts, "recordedAt");
+    }
+
+    private String mapReportSort(String sortBy) {
+        if ("serviceDate".equals(sortBy)) {
+            return "route.planningSession.serviceDate";
+        }
+        if ("routeDirection".equals(sortBy)) {
+            return "route.planningSession.routeDirection";
+        }
+        return null;
+    }
+
+    private String mapAttendanceSort(String sortBy) {
+        if ("serviceDate".equals(sortBy)) {
+            return "tripStudent.trip.route.planningSession.serviceDate";
+        }
+        if ("routeDirection".equals(sortBy)) {
+            return "tripStudent.trip.route.planningSession.routeDirection";
+        }
+        return null;
+    }
+
+    private BaseParamsRequest copyParamsWithSort(BaseParamsRequest source, String sortBy) {
+        BaseParamsRequest copy = new BaseParamsRequest() {
+        };
+        if (source != null) {
+            copy.setPage(source.getPage());
+            copy.setSize(source.getSize());
+            copy.setSortDirection(source.getSortDirection());
+            copy.setKeyword(source.getKeyword());
+        }
+        copy.setSortBy(sortBy);
+        return copy;
     }
 }

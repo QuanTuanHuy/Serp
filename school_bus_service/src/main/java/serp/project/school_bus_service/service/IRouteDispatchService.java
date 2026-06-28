@@ -16,6 +16,9 @@ public interface IRouteDispatchService extends IBaseService<RouteAssignmentEntit
     RouteAssignmentResponse manualDispatchRoute(Long routeId, ManualDispatchRequest request, Long tenantId,
             Long actorId);
 
+    /** Internal: persists the selected bus before staff assignment. */
+    RouteAssignmentEntity reserveBusForRoute(Long routeId, Long busId, Long tenantId, Long actorId);
+
     /** Internal: returns the active assignment entity for a route. */
     Optional<RouteAssignmentEntity> findAssignmentEntityByRoute(Long routeId, Long tenantId);
 }

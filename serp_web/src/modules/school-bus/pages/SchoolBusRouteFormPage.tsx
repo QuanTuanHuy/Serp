@@ -24,7 +24,7 @@ export function SchoolBusRouteFormPage({
   const router = useRouter();
   const { data: routeData, isLoading: loadingRoute } = useGetRouteByIdQuery(
     routeId as number,
-    { skip: !routeId }
+    { skip: !routeId, refetchOnMountOrArgChange: true }
   );
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
   const { data: depotsData } = useGetDepotsQuery({

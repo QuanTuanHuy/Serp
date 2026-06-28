@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
@@ -46,7 +46,7 @@ import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
 
 export function SchoolBusReportsPage() {
-  // ─── Filter States ─────────────────────────────────────────────────────────
+  // --- Filter States ---------------------------------------------------------
   const [filters, setFilters] = useState({
     fromDate: '',
     toDate: '',
@@ -75,7 +75,7 @@ export function SchoolBusReportsPage() {
     return count;
   }, [filters]);
 
-  // ─── Keyword / Search States ───────────────────────────────────────────────
+  // --- Keyword / Search States -----------------------------------------------
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
 
@@ -86,10 +86,10 @@ export function SchoolBusReportsPage() {
     return () => clearTimeout(handler);
   }, [keyword]);
 
-  // ─── Tab Selection State ───────────────────────────────────────────────────
+  // --- Tab Selection State ---------------------------------------------------
   const [activeTab, setActiveTab] = useState('trips');
 
-  // ─── Pagination Hooks ──────────────────────────────────────────────────────
+  // --- Pagination Hooks ------------------------------------------------------
   const tripPagination = useSchoolBusPagination({
     page: 0,
     size: 8,
@@ -115,7 +115,7 @@ export function SchoolBusReportsPage() {
     setKeyword('');
   };
 
-  // ─── Query Parameters ──────────────────────────────────────────────────────
+  // --- Query Parameters ------------------------------------------------------
   const summaryParams = useMemo(
     () =>
       ({
@@ -170,7 +170,7 @@ export function SchoolBusReportsPage() {
     [capacityPagination.params, filters, debouncedKeyword]
   );
 
-  // ─── Queries ───────────────────────────────────────────────────────────────
+  // --- Queries ---------------------------------------------------------------
   const { data: summaryData, isLoading: loadingSummary } =
     useGetSchoolBusReportQuery(summaryParams);
   const { data: tripsData, isLoading: loadingTrips } =
@@ -189,7 +189,7 @@ export function SchoolBusReportsPage() {
   const capacity = getPageItems(capacityData?.data);
   const schoolsList = schoolsData?.data || [];
 
-  // ─── Dropdown Options ──────────────────────────────────────────────────────
+  // --- Dropdown Options ------------------------------------------------------
   const schoolOptions = useMemo(() => {
     return [
       { label: 'All Schools', value: '' },
@@ -215,7 +215,7 @@ export function SchoolBusReportsPage() {
     { label: 'Return', value: 'RETURN' },
   ];
 
-  // ─── Filter Actions ────────────────────────────────────────────────────────
+  // --- Filter Actions --------------------------------------------------------
   const handleApplyFilters = () => {
     setFilters(tempFilters);
     tripPagination.setPage(0);
@@ -241,7 +241,7 @@ export function SchoolBusReportsPage() {
     setIsFilterOpen(false);
   };
 
-  // ─── Attendance KPI strip calculations ─────────────────────────────────────
+  // --- Attendance KPI strip calculations -------------------------------------
   const boardedCount = useMemo(
     () =>
       attendance.filter((a) => {
@@ -291,7 +291,7 @@ export function SchoolBusReportsPage() {
     [attendance]
   );
 
-  // ─── Table Columns Definitions ─────────────────────────────────────────────
+  // --- Table Columns Definitions ---------------------------------------------
   const tripColumns = useMemo(
     () => [
       {
@@ -398,7 +398,7 @@ export function SchoolBusReportsPage() {
         header: 'Trip',
         render: (row: any) => (
           <span className='font-medium text-slate-600'>
-            {row.tripId || '—'}
+            {row.tripId || '-'}
           </span>
         ),
       },
@@ -500,7 +500,7 @@ export function SchoolBusReportsPage() {
         key: 'utilization',
         header: 'Utilization',
         render: (row: any) => {
-          const pct = row.utilizationPercent ?? 0;
+          const pct = row.utilizationPercent || 0;
           const displayPct = Math.min(pct, 100);
           const barColor =
             pct > 100
@@ -530,7 +530,7 @@ export function SchoolBusReportsPage() {
         key: 'status',
         header: 'Status',
         render: (row: any) => {
-          const pct = row.utilizationPercent ?? 0;
+          const pct = row.utilizationPercent || 0;
           if (pct > 100) {
             return (
               <span className='inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 border border-rose-200/50'>
@@ -556,7 +556,7 @@ export function SchoolBusReportsPage() {
     []
   );
 
-  // ─── Toolbar Content ───────────────────────────────────────────────────────
+  // --- Toolbar Content -------------------------------------------------------
   const toolbar = (
     <div className='flex flex-col gap-4 w-full'>
       <div className='flex flex-wrap items-center justify-between gap-4'>
@@ -662,7 +662,7 @@ export function SchoolBusReportsPage() {
         }
       >
         <div className='space-y-6'>
-          {/* ─── 1. Operations Summary Metrics ────────────────────────────────── */}
+          {/* --- 1. Operations Summary Metrics ---------------------------------- */}
           {loadingSummary || !report ? (
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               {[1, 2, 3, 4].map((i) => (
@@ -705,7 +705,7 @@ export function SchoolBusReportsPage() {
             </div>
           )}
 
-          {/* ─── 2. Report Card ────────────────────────────────────────────────── */}
+          {/* --- 2. Report Card -------------------------------------------------- */}
           <SchoolBusDataTable
             tabs={[
               {
@@ -885,3 +885,4 @@ export function SchoolBusReportsPage() {
     </>
   );
 }
+

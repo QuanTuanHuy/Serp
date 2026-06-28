@@ -24,6 +24,8 @@ import org.springframework.context.annotation.Lazy;
 import serp.project.school_bus_service.service.ISchoolPickupPointService;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
 import serp.project.school_bus_service.dto.response.LinkedPickupPointSummaryResponse;
+import serp.project.school_bus_service.repository.SchoolPickupPointRepository;
+import serp.project.school_bus_service.repository.projection.SchoolPickupPointSummaryProjection;
 
 import java.util.Set;
 import java.util.List;
@@ -39,17 +41,20 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
     private final ICodeGeneratorService codeGeneratorService;
     private final MessageCommon messageCommon;
     private final ISchoolPickupPointService pickupPointService;
+    private final SchoolPickupPointRepository schoolPickupPointRepository;
 
     public SchoolServiceImpl(SchoolRepository schoolRepository,
                              SchoolBusMapper mapper,
                              ICodeGeneratorService codeGeneratorService,
                              MessageCommon messageCommon,
-                             @Lazy ISchoolPickupPointService pickupPointService) {
+                             @Lazy ISchoolPickupPointService pickupPointService,
+                             SchoolPickupPointRepository schoolPickupPointRepository) {
         this.schoolRepository = schoolRepository;
         this.mapper = mapper;
         this.codeGeneratorService = codeGeneratorService;
         this.messageCommon = messageCommon;
         this.pickupPointService = pickupPointService;
+        this.schoolPickupPointRepository = schoolPickupPointRepository;
     }
 
     @Override
@@ -67,7 +72,7 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
                 PageableUtils.from(params,
                         Set.of("id", "name", "code", "createdAt", "updatedAt"), "name")),
                 mapper::toSchoolResponse);
-        enrichSchoolResponses(pageResponse.getItems(), tenantId);
+        enrichSchoolListSummaries(pageResponse.getItems(), tenantId);
         return pageResponse;
     }
 
@@ -130,6 +135,24 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
             }
             resp.setPickupPoints(pickupPointsSummary);
             resp.setAnyLinkedPointMissingCoordinates(anyMissingCoordinates);
+        }
+    }
+
+    private void enrichSchoolListSummaries(List<SchoolResponse> responses, Long tenantId) {
+        if (responses == null || responses.isEmpty()) {
+            return;
+        }
+        responses.forEach(resp -> resp.setHasCoordinates(resp.getLatitude() != null && resp.getLongitude() != null));
+        List<Long> schoolIds = responses.stream().map(SchoolResponse::getId).toList();
+        Map<Long, SchoolPickupPointSummaryProjection> summaryBySchool = schoolPickupPointRepository
+                .summarizeBySchoolIds(schoolIds, tenantId)
+                .stream()
+                .collect(Collectors.toMap(SchoolPickupPointSummaryProjection::getSchoolId, java.util.function.Function.identity()));
+        for (SchoolResponse response : responses) {
+            SchoolPickupPointSummaryProjection summary = summaryBySchool.get(response.getId());
+            response.setPickupPointCount(summary == null ? 0 : summary.getPickupPointCount());
+            response.setAnyLinkedPointMissingCoordinates(summary != null && Boolean.TRUE.equals(summary.getAnyMissingCoordinates()));
+            response.setPickupPoints(List.of());
         }
     }
 

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
@@ -20,7 +20,7 @@ import { createSchoolBusMarkerIcon } from './mapIcons';
 import { useMapMarkerVisibility } from './MapMarkerVisibilityContext';
 import { useMapExpand } from './MapExpandContext';
 
-// ── Map size invalidator — reacts to expand/collapse ─────────────────────────
+// -- Map size invalidator - reacts to expand/collapse -------------------------
 function MapInvalidator({ trigger }: { trigger: number }) {
   const map = useMap();
   React.useEffect(() => {
@@ -74,7 +74,7 @@ export default function OperationsMapClient({
 }: OperationsMapClientProps) {
   const { isVisible } = useMapMarkerVisibility();
 
-  // ── Normalize all markers into a unified list ─────────────────────
+  // -- Normalize all markers into a unified list ---------------------
   const groupedMarkers = React.useMemo(() => {
     type MarkerItem = {
       kind: 'school' | 'depot' | 'pickup' | 'student';
@@ -104,7 +104,7 @@ export default function OperationsMapClient({
             popup: (
               <div className='space-y-0.5'>
                 <p className='text-xs font-semibold text-slate-700'>
-                  🎓 School
+                   School
                 </p>
                 <p className='font-medium text-slate-950'>{s.name}</p>
                 <p className='text-xs text-slate-500'>
@@ -131,7 +131,7 @@ export default function OperationsMapClient({
             onClick: () => onDepotSelect?.(d.id),
             popup: (
               <div className='space-y-0.5'>
-                <p className='text-xs font-semibold text-amber-700'>🏭 Depot</p>
+                <p className='text-xs font-semibold text-amber-700'> Depot</p>
                 <p className='font-medium text-slate-950'>{d.name}</p>
                 <p className='text-xs text-slate-500'>
                   {d.address || 'No address'}
@@ -158,7 +158,7 @@ export default function OperationsMapClient({
             popup: (
               <div className='space-y-0.5'>
                 <p className='text-xs font-semibold text-sky-700'>
-                  📍 Pickup point
+                   Pickup point
                 </p>
                 <p className='font-medium text-slate-950'>{p.name}</p>
                 <p className='text-xs text-slate-500'>{p.address}</p>
@@ -178,7 +178,7 @@ export default function OperationsMapClient({
           popup: (
             <div className='space-y-0.5'>
               <p className='text-xs font-semibold text-violet-700'>
-                {sm.role === 'pickup' ? '🔵' : '🟢'} Student
+                {sm.role === 'pickup' ? '' : ''} Student
               </p>
               <p className='font-medium text-slate-950'>{sm.studentName}</p>
               <p className='text-xs text-slate-500'>
@@ -190,7 +190,7 @@ export default function OperationsMapClient({
       );
     }
 
-    // Group by coordinate key (rounded to 5 decimal places ≈ 1m precision)
+    // Group by coordinate key (rounded to 5 decimal places approx. 1m precision)
     const groups = new Map<string, MarkerItem[]>();
     for (const item of items) {
       const key = `${item.lat.toFixed(5)}_${item.lng.toFixed(5)}`;
@@ -203,7 +203,7 @@ export default function OperationsMapClient({
     }
 
     return Array.from(groups.entries()).map(([key, group]) => {
-      // Sort by priority → pick highest-priority kind for icon
+      // Sort by priority -> pick highest-priority kind for icon
       group.sort((a, b) => a.priority - b.priority);
       const primary = group[0];
       // Collect the first onClick from the highest-priority interactive item
@@ -417,7 +417,7 @@ function OperationsViewport({
     selectedSchoolId,
   ]);
 
-  // Fit All: triggered by button — always fits all markers regardless of selection.
+  // Fit All: triggered by button - always fits all markers regardless of selection.
   React.useEffect(() => {
     if (!fitAllKey) return;
     const coordinates: [number, number][] = [
@@ -466,3 +466,4 @@ function OperationsViewport({
 
   return null;
 }
+

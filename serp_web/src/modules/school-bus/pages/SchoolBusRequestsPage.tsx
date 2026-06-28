@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -43,6 +43,7 @@ import {
   formatDateTime,
   getPageItems,
   SCHOOL_BUS_OPTION_QUERY,
+  SCHOOL_BUS_PAGE_QUERY_OPTIONS,
 } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
@@ -55,7 +56,10 @@ export function SchoolBusRequestsPage() {
     sortDirection: 'DESC',
   });
   const { setKeyword } = pagination;
-  const { data, isLoading } = useGetTransportRequestsQuery(pagination.params);
+  const { data, isLoading } = useGetTransportRequestsQuery(
+    pagination.params,
+    SCHOOL_BUS_PAGE_QUERY_OPTIONS
+  );
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
 
   const [approveTransportRequest, { isLoading: approving }] =
@@ -228,7 +232,7 @@ export function SchoolBusRequestsPage() {
         },
       ];
 
-      // Parent column — only for Admin/Dispatcher
+      // Parent column - only for Admin/Dispatcher
       if (!access.isParentOnly) {
         cols.push({
           key: 'parent',
@@ -268,7 +272,7 @@ export function SchoolBusRequestsPage() {
               <span className='font-medium text-xs text-slate-600 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100'>
                 {request.studentCount != null
                   ? `${request.studentCount} student${request.studentCount !== 1 ? 's' : ''}`
-                  : '—'}
+                  : '-'}
               </span>
             </div>
           ),
@@ -650,7 +654,7 @@ export function SchoolBusRequestsPage() {
                                 <Calendar className='h-3 w-3 text-slate-400 shrink-0' />
                                 {formatDate(request.effectiveFrom)}
                                 {request.effectiveTo
-                                  ? ` — ${formatDate(request.effectiveTo)}`
+                                  ? ` - ${formatDate(request.effectiveTo)}`
                                   : ' (Open)'}
                               </span>
                             </div>
@@ -727,3 +731,4 @@ export function SchoolBusRequestsPage() {
     </>
   );
 }
+

@@ -6,6 +6,10 @@ export const SCHOOL_BUS_OPTION_QUERY = {
   sortDirection: 'ASC' as const,
 };
 
+export const SCHOOL_BUS_PAGE_QUERY_OPTIONS = {
+  refetchOnMountOrArgChange: true,
+} as const;
+
 export function getPageItems<T>(page?: PagedResponse<T> | null): T[] {
   return page?.items || [];
 }

@@ -27,7 +27,7 @@ public class RouteAssignmentEntity extends BaseModel {
     @JoinColumn(name = "bus_id")
     private BusEntity bus;
 
-    @ManyToOne(optional = false)
+    @ManyToOne
     @JoinColumn(name = "driver_id")
     private DriverProfileEntity driver;
 

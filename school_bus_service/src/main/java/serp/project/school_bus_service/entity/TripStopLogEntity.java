@@ -27,9 +27,6 @@ public class TripStopLogEntity extends BaseModel {
     @JoinColumn(name = "route_stop_id")
     private RouteStopEntity routeStop;
 
-    @Column(name = "stop_order", nullable = false)
-    private Integer stopOrder;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TripStopStatus status;

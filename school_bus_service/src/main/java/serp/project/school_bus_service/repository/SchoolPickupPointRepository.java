@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
+import serp.project.school_bus_service.repository.projection.SchoolPickupPointSummaryProjection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
 import java.util.List;
@@ -38,4 +39,19 @@ public interface SchoolPickupPointRepository extends BaseRepository<SchoolPickup
     @Query("SELECT s FROM SchoolPickupPointEntity s JOIN FETCH s.school WHERE s.pickupPoint.id IN :pickupPointIds AND s.tenantId = :tenantId AND s.isDeleted = false AND s.isActive = true")
     List<SchoolPickupPointEntity> findByPickupPointIdInAndTenantIdAndIsDeletedFalse(
             @Param("pickupPointIds") List<Long> pickupPointIds, @Param("tenantId") Long tenantId);
+
+    @Query(value = """
+            SELECT spp.school_id AS schoolId,
+                   CAST(COUNT(*) AS INTEGER) AS pickupPointCount,
+                   BOOL_OR(pp.latitude IS NULL OR pp.longitude IS NULL) AS anyMissingCoordinates
+              FROM public.school_bus_school_pickup_point spp
+              JOIN public.school_bus_pickup_point pp ON pp.id = spp.pickup_point_id
+             WHERE spp.tenant_id = :tenantId
+               AND spp.is_deleted = false
+               AND spp.school_id IN (:schoolIds)
+             GROUP BY spp.school_id
+            """, nativeQuery = true)
+    List<SchoolPickupPointSummaryProjection> summarizeBySchoolIds(
+            @Param("schoolIds") List<Long> schoolIds,
+            @Param("tenantId") Long tenantId);
 }

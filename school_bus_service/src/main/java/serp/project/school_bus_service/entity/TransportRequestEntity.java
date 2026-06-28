@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import serp.project.school_bus_service.enums.RequestStatus;
@@ -28,8 +29,7 @@ public class TransportRequestEntity extends BaseModel {
     @JoinColumn(name = "parent_profile_id")
     private ParentProfileEntity parentProfile;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "school_id")
+    @Transient
     private SchoolEntity school;
 
     @Enumerated(EnumType.STRING)

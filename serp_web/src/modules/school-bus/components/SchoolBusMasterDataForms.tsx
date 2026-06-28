@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -181,7 +181,7 @@ export function SchoolFormDialog({
       contactEmail: initialData?.contactEmail || '',
       latitude: toCoordinateString(initialData?.latitude),
       longitude: toCoordinateString(initialData?.longitude),
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     },
   });
 
@@ -193,7 +193,7 @@ export function SchoolFormDialog({
       contactEmail: initialData?.contactEmail || '',
       latitude: toCoordinateString(initialData?.latitude),
       longitude: toCoordinateString(initialData?.longitude),
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     });
   }, [form, initialData]);
 
@@ -322,7 +322,7 @@ export function PickupPointFormDialog({
           : String(initialData.longitude),
       usageType: initialData?.usageType || '',
       pickupInstruction: initialData?.pickupInstruction || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     },
   });
 
@@ -340,7 +340,7 @@ export function PickupPointFormDialog({
           : String(initialData.longitude),
       usageType: initialData?.usageType || '',
       pickupInstruction: initialData?.pickupInstruction || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     });
   }, [form, initialData, schools]);
 
@@ -481,7 +481,7 @@ export function DepotFormDialog({
       longitude: toCoordinateString(initialData?.longitude),
       contactPhone: initialData?.contactPhone || '',
       description: initialData?.description || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     },
   });
 
@@ -493,7 +493,7 @@ export function DepotFormDialog({
       longitude: toCoordinateString(initialData?.longitude),
       contactPhone: initialData?.contactPhone || '',
       description: initialData?.description || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     });
   }, [form, initialData]);
 
@@ -520,7 +520,7 @@ export function DepotFormDialog({
           })
         }
       >
-        {/* ── Section: Depot information ── */}
+        {/* -- Section: Depot information -- */}
         <FormSectionHeader title='Depot information' />
         <TextField form={form} name='name' label='Depot name *' />
         {initialData?.code ? (
@@ -530,12 +530,12 @@ export function DepotFormDialog({
         <TextareaField form={form} name='address' label='Address' />
         <TextareaField form={form} name='description' label='Description' />
 
-        {/* ── Section: Coordinates ── */}
+        {/* -- Section: Coordinates -- */}
         <FormSectionHeader title='Coordinates' />
         <TextField form={form} name='latitude' label='Latitude' />
         <TextField form={form} name='longitude' label='Longitude' />
 
-        {/* ── Section: Map picker ── */}
+        {/* -- Section: Map picker -- */}
         <FormSectionHeader title='Map picker' />
         <div className='md:col-span-2'>
           <LocationPickerMap
@@ -592,23 +592,23 @@ export function ParentFormDialog({
   const form = useForm<ParentFormValues>({
     resolver: zodResolver(parentSchema) as any,
     defaultValues: {
-      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId || initialData?.userId || 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       email: initialData?.email || '',
       address: initialData?.address || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     },
   });
 
   React.useEffect(() => {
     form.reset({
-      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId || initialData?.userId || 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       email: initialData?.email || '',
       address: initialData?.address || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     });
   }, [form, initialData]);
 
@@ -657,7 +657,7 @@ export function ParentFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={onSubmit}
       >
-        {/* ── Section: Linked account ── */}
+        {/* -- Section: Linked account -- */}
         <FormSectionHeader title='Linked account' />
         <SelectField
           form={form}
@@ -688,13 +688,13 @@ export function ParentFormDialog({
           onChange={handleAccountUserChange}
         />
 
-        {/* ── Section: Contact information ── */}
+        {/* -- Section: Contact information -- */}
         <FormSectionHeader title='Contact information' />
         <TextField form={form} name='fullName' label='Full name *' />
         <TextField form={form} name='phone' label='Phone *' />
         <TextField form={form} name='email' label='Email' />
 
-        {/* ── Section: Address ── */}
+        {/* -- Section: Address -- */}
         <FormSectionHeader title='Address' />
         <TextareaField form={form} name='address' label='Address' />
       </SimpleForm>
@@ -733,10 +733,10 @@ export function StudentFormDialog({
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema) as any,
     defaultValues: {
-      schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
+      schoolId: initialData?.schoolId || schools[0]?.id || 0,
       parentProfileId:
-        initialData?.parentProfileId ??
-        (isParent ? 999999 : (parents[0]?.id ?? 0)),
+        initialData?.parentProfileId ||
+        (isParent ? 999999 : (parents[0]?.id || 0)),
       pickupPointId:
         initialData?.pickupPointId === null ||
         initialData?.pickupPointId === undefined
@@ -754,16 +754,16 @@ export function StudentFormDialog({
       gender: initialData?.gender || '',
       homeAddress: initialData?.homeAddress || '',
       specialNote: initialData?.specialNote || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     },
   });
 
   React.useEffect(() => {
     form.reset({
-      schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
+      schoolId: initialData?.schoolId || schools[0]?.id || 0,
       parentProfileId:
-        initialData?.parentProfileId ??
-        (isParent ? 999999 : (parents[0]?.id ?? 0)),
+        initialData?.parentProfileId ||
+        (isParent ? 999999 : (parents[0]?.id || 0)),
       pickupPointId:
         initialData?.pickupPointId === null ||
         initialData?.pickupPointId === undefined
@@ -781,7 +781,7 @@ export function StudentFormDialog({
       gender: initialData?.gender || '',
       homeAddress: initialData?.homeAddress || '',
       specialNote: initialData?.specialNote || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     });
   }, [form, initialData, schools, parents, isParent]);
 
@@ -807,7 +807,7 @@ export function StudentFormDialog({
     useGetSchoolPickupPointDropdownOptionsQuery(numericSchoolId, {
       skip: !numericSchoolId,
     });
-  const schoolDropdownPoints = dropdownPointsData?.data ?? [];
+  const schoolDropdownPoints = dropdownPointsData?.data || [];
 
   // Pickup options: options with usage PICKUP_ONLY or PICKUP_DROPOFF
   const pickupOptions = React.useMemo(() => {
@@ -869,7 +869,7 @@ export function StudentFormDialog({
           })
         }
       >
-        {/* ── Section: Basic information ── */}
+        {/* -- Section: Basic information -- */}
         <FormSectionHeader title='Basic information' />
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <SelectField
@@ -911,7 +911,7 @@ export function StudentFormDialog({
           />
         </div>
 
-        {/* ── Section: Parent & contact ── */}
+        {/* -- Section: Parent & contact -- */}
         {!isParent && (
           <>
             <FormSectionHeader title='Parent & contact' />
@@ -927,7 +927,7 @@ export function StudentFormDialog({
           </>
         )}
 
-        {/* ── Section: Transport defaults ── */}
+        {/* -- Section: Transport defaults -- */}
         <FormSectionHeader title='Transport defaults' />
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <SelectField
@@ -963,7 +963,7 @@ export function StudentFormDialog({
         </div>
         <TextareaField form={form} name='homeAddress' label='Home address' />
 
-        {/* ── Section: Notes ── */}
+        {/* -- Section: Notes -- */}
         <FormSectionHeader title='Notes' />
         <TextareaField form={form} name='specialNote' label='Special note' />
       </SimpleForm>
@@ -999,7 +999,7 @@ export function BusFormDialog({
       plateNumber: initialData?.plateNumber || '',
       busType: defaultBusType,
       capacity:
-        initialData?.capacity ??
+        initialData?.capacity ||
         (defaultBusTypeMeta?.value && defaultBusTypeMeta.value > 0
           ? defaultBusTypeMeta.value
           : 1),
@@ -1007,7 +1007,7 @@ export function BusFormDialog({
       homeDepotId: initialData?.homeDepotId
         ? String(initialData.homeDepotId)
         : '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     },
   });
 
@@ -1020,7 +1020,7 @@ export function BusFormDialog({
       plateNumber: initialData?.plateNumber || '',
       busType: nextBusType,
       capacity:
-        initialData?.capacity ??
+        initialData?.capacity ||
         (nextBusTypeMeta?.value && nextBusTypeMeta.value > 0
           ? nextBusTypeMeta.value
           : 1),
@@ -1028,7 +1028,7 @@ export function BusFormDialog({
       homeDepotId: initialData?.homeDepotId
         ? String(initialData.homeDepotId)
         : '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     });
   }, [form, initialData, busTypes]);
 
@@ -1099,7 +1099,7 @@ export function BusFormDialog({
           })
         }
       >
-        {/* ── Section: Bus information ── */}
+        {/* -- Section: Bus information -- */}
         <FormSectionHeader title='Bus information' />
         <TextField form={form} name='plateNumber' label='Plate number *' />
         <SelectField
@@ -1136,7 +1136,7 @@ export function BusFormDialog({
           }
         />
 
-        {/* ── Section: Assignment defaults ── */}
+        {/* -- Section: Assignment defaults -- */}
         <FormSectionHeader title='Assignment defaults' />
         <SelectField
           form={form}
@@ -1150,7 +1150,7 @@ export function BusFormDialog({
           }))}
         />
 
-        {/* ── Section: Operational status ── */}
+        {/* -- Section: Operational status -- */}
         <FormSectionHeader title='Operational status' />
         <SelectField
           form={form}
@@ -1185,21 +1185,21 @@ export function DriverFormDialog({
   const form = useForm<DriverFormValues>({
     resolver: zodResolver(driverSchema) as any,
     defaultValues: {
-      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId || initialData?.userId || 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     },
   });
 
   React.useEffect(() => {
     form.reset({
-      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId || initialData?.userId || 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     });
   }, [form, initialData]);
 
@@ -1245,7 +1245,7 @@ export function DriverFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={onSubmit}
       >
-        {/* ── Section: Account link ── */}
+        {/* -- Section: Account link -- */}
         <FormSectionHeader title='ACCOUNT LINK' />
         <SelectField
           form={form}
@@ -1276,12 +1276,12 @@ export function DriverFormDialog({
           onChange={handleAccountUserChange}
         />
 
-        {/* ── Section: Driver information ── */}
+        {/* -- Section: Driver information -- */}
         <FormSectionHeader title='DRIVER INFORMATION' />
         <TextField form={form} name='fullName' label='Full name *' />
         <TextField form={form} name='phone' label='Phone' />
 
-        {/* ── Section: Operational status ── */}
+        {/* -- Section: Operational status -- */}
         <FormSectionHeader title='OPERATIONAL STATUS' />
         <SelectField
           form={form}
@@ -1316,21 +1316,21 @@ export function AttendantFormDialog({
   const form = useForm<AttendantFormValues>({
     resolver: zodResolver(attendantSchema) as any,
     defaultValues: {
-      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId || initialData?.userId || 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     },
   });
 
   React.useEffect(() => {
     form.reset({
-      accountUserId: initialData?.accountUserId ?? initialData?.userId ?? 0,
+      accountUserId: initialData?.accountUserId || initialData?.userId || 0,
       fullName: initialData?.fullName || '',
       phone: initialData?.phone || '',
       status: initialData?.status || STAFF_STATUS_OPTIONS[0].value,
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     });
   }, [form, initialData]);
 
@@ -1376,7 +1376,7 @@ export function AttendantFormDialog({
         onCancel={() => onOpenChange(false)}
         onSubmit={onSubmit}
       >
-        {/* ── Section: Account link ── */}
+        {/* -- Section: Account link -- */}
         <FormSectionHeader title='Account link' />
         <SelectField
           form={form}
@@ -1407,12 +1407,12 @@ export function AttendantFormDialog({
           onChange={handleAccountUserChange}
         />
 
-        {/* ── Section: Attendant information ── */}
+        {/* -- Section: Attendant information -- */}
         <FormSectionHeader title='Attendant information' />
         <TextField form={form} name='fullName' label='Full name *' />
         <TextField form={form} name='phone' label='Phone' />
 
-        {/* ── Section: Operational status ── */}
+        {/* -- Section: Operational status -- */}
         <FormSectionHeader title='Operational status' />
         <SelectField
           form={form}
@@ -1546,7 +1546,7 @@ function TextField({
               <Input
                 {...field}
                 type={type}
-                value={(field.value as string) ?? ''}
+                value={(field.value as string) || ''}
                 disabled={disabled}
               />
             )}
@@ -1599,7 +1599,7 @@ function TextareaField({ form, name, label }: FieldProps) {
         <FormItem className='md:col-span-2'>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Textarea {...field} value={(field.value as string) ?? ''} />
+            <Textarea {...field} value={(field.value as string) || ''} />
           </FormControl>
           <FormMessage />
         </FormItem>
@@ -1642,7 +1642,7 @@ function SelectField({
     return list;
   }, [options, allowEmpty, emptyLabel, emptyValue]);
 
-  const isSearchable = searchable ?? options.length > 6;
+  const isSearchable = searchable || options.length > 6;
 
   return (
     <FormField
@@ -1657,7 +1657,7 @@ function SelectField({
               size='md'
               className='h-11 rounded-xl w-full text-slate-900 border-slate-200 shadow-sm'
               disabled={disabled}
-              value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
+              value={String(field.value || (allowEmpty ? emptyValue : ''))}
               onChange={(value) => {
                 const val = value === emptyValue ? '' : value;
                 field.onChange(val);
@@ -1679,3 +1679,4 @@ function SelectField({
     />
   );
 }
+

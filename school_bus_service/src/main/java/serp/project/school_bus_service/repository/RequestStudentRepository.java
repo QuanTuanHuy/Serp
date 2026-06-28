@@ -27,6 +27,22 @@ public interface RequestStudentRepository extends BaseRepository<RequestStudentE
     List<Object[]> countStudentsByRequestIds(@Param("requestIds") List<Long> requestIds, @Param("tenantId") Long tenantId);
 
     @Query("""
+            select entity.request.id,
+                   student.school.id,
+                   student.school.name,
+                   student.school.latitude,
+                   student.school.longitude
+              from RequestStudentEntity entity
+              join entity.student student
+             where entity.request.id in :requestIds
+               and entity.tenantId = :tenantId
+               and entity.isDeleted = false
+               and student.school is not null
+            """)
+    List<Object[]> findSchoolSummariesByRequestIds(@Param("requestIds") List<Long> requestIds,
+                                                   @Param("tenantId") Long tenantId);
+
+    @Query("""
             select entity
               from RequestStudentEntity entity
               join fetch entity.request request
@@ -36,7 +52,7 @@ public interface RequestStudentRepository extends BaseRepository<RequestStudentE
                and entity.isDeleted = false
                and request.tenantId = :tenantId
                and request.isDeleted = false
-               and request.school.id = :schoolId
+               and student.school.id = :schoolId
                and request.status = :status
                and :serviceDate >= request.effectiveFrom
                and (request.effectiveTo is null or :serviceDate <= request.effectiveTo)

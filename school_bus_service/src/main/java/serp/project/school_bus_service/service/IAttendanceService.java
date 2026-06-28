@@ -10,6 +10,7 @@ import serp.project.school_bus_service.dto.response.BatchAttendanceResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceManifestResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
+import serp.project.school_bus_service.dto.response.TripOperationOverviewResponse;
 import serp.project.school_bus_service.entity.AttendanceEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
@@ -23,6 +24,8 @@ public interface IAttendanceService extends IBaseService<AttendanceEntity, Long>
 
     List<AttendanceResponse> getTripAttendance(Long tripId, Long tenantId);
 
+    List<AttendanceResponse> getRecentTripAttendance(Long tripId, Long tenantId, int size);
+
     /**
      * System-generated NOT_SERVED event — called when a stop is skipped or trip cancelled.
      * Creates an AttendanceEntity with eventType=NOT_SERVED for audit trail.
@@ -31,6 +34,11 @@ public interface IAttendanceService extends IBaseService<AttendanceEntity, Long>
                               RouteStopEntity routeStop, String reason, Long tenantId, Long actorId);
 
     TripAttendanceManifestResponse getTripAttendanceManifest(Long tripId, Long tenantId);
+
+    TripOperationOverviewResponse getTripOperationOverview(Long tripId, Long tenantId);
+
+    List<TripAttendanceManifestResponse.TripAttendanceStudentItem> getTripAttendanceStudents(
+            Long tripId, Long routeStopId, Long tenantId);
 
     TripAttendanceSummaryResponse getTripAttendanceSummary(Long tripId, Long tenantId);
 

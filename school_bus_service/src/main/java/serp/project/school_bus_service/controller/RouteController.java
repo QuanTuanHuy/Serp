@@ -25,6 +25,8 @@ import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
+import serp.project.school_bus_service.dto.response.RouteMapResponse;
+import serp.project.school_bus_service.dto.response.RoutePlanListItemResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanStudentResponse;
 import serp.project.school_bus_service.dto.response.RoutePathResponse;
@@ -48,7 +50,7 @@ public class RouteController extends AbstractBaseController {
 
     @GetMapping
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
-    public ResponseEntity<GeneralResponse<PageResponse<RoutePlanResponse>>> getRoutes(
+    public ResponseEntity<GeneralResponse<PageResponse<RoutePlanListItemResponse>>> getRoutes(
             @ModelAttribute RoutePlanParamsRequest params) {
         return ok("Fetched routes", routeService.getRoutes(params, getCurrentTenantId()));
     }
@@ -57,6 +59,12 @@ public class RouteController extends AbstractBaseController {
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
     public ResponseEntity<GeneralResponse<RouteDetailResponse>> getRoute(@PathVariable Long id) {
         return ok("Fetched route", routeService.getRoute(id, getCurrentTenantId()));
+    }
+
+    @GetMapping("/{id}/map")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
+    public ResponseEntity<GeneralResponse<RouteMapResponse>> getRouteMap(@PathVariable Long id) {
+        return ok("Fetched route map", routeService.getRouteMap(id, getCurrentTenantId()));
     }
 
     @GetMapping("/{id}/path")

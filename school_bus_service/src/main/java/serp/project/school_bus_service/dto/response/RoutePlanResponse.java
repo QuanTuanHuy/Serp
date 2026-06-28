@@ -34,7 +34,6 @@ public class RoutePlanResponse extends BaseResponse {
     private Double plannedDistanceKm;
     private Integer plannedDurationMin;
     private Integer plannedStudentCount;
-    private Integer assignedBusCapacity;
     private Long busId;
     private String busPlateNumber;
     private String busName;

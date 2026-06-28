@@ -21,27 +21,29 @@ import { cn } from '@/shared/utils';
 import {
   useCreateParentMutation,
   useDeleteParentMutation,
+  useGetParentByIdQuery,
   useGetParentsQuery,
-  useGetStudentsQuery,
   useUpdateParentMutation,
 } from '../api/schoolBusApi';
 import { useGetSchoolBusModuleUsersQuery } from '../api/schoolBusAccountApi';
-import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
-import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
-import { ParentFormDialog } from '../components/SchoolBusMasterDataForms';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
-import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
+import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
+import { ParentFormDialog } from '../components/SchoolBusMasterDataForms';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
+import { SchoolBusReadOnlyDetailDialog } from '../components/SchoolBusReadOnlyDetailDialog';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
+import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { SCHOOL_BUS_ACCOUNT_MODULE_ID } from '../constants';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
-import type { SchoolBusAccountUser, SchoolBusParent } from '../types';
-import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
-
-// ── Contact completeness helpers ───────────────────────────────────────────────
+import type {
+  SchoolBusAccountUser,
+  SchoolBusParent,
+  SchoolBusParentUpsertRequest,
+} from '../types';
+import { getPageItems, SCHOOL_BUS_PAGE_QUERY_OPTIONS } from '../utils';
 
 type ContactCompleteness =
   | 'reachable'
@@ -51,7 +53,7 @@ type ContactCompleteness =
 
 function getContactCompleteness(
   parent: SchoolBusParent,
-  linkedStudentCount: number
+  linkedStudentCount?: number | null
 ): ContactCompleteness {
   if (linkedStudentCount === 0) return 'no-linked-student';
   if (!parent.phone) return 'missing-phone';
@@ -104,8 +106,6 @@ function ContactCompletenessBadge({
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
 export function SchoolBusParentsPage() {
   const currentUser = useAppSelector(selectUserProfile);
   const organizationId = currentUser?.organizationId;
@@ -117,20 +117,38 @@ export function SchoolBusParentsPage() {
   });
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editingParent, setEditingParent] =
-    React.useState<SchoolBusParent | null>(null);
+  const [editingParentId, setEditingParentId] = React.useState<number | null>(
+    null
+  );
+  const [viewingParentId, setViewingParentId] = React.useState<number | null>(
+    null
+  );
   const [deletingParent, setDeletingParent] =
     React.useState<SchoolBusParent | null>(null);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [filterContact, setFilterContact] = React.useState<string>('');
+  const [filterStatus, setFilterStatus] = React.useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
 
-  const { data, isLoading } = useGetParentsQuery(pagination.params);
+  const { data, isLoading } = useGetParentsQuery(
+    pagination.params,
+    SCHOOL_BUS_PAGE_QUERY_OPTIONS
+  );
+  const { data: editingParentData } = useGetParentByIdQuery(
+    editingParentId || 0,
+    { skip: !dialogOpen || !editingParentId }
+  );
+  const {
+    data: viewingParentData,
+    isFetching: loadingViewingParent,
+    isError: viewingParentError,
+  } = useGetParentByIdQuery(viewingParentId || 0, {
+    skip: !viewingParentId,
+  });
   const { data: parentOptionsData } = useGetParentsQuery(
     { page: 0, size: 100, sortBy: 'fullName', sortDirection: 'ASC' },
     { skip: !dialogOpen }
   );
-  const { data: studentsData } = useGetStudentsQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'fullName',
-  });
   const { data: accountUsersData, isFetching: loadingAccountUsers } =
     useGetSchoolBusModuleUsersQuery(
       {
@@ -145,47 +163,25 @@ export function SchoolBusParentsPage() {
   const [deleteParent, { isLoading: deleting }] = useDeleteParentMutation();
 
   const parents = getPageItems(data?.data);
+  const editingParent = editingParentData?.data || null;
+  const viewingParent = viewingParentData?.data || null;
   const parentOptions = getPageItems(parentOptionsData?.data);
-  const allStudents = getPageItems(studentsData?.data);
   const accountUsers = accountUsersData?.data || [];
 
-  // ─── Linked students count map ──────────────────────────────────
-  const linkedStudentsMap = React.useMemo(() => {
-    const map = new Map<number, number>();
-    for (const student of allStudents) {
-      if (student.parentProfileId) {
-        map.set(
-          student.parentProfileId,
-          (map.get(student.parentProfileId) || 0) + 1
-        );
-      }
-    }
-    return map;
-  }, [allStudents]);
-
-  // ─── Stats ──────────────────────────────────────────────────────
-  const withEmail = parents.filter((p) => p.email).length;
-  const withPhone = parents.filter((p) => p.phone).length;
-  const noLinkedStudents = parents.filter(
-    (p) => !linkedStudentsMap.get(p.id)
-  ).length;
-
-  // ─── Filter state ───────────────────────────────────────────────
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [filterContact, setFilterContact] = React.useState<string>('');
-  const [filterStatus, setFilterStatus] = React.useState<string>('');
-
-  // Debounced keyword search
-  const [debouncedSearch, setDebouncedSearch] = React.useState('');
   React.useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
   }, [searchTerm]);
+
   React.useEffect(() => {
-    pagination.setKeyword(debouncedSearch || ''); // eslint-disable-next-line react-hooks/exhaustive-deps
+    pagination.setKeyword(debouncedSearch || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
-  // Client-side filters
+  const withEmail = parents.filter((p) => p.email).length;
+  const withPhone = parents.filter((p) => p.phone).length;
+  const activeParents = parents.filter((p) => p.isActive !== false).length;
+
   const filteredParents = React.useMemo(() => {
     let result = parents;
     if (filterContact === 'has-phone') result = result.filter((p) => p.phone);
@@ -201,7 +197,6 @@ export function SchoolBusParentsPage() {
     return result;
   }, [parents, filterContact, filterStatus]);
 
-  // ─── Dialog helpers ─────────────────────────────────────────────
   const parentDialogUsers = React.useMemo(
     () =>
       buildAvailableParentAccountUsers({
@@ -212,16 +207,16 @@ export function SchoolBusParentsPage() {
     [accountUsers, parentOptions, editingParent]
   );
 
-  const handleSave = async (values: any) => {
+  const handleSave = async (values: SchoolBusParentUpsertRequest) => {
     try {
-      const response = editingParent
-        ? await updateParent({ id: editingParent.id, body: values }).unwrap()
+      const response = editingParentId
+        ? await updateParent({ id: editingParentId, body: values }).unwrap()
         : await createParent(values).unwrap();
       toast.success(response.message || 'Parent profile saved');
       setDialogOpen(false);
-      setEditingParent(null);
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save parent profile');
+      setEditingParentId(null);
+    } catch {
+      toast.error('Failed to save parent profile');
     }
   };
 
@@ -231,8 +226,8 @@ export function SchoolBusParentsPage() {
       const response = await deleteParent(deletingParent.id).unwrap();
       toast.success(response.message || 'Parent profile deleted');
       setDeletingParent(null);
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to delete parent profile');
+    } catch {
+      toast.error('Failed to delete parent profile');
     }
   };
 
@@ -276,26 +271,34 @@ export function SchoolBusParentsPage() {
       key: 'students',
       header: 'Linked students',
       render: (parent) => {
-        const studentCount = linkedStudentsMap.get(parent.id) || 0;
-        return studentCount > 0 ? (
-          <span className='inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-200'>
-            {studentCount} student{studentCount > 1 ? 's' : ''}
-          </span>
-        ) : (
-          <span className='inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-slate-200'>
-            None
-          </span>
+        const studentCount = parent.studentCount;
+        if (typeof studentCount === 'number' && studentCount > 0) {
+          return (
+            <span className='inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-200'>
+              {studentCount} student{studentCount > 1 ? 's' : ''}
+            </span>
+          );
+        }
+        if (typeof studentCount === 'number') {
+          return (
+            <span className='inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-slate-200'>
+              None
+            </span>
+          );
+        }
+        return (
+          <span className='text-xs text-muted-foreground'>Not available</span>
         );
       },
     },
     {
       key: 'completeness',
       header: 'Profile status',
-      render: (parent) => {
-        const studentCount = linkedStudentsMap.get(parent.id) || 0;
-        const completeness = getContactCompleteness(parent, studentCount);
-        return <ContactCompletenessBadge completeness={completeness} />;
-      },
+      render: (parent) => (
+        <ContactCompletenessBadge
+          completeness={getContactCompleteness(parent, parent.studentCount)}
+        />
+      ),
     },
     {
       key: 'address',
@@ -328,10 +331,7 @@ export function SchoolBusParentsPage() {
             size='icon'
             variant='outline'
             className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-            onClick={() => {
-              setEditingParent(parent);
-              setDialogOpen(true);
-            }}
+            onClick={() => setViewingParentId(parent.id)}
           >
             <Eye className='h-3.5 w-3.5' />
           </Button>
@@ -340,7 +340,7 @@ export function SchoolBusParentsPage() {
             variant='outline'
             className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
             onClick={() => {
-              setEditingParent(parent);
+              setEditingParentId(parent.id);
               setDialogOpen(true);
             }}
           >
@@ -361,7 +361,6 @@ export function SchoolBusParentsPage() {
 
   const toolbar = (
     <div className='flex flex-wrap items-center gap-3 flex-1 min-w-0'>
-      {/* Search */}
       <div className='relative flex-1 min-w-[200px] max-w-xs'>
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
@@ -402,7 +401,7 @@ export function SchoolBusParentsPage() {
     <>
       <SchoolBusPageShell
         title='Parent profiles'
-        description='Operational parent directory — contact data powering notifications, escalation, and student linkage.'
+        description='Operational parent directory - contact data powering notifications, escalation, and student linkage.'
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
@@ -415,7 +414,7 @@ export function SchoolBusParentsPage() {
           <Button
             className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white'
             onClick={() => {
-              setEditingParent(null);
+              setEditingParentId(null);
               setDialogOpen(true);
             }}
           >
@@ -424,7 +423,6 @@ export function SchoolBusParentsPage() {
         }
       >
         <div className='flex flex-col gap-6'>
-          {/* Stats */}
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
             <SchoolBusMetricCard
               label='Parent profiles'
@@ -448,15 +446,11 @@ export function SchoolBusParentsPage() {
               hint='Reachable for escalation'
             />
             <SchoolBusMetricCard
-              label='No linked student'
-              value={noLinkedStudents}
-              icon={AlertTriangle}
-              tone={noLinkedStudents > 0 ? 'warning' : 'success'}
-              hint={
-                noLinkedStudents > 0
-                  ? 'Parents without any linked student'
-                  : 'All parents linked'
-              }
+              label='Active parents'
+              value={activeParents}
+              icon={CheckCircle2}
+              tone='success'
+              hint='Profiles currently active for transport operations'
             />
           </div>
 
@@ -486,16 +480,57 @@ export function SchoolBusParentsPage() {
       </SchoolBusPageShell>
 
       <ParentFormDialog
-        open={dialogOpen}
+        open={dialogOpen && (!editingParentId || Boolean(editingParent))}
         onOpenChange={(open) => {
           setDialogOpen(open);
-          if (!open) setEditingParent(null);
+          if (!open) setEditingParentId(null);
         }}
         initialData={editingParent}
         accountUsers={parentDialogUsers}
         isLoadingAccountUsers={loadingAccountUsers}
         isLoading={creating || updating}
         onSubmit={handleSave}
+      />
+
+      <SchoolBusReadOnlyDetailDialog
+        open={Boolean(viewingParentId)}
+        onOpenChange={(open) => {
+          if (!open) setViewingParentId(null);
+        }}
+        title='Parent profile detail'
+        description='Read-only parent information loaded from the detail API.'
+        isLoading={loadingViewingParent}
+        isError={viewingParentError}
+        sections={[
+          {
+            title: 'Linked account',
+            fields: [
+              {
+                label: 'Account user ID',
+                value:
+                  viewingParent?.accountUserId || viewingParent?.userId || null,
+              },
+              { label: 'Account email', value: viewingParent?.user?.email },
+            ],
+          },
+          {
+            title: 'Contact information',
+            fields: [
+              { label: 'Full name', value: viewingParent?.fullName },
+              { label: 'Phone', value: viewingParent?.phone },
+              { label: 'Email', value: viewingParent?.email },
+              {
+                label: 'Status',
+                value: viewingParent?.isActive === false ? 'Inactive' : 'Active',
+              },
+              {
+                label: 'Address',
+                value: viewingParent?.address,
+                fullWidth: true,
+              },
+            ],
+          },
+        ]}
       />
 
       <SchoolBusDeleteDialog

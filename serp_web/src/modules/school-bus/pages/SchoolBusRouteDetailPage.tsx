@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Calendar,
   Clock3,
+  Loader2,
   MapPin,
   Users,
 } from 'lucide-react';
@@ -25,9 +26,9 @@ import {
   useAssignRouteMutation,
   useCreateTripFromRouteMutation,
   useGetAttendantDropdownOptionsQuery,
+  useGetBusesQuery,
   useGetDriverDropdownOptionsQuery,
-  useGetRoutePathQuery,
-  useGetRouteByIdQuery,
+  useGetRouteMapQuery,
 } from '../api/schoolBusApi';
 import { RouteAssignmentDialog } from '../components/SchoolBusWorkflowForms';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -56,19 +57,21 @@ export function SchoolBusRouteDetailPage({
   const {
     data,
     isLoading,
-    refetch: refetchRoute,
-  } = useGetRouteByIdQuery(routeId);
+    isFetching,
+  } = useGetRouteMapQuery(routeId, { refetchOnMountOrArgChange: true });
   const { data: driversData } = useGetDriverDropdownOptionsQuery();
 
   const { data: attendantsData } = useGetAttendantDropdownOptionsQuery();
+  const { data: busesData } = useGetBusesQuery({
+    ...SCHOOL_BUS_OPTION_QUERY,
+    sortBy: 'plateNumber',
+  });
 
   const [assignRoute, { isLoading: assigning }] = useAssignRouteMutation();
   const [createTripFromRoute, { isLoading: creatingTrip }] =
     useCreateTripFromRouteMutation();
   const [assignmentOpen, setAssignmentOpen] = React.useState(false);
   const [fitKey, setFitKey] = React.useState(0);
-  const { data: routePathData, refetch: refetchPath } =
-    useGetRoutePathQuery(routeId);
 
   const detail = data?.data;
 
@@ -118,18 +121,19 @@ export function SchoolBusRouteDetailPage({
   }
 
   const route = detail.route;
-  const isAssigned = !!detail.assignment;
   const selectedBusPlate =
-    detail.assignment?.busPlateNumber ?? route.busPlateNumber;
+    detail.assignment?.busPlateNumber || route.busPlateNumber;
   const selectedBusCapacity =
-    detail.assignment?.busCapacity ??
-    route.busCapacity ??
-    route.assignedBusCapacity;
+    detail.assignment?.busCapacity ||
+    route.busCapacity;
   const plannedStudentCount =
-    route.plannedStudentCount ?? detail.students.length ?? 0;
-  const stopsCount = route.stopsCount ?? detail.stops.length;
-  const driverName = detail.assignment?.driverName ?? route.driverName;
-  const attendantName = detail.assignment?.attendantName ?? route.attendantName;
+    route.plannedStudentCount || 0;
+  const stopsCount = route.stopsCount || detail.stops.length;
+  const driverName = detail.assignment?.driverName || route.driverName;
+  const attendantName = detail.assignment?.attendantName || route.attendantName;
+  const hasBusReservation = Boolean(detail.assignment?.busId || route.busId);
+  const hasStaffAssignment = Boolean(driverName);
+  const isAssigned = hasBusReservation && hasStaffAssignment;
   const missingResourceCount = [
     !selectedBusPlate,
     !driverName,
@@ -181,7 +185,7 @@ export function SchoolBusRouteDetailPage({
               onClick={() => setAssignmentOpen(true)}
             >
               <UserCog className='h-4 w-4' />
-              {isAssigned ? 'Manage assignment' : 'Assign resources'}
+              {hasBusReservation ? 'Manage resources' : 'Assign resources'}
             </Button>
             <Button variant='outline' className='rounded-full' asChild>
               <Link
@@ -213,7 +217,7 @@ export function SchoolBusRouteDetailPage({
           />
           <StatusCard
             label='Assignment'
-            value={isAssigned ? 'Ready' : 'Missing'}
+            value={isAssigned ? 'Ready' : hasBusReservation ? 'Bus selected' : 'Missing'}
             status={isAssigned ? 'success' : 'warning'}
           />
           <StatusCard
@@ -308,7 +312,7 @@ export function SchoolBusRouteDetailPage({
                 <SummaryItem
                   label='Depot'
                   value={
-                    route.startDepotName ??
+                    route.startDepotName ||
                     (route.startLocationType === 'DEPOT'
                       ? route.startLocationName
                       : route.endLocationName)
@@ -563,28 +567,38 @@ export function SchoolBusRouteDetailPage({
                 </h3>
                 {missingStopCoordinates > 0 && (
                   <span className='rounded bg-amber-50 border border-amber-100 text-amber-700 font-bold text-[9px] px-1.5 py-0.5 animate-pulse'>
-                    ⚠ {missingStopCoordinates} stop(s) missing coords
+                    Warning: {missingStopCoordinates} stop(s) missing coords
                   </span>
                 )}
               </div>
               <div className='w-full bg-slate-50'>
-                <SchoolBusMapWorkspace
-                  flat
-                  mapHeightClassName='h-[420px]'
-                  map={
-                    <RouteMap
-                      route={detail.route}
-                      stops={detail.stops}
-                      assignment={detail.assignment}
-                      routePath={routePathData?.data}
-                      className='h-full w-full'
-                      fitKey={fitKey}
-                    />
-                  }
-                  legend={<SchoolBusMapLegend />}
-                  onFitAll={() => setFitKey((k) => k + 1)}
-                  canFitAll={true}
-                />
+                <div className='relative'>
+                  {isFetching && (
+                    <div className='absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]'>
+                      <div className='flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm'>
+                        <Loader2 className='h-4 w-4 animate-spin text-[#C81E3A]' />
+                        Updating route map...
+                      </div>
+                    </div>
+                  )}
+                  <SchoolBusMapWorkspace
+                    flat
+                    mapHeightClassName='h-[420px]'
+                    map={
+                      <RouteMap
+                        route={detail.route}
+                        stops={detail.stops}
+                        assignment={detail.assignment}
+                        routePath={detail.path}
+                        className='h-full w-full'
+                        fitKey={fitKey}
+                      />
+                    }
+                    legend={<SchoolBusMapLegend />}
+                    onFitAll={() => setFitKey((k) => k + 1)}
+                    canFitAll={true}
+                  />
+                </div>
               </div>
             </div>
 
@@ -639,8 +653,8 @@ export function SchoolBusRouteDetailPage({
                         <div className='min-w-0 flex-1 p-3 rounded-xl bg-slate-50/50 border border-slate-100 flex items-center justify-between gap-3'>
                           <div className='min-w-0'>
                             <p className='font-bold text-slate-800 truncate'>
-                              {stop.displayName ??
-                                stop.pickupPointName ??
+                              {stop.displayName ||
+                                stop.pickupPointName ||
                                 `Stop #${stop.id}`}
                             </p>
                             <p className='text-[10px] text-slate-450 mt-1 flex items-center gap-1.5'>
@@ -664,9 +678,9 @@ export function SchoolBusRouteDetailPage({
                                       ? 'Drop-off'
                                       : 'Pickup'}
                               </span>
-                              <span>•</span>
+                              <span>-</span>
                               <span>
-                                {stop.estimatedStudentCount ?? 0} student(s)
+                                {stop.estimatedStudentCount || 0} student(s)
                               </span>
                             </p>
                           </div>
@@ -685,6 +699,11 @@ export function SchoolBusRouteDetailPage({
         open={assignmentOpen}
         onOpenChange={setAssignmentOpen}
         initialData={detail.assignment}
+        buses={getPageItems(busesData?.data).map((bus) => ({
+          id: bus.id,
+          label: `${bus.plateNumber} - ${bus.capacity} seats`,
+          value: String(bus.id),
+        }))}
         drivers={driversData?.data || []}
         attendants={attendantsData?.data || []}
         onSubmit={handleAssign}
@@ -721,12 +740,12 @@ function StatusCard({
         )}
       >
         {status === 'success'
-          ? '✓ '
+          ? 'OK '
           : status === 'warning'
-            ? '⚠ '
+            ? 'Warning: '
             : status === 'danger'
-              ? '✗ '
-              : '🔒 '}
+              ? 'X '
+              : ' '}
         {value}
       </span>
     </div>
@@ -867,7 +886,7 @@ function WorkflowStep({
                 : 'bg-slate-105 border-slate-200 text-slate-400'
         )}
       >
-        {status === 'completed' ? '✓' : stepNumber}
+        {status === 'completed' ? 'OK' : stepNumber}
       </span>
 
       <div className='min-w-0 flex-1 bg-slate-50/30 border border-slate-100/60 rounded-xl p-3.5 shadow-sm'>

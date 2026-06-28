@@ -1,9 +1,9 @@
-/**
+﻿/**
  * English label mappings for school-bus module enums.
  * Centralises all display labels so pages don't duplicate strings.
  */
 
-/* ── Route status ──────────────────────────────────────────────── */
+/* -- Route status ------------------------------------------------ */
 export const routeStatusLabel: Record<string, string> = {
   DRAFT: 'Draft',
   GENERATED: 'Generated',
@@ -17,7 +17,7 @@ export const routeStatusLabel: Record<string, string> = {
   CANCELLED: 'Cancelled',
 };
 
-/* ── Transport request status ──────────────────────────────────── */
+/* -- Transport request status ------------------------------------ */
 export const requestStatusLabel: Record<string, string> = {
   DRAFT: 'Draft',
   SUBMITTED: 'Submitted',
@@ -26,7 +26,7 @@ export const requestStatusLabel: Record<string, string> = {
   CANCELLED: 'Cancelled',
 };
 
-/* ── Subscription status ───────────────────────────────────────── */
+/* -- Subscription status ----------------------------------------- */
 export const subscriptionStatusLabel: Record<string, string> = {
   ACTIVE: 'Active',
   INACTIVE: 'Inactive',
@@ -34,7 +34,7 @@ export const subscriptionStatusLabel: Record<string, string> = {
   CANCELLED: 'Cancelled',
 };
 
-/* ── Planning session status ───────────────────────────────────── */
+/* -- Planning session status ------------------------------------- */
 export const sessionStatusLabel: Record<string, string> = {
   DRAFT: 'Draft',
   IN_PROGRESS: 'In Progress',
@@ -43,7 +43,7 @@ export const sessionStatusLabel: Record<string, string> = {
   CANCELLED: 'Cancelled',
 };
 
-/* ── Route direction ───────────────────────────────────────────── */
+/* -- Route direction --------------------------------------------- */
 export const directionLabel: Record<string, string> = {
   TO_SCHOOL: 'Outbound',
   FROM_SCHOOL: 'Return',
@@ -51,7 +51,7 @@ export const directionLabel: Record<string, string> = {
   RETURN: 'Return',
 };
 
-/* ── Student usage type ────────────────────────────────────────── */
+/* -- Student usage type ------------------------------------------ */
 export const usageTypeLabel: Record<string, string> = {
   ONE_WAY_TO: 'One Way - To School',
   ONE_WAY_FROM: 'One Way - From School',
@@ -59,11 +59,12 @@ export const usageTypeLabel: Record<string, string> = {
   ONE_WAY: 'One Way',
 };
 
-/* ── Generic helper ────────────────────────────────────────────── */
+/* -- Generic helper ---------------------------------------------- */
 export function getLabel(
   map: Record<string, string>,
   key?: string | null
 ): string {
   if (!key) return '-';
-  return map[key.toUpperCase()] ?? key;
+  return map[key.toUpperCase()] || key;
 }
+

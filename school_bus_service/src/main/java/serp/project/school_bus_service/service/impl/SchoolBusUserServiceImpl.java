@@ -2,6 +2,7 @@ package serp.project.school_bus_service.service.impl;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import serp.project.school_bus_service.dto.request.SchoolBusUserUpsertCommand;
 import serp.project.school_bus_service.entity.SchoolBusUserEntity;
 import serp.project.school_bus_service.mapper.SchoolBusUserMapper;
@@ -61,7 +62,7 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public SchoolBusUserEntity upsertFromAccountUser(SchoolBusUserUpsertCommand command) {
         if (command == null) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "Command is null");
