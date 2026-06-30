@@ -35,6 +35,8 @@ public interface IMenuDisplayService {
 
     void unassignMenuDisplaysFromRole(Long roleId, List<Long> menuDisplayIds);
 
+    void updateMenuDisplayRoles(Long menuDisplayId, List<Long> roleIds);
+
     Map<Long, List<MenuDisplayEntity>> getMenuDisplaysByRoleIds(List<Long> roleIds);
 
     Pair<List<MenuDisplayEntity>, Long> getAllMenuDisplays(GetMenuDisplayParams params);
