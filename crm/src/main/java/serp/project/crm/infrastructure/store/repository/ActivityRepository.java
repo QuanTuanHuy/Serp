@@ -31,6 +31,7 @@ public interface ActivityRepository extends JpaRepository<ActivityModel, Long>, 
     Page<ActivityModel> findByTenantIdAndLeadId(Long tenantId, Long leadId, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndAccountId(Long tenantId, Long accountId, Pageable pageable);
     Page<ActivityModel> findByTenantIdAndOpportunityId(Long tenantId, Long opportunityId, Pageable pageable);
+    List<ActivityModel> findByTenantIdAndOpportunityIdIn(Long tenantId, List<Long> opportunityIds);
     Page<ActivityModel> findByTenantIdAndContactId(Long tenantId, Long contactId, Pageable pageable);
 
     @Query("SELECT a FROM ActivityModel a WHERE a.tenantId = :tenantId " +

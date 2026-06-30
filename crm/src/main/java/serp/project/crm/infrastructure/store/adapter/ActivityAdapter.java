@@ -78,6 +78,17 @@ public class ActivityAdapter implements IActivityPort {
     }
 
     @Override
+    public List<ActivityEntity> findByOpportunityIds(List<Long> opportunityIds, Long tenantId) {
+        if (opportunityIds == null || opportunityIds.isEmpty()) {
+            return List.of();
+        }
+        return activityRepository.findByTenantIdAndOpportunityIdIn(tenantId, opportunityIds)
+                .stream()
+                .map(activityMapper::toEntity)
+                .toList();
+    }
+
+    @Override
     public Pair<List<ActivityEntity>, Long> findByContactId(Long contactId, Long tenantId, PageRequest pageRequest) {
         var pageable = activityMapper.toPageable(pageRequest);
         var page = activityRepository.findByTenantIdAndContactId(tenantId, contactId, pageable)
