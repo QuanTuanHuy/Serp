@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
+import serp.project.discuss_service.core.domain.dto.websocket.WsMessageReadPayload;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.UserPresenceEntity;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
@@ -106,5 +107,44 @@ class DeliveryServiceTest {
         assertEquals(WsEventType.USER_PRESENCE_CHANGED, event.getType());
 
         verify(webSocketHub, never()).sendToUser(any(), any());
+    }
+
+    @Test
+    @DisplayName("notifyMessageRead should fan out read receipt event")
+    void testNotifyMessageRead_FansOutReadEvent() {
+        // Given
+        Set<Long> memberIds = Set.of(
+                TestDataFactory.USER_ID_1,
+                TestDataFactory.USER_ID_2,
+                TestDataFactory.USER_ID_3
+        );
+        Set<Long> onlineIds = Set.of(TestDataFactory.USER_ID_1, TestDataFactory.USER_ID_2);
+
+        when(memberService.getMemberIds(TestDataFactory.CHANNEL_ID)).thenReturn(memberIds);
+        when(presenceService.getOnlineUsers(memberIds)).thenReturn(onlineIds);
+
+        // When
+        deliveryService.notifyMessageRead(
+                TestDataFactory.CHANNEL_ID,
+                TestDataFactory.MESSAGE_ID,
+                TestDataFactory.USER_ID_2,
+                List.of(TestDataFactory.USER_ID_1, TestDataFactory.USER_ID_2),
+                2
+        );
+
+        // Then
+        ArgumentCaptor<Object> eventCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(webSocketHub).sendToUsers(eq(onlineIds), eventCaptor.capture());
+
+        WsEvent<?> event = (WsEvent<?>) eventCaptor.getValue();
+        assertEquals(WsEventType.MESSAGE_READ, event.getType());
+        assertEquals(TestDataFactory.CHANNEL_ID, event.getChannelId());
+
+        WsMessageReadPayload payload = (WsMessageReadPayload) event.getPayload();
+        assertEquals(TestDataFactory.CHANNEL_ID, payload.getChannelId());
+        assertEquals(TestDataFactory.MESSAGE_ID, payload.getMessageId());
+        assertEquals(TestDataFactory.USER_ID_2, payload.getUserId());
+        assertEquals(List.of(TestDataFactory.USER_ID_1, TestDataFactory.USER_ID_2), payload.getReadBy());
+        assertEquals(2, payload.getReadCount());
     }
 }

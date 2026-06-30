@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import serp.project.discuss_service.core.domain.event.MessageDeletedInternalEvent;
+import serp.project.discuss_service.core.domain.event.MessageReadInternalEvent;
 import serp.project.discuss_service.core.domain.event.MessageSentInternalEvent;
 import serp.project.discuss_service.core.domain.event.MessageUpdatedInternalEvent;
 import serp.project.discuss_service.core.domain.event.ReactionAddedInternalEvent;
@@ -112,6 +113,29 @@ public class MessageEventListener {
             } catch (Exception e) {
                 log.error("Failed to process post-commit for message deletion {}: {}", 
                         event.getMessage().getId(), e.getMessage(), e);
+            }
+        }, messageAsyncExecutor);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleMessageRead(MessageReadInternalEvent event) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                log.debug("Processing post-commit for message read: messageId={}, userId={}",
+                        event.getMessageId(), event.getUserId());
+
+                eventPublisher.publishMessageRead(
+                        event.getChannelId(),
+                        event.getMessageId(),
+                        event.getUserId(),
+                        event.getReadBy(),
+                        event.getReadCount());
+
+                cacheService.invalidateMessage(event.getMessageId());
+                cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
+            } catch (Exception e) {
+                log.error("Failed to process post-commit for message read {}: {}",
+                        event.getMessageId(), e.getMessage(), e);
             }
         }, messageAsyncExecutor);
     }
