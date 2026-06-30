@@ -24,6 +24,10 @@ import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.service.IProjectMemberService;
+import serp.project.pmcore.domain.project.service.IProjectService;
+import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.List;
 
@@ -56,6 +60,12 @@ class BatchUpdateOptimizationRunItemDecisionsCommandHandlerTest {
     private OptimizationRunReviewAssembler optimizationRunReviewAssembler;
     @Mock
     private OptimizationRunWarningAuditService optimizationRunWarningAuditService;
+    @Mock
+    private IProjectService projectService;
+    @Mock
+    private IProjectMemberService projectMemberService;
+    @Mock
+    private JsonUtils jsonUtils;
 
     private BatchUpdateOptimizationRunItemDecisionsCommandHandler handler;
 
@@ -67,7 +77,10 @@ class BatchUpdateOptimizationRunItemDecisionsCommandHandlerTest {
                 optimizationRunWarningPort,
                 optimizationProjectModelBuilder,
                 optimizationRunReviewAssembler,
-                optimizationRunWarningAuditService
+                optimizationRunWarningAuditService,
+                projectService,
+                projectMemberService,
+                jsonUtils
         );
     }
 
@@ -95,12 +108,14 @@ class BatchUpdateOptimizationRunItemDecisionsCommandHandlerTest {
                                 OptimizationDecision.REJECTED,
                                 null,
                                 null,
-                                null
+                                null,
+                                List.of()
                         ),
                         new BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision(
                                 SECOND_WORK_ITEM_ID,
                                 OptimizationDecision.ACCEPTED,
                                 OptimizationDecision.ACCEPTED,
+                                null,
                                 null,
                                 null,
                                 null
@@ -130,11 +145,13 @@ class BatchUpdateOptimizationRunItemDecisionsCommandHandlerTest {
                                 null,
                                 null,
                                 null,
-                                null
+                                null,
+                                List.of()
                         ),
                         new BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision(
                                 WORK_ITEM_ID,
                                 OptimizationDecision.REJECTED,
+                                null,
                                 null,
                                 null,
                                 null,
@@ -166,6 +183,7 @@ class BatchUpdateOptimizationRunItemDecisionsCommandHandlerTest {
                         null,
                         null,
                         null,
+                        null,
                         null
                 ))
         );
@@ -180,6 +198,112 @@ class BatchUpdateOptimizationRunItemDecisionsCommandHandlerTest {
                 "overrideAssigneeId is required when assignmentDecision is OVERRIDDEN"
         );
         verify(optimizationRunItemPort, never()).saveAll(any());
+    }
+
+    @Test
+    void handleShouldDeriveOverrideRangeFromAllocationChunks() {
+        OptimizationRunEntity run = run();
+        OptimizationRunItemEntity item = runItem(WORK_ITEM_ID);
+        OptimizationRunReviewView view = OptimizationRunReviewView.builder().id(RUN_ID).build();
+        when(optimizationRunGuard.requireRunInProject(TENANT_ID, PROJECT_ID, RUN_ID)).thenReturn(run);
+        when(optimizationRunItemPort.listByRunId(TENANT_ID, RUN_ID)).thenReturn(List.of(item));
+        when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project());
+        when(projectMemberService.listAssignableMembers(any())).thenReturn(List.of(100L));
+        when(jsonUtils.toJson(any())).thenReturn("[{\"assigneeId\":100,\"start\":1714963200000,\"end\":1714966800000,\"effortMillis\":3600000}]");
+        when(optimizationRunWarningPort.listByRunId(TENANT_ID, RUN_ID)).thenReturn(List.of());
+        when(optimizationRunReviewAssembler.toView(any(), any(), any())).thenReturn(view);
+
+        OptimizationRunReviewView result = handler.handle(new BatchUpdateOptimizationRunItemDecisionsCommand(
+                TENANT_ID,
+                USER_ID,
+                PROJECT_ID,
+                RUN_ID,
+                List.of(new BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision(
+                        WORK_ITEM_ID,
+                        null,
+                        OptimizationDecision.OVERRIDDEN,
+                        null,
+                        null,
+                        null,
+                        List.of(allocation(100L, 1_714_963_200_000L, 1_714_966_800_000L, 3_600_000L))
+                ))
+        ));
+
+        assertEquals(RUN_ID, result.getId());
+        assertEquals(OptimizationDecision.OVERRIDDEN, item.getScheduleDecision());
+        assertEquals(1_714_963_200_000L, item.getOverridePlannedStart());
+        assertEquals(1_714_966_800_000L, item.getOverridePlannedEnd());
+        assertEquals("[{\"assigneeId\":100,\"start\":1714963200000,\"end\":1714966800000,\"effortMillis\":3600000}]",
+                item.getOverrideAllocationChunksJson());
+    }
+
+    @Test
+    void handleShouldRejectEmptyOverrideAllocationChunks() {
+        OptimizationRunEntity run = run();
+        OptimizationRunItemEntity item = runItem(WORK_ITEM_ID);
+        when(optimizationRunGuard.requireRunInProject(TENANT_ID, PROJECT_ID, RUN_ID)).thenReturn(run);
+        when(optimizationRunItemPort.listByRunId(TENANT_ID, RUN_ID)).thenReturn(List.of(item));
+
+        BatchUpdateOptimizationRunItemDecisionsCommand command = new BatchUpdateOptimizationRunItemDecisionsCommand(
+                TENANT_ID,
+                USER_ID,
+                PROJECT_ID,
+                RUN_ID,
+                List.of(new BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision(
+                        WORK_ITEM_ID,
+                        null,
+                        OptimizationDecision.OVERRIDDEN,
+                        null,
+                        null,
+                        null,
+                        List.of()
+                ))
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> handler.handle(command));
+        verify(optimizationRunWarningAuditService).recordInvalidOverrideWarning(
+                TENANT_ID,
+                USER_ID,
+                RUN_ID,
+                WORK_ITEM_ID,
+                "overrideAllocationChunks is required when scheduleDecision is OVERRIDDEN"
+        );
+        verify(optimizationRunItemPort, never()).saveAll(any());
+    }
+
+    @Test
+    void handleShouldRejectOverrideAllocationForNonAssignableMember() {
+        OptimizationRunEntity run = run();
+        OptimizationRunItemEntity item = runItem(WORK_ITEM_ID);
+        when(optimizationRunGuard.requireRunInProject(TENANT_ID, PROJECT_ID, RUN_ID)).thenReturn(run);
+        when(optimizationRunItemPort.listByRunId(TENANT_ID, RUN_ID)).thenReturn(List.of(item));
+        when(projectService.getProjectById(PROJECT_ID, TENANT_ID)).thenReturn(project());
+        when(projectMemberService.listAssignableMembers(any())).thenReturn(List.of(100L));
+
+        BatchUpdateOptimizationRunItemDecisionsCommand command = new BatchUpdateOptimizationRunItemDecisionsCommand(
+                TENANT_ID,
+                USER_ID,
+                PROJECT_ID,
+                RUN_ID,
+                List.of(new BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision(
+                        WORK_ITEM_ID,
+                        null,
+                        OptimizationDecision.OVERRIDDEN,
+                        null,
+                        null,
+                        null,
+                        List.of(allocation(999L, 1_714_963_200_000L, 1_714_966_800_000L, 3_600_000L))
+                ))
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> handler.handle(command));
+        verify(optimizationRunWarningAuditService).recordInvalidOverrideWarning(
+                TENANT_ID,
+                USER_ID,
+                RUN_ID,
+                WORK_ITEM_ID,
+                "override allocation assigneeId must be an assignable project member"
+        );
     }
 
     private OptimizationRunEntity run() {
@@ -209,6 +333,27 @@ class BatchUpdateOptimizationRunItemDecisionsCommandHandlerTest {
                 .currentPlannedEnd(1_714_963_200_000L)
                 .suggestedPlannedStart(1_714_963_200_000L)
                 .suggestedPlannedEnd(1_715_049_600_000L)
+                .build();
+    }
+
+    private BatchUpdateOptimizationRunItemDecisionsCommand.AllocationOverride allocation(
+            Long assigneeId,
+            Long start,
+            Long end,
+            Long effortMillis) {
+        return new BatchUpdateOptimizationRunItemDecisionsCommand.AllocationOverride(
+                assigneeId,
+                start,
+                end,
+                effortMillis
+        );
+    }
+
+    private ProjectEntity project() {
+        return ProjectEntity.builder()
+                .id(PROJECT_ID)
+                .tenantId(TENANT_ID)
+                .isArchived(false)
                 .build();
     }
 }

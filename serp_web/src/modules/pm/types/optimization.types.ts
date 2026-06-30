@@ -112,6 +112,13 @@ export interface PMOptimizationUserSummaryApi {
   avatarUrl?: string | null;
 }
 
+export interface PMOptimizationScheduleAllocationApi {
+  assigneeId: number;
+  start: number;
+  end: number;
+  effortMillis: number;
+}
+
 export interface PMOptimizationRunItemApi {
   id: number;
   workItemId: number;
@@ -139,6 +146,8 @@ export interface PMOptimizationRunItemApi {
   cost?: string | null;
   confidence?: string | null;
   candidateSkillFit?: PMOptimizationCandidateSkillFitApi | null;
+  allocationChunks?: PMOptimizationScheduleAllocationApi[];
+  overrideAllocationChunks?: PMOptimizationScheduleAllocationApi[];
   assignmentReasons?: string[];
   scheduleReasons?: string[];
   violations?: string[];
@@ -164,6 +173,7 @@ export interface PMOptimizationRunDecisionItemRequest {
   overrideAssigneeId?: number | null;
   overridePlannedStart?: number | null;
   overridePlannedEnd?: number | null;
+  overrideAllocationChunks?: PMOptimizationScheduleAllocationApi[];
 }
 
 export interface PMBatchUpdateOptimizationRunItemDecisionsRequest {

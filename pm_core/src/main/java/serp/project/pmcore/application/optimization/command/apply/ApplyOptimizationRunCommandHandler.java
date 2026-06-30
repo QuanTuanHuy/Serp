@@ -291,13 +291,14 @@ public class ApplyOptimizationRunCommandHandler
     private List<WorkItemPlanAllocationEntity> buildPlanAllocations(ApplyOptimizationRunCommand command,
                                                                     OptimizationRunItemEntity item,
                                                                     WorkItemPlanEntity plan) {
-        if (item.getScheduleDecision() == OptimizationDecision.OVERRIDDEN
-                || item.getAllocationChunksJson() == null
-                || item.getAllocationChunksJson().isBlank()) {
+        String allocationChunksJson = item.getScheduleDecision() == OptimizationDecision.OVERRIDDEN
+                ? item.getOverrideAllocationChunksJson()
+                : item.getAllocationChunksJson();
+        if (allocationChunksJson == null || allocationChunksJson.isBlank()) {
             return List.of();
         }
         List<OptimizationScheduleAllocation> allocations = jsonUtils.fromJsonToList(
-                item.getAllocationChunksJson(), OptimizationScheduleAllocation.class);
+                allocationChunksJson, OptimizationScheduleAllocation.class);
         if (allocations == null || allocations.isEmpty()) {
             return List.of();
         }

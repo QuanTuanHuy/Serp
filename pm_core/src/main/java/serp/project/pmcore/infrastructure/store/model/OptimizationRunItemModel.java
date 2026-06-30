@@ -89,6 +89,8 @@ public class OptimizationRunItemModel extends BaseModel {
     private String violationsJson;
     @Column(name = "allocation_chunks_json", columnDefinition = "TEXT")
     private String allocationChunksJson;
+    @Column(name = "override_allocation_chunks_json", columnDefinition = "TEXT")
+    private String overrideAllocationChunksJson;
     @Column(name = "applied_at")
     private LocalDateTime appliedAt;
     @Column(name = "assignment_skipped_reason")

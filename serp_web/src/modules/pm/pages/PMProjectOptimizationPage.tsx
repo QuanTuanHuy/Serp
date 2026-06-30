@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
 import { Badge, Button, Card, CardContent } from '@/shared/components/ui';
 import {
-  PM_OPTIMIZATION_DEFAULT_ALGORITHM_KEY,
+  getPmOptimizationAlgorithmKeyForObjective,
   getPmOptimizationAlgorithmLabel,
 } from '../constants/optimization';
 import {
@@ -63,9 +63,7 @@ export function PMProjectOptimizationPage({
   const [changeScope, setChangeScope] = useState<PMOptimizationChangeScope>(
     'ASSIGNMENT_AND_SCHEDULE'
   );
-  const [algorithmKey, setAlgorithmKey] = useState(
-    PM_OPTIMIZATION_DEFAULT_ALGORITHM_KEY
-  );
+  const algorithmKey = getPmOptimizationAlgorithmKeyForObjective(objective);
   const [dateState, setDateState] = useState<DateInputState>({
     planningStart: toLocalDateInputValue(Date.now()),
     planningEnd: toLocalDateInputValue(Date.now() + 14 * 24 * 60 * 60 * 1000),
@@ -263,7 +261,6 @@ export function PMProjectOptimizationPage({
             planningEnd={dateState.planningEnd}
             onObjectiveChange={setObjective}
             onChangeScopeChange={setChangeScope}
-            onAlgorithmKeyChange={setAlgorithmKey}
             onPlanningStartChange={(value) =>
               setDateState((current) => ({
                 ...current,

@@ -109,7 +109,12 @@ public class OptimizationRunController {
                         item.getScheduleDecision(),
                         item.getOverrideAssigneeId(),
                         item.getOverridePlannedStart(),
-                        item.getOverridePlannedEnd()
+                        item.getOverridePlannedEnd(),
+                        item.getOverrideAllocationChunks() == null
+                                ? List.of()
+                                : item.getOverrideAllocationChunks().stream()
+                                        .map(BatchUpdateOptimizationRunItemDecisionsRequest.AllocationRequest::toCommand)
+                                        .toList()
                 ))
                 .toList();
 

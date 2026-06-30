@@ -163,6 +163,56 @@ class ApplyOptimizationRunCommandHandlerTest {
     }
 
     @Test
+    void handleShouldWriteOverrideAllocationsForOverriddenSchedule() {
+        OptimizationRunEntity run = run();
+        OptimizationRunItemEntity item = runItem();
+        item.setScheduleDecision(OptimizationDecision.OVERRIDDEN);
+        item.setOverridePlannedStart(1_714_876_800_000L);
+        item.setOverridePlannedEnd(1_714_883_200_000L);
+        item.setOverrideAllocationChunksJson("[{\"assigneeId\":200,\"start\":1714876800000,\"end\":1714883200000,\"effortMillis\":6400000}]");
+        WorkItemEntity workItem = workItem(SNAPSHOT_UPDATED_AT, 100L);
+        ProjectEntity project = project();
+        ProjectPermissionEvaluationContext actorContext = ProjectPermissionEvaluationContext.builder()
+                .userId(USER_ID)
+                .groupKeys(Set.of("pm"))
+                .reporterUserId(101L)
+                .assigneeUserId(100L)
+                .build();
+
+        stubCommon(run, item, project, workItem);
+        when(workItemAuthorizationSupportService.buildActorContext(USER_ID, Set.of("pm"), 101L, 100L)).thenReturn(actorContext);
+        when(workItemPlanPort.upsertActivePlan(any())).thenReturn(WorkItemPlanEntity.builder()
+                .id(701L)
+                .tenantId(TENANT_ID)
+                .projectId(PROJECT_ID)
+                .workItemId(WORK_ITEM_ID)
+                .plannedStart(1_714_876_800_000L)
+                .plannedEnd(1_714_883_200_000L)
+                .source(WorkItemPlanSource.OPTIMIZATION)
+                .sourceRunId(RUN_ID)
+                .locked(false)
+                .build());
+        when(jsonUtils.fromJsonToList(eq(item.getOverrideAllocationChunksJson()), eq(OptimizationScheduleAllocation.class)))
+                .thenReturn(List.of(new OptimizationScheduleAllocation(
+                        200L,
+                        1_714_876_800_000L,
+                        1_714_883_200_000L,
+                        6_400_000L
+                )));
+        when(optimizationRunReviewAssembler.toView(any(), any(), any()))
+                .thenReturn(OptimizationRunReviewView.builder().id(RUN_ID).build());
+
+        handler.handle(new ApplyOptimizationRunCommand(
+                TENANT_ID, USER_ID, PROJECT_ID, RUN_ID, false, true, List.of(WORK_ITEM_ID), Set.of("pm")));
+
+        ArgumentCaptor<List<WorkItemPlanAllocationEntity>> allocationCaptor = ArgumentCaptor.forClass(List.class);
+        verify(workItemPlanAllocationPort).replaceForPlan(eq(TENANT_ID), eq(701L), allocationCaptor.capture());
+        assertEquals(1, allocationCaptor.getValue().size());
+        assertEquals(200L, allocationCaptor.getValue().getFirst().getAssigneeId());
+        assertEquals(6_400_000L, allocationCaptor.getValue().getFirst().getEffortMillis());
+    }
+
+    @Test
     void handleShouldSkipStaleAssignment() {
         OptimizationRunEntity run = run();
         OptimizationRunItemEntity item = runItem();
