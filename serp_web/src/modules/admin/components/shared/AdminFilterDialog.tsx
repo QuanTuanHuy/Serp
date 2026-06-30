@@ -6,7 +6,7 @@
  */
 
 import type React from 'react';
-import { ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import {
   Badge,
   Button,
@@ -104,5 +104,50 @@ export function AdminFilterDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export interface FilterPaneProps {
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function FilterPane({ title, children, className }: FilterPaneProps) {
+  return (
+    <div className='flex min-h-0 flex-1 flex-col p-4'>
+      <div className='mb-3'>
+        <h3 className='text-sm font-semibold'>{title}</h3>
+        <p className='text-sm text-muted-foreground'>Select one value.</p>
+      </div>
+      <div className={cn('flex-1 overflow-y-auto space-y-2 pr-1', className)}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export interface FilterOptionProps {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+export function FilterOption({ label, selected, onSelect }: FilterOptionProps) {
+  return (
+    <button
+      type='button'
+      onClick={onSelect}
+      title={label}
+      className={cn(
+        'flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted transition-colors',
+        selected && 'bg-muted font-medium'
+      )}
+    >
+      <span className='min-w-0 flex-1 truncate'>{label}</span>
+      {selected ? (
+        <CheckCircle className='h-4 w-4 shrink-0 text-primary' />
+      ) : null}
+    </button>
   );
 }

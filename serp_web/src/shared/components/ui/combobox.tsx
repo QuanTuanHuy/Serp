@@ -34,6 +34,7 @@ export interface ComboboxProps {
   clearable?: boolean;
   onSearch?: (query: string) => void; // if provided, caller controls filtering via items
   className?: string;
+  modal?: boolean;
 }
 
 export const Combobox: React.FC<ComboboxProps> = ({
@@ -47,6 +48,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
   clearable = true,
   onSearch,
   className,
+  modal = false,
 }) => {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -63,7 +65,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={modal}>
       <PopoverTrigger asChild>
         <Button
           type='button'

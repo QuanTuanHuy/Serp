@@ -12,8 +12,7 @@ import {
   useCreateMenuDisplayMutation,
   useUpdateMenuDisplayMutation,
   useDeleteMenuDisplayMutation,
-  useAssignMenuDisplaysToRoleMutation,
-  useUnassignMenuDisplaysFromRoleMutation,
+  useUpdateMenuDisplayRolesMutation,
 } from '../services/adminApi';
 import {
   setMenuDisplaysFilters,
@@ -208,10 +207,8 @@ export const useMenuDisplays = () => {
     useUpdateMenuDisplayMutation();
   const [deleteMenuDisplay, { isLoading: isDeletingMenuDisplay }] =
     useDeleteMenuDisplayMutation();
-  const [assignMenuDisplaysToRole, { isLoading: isAssigningRole }] =
-    useAssignMenuDisplaysToRoleMutation();
-  const [unassignMenuDisplaysFromRole, { isLoading: isUnassigningRole }] =
-    useUnassignMenuDisplaysFromRoleMutation();
+  const [updateMenuDisplayRoles, { isLoading: isUpdatingRoles }] =
+    useUpdateMenuDisplayRolesMutation();
 
   // Extract items from paginated response
   const menuDisplaysData = menuDisplaysResponse?.data?.items || [];
@@ -419,41 +416,23 @@ export const useMenuDisplays = () => {
   );
 
   // Role assignment operations
-  const handleAssignRole = useCallback(
-    async (roleId: number, menuDisplayIds: number[]) => {
+  const handleUpdateMenuDisplayRoles = useCallback(
+    async (menuDisplayId: number, roleIds: number[]) => {
       try {
-        const message = await assignMenuDisplaysToRole({
-          roleId,
-          menuDisplayIds,
-        }).unwrap();
-        toast.success(message);
-        refetch();
-      } catch (error: any) {
-        const errorMessage = getErrorMessage(error) || 'Failed to assign role';
-        toast.error(errorMessage);
-        throw error;
-      }
-    },
-    [assignMenuDisplaysToRole, refetch]
-  );
-
-  const handleUnassignRole = useCallback(
-    async (roleId: number, menuDisplayIds: number[]) => {
-      try {
-        const message = await unassignMenuDisplaysFromRole({
-          roleId,
-          menuDisplayIds,
+        const message = await updateMenuDisplayRoles({
+          id: menuDisplayId,
+          roleIds,
         }).unwrap();
         toast.success(message);
         refetch();
       } catch (error: any) {
         const errorMessage =
-          getErrorMessage(error) || 'Failed to unassign role';
+          getErrorMessage(error) || 'Failed to update roles';
         toast.error(errorMessage);
         throw error;
       }
     },
-    [unassignMenuDisplaysFromRole, refetch]
+    [updateMenuDisplayRoles, refetch]
   );
 
   // Role dialog actions
@@ -499,8 +478,7 @@ export const useMenuDisplays = () => {
     isCreatingMenuDisplay,
     isUpdatingMenuDisplay,
     isDeletingMenuDisplay,
-    isAssigningRole,
-    isUnassigningRole,
+    isUpdatingRoles,
 
     // Dialog state
     isDialogOpen,
@@ -532,8 +510,7 @@ export const useMenuDisplays = () => {
     handleUpdateMenuDisplay,
     handleDeleteMenuDisplay,
     submitMenuDisplay,
-    handleAssignRole,
-    handleUnassignRole,
+    handleUpdateMenuDisplayRoles,
     refetch,
 
     // Role dialog state & actions

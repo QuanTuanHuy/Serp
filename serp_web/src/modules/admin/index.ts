@@ -29,7 +29,11 @@ export type {
   AdminActionMenuProps,
   AdminActionMenuItem,
 } from './components/shared/AdminActionMenu';
-export { AdminFilterDialog } from './components/shared/AdminFilterDialog';
+export {
+  AdminFilterDialog,
+  FilterPane,
+  FilterOption,
+} from './components/shared/AdminFilterDialog';
 export type {
   AdminFilterCriterion,
   AdminFilterDialogProps,
@@ -204,8 +208,7 @@ export {
   useCreateMenuDisplayMutation,
   useUpdateMenuDisplayMutation,
   useDeleteMenuDisplayMutation,
-  useAssignMenuDisplaysToRoleMutation,
-  useUnassignMenuDisplaysFromRoleMutation,
+  useUpdateMenuDisplayRolesMutation,
 } from './services/adminApi';
 
 // Users UI Components

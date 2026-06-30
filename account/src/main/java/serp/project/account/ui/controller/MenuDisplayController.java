@@ -15,6 +15,7 @@ import serp.project.account.core.domain.dto.request.AssignMenuDisplayToRoleDto;
 import serp.project.account.core.domain.dto.request.CreateMenuDisplayDto;
 import serp.project.account.core.domain.dto.request.GetMenuDisplayParams;
 import serp.project.account.core.domain.dto.request.UpdateMenuDisplayDto;
+import serp.project.account.core.domain.dto.request.UpdateMenuDisplayRolesDto;
 import serp.project.account.core.usecase.MenuDisplayUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
 
@@ -102,6 +103,14 @@ public class MenuDisplayController {
     @GetMapping("/menu-displays/get-by-role-ids")
     public ResponseEntity<?> getMenuDisplaysByRoleIds(@RequestParam List<Long> roleIds) {
         var response = menuDisplayUseCase.getMenuDisplaysByRoleIds(roleIds);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PutMapping("/menu-displays/{id}/roles")
+    public ResponseEntity<?> updateMenuDisplayRoles(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateMenuDisplayRolesDto request) {
+        var response = menuDisplayUseCase.updateMenuDisplayRoles(id, request);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

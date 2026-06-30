@@ -81,4 +81,22 @@ public class MenuDisplayRoleAdapter implements IMenuDisplayRolePort {
 
         jdbcTemplate.update(sql, params);
     }
+
+    @Override
+    public void deleteByMenuDisplayIdAndRoleIds(Long menuDisplayId, List<Long> roleIds) {
+        if (roleIds == null || roleIds.isEmpty()) {
+            return;
+        }
+
+        String placeholders = roleIds.stream().map(id -> "?").collect(Collectors.joining(", "));
+        String sql = "DELETE FROM menu_display_roles WHERE menu_display_id = ? AND role_id IN (" + placeholders + ")";
+
+        Object[] params = new Object[1 + roleIds.size()];
+        params[0] = menuDisplayId;
+        for (int i = 0; i < roleIds.size(); i++) {
+            params[i + 1] = roleIds.get(i);
+        }
+
+        jdbcTemplate.update(sql, params);
+    }
 }
