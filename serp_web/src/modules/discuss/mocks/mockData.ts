@@ -189,6 +189,7 @@ export function createMockMessage(
     isEdited: false,
     isDeleted: false,
     readCount: 0,
+    readBy: [],
     sender: {
       id: user.id,
       name: user.name,

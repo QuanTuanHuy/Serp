@@ -398,6 +398,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               isEdited: false,
               isDeleted: false,
               readCount: 0,
+              readBy: [],
               isSentByMe: true,
               sender: {
                 id: currentUserId,
