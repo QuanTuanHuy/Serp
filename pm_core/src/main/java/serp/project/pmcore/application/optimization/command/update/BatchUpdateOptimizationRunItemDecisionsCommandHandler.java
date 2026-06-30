@@ -24,12 +24,17 @@ import serp.project.pmcore.domain.optimization.model.OptimizationBuilderInput;
 import serp.project.pmcore.domain.optimization.model.OptimizationDependencyEdge;
 import serp.project.pmcore.domain.optimization.model.OptimizationProjectModel;
 import serp.project.pmcore.domain.optimization.model.OptimizationRunIntent;
+import serp.project.pmcore.domain.optimization.model.OptimizationScheduleAllocation;
 import serp.project.pmcore.domain.optimization.model.OptimizationWorkItem;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunItemPort;
 import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
+import serp.project.pmcore.domain.project.entity.ProjectEntity;
+import serp.project.pmcore.domain.project.service.IProjectMemberService;
+import serp.project.pmcore.domain.project.service.IProjectService;
 import serp.project.pmcore.domain.shared.exception.DomainErrorCode;
 import serp.project.pmcore.domain.shared.exception.ResourceNotFoundException;
+import serp.project.pmcore.kernel.utils.JsonUtils;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -52,6 +57,9 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
     private final IOptimizationProjectModelBuilder optimizationProjectModelBuilder;
     private final OptimizationRunReviewAssembler optimizationRunReviewAssembler;
     private final OptimizationRunWarningAuditService optimizationRunWarningAuditService;
+    private final IProjectService projectService;
+    private final IProjectMemberService projectMemberService;
+    private final JsonUtils jsonUtils;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -87,15 +95,18 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
         OptimizationProjectModel projectModel = needsModelValidation(command)
                 ? buildCurrentProjectModel(run, items)
                 : null;
+        Set<Long> assignableMemberIds = needsScheduleOverride(command)
+                ? assignableMemberIds(command)
+                : Set.of();
         decisionsByWorkItemId.values().forEach(decision ->
-                validateDecisionBasics(command, run, decision, projectModel));
+                validateDecisionBasics(command, run, decision, projectModel, assignableMemberIds));
         decisionsByWorkItemId.values().forEach(decision ->
                 validateScheduleDependencies(command, decision, projectModel, itemsByWorkItemId, decisionsByWorkItemId));
 
         long now = System.currentTimeMillis();
         for (BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision decision : decisionsByWorkItemId.values()) {
             OptimizationRunItemEntity item = itemsByWorkItemId.get(decision.workItemId());
-            applyDecision(command, decision, item, now);
+            applyDecision(command, run, decision, item, assignableMemberIds, now);
         }
         optimizationRunItemPort.saveAll(selectedItems);
 
@@ -107,7 +118,8 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
     private void validateDecisionBasics(BatchUpdateOptimizationRunItemDecisionsCommand command,
                                         OptimizationRunEntity run,
                                         BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision decision,
-                                        OptimizationProjectModel projectModel) {
+                                        OptimizationProjectModel projectModel,
+                                        Set<Long> assignableMemberIds) {
         if (decision.assignmentDecision() == OptimizationDecision.OVERRIDDEN) {
             if (decision.overrideAssigneeId() == null || decision.overrideAssigneeId() <= 0) {
                 rejectInvalidOverride(command, decision.workItemId(),
@@ -119,17 +131,21 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
             }
         }
         if (decision.scheduleDecision() == OptimizationDecision.OVERRIDDEN) {
-            if (decision.overridePlannedStart() == null || decision.overridePlannedEnd() == null) {
-                rejectInvalidOverride(command, decision.workItemId(),
-                        "overridePlannedStart and overridePlannedEnd are required when scheduleDecision is OVERRIDDEN");
+            List<OptimizationScheduleAllocation> allocations = buildOverrideAllocations(
+                    command,
+                    run,
+                    decision,
+                    assignableMemberIds
+            );
+            Long overrideStart = derivedStart(allocations);
+            Long overrideEnd = derivedEnd(allocations);
+            if (overrideStart == null || overrideEnd == null || overrideStart >= overrideEnd) {
+                rejectInvalidOverride(command, decision.workItemId(), "override allocation range is invalid");
             }
-            if (decision.overridePlannedStart() >= decision.overridePlannedEnd()) {
-                rejectInvalidOverride(command, decision.workItemId(), "overridePlannedStart must be before overridePlannedEnd");
-            }
-            if (decision.overridePlannedStart() < run.getPlanningStart()
-                    || decision.overridePlannedEnd() > run.getPlanningEnd()) {
+            if (overrideStart < run.getPlanningStart()
+                    || overrideEnd > run.getPlanningEnd()) {
                 rejectInvalidOverride(command, decision.workItemId(),
-                        "override planned range must stay within the optimization planning range");
+                        "override allocation range must stay within the optimization planning range");
             }
         }
     }
@@ -143,16 +159,18 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
             return;
         }
         for (OptimizationDependencyEdge edge : projectModel.dependencyGraph().internalEdges()) {
+            Long decisionStart = decisionOverrideStart(decision);
+            Long decisionEnd = decisionOverrideEnd(decision);
             if (Objects.equals(edge.successorId(), decision.workItemId())) {
                 Long predecessorEnd = effectivePlannedEnd(edge.predecessorId(), itemsByWorkItemId, decisionsByWorkItemId);
-                if (predecessorEnd != null && predecessorEnd > decision.overridePlannedStart()) {
+                if (predecessorEnd != null && decisionStart != null && predecessorEnd > decisionStart) {
                     rejectInvalidOverride(command, decision.workItemId(),
                             "override violates hard dependency: predecessorId=" + edge.predecessorId());
                 }
             }
             if (Objects.equals(edge.predecessorId(), decision.workItemId())) {
                 Long successorStart = effectivePlannedStart(edge.successorId(), itemsByWorkItemId, decisionsByWorkItemId);
-                if (successorStart != null && decision.overridePlannedEnd() > successorStart) {
+                if (successorStart != null && decisionEnd != null && decisionEnd > successorStart) {
                     rejectInvalidOverride(command, decision.workItemId(),
                             "override violates hard dependency: successorId=" + edge.successorId());
                 }
@@ -171,7 +189,7 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
         OptimizationDecision scheduleDecision = finalScheduleDecision(item, decision);
         if (scheduleDecision == OptimizationDecision.OVERRIDDEN) {
             return decision != null && decision.scheduleDecision() == OptimizationDecision.OVERRIDDEN
-                    ? decision.overridePlannedStart()
+                    ? decisionOverrideStart(decision)
                     : item.getOverridePlannedStart();
         }
         if (scheduleDecision == OptimizationDecision.REJECTED) {
@@ -191,7 +209,7 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
         OptimizationDecision scheduleDecision = finalScheduleDecision(item, decision);
         if (scheduleDecision == OptimizationDecision.OVERRIDDEN) {
             return decision != null && decision.scheduleDecision() == OptimizationDecision.OVERRIDDEN
-                    ? decision.overridePlannedEnd()
+                    ? decisionOverrideEnd(decision)
                     : item.getOverridePlannedEnd();
         }
         if (scheduleDecision == OptimizationDecision.REJECTED) {
@@ -208,9 +226,31 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
         return item.getScheduleDecision();
     }
 
+    private Long decisionOverrideStart(BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision decision) {
+        if (decision == null || decision.overrideAllocationChunks().isEmpty()) {
+            return decision == null ? null : decision.overridePlannedStart();
+        }
+        return decision.overrideAllocationChunks().stream()
+                .map(BatchUpdateOptimizationRunItemDecisionsCommand.AllocationOverride::start)
+                .min(Long::compareTo)
+                .orElse(null);
+    }
+
+    private Long decisionOverrideEnd(BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision decision) {
+        if (decision == null || decision.overrideAllocationChunks().isEmpty()) {
+            return decision == null ? null : decision.overridePlannedEnd();
+        }
+        return decision.overrideAllocationChunks().stream()
+                .map(BatchUpdateOptimizationRunItemDecisionsCommand.AllocationOverride::end)
+                .max(Long::compareTo)
+                .orElse(null);
+    }
+
     private void applyDecision(BatchUpdateOptimizationRunItemDecisionsCommand command,
+                               OptimizationRunEntity run,
                                BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision decision,
                                OptimizationRunItemEntity item,
+                               Set<Long> assignableMemberIds,
                                long now) {
         if (decision.assignmentDecision() != null) {
             item.setAssignmentDecision(decision.assignmentDecision());
@@ -221,14 +261,89 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
         if (decision.scheduleDecision() != null) {
             item.setScheduleDecision(decision.scheduleDecision());
             if (decision.scheduleDecision() == OptimizationDecision.OVERRIDDEN) {
-                item.setOverridePlannedStart(decision.overridePlannedStart());
-                item.setOverridePlannedEnd(decision.overridePlannedEnd());
+                List<OptimizationScheduleAllocation> allocations = buildOverrideAllocations(
+                        command,
+                        run,
+                        decision,
+                        assignableMemberIds
+                );
+                item.setOverridePlannedStart(derivedStart(allocations));
+                item.setOverridePlannedEnd(derivedEnd(allocations));
+                item.setOverrideAllocationChunksJson(jsonUtils.toJson(allocations));
             } else {
                 item.setOverridePlannedStart(null);
                 item.setOverridePlannedEnd(null);
+                item.setOverrideAllocationChunksJson(null);
             }
         }
         item.applyUpdate(command.userId(), now);
+    }
+
+    private List<OptimizationScheduleAllocation> buildOverrideAllocations(
+            BatchUpdateOptimizationRunItemDecisionsCommand command,
+            OptimizationRunEntity run,
+            BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision decision,
+            Set<Long> assignableMemberIds) {
+        if (decision.overrideAllocationChunks().isEmpty()) {
+            rejectInvalidOverride(command, decision.workItemId(),
+                    "overrideAllocationChunks is required when scheduleDecision is OVERRIDDEN");
+        }
+        return decision.overrideAllocationChunks().stream()
+                .map(allocation -> toScheduleAllocation(command, run, decision, allocation, assignableMemberIds))
+                .toList();
+    }
+
+    private OptimizationScheduleAllocation toScheduleAllocation(
+            BatchUpdateOptimizationRunItemDecisionsCommand command,
+            OptimizationRunEntity run,
+            BatchUpdateOptimizationRunItemDecisionsCommand.ItemDecision decision,
+            BatchUpdateOptimizationRunItemDecisionsCommand.AllocationOverride allocation,
+            Set<Long> assignableMemberIds) {
+        if (allocation == null
+                || allocation.assigneeId() == null
+                || allocation.start() == null
+                || allocation.end() == null
+                || allocation.effortMillis() == null
+                || allocation.assigneeId() <= 0
+                || allocation.start() <= 0
+                || allocation.end() <= 0
+                || allocation.effortMillis() <= 0) {
+            rejectInvalidOverride(command, decision.workItemId(),
+                    "override allocation fields must be positive");
+        }
+        if (allocation.start() >= allocation.end()) {
+            rejectInvalidOverride(command, decision.workItemId(),
+                    "override allocation start must be before end");
+        }
+        if (run != null
+                && (allocation.start() < run.getPlanningStart() || allocation.end() > run.getPlanningEnd())) {
+            rejectInvalidOverride(command, decision.workItemId(),
+                    "override allocation range must stay within the optimization planning range");
+        }
+        if (!assignableMemberIds.contains(allocation.assigneeId())) {
+            rejectInvalidOverride(command, decision.workItemId(),
+                    "override allocation assigneeId must be an assignable project member");
+        }
+        return new OptimizationScheduleAllocation(
+                allocation.assigneeId(),
+                allocation.start(),
+                allocation.end(),
+                allocation.effortMillis()
+        );
+    }
+
+    private Long derivedStart(List<OptimizationScheduleAllocation> allocations) {
+        return allocations.stream()
+                .map(OptimizationScheduleAllocation::start)
+                .min(Long::compareTo)
+                .orElse(null);
+    }
+
+    private Long derivedEnd(List<OptimizationScheduleAllocation> allocations) {
+        return allocations.stream()
+                .map(OptimizationScheduleAllocation::end)
+                .max(Long::compareTo)
+                .orElse(null);
     }
 
     private boolean isGeneratedCandidate(OptimizationProjectModel projectModel, Long workItemId, Long assigneeId) {
@@ -266,6 +381,17 @@ public class BatchUpdateOptimizationRunItemDecisionsCommandHandler
         return command.items().stream()
                 .anyMatch(item -> item.assignmentDecision() == OptimizationDecision.OVERRIDDEN
                         || item.scheduleDecision() == OptimizationDecision.OVERRIDDEN);
+    }
+
+    private boolean needsScheduleOverride(BatchUpdateOptimizationRunItemDecisionsCommand command) {
+        return command.items().stream()
+                .anyMatch(item -> item.scheduleDecision() == OptimizationDecision.OVERRIDDEN);
+    }
+
+    private Set<Long> assignableMemberIds(BatchUpdateOptimizationRunItemDecisionsCommand command) {
+        ProjectEntity project = projectService.getProjectById(command.projectId(), command.tenantId());
+        List<Long> assignableMembers = projectMemberService.listAssignableMembers(project);
+        return assignableMembers == null ? Set.of() : Set.copyOf(assignableMembers);
     }
 
     private OptimizationRunItemEntity requireRunItem(BatchUpdateOptimizationRunItemDecisionsCommand command,

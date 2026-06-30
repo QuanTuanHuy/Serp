@@ -29,7 +29,21 @@ public record BatchUpdateOptimizationRunItemDecisionsCommand(
             OptimizationDecision scheduleDecision,
             Long overrideAssigneeId,
             Long overridePlannedStart,
-            Long overridePlannedEnd
+            Long overridePlannedEnd,
+            List<AllocationOverride> overrideAllocationChunks
+    ) {
+        public ItemDecision {
+            overrideAllocationChunks = overrideAllocationChunks == null
+                    ? List.of()
+                    : List.copyOf(overrideAllocationChunks);
+        }
+    }
+
+    public record AllocationOverride(
+            Long assigneeId,
+            Long start,
+            Long end,
+            Long effortMillis
     ) {
     }
 }
