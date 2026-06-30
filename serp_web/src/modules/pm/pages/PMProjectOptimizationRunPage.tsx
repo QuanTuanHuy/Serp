@@ -201,9 +201,7 @@ export function PMProjectOptimizationRunPage({
 
     void handleDecisionBatch(
       [decisionItem],
-      decision === 'ACCEPTED'
-        ? 'Suggestion accepted.'
-        : 'Suggestion rejected.'
+      decision === 'ACCEPTED' ? 'Suggestion accepted.' : 'Suggestion rejected.'
     );
   };
 
@@ -219,8 +217,8 @@ export function PMProjectOptimizationRunPage({
 
     const decisionItems = selectedItems
       .map((item) => buildMeaningfulDecisionItem(item, decision, reviewScope))
-      .filter(
-        (item): item is PMOptimizationRunDecisionItemRequest => Boolean(item)
+      .filter((item): item is PMOptimizationRunDecisionItemRequest =>
+        Boolean(item)
       );
 
     if (!decisionItems.length) {
