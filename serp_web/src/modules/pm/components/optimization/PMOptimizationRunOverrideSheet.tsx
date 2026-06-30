@@ -1,6 +1,6 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - PM optimization override dialog
+ * Description: Part of Serp Project - PM optimization override sheet
  */
 
 'use client';
@@ -11,12 +11,13 @@ import {
   Badge,
   Button,
   Checkbox,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Input,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
 } from '@/shared/components/ui';
 import { PMDatePicker } from '../shared';
 import { toLocalDateInputValue } from '../../utils/date';
@@ -32,7 +33,7 @@ import type {
   PMProjectPersonApi,
 } from '../../types/api';
 
-type PMOptimizationRunOverrideDialogProps = {
+type PMOptimizationRunOverrideSheetProps = {
   open: boolean;
   item: PMOptimizationRunItemApi | null;
   users: { id: number; label: string }[];
@@ -56,7 +57,7 @@ type PMOptimizationRunOverrideDialogProps = {
   isSaving?: boolean;
 };
 
-export function PMOptimizationRunOverrideDialog({
+export function PMOptimizationRunOverrideSheet({
   open,
   item,
   users,
@@ -76,7 +77,7 @@ export function PMOptimizationRunOverrideDialog({
   onSave,
   onClose,
   isSaving,
-}: PMOptimizationRunOverrideDialogProps) {
+}: PMOptimizationRunOverrideSheetProps) {
   const [showAllProjectMembers, setShowAllProjectMembers] = useState(false);
   const projectMemberOptions = projectPeople
     .map((person) => ({
@@ -144,13 +145,23 @@ export function PMOptimizationRunOverrideDialog({
     : null;
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className='max-h-[85vh] max-w-4xl overflow-y-auto'>
-        <DialogHeader>
-          <DialogTitle>Override suggestion</DialogTitle>
-        </DialogHeader>
-        {item ? (
-          <div className='space-y-4'>
+    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <SheetContent
+        side='right'
+        className='w-full gap-0 p-0 sm:max-w-2xl lg:max-w-3xl xl:max-w-4xl'
+      >
+        <SheetHeader className='border-b px-5 py-4'>
+          <SheetTitle>Override suggestion</SheetTitle>
+          <SheetDescription>
+            {item
+              ? item.workItem?.key || `Work item #${item.workItemId}`
+              : ''}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className='min-h-0 flex-1 overflow-y-auto px-5 py-4'>
+          {item ? (
+            <div className='space-y-5'>
             <div className='flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
               <Badge variant='secondary'>
                 {item.workItem?.key || `Work item #${item.workItemId}`}
@@ -268,7 +279,7 @@ export function PMOptimizationRunOverrideDialog({
                   {overrideAllocationChunks.map((chunk, index) => (
                     <div
                       key={`${chunk.assigneeId}-${chunk.start}-${index}`}
-                      className='grid gap-2 rounded-md border p-3 md:grid-cols-[1fr_1fr_1fr_120px_40px]'
+                      className='grid gap-2 rounded-md border p-3 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_120px_40px]'
                     >
                       <select
                         value={chunk.assigneeId || ''}
@@ -362,18 +373,20 @@ export function PMOptimizationRunOverrideDialog({
                 </label>
               </div>
             )}
-          </div>
-        ) : null}
-        <DialogFooter>
+            </div>
+          ) : null}
+        </div>
+
+        <SheetFooter className='border-t bg-background px-5 py-4 sm:flex-row sm:justify-end'>
           <Button type='button' variant='outline' onClick={onClose}>
             Cancel
           </Button>
           <Button type='button' onClick={onSave} disabled={isSaving}>
             Save override
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 

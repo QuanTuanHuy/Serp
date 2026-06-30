@@ -41,7 +41,7 @@ import { useGetPmProjectPeopleQuery } from '../api/projectApi';
 import { fromLocalDateInputValue, toLocalDateInputValue } from '../utils/date';
 import { PMOptimizationRunItemTable } from '../components/optimization/PMOptimizationRunItemTable';
 import { PMOptimizationRunOverview } from '../components/optimization/PMOptimizationRunOverview';
-import { PMOptimizationRunOverrideDialog } from '../components/optimization/PMOptimizationRunOverrideDialog';
+import { PMOptimizationRunOverrideSheet } from '../components/optimization/PMOptimizationRunOverrideSheet';
 import { getPmOptimizationAlgorithmLabel } from '../constants/optimization';
 import type {
   PMOptimizationDecision,
@@ -621,7 +621,7 @@ export function PMProjectOptimizationRunPage({
         </TabsContent>
       </Tabs>
 
-      <PMOptimizationRunOverrideDialog
+      <PMOptimizationRunOverrideSheet
         open={Boolean(reviewItem)}
         item={reviewItem}
         users={users}
