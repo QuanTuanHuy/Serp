@@ -128,7 +128,10 @@ export const opportunityApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'crm' },
       transformResponse: mapSingleOpportunityResponse,
-      invalidatesTags: [{ type: 'Opportunity', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Opportunity', id: 'LIST' },
+        { type: 'Opportunity', id: 'PIPELINE' },
+      ],
     }),
 
     updateOpportunity: builder.mutation<
@@ -145,6 +148,7 @@ export const opportunityApi = api.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: 'Opportunity', id },
         { type: 'Opportunity', id: 'LIST' },
+        { type: 'Opportunity', id: 'PIPELINE' },
       ],
     }),
 
