@@ -21,6 +21,7 @@ import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateMenuDisplayDto;
 import serp.project.account.core.domain.dto.request.GetMenuDisplayParams;
 import serp.project.account.core.domain.dto.request.UpdateMenuDisplayDto;
+import serp.project.account.core.domain.dto.request.UpdateMenuDisplayRolesDto;
 import serp.project.account.core.domain.dto.response.MenuDisplayResponse;
 import serp.project.account.core.domain.entity.MenuDisplayEntity;
 import serp.project.account.core.domain.entity.MenuDisplayRoleEntity;
@@ -279,6 +280,42 @@ public class MenuDisplayUseCase {
         } catch (Exception e) {
             log.error("Unexpected Error fetching menu displays by module id and user id: {}", e.getMessage());
             return responseUtils.internalServerError(e.getMessage());
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> updateMenuDisplayRoles(Long id, UpdateMenuDisplayRolesDto request) {
+        try {
+            var menuDisplay = menuDisplayService.getMenuDisplayById(id);
+            if (menuDisplay == null) {
+                throw new AppException(Constants.ErrorMessage.MENU_DISPLAY_NOT_FOUND);
+            }
+            List<Long> roleIds = request.getRoleIds().stream().distinct().toList();
+            if (!roleIds.isEmpty()) {
+                var roles = roleService.getAllRoles().stream()
+                        .filter(r -> roleIds.contains(r.getId()))
+                        .toList();
+                if (roles.size() != roleIds.size()) {
+                    throw new AppException(Constants.ErrorMessage.ROLE_NOT_FOUND);
+                }
+                for (var role : roles) {
+                    if (!role.canAssignToMenuDisplays()) {
+                        throw new AppException(Constants.ErrorMessage.ROLE_CANNOT_ASSIGN_MENU_DISPLAYS);
+                    }
+                    if (!role.isSystemRole() && !Objects.equals(role.getModuleId(), menuDisplay.getModuleId())) {
+                        throw new AppException(Constants.ErrorMessage.ROLE_MODULE_MISMATCH);
+                    }
+                }
+            }
+
+            menuDisplayService.updateMenuDisplayRoles(id, roleIds);
+            return responseUtils.success("Updated menu display roles successfully");
+        } catch (AppException e) {
+            log.error("Error updating menu display roles: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected Error updating menu display roles: {}", e.getMessage());
+            throw e;
         }
     }
 }
