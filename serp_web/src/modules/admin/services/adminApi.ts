@@ -105,6 +105,5 @@ export {
   useCreateMenuDisplayMutation,
   useUpdateMenuDisplayMutation,
   useDeleteMenuDisplayMutation,
-  useAssignMenuDisplaysToRoleMutation,
-  useUnassignMenuDisplaysFromRoleMutation,
+  useUpdateMenuDisplayRolesMutation,
 } from './menu-displays/menuDisplaysApi';
