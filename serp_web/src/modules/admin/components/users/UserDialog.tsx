@@ -120,6 +120,7 @@ export function UserDialog() {
               <Label>Organization</Label>
               <Combobox
                 value={organizationId}
+                modal={true}
                 onChange={(value) => {
                   setOrganizationId(
                     value !== undefined ? Number(value) : undefined
