@@ -71,7 +71,10 @@ export const UserProfileCard: React.FC = () => {
 
   const handleStatusSelect = async (status: UserStatus) => {
     try {
-      await updateMyPresence({ status, statusMessage: currentMessage }).unwrap();
+      await updateMyPresence({
+        status,
+        statusMessage: currentMessage,
+      }).unwrap();
     } catch (err) {
       console.error('Failed to update status:', err);
     }
@@ -160,7 +163,12 @@ export const UserProfileCard: React.FC = () => {
           </div>
         </button>
       </PopoverTrigger>
-      <PopoverContent className='w-72 p-3' align='start' side='top' sideOffset={8}>
+      <PopoverContent
+        className='w-72 p-3'
+        align='start'
+        side='top'
+        sideOffset={8}
+      >
         <div className='space-y-3'>
           <div className='flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800'>
             <span className='text-xs font-semibold text-slate-500 uppercase tracking-wide'>
@@ -170,42 +178,51 @@ export const UserProfileCard: React.FC = () => {
 
           {/* Quick status selector */}
           <div className='grid grid-cols-3 gap-1.5'>
-            {(['ONLINE', 'BUSY', 'OFFLINE'] as UserStatus[]).map((statusOption) => {
-              const mapped = mapStatusToOnlineStatus(statusOption);
-              const isActive = currentStatus === statusOption;
-              const label =
-                statusOption === 'ONLINE'
-                  ? 'Online'
-                  : statusOption === 'BUSY'
-                    ? 'DND'
-                    : 'Offline';
+            {(['ONLINE', 'BUSY', 'OFFLINE'] as UserStatus[]).map(
+              (statusOption) => {
+                const mapped = mapStatusToOnlineStatus(statusOption);
+                const isActive = currentStatus === statusOption;
+                const label =
+                  statusOption === 'ONLINE'
+                    ? 'Online'
+                    : statusOption === 'BUSY'
+                      ? 'DND'
+                      : 'Offline';
 
-              return (
-                <Button
-                  key={statusOption}
-                  variant={isActive ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => handleStatusSelect(statusOption)}
-                  disabled={isUpdating}
-                  className={cn(
-                    'h-8 gap-1.5 text-xs',
-                    isActive &&
-                      statusOption === 'ONLINE' &&
-                      'bg-emerald-600 hover:bg-emerald-700',
-                    isActive &&
-                      statusOption === 'BUSY' &&
-                      'bg-rose-600 hover:bg-rose-700'
-                  )}
-                >
-                  <OnlineStatusIndicator status={mapped} size='sm' showPulse={false} />
-                  {label}
-                </Button>
-              );
-            })}
+                return (
+                  <Button
+                    key={statusOption}
+                    variant={isActive ? 'default' : 'outline'}
+                    size='sm'
+                    onClick={() => handleStatusSelect(statusOption)}
+                    disabled={isUpdating}
+                    className={cn(
+                      'h-8 gap-1.5 text-xs',
+                      isActive &&
+                        statusOption === 'ONLINE' &&
+                        'bg-emerald-600 hover:bg-emerald-700',
+                      isActive &&
+                        statusOption === 'BUSY' &&
+                        'bg-rose-600 hover:bg-rose-700'
+                    )}
+                  >
+                    <OnlineStatusIndicator
+                      status={mapped}
+                      size='sm'
+                      showPulse={false}
+                    />
+                    {label}
+                  </Button>
+                );
+              }
+            )}
           </div>
 
           {/* Status Message Form */}
-          <form onSubmit={handleSaveMessage} className='space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800'>
+          <form
+            onSubmit={handleSaveMessage}
+            className='space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800'
+          >
             <div className='space-y-1.5'>
               <label className='text-xs font-medium text-slate-500'>
                 Status message
@@ -240,7 +257,9 @@ export const UserProfileCard: React.FC = () => {
                 disabled={isUpdating}
                 className='h-7 text-xs px-3 bg-violet-600 hover:bg-violet-700'
               >
-                {isUpdating && <Loader2 className='h-3 w-3 animate-spin mr-1' />}
+                {isUpdating && (
+                  <Loader2 className='h-3 w-3 animate-spin mr-1' />
+                )}
                 Save
               </Button>
             </div>

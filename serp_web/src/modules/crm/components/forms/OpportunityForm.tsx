@@ -349,7 +349,9 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
                         field.onChange(date ? toLocalDateInputValue(date) : '')
                       }
                       disabled={isLoading}
-                      className={errors.expectedCloseDate ? 'border-destructive' : ''}
+                      className={
+                        errors.expectedCloseDate ? 'border-destructive' : ''
+                      }
                     />
                   )}
                 />

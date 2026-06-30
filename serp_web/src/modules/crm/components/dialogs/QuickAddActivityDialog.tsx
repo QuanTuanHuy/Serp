@@ -351,7 +351,10 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                 id='scheduledDate'
                 value={formData.scheduledDate}
                 onChange={(date) =>
-                  handleChange('scheduledDate', date ? toLocalDateInputValue(date) : '')
+                  handleChange(
+                    'scheduledDate',
+                    date ? toLocalDateInputValue(date) : ''
+                  )
                 }
                 disabled={isLoading}
               />

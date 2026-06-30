@@ -75,7 +75,9 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
   React.useEffect(() => {
     if (open) {
       if (menuDisplay?.assignedRoles) {
-        setSelectedRoleIds(new Set(menuDisplay.assignedRoles.map((r) => r.roleId)));
+        setSelectedRoleIds(
+          new Set(menuDisplay.assignedRoles.map((r) => r.roleId))
+        );
       } else {
         setSelectedRoleIds(new Set());
       }
@@ -109,7 +111,9 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
     }
   };
 
-  const getRoleStatus = (roleId: number): 'assigned' | 'unassigned' | 'new' | 'removed' => {
+  const getRoleStatus = (
+    roleId: number
+  ): 'assigned' | 'unassigned' | 'new' | 'removed' => {
     const wasAssigned = assignedRoleIds.has(roleId);
     const isSelected = selectedRoleIds.has(roleId);
 
@@ -208,7 +212,10 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
                             </Badge>
                           )}
                           {status === 'new' && (
-                            <Badge variant='default' className='text-xs bg-green-600 hover:bg-green-600 text-white'>
+                            <Badge
+                              variant='default'
+                              className='text-xs bg-green-600 hover:bg-green-600 text-white'
+                            >
                               Will Assign
                             </Badge>
                           )}
@@ -246,12 +253,7 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
           </Button>
           <Button
             onClick={handleApply}
-            disabled={
-              !hasChanged ||
-              processing ||
-              isLoading ||
-              !menuDisplay
-            }
+            disabled={!hasChanged || processing || isLoading || !menuDisplay}
           >
             {processing || isLoading ? (
               <>

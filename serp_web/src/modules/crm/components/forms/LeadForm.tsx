@@ -340,7 +340,10 @@ export const LeadForm: React.FC<LeadFormProps> = ({
                 id='followUpDate'
                 value={formData.followUpDate}
                 onChange={(date) =>
-                  updateField('followUpDate', date ? toLocalDateInputValue(date) : '')
+                  updateField(
+                    'followUpDate',
+                    date ? toLocalDateInputValue(date) : ''
+                  )
                 }
                 disabled={isLoading}
               />

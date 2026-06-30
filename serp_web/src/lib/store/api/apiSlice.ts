@@ -177,6 +177,7 @@ export const api = createApi({
     'Analytics',
     'Team',
     'Territory',
+    'Note',
     // Admin tags
     'admin/Organization',
     'admin/Dashboard',

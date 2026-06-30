@@ -100,7 +100,9 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
     }
   };
 
-  const dmStatus = otherDirectUser ? mapUserStatus(otherDirectUser.status) : 'offline';
+  const dmStatus = otherDirectUser
+    ? mapUserStatus(otherDirectUser.status)
+    : 'offline';
 
   return (
     <button
@@ -150,7 +152,11 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
         {/* Online indicator for DIRECT channels */}
         {channel.type === 'DIRECT' && (
           <div className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border border-slate-100 dark:border-slate-800'>
-            <OnlineStatusIndicator status={dmStatus} size='sm' showPulse={dmStatus === 'online'} />
+            <OnlineStatusIndicator
+              status={dmStatus}
+              size='sm'
+              showPulse={dmStatus === 'online'}
+            />
           </div>
         )}
       </div>
