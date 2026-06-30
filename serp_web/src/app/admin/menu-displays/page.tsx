@@ -69,10 +69,8 @@ export default function MenuDisplaysPage() {
     pagination,
     handlePageChange,
     handlePageSizeChange,
-    handleAssignRole,
-    handleUnassignRole,
-    isAssigningRole,
-    isUnassigningRole,
+    handleUpdateMenuDisplayRoles,
+    isUpdatingRoles,
     roleDialogOpen,
     selectedMenuForRole,
     openRoleDialog,
@@ -363,9 +361,8 @@ export default function MenuDisplaysPage() {
         open={roleDialogOpen}
         onOpenChange={closeRoleDialog}
         menuDisplay={selectedMenuForRole}
-        onAssign={handleAssignRole}
-        onUnassign={handleUnassignRole}
-        isLoading={isAssigningRole || isUnassigningRole}
+        onUpdateRoles={handleUpdateMenuDisplayRoles}
+        isLoading={isUpdatingRoles}
       />
 
       {/* Details Dialog */}

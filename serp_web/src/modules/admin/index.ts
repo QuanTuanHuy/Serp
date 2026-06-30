@@ -208,8 +208,7 @@ export {
   useCreateMenuDisplayMutation,
   useUpdateMenuDisplayMutation,
   useDeleteMenuDisplayMutation,
-  useAssignMenuDisplaysToRoleMutation,
-  useUnassignMenuDisplaysFromRoleMutation,
+  useUpdateMenuDisplayRolesMutation,
 } from './services/adminApi';
 
 // Users UI Components
