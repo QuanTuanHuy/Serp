@@ -139,7 +139,9 @@ export const SalesChart: React.FC<SalesChartProps> = ({
           <div className='text-right'>
             <p className='text-sm text-muted-foreground'>Total Revenue</p>
             <p className='text-xl font-bold text-emerald-600 dark:text-emerald-400'>
-              {formatCurrency(data.reduce((sum, item) => sum + item.revenue, 0))}
+              {formatCurrency(
+                data.reduce((sum, item) => sum + item.revenue, 0)
+              )}
             </p>
           </div>
         </div>

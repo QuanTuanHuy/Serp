@@ -426,8 +426,7 @@ export const useMenuDisplays = () => {
         toast.success(message);
         refetch();
       } catch (error: any) {
-        const errorMessage =
-          getErrorMessage(error) || 'Failed to update roles';
+        const errorMessage = getErrorMessage(error) || 'Failed to update roles';
         toast.error(errorMessage);
         throw error;
       }

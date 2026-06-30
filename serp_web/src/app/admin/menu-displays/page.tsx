@@ -7,7 +7,12 @@
 
 import React, { useState } from 'react';
 import { useMenuDisplays } from '@/modules/admin/hooks/useMenuDisplays';
-import { AdminFilterChips, AdminFilterDialog, FilterPane, FilterOption } from '@/modules/admin';
+import {
+  AdminFilterChips,
+  AdminFilterDialog,
+  FilterPane,
+  FilterOption,
+} from '@/modules/admin';
 import { MenuDisplayTree } from '@/modules/admin/components/menu-displays/MenuDisplayTree';
 import { MenuDisplayFormDialog } from '@/modules/admin/components/menu-displays/MenuDisplayFormDialog';
 import { RoleAssignmentDialog } from '@/modules/admin/components/menu-displays/RoleAssignmentDialog';
@@ -404,5 +409,3 @@ export default function MenuDisplaysPage() {
     </div>
   );
 }
-
-

@@ -87,8 +87,7 @@ const getLatestMessage = (messages: Message[]) => {
   }
 
   return messages.reduce((latest, message) =>
-    new Date(message.createdAt).getTime() >
-    new Date(latest.createdAt).getTime()
+    new Date(message.createdAt).getTime() > new Date(latest.createdAt).getTime()
       ? message
       : latest
   );
@@ -826,7 +825,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
                       return (
                         <span className='flex items-center gap-1.5 min-w-0'>
-                          <OnlineStatusIndicator status={status} size='sm' showPulse={status === 'online'} />
+                          <OnlineStatusIndicator
+                            status={status}
+                            size='sm'
+                            showPulse={status === 'online'}
+                          />
                           <span
                             className={cn(
                               'font-medium truncate',

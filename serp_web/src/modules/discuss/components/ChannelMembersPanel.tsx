@@ -308,7 +308,9 @@ export const ChannelMembersPanel: React.FC<ChannelMembersPanelProps> = ({
                         </Avatar>
                         {(() => {
                           const userPresence = presenceMap.get(member.userId);
-                          const presenceStatus = userPresence ? mapUserStatus(userPresence.status) : 'offline';
+                          const presenceStatus = userPresence
+                            ? mapUserStatus(userPresence.status)
+                            : 'offline';
                           return (
                             <div className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border border-slate-100 dark:border-slate-800'>
                               <OnlineStatusIndicator

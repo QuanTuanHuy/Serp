@@ -3,6 +3,7 @@
 // Re-export all API endpoints and hooks from domain-specific files
 export * from './customerApi';
 export * from './leadApi';
+export * from './noteApi';
 export * from './opportunityApi';
 export * from './activityApi';
 export * from './teamApi';

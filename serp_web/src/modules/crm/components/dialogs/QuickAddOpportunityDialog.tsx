@@ -337,7 +337,10 @@ export const QuickAddOpportunityDialog: React.FC<
               id='expectedCloseDate'
               value={formData.expectedCloseDate}
               onChange={(date) =>
-                handleChange('expectedCloseDate', date ? toLocalDateInputValue(date) : '')
+                handleChange(
+                  'expectedCloseDate',
+                  date ? toLocalDateInputValue(date) : ''
+                )
               }
               className={cn(errors.expectedCloseDate && 'border-red-500')}
               disabled={isLoading}

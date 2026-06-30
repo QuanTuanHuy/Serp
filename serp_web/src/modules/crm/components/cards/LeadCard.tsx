@@ -200,7 +200,7 @@ const LeadScoreIndicator: React.FC<{ score?: number }> = ({ score = 0 }) => {
   };
 
   return (
-    <div className='relative flex items-center justify-center h-10 w-10'>
+    <div className='relative flex items-center justify-center h-10 w-10 shrink-0'>
       <svg className='h-10 w-10 -rotate-90' viewBox='0 0 36 36'>
         <circle
           cx='18'
@@ -264,12 +264,12 @@ export const LeadCard: React.FC<LeadCardProps> = ({
         )}
         onClick={onClick}
       >
-        <div className='flex items-start justify-between mb-2'>
-          <div className='flex items-center gap-2'>
-            <div className='flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold text-xs'>
+        <div className='flex items-start justify-between gap-2 mb-2'>
+          <div className='flex items-center gap-2 min-w-0 flex-1'>
+            <div className='flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold text-xs shrink-0'>
               {leadInitials}
             </div>
-            <div className='min-w-0'>
+            <div className='min-w-0 flex-1'>
               <p className='font-medium text-sm truncate'>{fullName}</p>
               {lead.company && (
                 <p className='text-xs text-muted-foreground truncate'>
@@ -349,9 +349,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({
 
       <CardContent className='p-5'>
         {/* Top Row */}
-        <div className='flex items-start justify-between mb-4'>
-          <div className='flex items-center gap-3'>
-            <div className='relative'>
+        <div className='flex items-start justify-between gap-3 mb-4'>
+          <div className='flex items-center gap-3 min-w-0 flex-1'>
+            <div className='relative shrink-0'>
               <div className='flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold text-lg shadow-sm'>
                 {leadInitials}
               </div>
@@ -362,7 +362,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
                 )}
               />
             </div>
-            <div className='min-w-0'>
+            <div className='min-w-0 flex-1'>
               <h3 className='font-semibold text-foreground truncate'>
                 {fullName}
               </h3>
@@ -375,7 +375,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({
           </div>
 
           {/* Score & Menu */}
-          <div className='flex items-center gap-2'>
+          <div className='flex items-center gap-2 shrink-0'>
             <LeadScoreIndicator score={leadScore} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

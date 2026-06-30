@@ -56,8 +56,7 @@ export const CRMUserSelect: React.FC<CRMUserSelectProps> = ({
   };
 
   const showOrphanAssignee =
-    Boolean(valString) &&
-    !orgUsers.some((u) => String(u.id) === valString);
+    Boolean(valString) && !orgUsers.some((u) => String(u.id) === valString);
   const orphanAssigneeLabel = fallbackUserName || `User #${valString}`;
 
   return (
@@ -75,9 +74,7 @@ export const CRMUserSelect: React.FC<CRMUserSelectProps> = ({
         <SelectContent position='popper' className='max-h-60'>
           <SelectItem value='_none'>{placeholder}</SelectItem>
           {showOrphanAssignee && (
-            <SelectItem value={valString}>
-              {orphanAssigneeLabel}
-            </SelectItem>
+            <SelectItem value={valString}>{orphanAssigneeLabel}</SelectItem>
           )}
           {orgUsers.map((u) => (
             <SelectItem key={u.id} value={String(u.id)}>
@@ -88,7 +85,8 @@ export const CRMUserSelect: React.FC<CRMUserSelectProps> = ({
       </Select>
       {!organizationId && (
         <p className='text-[10px] text-muted-foreground mt-1'>
-          Your profile does not include an organization yet; assignees cannot be loaded.
+          Your profile does not include an organization yet; assignees cannot be
+          loaded.
         </p>
       )}
     </div>
