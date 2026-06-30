@@ -120,6 +120,24 @@ class GenerateOptimizationRunCommandHandlerTest {
     }
 
     @Test
+    void handleShouldNormalizeAlgorithmKeyFromObjective() {
+        GenerateOptimizationRunCommand command = new GenerateOptimizationRunCommand(
+                1L,
+                10L,
+                2L,
+                "SELECTED_WORK_ITEMS",
+                OptimizationAlgorithmKeys.GREEDY_BALANCED,
+                OptimizationObjective.SKILL_FIRST,
+                OptimizationChangeScope.ASSIGNMENT_AND_SCHEDULE,
+                1_000L,
+                10_000L,
+                List.of(100L)
+        );
+
+        assertThat(command.algorithmKey()).isEqualTo(OptimizationAlgorithmKeys.GREEDY_SKILL_FIRST);
+    }
+
+    @Test
     void handleShouldRejectWhenAlgorithmCapabilitiesDoNotSupportRequestedScope() {
         IOptimizationAlgorithm algorithm = stubAlgorithm(Set.of(OptimizationCapability.ASSIGNMENT));
         when(optimizationAlgorithmRegistry.resolve(OptimizationAlgorithmKeys.GREEDY_BALANCED)).thenReturn(algorithm);
