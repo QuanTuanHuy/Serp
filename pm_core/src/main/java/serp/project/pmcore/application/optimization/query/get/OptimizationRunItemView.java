@@ -51,6 +51,7 @@ public class OptimizationRunItemView {
     private List<String> scheduleReasons;
     private List<String> violations;
     private List<OptimizationScheduleAllocationView> allocationChunks;
+    private List<OptimizationScheduleAllocationView> overrideAllocationChunks;
     private Long appliedAt;
     private String assignmentSkippedReason;
     private String scheduleSkippedReason;

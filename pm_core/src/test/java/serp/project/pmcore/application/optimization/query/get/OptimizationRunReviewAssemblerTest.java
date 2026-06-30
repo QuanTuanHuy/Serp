@@ -93,6 +93,26 @@ class OptimizationRunReviewAssemblerTest {
     }
 
     @Test
+    void toViewShouldExposeOverrideScheduleAllocationChunks() {
+        OptimizationRunItemEntity item = item(10L, 200L);
+        item.setAllocationChunksJson("""
+                [{"assigneeId":200,"start":1000,"end":2000,"effortMillis":1000}]
+                """);
+        item.setOverrideAllocationChunksJson("""
+                [{"assigneeId":300,"start":5000,"end":6000,"effortMillis":1000}]
+                """);
+
+        OptimizationRunReviewView view = assembler.toView(run(OptimizationRunSummary.builder().build()), List.of(item), List.of());
+
+        assertEquals(1, view.getItems().get(0).getAllocationChunks().size());
+        assertEquals(200L, view.getItems().get(0).getAllocationChunks().get(0).getAssigneeId());
+        assertEquals(1, view.getItems().get(0).getOverrideAllocationChunks().size());
+        assertEquals(300L, view.getItems().get(0).getOverrideAllocationChunks().get(0).getAssigneeId());
+        assertEquals(5000L, view.getItems().get(0).getOverrideAllocationChunks().get(0).getStart());
+        assertEquals(6000L, view.getItems().get(0).getOverrideAllocationChunks().get(0).getEnd());
+    }
+
+    @Test
     void toViewShouldEnrichWorkItemAndAssigneeSummaries() {
         OptimizationRunItemEntity item = item(10L, 200L);
         item.setCurrentAssigneeId(100L);
