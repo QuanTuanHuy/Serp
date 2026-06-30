@@ -53,6 +53,7 @@ class MessageMapperTest {
             Map<String, Object> metadata = new HashMap<>();
             metadata.put("key", "value");
             Long[] mentions = {200L, 300L};
+            Long[] readBy = {400L, 500L};
 
             List<Map<String, Object>> reactions = new ArrayList<>();
             Map<String, Object> reaction = new HashMap<>();
@@ -68,6 +69,7 @@ class MessageMapperTest {
                     .content("Test message content")
                     .messageType(MessageType.STANDARD)
                     .mentions(mentions)
+                    .readBy(readBy)
                     .parentId(1500L)
                     .threadCount(5)
                     .isEdited(true)
@@ -95,6 +97,9 @@ class MessageMapperTest {
             assertNotNull(entity.getMentions());
             assertEquals(2, entity.getMentions().size());
             assertTrue(entity.getMentions().containsAll(Arrays.asList(200L, 300L)));
+            assertNotNull(entity.getReadBy());
+            assertEquals(2, entity.getReadBy().size());
+            assertTrue(entity.getReadBy().containsAll(Arrays.asList(400L, 500L)));
             assertEquals(1500L, entity.getParentId());
             assertEquals(5, entity.getThreadCount());
             assertTrue(entity.getIsEdited());
@@ -130,6 +135,32 @@ class MessageMapperTest {
             assertNotNull(entity);
             assertNotNull(entity.getMentions());
             assertTrue(entity.getMentions().isEmpty());
+        }
+
+        @Test
+        @DisplayName("Should handle null readBy array")
+        void shouldHandleNullReadByArray() {
+            // Given
+            MessageModel model = MessageModel.builder()
+                    .id(MESSAGE_ID)
+                    .channelId(CHANNEL_ID)
+                    .senderId(USER_ID)
+                    .tenantId(TENANT_ID)
+                    .content("Test message")
+                    .messageType(MessageType.STANDARD)
+                    .readBy(null)
+                    .threadCount(0)
+                    .isEdited(false)
+                    .isDeleted(false)
+                    .build();
+
+            // When
+            MessageEntity entity = messageMapper.toEntity(model);
+
+            // Then
+            assertNotNull(entity);
+            assertNotNull(entity.getReadBy());
+            assertTrue(entity.getReadBy().isEmpty());
         }
 
         @Test
@@ -238,6 +269,7 @@ class MessageMapperTest {
                     .content("Entity content")
                     .messageType(MessageType.STANDARD)
                     .mentions(Arrays.asList(300L, 400L))
+                    .readBy(Arrays.asList(500L, 600L))
                     .parentId(1000L)
                     .threadCount(10)
                     .isEdited(false)
@@ -264,6 +296,9 @@ class MessageMapperTest {
             assertEquals(MessageType.STANDARD, model.getMessageType());
             assertNotNull(model.getMentions());
             assertEquals(2, model.getMentions().length);
+            assertNotNull(model.getReadBy());
+            assertEquals(2, model.getReadBy().length);
+            assertTrue(Arrays.asList(model.getReadBy()).containsAll(Arrays.asList(500L, 600L)));
             assertEquals(1000L, model.getParentId());
             assertEquals(10, model.getThreadCount());
             assertFalse(model.getIsEdited());

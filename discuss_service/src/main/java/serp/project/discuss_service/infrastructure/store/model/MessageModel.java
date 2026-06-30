@@ -77,6 +77,10 @@ public class MessageModel extends BaseModel {
     @Column(name = "reactions", columnDefinition = "jsonb")
     private List<Map<String, Object>> reactions;
 
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "read_by", columnDefinition = "BIGINT[]")
+    private Long[] readBy;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "metadata", columnDefinition = "jsonb")
     private Map<String, Object> metadata;
