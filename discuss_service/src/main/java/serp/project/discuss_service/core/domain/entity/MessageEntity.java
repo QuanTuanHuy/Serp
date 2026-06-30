@@ -253,6 +253,7 @@ public class MessageEntity extends BaseEntity {
         }
         
         if (!this.readBy.contains(userId)) {
+            this.readBy = new ArrayList<>(this.readBy);
             this.readBy.add(userId);
         }
     }

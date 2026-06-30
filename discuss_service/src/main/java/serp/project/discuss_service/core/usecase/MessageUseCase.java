@@ -20,6 +20,7 @@ import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.domain.event.MessageDeletedInternalEvent;
+import serp.project.discuss_service.core.domain.event.MessageReadInternalEvent;
 import serp.project.discuss_service.core.domain.event.MessageSentInternalEvent;
 import serp.project.discuss_service.core.domain.event.MessageUpdatedInternalEvent;
 import serp.project.discuss_service.core.domain.event.ReactionAddedInternalEvent;
@@ -317,8 +318,22 @@ public class MessageUseCase {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
+        MessageEntity target = messageService.getMessageByIdOrThrow(messageId);
+        if (!target.getChannelId().equals(channelId)) {
+            throw new AppException(ErrorCode.MESSAGE_NOT_FOUND);
+        }
+
         memberService.markAsRead(channelId, userId, messageId);
-        messageService.markAsRead(messageId, userId);
+        MessageEntity updated = messageService.markAsRead(messageId, userId);
+
+        applicationEventPublisher.publishEvent(new MessageReadInternalEvent(
+                this,
+                channelId,
+                messageId,
+                userId,
+                updated.getReadBy(),
+                updated.getReadCount()
+        ));
 
         log.debug("User {} marked messages as read in channel {} up to {}", userId, channelId, messageId);
     }

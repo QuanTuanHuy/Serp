@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -19,6 +20,7 @@ import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
+import serp.project.discuss_service.core.domain.event.MessageReadInternalEvent;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IChannelMemberService;
@@ -524,17 +526,59 @@ class MessageUseCaseTest {
     class MarkAsReadTests {
 
         @Test
-        @DisplayName("should mark messages as read when user is member")
-        void testMarkAsRead_UserIsMember_MarksRead() {
+        @DisplayName("should mark target message as read and publish read event when user is member")
+        void testMarkAsRead_UserIsMember_MarksReadAndPublishesEvent() {
             // Given
-            when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
+            MessageEntity target = TestDataFactory.createTextMessage();
+            target.setId(100L);
+            target.setChannelId(TestDataFactory.CHANNEL_ID);
+            target.setReadBy(List.of(TestDataFactory.USER_ID_1));
+
+            when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_2)).thenReturn(true);
+            when(messageService.getMessageByIdOrThrow(100L)).thenReturn(target);
+            when(messageService.markAsRead(100L, TestDataFactory.USER_ID_2)).thenAnswer(invocation -> {
+                target.markReadBy(TestDataFactory.USER_ID_2);
+                return target;
+            });
 
             // When
-            messageUseCase.markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, 100L);
+            messageUseCase.markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_2, 100L);
 
             // Then
-            verify(memberService).markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, 100L);
-            verify(messageService).markAsRead(100L, TestDataFactory.USER_ID_1);
+            verify(memberService).markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_2, 100L);
+            verify(messageService).markAsRead(100L, TestDataFactory.USER_ID_2);
+
+            ArgumentCaptor<MessageReadInternalEvent> eventCaptor =
+                    ArgumentCaptor.forClass(MessageReadInternalEvent.class);
+            verify(applicationEventPublisher).publishEvent(eventCaptor.capture());
+
+            MessageReadInternalEvent event = eventCaptor.getValue();
+            assertEquals(TestDataFactory.CHANNEL_ID, event.getChannelId());
+            assertEquals(100L, event.getMessageId());
+            assertEquals(TestDataFactory.USER_ID_2, event.getUserId());
+            assertEquals(2, event.getReadCount());
+            assertTrue(event.getReadBy().contains(TestDataFactory.USER_ID_2));
+        }
+
+        @Test
+        @DisplayName("should throw when target message is not in channel")
+        void testMarkAsRead_MessageInDifferentChannel_ThrowsException() {
+            // Given
+            MessageEntity target = TestDataFactory.createTextMessage();
+            target.setId(100L);
+            target.setChannelId(999L);
+
+            when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
+            when(messageService.getMessageByIdOrThrow(100L)).thenReturn(target);
+
+            // When/Then
+            AppException exception = assertThrows(AppException.class,
+                    () -> messageUseCase.markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, 100L));
+
+            assertEquals(ErrorCode.MESSAGE_NOT_FOUND.getMessage(), exception.getMessage());
+            verify(memberService, never()).markAsRead(anyLong(), anyLong(), anyLong());
+            verify(messageService, never()).markAsRead(anyLong(), anyLong());
+            verify(applicationEventPublisher, never()).publishEvent(any());
         }
 
         @Test
