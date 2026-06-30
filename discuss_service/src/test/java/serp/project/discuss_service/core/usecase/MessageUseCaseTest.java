@@ -9,14 +9,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.util.Pair;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
+import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
+import serp.project.discuss_service.core.domain.event.MessageReadInternalEvent;
 import serp.project.discuss_service.core.exception.AppException;
 import serp.project.discuss_service.core.exception.ErrorCode;
 import serp.project.discuss_service.core.service.IChannelMemberService;
@@ -25,9 +29,12 @@ import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
 import serp.project.discuss_service.core.service.IAttachmentService;
+import serp.project.discuss_service.core.service.IAttachmentUrlService;
+import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -59,6 +66,12 @@ class MessageUseCaseTest {
 
     @Mock
     private IAttachmentService attachmentService;
+
+    @Mock
+    private IAttachmentUrlService attachmentUrlService;
+
+    @Mock
+    private IUserInfoService userInfoService;
 
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
@@ -513,17 +526,59 @@ class MessageUseCaseTest {
     class MarkAsReadTests {
 
         @Test
-        @DisplayName("should mark messages as read when user is member")
-        void testMarkAsRead_UserIsMember_MarksRead() {
+        @DisplayName("should mark target message as read and publish read event when user is member")
+        void testMarkAsRead_UserIsMember_MarksReadAndPublishesEvent() {
             // Given
-            when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
+            MessageEntity target = TestDataFactory.createTextMessage();
+            target.setId(100L);
+            target.setChannelId(TestDataFactory.CHANNEL_ID);
+            target.setReadBy(List.of(TestDataFactory.USER_ID_1));
+
+            when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_2)).thenReturn(true);
+            when(messageService.getMessageByIdOrThrow(100L)).thenReturn(target);
+            when(messageService.markAsRead(100L, TestDataFactory.USER_ID_2)).thenAnswer(invocation -> {
+                target.markReadBy(TestDataFactory.USER_ID_2);
+                return target;
+            });
 
             // When
-            messageUseCase.markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, 100L);
+            messageUseCase.markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_2, 100L);
 
             // Then
-            verify(memberService).markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, 100L);
-            verify(messageService).markAsRead(100L, TestDataFactory.USER_ID_1);
+            verify(memberService).markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_2, 100L);
+            verify(messageService).markAsRead(100L, TestDataFactory.USER_ID_2);
+
+            ArgumentCaptor<MessageReadInternalEvent> eventCaptor =
+                    ArgumentCaptor.forClass(MessageReadInternalEvent.class);
+            verify(applicationEventPublisher).publishEvent(eventCaptor.capture());
+
+            MessageReadInternalEvent event = eventCaptor.getValue();
+            assertEquals(TestDataFactory.CHANNEL_ID, event.getChannelId());
+            assertEquals(100L, event.getMessageId());
+            assertEquals(TestDataFactory.USER_ID_2, event.getUserId());
+            assertEquals(2, event.getReadCount());
+            assertTrue(event.getReadBy().contains(TestDataFactory.USER_ID_2));
+        }
+
+        @Test
+        @DisplayName("should throw when target message is not in channel")
+        void testMarkAsRead_MessageInDifferentChannel_ThrowsException() {
+            // Given
+            MessageEntity target = TestDataFactory.createTextMessage();
+            target.setId(100L);
+            target.setChannelId(999L);
+
+            when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
+            when(messageService.getMessageByIdOrThrow(100L)).thenReturn(target);
+
+            // When/Then
+            AppException exception = assertThrows(AppException.class,
+                    () -> messageUseCase.markAsRead(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, 100L));
+
+            assertEquals(ErrorCode.MESSAGE_NOT_FOUND.getMessage(), exception.getMessage());
+            verify(memberService, never()).markAsRead(anyLong(), anyLong(), anyLong());
+            verify(messageService, never()).markAsRead(anyLong(), anyLong());
+            verify(applicationEventPublisher, never()).publishEvent(any());
         }
 
         @Test
@@ -661,6 +716,61 @@ class MessageUseCaseTest {
 
             // Then
             assertEquals(25L, count);
+        }
+    }
+
+    @Nested
+    @DisplayName("enrichMessageResponseList")
+    class EnrichMessageResponseListTests {
+
+        @Test
+        @DisplayName("should include read receipt user info")
+        void testEnrichMessageResponseList_WithReadBy_IncludesReadByUsers() {
+            // Given
+            MessageEntity message = TestDataFactory.createTextMessage();
+            message.setReadBy(List.of(TestDataFactory.USER_ID_2, TestDataFactory.USER_ID_3));
+
+            UserInfo sender = UserInfo.builder()
+                    .id(TestDataFactory.USER_ID_1)
+                    .name("Sender")
+                    .email("sender@example.com")
+                    .build();
+            UserInfo readerOne = UserInfo.builder()
+                    .id(TestDataFactory.USER_ID_2)
+                    .name("Reader One")
+                    .email("reader1@example.com")
+                    .build();
+            UserInfo readerTwo = UserInfo.builder()
+                    .id(TestDataFactory.USER_ID_3)
+                    .name("Reader Two")
+                    .email("reader2@example.com")
+                    .build();
+
+            when(userInfoService.getUsersByIds(List.of(
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.USER_ID_2,
+                    TestDataFactory.USER_ID_3
+            ))).thenReturn(List.of(sender, readerOne, readerTwo));
+            when(attachmentService.getAttachmentsByMessageIds(List.of(TestDataFactory.MESSAGE_ID)))
+                    .thenReturn(Map.of());
+            when(attachmentUrlService.enrichWithUrls(List.of()))
+                    .thenReturn(List.of());
+
+            // When
+            List<MessageResponse> responses = messageUseCase.enrichMessageResponseList(
+                    List.of(message),
+                    TestDataFactory.USER_ID_2
+            );
+
+            // Then
+            assertEquals(1, responses.size());
+            MessageResponse response = responses.get(0);
+            assertEquals(List.of(TestDataFactory.USER_ID_2, TestDataFactory.USER_ID_3), response.getReadBy());
+            assertEquals(2, response.getReadCount());
+            assertTrue(response.getIsReadByMe());
+            assertEquals(2, response.getReadByUsers().size());
+            assertEquals("Reader One", response.getReadByUsers().get(0).getName());
+            assertEquals("Reader Two", response.getReadByUsers().get(1).getName());
         }
     }
 }

@@ -37,6 +37,8 @@ export interface Message extends BaseEntity {
   deletedAt?: string;
   deletedBy?: string;
   readCount: number;
+  readBy: string[];
+  readByUsers?: SenderInfo[];
   metadata?: Record<string, any>;
 
   // Computed fields

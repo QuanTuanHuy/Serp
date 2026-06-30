@@ -16,6 +16,7 @@ import serp.project.discuss_service.core.port.client.IKafkaProducerPort;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -71,6 +72,26 @@ public class DiscussEventPublisherService implements IDiscussEventPublisher {
         String key = String.valueOf(message.getChannelId());
         kafkaProducer.sendMessageAsync(key, event, TOPIC_MESSAGE_EVENTS);
         log.debug("Published MESSAGE_DELETED event for message {}", message.getId());
+    }
+
+    @Override
+    public void publishMessageRead(Long channelId, Long messageId, Long userId, List<Long> readBy, Integer readCount) {
+        if (channelId == null || messageId == null || userId == null) {
+            log.warn("Cannot publish MESSAGE_READ event: missing required fields");
+            return;
+        }
+
+        Map<String, Object> event = new HashMap<>();
+        event.put("eventType", WsEventType.MESSAGE_READ.name());
+        event.put("messageId", messageId);
+        event.put("channelId", channelId);
+        event.put("userId", userId);
+        event.put("readBy", readBy == null ? List.of() : readBy);
+        event.put("readCount", readCount == null ? 0 : readCount);
+        event.put("timestamp", System.currentTimeMillis());
+
+        kafkaProducer.sendMessageAsync(String.valueOf(channelId), event, TOPIC_MESSAGE_EVENTS);
+        log.debug("Published MESSAGE_READ event for message {} by user {}", messageId, userId);
     }
 
     // ==================== CHANNEL EVENTS ====================

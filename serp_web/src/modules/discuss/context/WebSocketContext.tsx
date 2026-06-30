@@ -6,7 +6,7 @@ Description: Part of Serp Project - WebSocket Context for Discuss module
 'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import type { Message } from '../types';
+import type { Message, MessageReadPayload } from '../types';
 
 // WebSocket API interface
 export interface WebSocketAPI {
@@ -17,6 +17,9 @@ export interface WebSocketAPI {
   // Setter functions for ChatWindow to register channel-specific behavior
   setActiveChannel: (channelId: string | undefined) => void;
   setOnMessage: (cb: ((msg: Message) => void) | undefined) => void;
+  setOnMessageRead: (
+    cb: ((payload: MessageReadPayload) => void) | undefined
+  ) => void;
   setOnTypingUpdate: (
     cb:
       | ((userId: string, userName: string, isTyping: boolean) => void)

@@ -477,6 +477,22 @@ class MessageEntityTest {
             // Then
             assertEquals(1, message.getReadCount());
         }
+
+        @Test
+        @DisplayName("markReadBy - should handle immutable read list")
+        void testMarkReadBy_ImmutableReadList_AddsUser() {
+            // Given
+            MessageEntity message = TestDataFactory.createTextMessage();
+            message.setReadBy(List.of(TestDataFactory.USER_ID_1));
+
+            // When
+            message.markReadBy(TestDataFactory.USER_ID_2);
+
+            // Then
+            assertTrue(message.isReadBy(TestDataFactory.USER_ID_1));
+            assertTrue(message.isReadBy(TestDataFactory.USER_ID_2));
+            assertEquals(2, message.getReadCount());
+        }
     }
 
     // ==================== QUERY METHOD TESTS ====================

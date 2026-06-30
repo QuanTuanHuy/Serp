@@ -9,6 +9,8 @@ import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 
+import java.util.List;
+
 public interface IDiscussEventPublisher {
 
     // ==================== KAFKA TOPICS ====================
@@ -26,6 +28,8 @@ public interface IDiscussEventPublisher {
     void publishMessageUpdated(MessageEntity message);
 
     void publishMessageDeleted(MessageEntity message);
+
+    void publishMessageRead(Long channelId, Long messageId, Long userId, List<Long> readBy, Integer readCount);
 
     // ==================== CHANNEL EVENTS ====================
 

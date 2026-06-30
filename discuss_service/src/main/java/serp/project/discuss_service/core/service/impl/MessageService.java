@@ -154,11 +154,12 @@ public class MessageService implements IMessageService {
     }
 
     @Override
-    public void markAsRead(Long messageId, Long userId) {
+    public MessageEntity markAsRead(Long messageId, Long userId) {
         MessageEntity message = getMessageByIdOrThrow(messageId);
         message.markReadBy(userId);
-        messagePort.save(message);
+        MessageEntity saved = messagePort.save(message);
         log.debug("Message {} marked as read by user {}", messageId, userId);
+        return saved;
     }
 
     @Override

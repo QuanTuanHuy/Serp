@@ -90,6 +90,44 @@ const getUserInitials = (name: string) => {
     .slice(0, 2);
 };
 
+const getReadReceiptLabel = (message: Message, currentUserId: string) => {
+  const readUsers = (message.readByUsers || []).filter(
+    (user) => user.id !== currentUserId
+  );
+
+  if (readUsers.length === 0) {
+    const readerIds = (message.readBy || []).filter(
+      (id) => id !== currentUserId
+    );
+    if (readerIds.length === 0) {
+      return null;
+    }
+    if (readerIds.length === 1) {
+      return {
+        label: 'Seen by 1 person',
+        title: 'Seen by 1 person',
+      };
+    }
+    return {
+      label: `Seen by ${readerIds.length} people`,
+      title: `Seen by ${readerIds.length} people`,
+    };
+  }
+
+  if (readUsers.length === 1) {
+    return {
+      label: `Seen by ${readUsers[0].name}`,
+      title: `Seen by ${readUsers[0].name}`,
+    };
+  }
+
+  const [firstUser, ...otherUsers] = readUsers;
+  return {
+    label: `Seen by ${firstUser.name} +${otherUsers.length}`,
+    title: `Seen by ${readUsers.map((user) => user.name).join(', ')}`,
+  };
+};
+
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isOwn,
@@ -118,6 +156,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   // Get sender info from message.sender (new structure)
   const senderName = message.sender?.name || 'Unknown User';
   const senderAvatar = message.sender?.avatarUrl;
+  const readReceipt = isOwn
+    ? getReadReceiptLabel(message, currentUserId)
+    : null;
 
   return (
     <div
@@ -313,7 +354,19 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               )}
 
               {/* Read receipts (only for own messages) */}
-              {isOwn && <Check className='h-3.5 w-3.5 text-white/70' />}
+              {isOwn && (
+                <span
+                  title={readReceipt?.title || 'Sent'}
+                  className='inline-flex items-center gap-1 text-xs text-white/75'
+                >
+                  <Check className='h-3.5 w-3.5 text-white/70' />
+                  {readReceipt ? (
+                    <span className='max-w-[12rem] truncate'>
+                      {readReceipt.label}
+                    </span>
+                  ) : null}
+                </span>
+              )}
             </div>
           </div>
 

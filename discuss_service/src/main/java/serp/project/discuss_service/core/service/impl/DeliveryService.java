@@ -16,6 +16,7 @@ import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.port.client.IWebSocketHubPort;
 import serp.project.discuss_service.core.service.*;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -154,6 +155,26 @@ public class DeliveryService implements IDeliveryService {
         );
         fanOutToChannelMembers(channelId, event);
         log.debug("Notified deleted message {} in channel {}", messageId, channelId);
+    }
+
+    @Override
+    public void notifyMessageRead(Long channelId, Long messageId, Long userId, List<Long> readBy, Integer readCount) {
+        if (channelId == null || messageId == null || userId == null) {
+            log.warn("Cannot notify message read with null channelId, messageId or userId");
+            return;
+        }
+
+        WsMessageReadPayload payload = WsMessageReadPayload.builder()
+                .messageId(messageId)
+                .channelId(channelId)
+                .userId(userId)
+                .readBy(readBy == null ? List.of() : readBy)
+                .readCount(readCount == null ? 0 : readCount)
+                .build();
+
+        WsEvent<WsMessageReadPayload> event = WsEvent.of(WsEventType.MESSAGE_READ, payload, channelId);
+        fanOutToChannelMembers(channelId, event);
+        log.debug("Notified message read for message {} in channel {} by user {}", messageId, channelId, userId);
     }
 
     @Override

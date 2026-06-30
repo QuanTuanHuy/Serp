@@ -16,6 +16,7 @@ import { discussApi } from '../api/discussApi';
 import type {
   Message,
   MessageReaction,
+  MessageReadPayload,
   WsEvent,
   ChannelFilters,
   PaginationParams,
@@ -90,6 +91,9 @@ export const useDiscussWebSocket = () => {
   // Channel and callback refs - updated via setter functions
   const channelIdRef = useRef<string | undefined>(undefined);
   const onMessageRef = useRef<((msg: Message) => void) | undefined>(undefined);
+  const onMessageReadRef = useRef<
+    ((payload: MessageReadPayload) => void) | undefined
+  >(undefined);
   const onTypingUpdateRef = useRef<
     ((userId: string, userName: string, isTyping: boolean) => void) | undefined
   >(undefined);
@@ -106,6 +110,13 @@ export const useDiscussWebSocket = () => {
   const setOnMessage = useCallback(
     (cb: ((msg: Message) => void) | undefined) => {
       onMessageRef.current = cb;
+    },
+    []
+  );
+
+  const setOnMessageRead = useCallback(
+    (cb: ((payload: MessageReadPayload) => void) | undefined) => {
+      onMessageReadRef.current = cb;
     },
     []
   );
@@ -518,11 +529,84 @@ export const useDiscussWebSocket = () => {
 
         case 'MESSAGE_READ': {
           console.log('[WebSocket] Message read:', data);
-          dispatch(
-            discussApi.util.invalidateTags([
-              { type: 'Channel', id: String(data.channelId) },
-            ])
-          );
+
+          const normalizedChannelId = String(data.channelId);
+          const normalizedMessageId = String(data.messageId);
+          const normalizedUserId = String(data.userId);
+          const readBy = Array.isArray(data.readBy)
+            ? data.readBy.map(String)
+            : [normalizedUserId];
+          const readCount =
+            typeof data.readCount === 'number' ? data.readCount : readBy.length;
+          const currentUserId = String(state.account?.user?.profile?.id || '');
+
+          const cacheInfo = findMessagesCacheEntry(state, data.channelId);
+          if (cacheInfo) {
+            dispatch(
+              messageApi.util.updateQueryData(
+                'getMessages',
+                { channelId: normalizedChannelId, pagination: cacheInfo },
+                (draft) => {
+                  const message = draft.data?.items?.find(
+                    (item) => item.id === normalizedMessageId
+                  );
+                  if (!message) {
+                    return;
+                  }
+
+                  const existingReadBy = new Set(message.readBy || []);
+                  for (const readerId of readBy) {
+                    existingReadBy.add(readerId);
+                  }
+                  message.readBy = Array.from(existingReadBy);
+                  message.readCount = readCount;
+                  message.isReadByMe = currentUserId
+                    ? message.readBy.includes(currentUserId)
+                    : message.isReadByMe;
+                }
+              )
+            );
+          }
+
+          if (currentUserId && normalizedUserId === currentUserId) {
+            const channelCaches = findChannelsCacheEntries(state);
+            for (const args of channelCaches) {
+              dispatch(
+                channelApi.util.updateQueryData(
+                  'getChannels',
+                  args,
+                  (draft) => {
+                    const channel = draft.data?.items?.find(
+                      (item) => String(item.id) === normalizedChannelId
+                    );
+                    if (channel) {
+                      channel.unreadCount = 0;
+                    }
+                  }
+                )
+              );
+            }
+
+            dispatch(
+              channelApi.util.updateQueryData(
+                'getChannel',
+                normalizedChannelId,
+                (draft) => {
+                  if (draft.data) {
+                    draft.data.unreadCount = 0;
+                  }
+                }
+              )
+            );
+          }
+
+          onMessageReadRef.current?.({
+            messageId: normalizedMessageId,
+            channelId: normalizedChannelId,
+            userId: normalizedUserId,
+            readBy,
+            readCount,
+          });
           break;
         }
 
@@ -689,6 +773,7 @@ export const useDiscussWebSocket = () => {
       markAsRead,
       setActiveChannel,
       setOnMessage,
+      setOnMessageRead,
       setOnTypingUpdate,
       setOnUserStatusUpdate,
       setOnError,
@@ -700,6 +785,7 @@ export const useDiscussWebSocket = () => {
       markAsRead,
       setActiveChannel,
       setOnMessage,
+      setOnMessageRead,
       setOnTypingUpdate,
       setOnUserStatusUpdate,
       setOnError,

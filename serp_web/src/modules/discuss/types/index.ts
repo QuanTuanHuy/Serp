@@ -98,6 +98,14 @@ export interface WsEvent<T = any> {
   timestamp: number;
 }
 
+export interface MessageReadPayload {
+  messageId: string | number;
+  channelId: string | number;
+  userId: string | number;
+  readBy?: Array<string | number>;
+  readCount?: number;
+}
+
 /** Matches backend WsEventType enum */
 export type WSEventType =
   // Message events
