@@ -38,6 +38,12 @@ export interface Opportunity extends BaseEntity {
   actualCloseDate?: string;
   assignedTo?: string;
   assignedToName?: string;
+  accountName?: string;
+  leadName?: string;
+  lastActivityAt?: string;
+  nextActivityAt?: string;
+  openActivityCount?: number;
+  overdueActivityCount?: number;
   description?: string;
   tags: string[];
   products: OpportunityProduct[];

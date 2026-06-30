@@ -37,6 +37,13 @@ public class OpportunityResponse {
     private LocalDate expectedCloseDate;
     private LocalDate actualCloseDate;
     private Long assignedTo;
+    private String accountName;
+    private String assignedToName;
+    private String leadName;
+    private Long lastActivityAt;
+    private Long nextActivityAt;
+    private Integer openActivityCount;
+    private Integer overdueActivityCount;
     private String notes;
     private String lossReason;
     private String reopenReason;

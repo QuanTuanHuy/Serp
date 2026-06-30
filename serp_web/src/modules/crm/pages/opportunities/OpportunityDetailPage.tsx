@@ -154,6 +154,16 @@ export const OpportunityDetailPage: React.FC<OpportunityDetailPageProps> = ({
         />
       )}
 
+      <div className='rounded-lg border bg-card p-4 md:p-5'>
+        <OpportunityDealMetricsStrip
+          estimatedValue={estimatedValue}
+          weightedValue={weightedValue}
+          probability={probability}
+          daysUntilClose={daysUntilClose}
+          formatCurrency={formatCurrency}
+        />
+      </div>
+
       <div className='space-y-6 rounded-lg border bg-card p-4 md:p-5'>
         <div className='border-t pt-6'>
           <div className='mb-4 flex items-center justify-between'>
