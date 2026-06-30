@@ -45,6 +45,7 @@ import { PMOptimizationRunOverrideDialog } from '../components/optimization/PMOp
 import { getPmOptimizationAlgorithmLabel } from '../constants/optimization';
 import type {
   PMOptimizationDecision,
+  PMOptimizationScheduleAllocationApi,
   PMOptimizationRunDecisionItemRequest,
   PMOptimizationRunApi,
   PMOptimizationRunItemApi,
@@ -89,6 +90,9 @@ export function PMProjectOptimizationRunPage({
   const [overrideAssigneeId, setOverrideAssigneeId] = useState('');
   const [overridePlannedStart, setOverridePlannedStart] = useState('');
   const [overridePlannedEnd, setOverridePlannedEnd] = useState('');
+  const [overrideAllocationChunks, setOverrideAllocationChunks] = useState<
+    PMOptimizationScheduleAllocationApi[]
+  >([]);
   const [activeTab, setActiveTab] = useState('summary');
 
   const { data, isLoading, error, refetch } = useGetPmOptimizationRunQuery(
@@ -209,10 +213,55 @@ export function PMProjectOptimizationRunPage({
     setOverrideAssigneeId(item.overrideAssigneeId?.toString() || '');
     setOverridePlannedStart(toLocalDateInputValue(item.overridePlannedStart));
     setOverridePlannedEnd(toLocalDateInputValue(item.overridePlannedEnd));
+    const effectiveChunks =
+      item.scheduleDecision === 'OVERRIDDEN' &&
+      item.overrideAllocationChunks?.length
+        ? item.overrideAllocationChunks
+        : item.allocationChunks || [];
+    setOverrideAllocationChunks(
+      effectiveChunks.length
+        ? effectiveChunks.map((chunk) => ({ ...chunk }))
+        : [
+            {
+              assigneeId:
+                item.overrideAssigneeId ||
+                item.suggestedAssigneeId ||
+                item.currentAssigneeId ||
+                0,
+              start:
+                item.overridePlannedStart ||
+                item.suggestedPlannedStart ||
+                item.currentPlannedStart ||
+                Date.now(),
+              end:
+                item.overridePlannedEnd ||
+                item.suggestedPlannedEnd ||
+                item.currentPlannedEnd ||
+                Date.now() + 60 * 60 * 1000,
+              effortMillis: 60 * 60 * 1000,
+            },
+          ]
+    );
   };
 
   const saveOverride = async () => {
     if (!reviewItem) return;
+
+    const validOverrideAllocationChunks = overrideAllocationChunks.filter(
+      (chunk) =>
+        chunk.assigneeId > 0 &&
+        chunk.start > 0 &&
+        chunk.end > chunk.start &&
+        chunk.effortMillis > 0
+    );
+
+    if (
+      overrideScheduleDecision === 'OVERRIDDEN' &&
+      validOverrideAllocationChunks.length === 0
+    ) {
+      toast.error('Add at least one valid schedule allocation.');
+      return;
+    }
 
     const saved = await handleDecision(reviewItem, {
       assignmentDecision: overrideAssignmentDecision,
@@ -220,8 +269,18 @@ export function PMProjectOptimizationRunPage({
       overrideAssigneeId: overrideAssigneeId
         ? Number(overrideAssigneeId)
         : undefined,
-      overridePlannedStart: fromLocalDateInputValue(overridePlannedStart),
-      overridePlannedEnd: fromLocalDateInputValue(overridePlannedEnd, true),
+      overridePlannedStart:
+        overrideScheduleDecision === 'OVERRIDDEN'
+          ? undefined
+          : fromLocalDateInputValue(overridePlannedStart),
+      overridePlannedEnd:
+        overrideScheduleDecision === 'OVERRIDDEN'
+          ? undefined
+          : fromLocalDateInputValue(overridePlannedEnd, true),
+      overrideAllocationChunks:
+        overrideScheduleDecision === 'OVERRIDDEN'
+          ? validOverrideAllocationChunks
+          : undefined,
     });
     if (saved) {
       setReviewItem(null);
@@ -571,11 +630,14 @@ export function PMProjectOptimizationRunPage({
         overrideAssigneeId={overrideAssigneeId}
         overridePlannedStart={overridePlannedStart}
         overridePlannedEnd={overridePlannedEnd}
+        overrideAllocationChunks={overrideAllocationChunks}
+        projectPeople={projectPeople}
         onAssignmentDecisionChange={setOverrideAssignmentDecision}
         onScheduleDecisionChange={setOverrideScheduleDecision}
         onOverrideAssigneeIdChange={setOverrideAssigneeId}
         onOverridePlannedStartChange={setOverridePlannedStart}
         onOverridePlannedEndChange={setOverridePlannedEnd}
+        onOverrideAllocationChunksChange={setOverrideAllocationChunks}
         onSave={saveOverride}
         onClose={() => setReviewItem(null)}
         isSaving={updateState.isLoading}

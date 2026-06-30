@@ -10,6 +10,16 @@ import type {
 
 export const PM_OPTIMIZATION_DEFAULT_ALGORITHM_KEY = 'greedy-balanced';
 
+export const PM_OPTIMIZATION_OBJECTIVE_ALGORITHM_MAP: Record<
+  PMOptimizationObjective,
+  string
+> = {
+  BALANCED_WORKLOAD: 'greedy-balanced',
+  MINIMAL_REASSIGNMENT: 'greedy-minimal-reassignment',
+  SKILL_FIRST: 'greedy-skill-first',
+  DEADLINE_FIRST: 'greedy-deadline-first',
+};
+
 export const PM_OPTIMIZATION_ALGORITHM_OPTIONS = [
   {
     value: 'greedy-balanced',
@@ -40,6 +50,12 @@ export function getPmOptimizationAlgorithmLabel(value?: string | null) {
     PM_OPTIMIZATION_ALGORITHM_OPTIONS.find((option) => option.value === value)
       ?.label || value
   );
+}
+
+export function getPmOptimizationAlgorithmKeyForObjective(
+  objective: PMOptimizationObjective
+) {
+  return PM_OPTIMIZATION_OBJECTIVE_ALGORITHM_MAP[objective];
 }
 
 export type PMOptimizationObjectiveOption = {
