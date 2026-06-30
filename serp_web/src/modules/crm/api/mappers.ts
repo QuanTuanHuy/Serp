@@ -193,6 +193,13 @@ type BackendOpportunity = {
   expectedCloseDate?: string | null;
   actualCloseDate?: string | null;
   assignedTo?: number | string | null;
+  accountName?: string | null;
+  assignedToName?: string | null;
+  leadName?: string | null;
+  lastActivityAt?: number | string | null;
+  nextActivityAt?: number | string | null;
+  openActivityCount?: number | null;
+  overdueActivityCount?: number | null;
   notes?: string | null;
   lossReason?: string | null;
   reopenReason?: string | null;
@@ -538,8 +545,14 @@ export const mapBackendLeadToLead = (lead: BackendLead): Lead => {
 };
 
 const mapBackendOpportunityAssignedToName = (
-  assignedTo?: number | string | null
+  assignedTo?: number | string | null,
+  assignedToName?: string | null
 ) => {
+  const trimmedName = assignedToName?.trim();
+  if (trimmedName) {
+    return trimmedName;
+  }
+
   if (assignedTo === null || assignedTo === undefined || assignedTo === '') {
     return 'Unassigned';
   }
@@ -558,6 +571,7 @@ export const mapBackendOpportunityToOpportunity = (
     opportunity.assignedTo === null || opportunity.assignedTo === undefined
       ? undefined
       : String(opportunity.assignedTo);
+  const accountName = opportunity.accountName?.trim() || undefined;
   const estimatedValue = Number(opportunity.estimatedValue || 0);
   const probability = opportunity.probability ?? 0;
 
@@ -574,7 +588,10 @@ export const mapBackendOpportunityToOpportunity = (
         ? undefined
         : String(opportunity.leadId),
     customerId: accountId,
-    customerName: accountId ? `Account #${accountId}` : undefined,
+    customerName:
+      accountName || (accountId ? `Account #${accountId}` : undefined),
+    accountName,
+    leadName: opportunity.leadName?.trim() || undefined,
     stage: (opportunity.stage as Opportunity['stage']) || 'PROSPECTING',
     type: 'NEW_BUSINESS',
     estimatedValue,
@@ -588,7 +605,22 @@ export const mapBackendOpportunityToOpportunity = (
       opportunity.expectedCloseDate || toIsoString(opportunity.createdAt),
     actualCloseDate: opportunity.actualCloseDate || undefined,
     assignedTo,
-    assignedToName: mapBackendOpportunityAssignedToName(opportunity.assignedTo),
+    assignedToName: mapBackendOpportunityAssignedToName(
+      opportunity.assignedTo,
+      opportunity.assignedToName
+    ),
+    lastActivityAt:
+      opportunity.lastActivityAt === null ||
+      opportunity.lastActivityAt === undefined
+        ? undefined
+        : toIsoString(opportunity.lastActivityAt),
+    nextActivityAt:
+      opportunity.nextActivityAt === null ||
+      opportunity.nextActivityAt === undefined
+        ? undefined
+        : toIsoString(opportunity.nextActivityAt),
+    openActivityCount: opportunity.openActivityCount ?? 0,
+    overdueActivityCount: opportunity.overdueActivityCount ?? 0,
     description: opportunity.description || undefined,
     tags: [],
     products: [],
