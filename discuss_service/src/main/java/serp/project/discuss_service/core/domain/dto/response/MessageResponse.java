@@ -41,6 +41,8 @@ public class MessageResponse {
     private Long deletedBy;
     private List<ReactionResponse> reactions;
     private Integer readCount;
+    private List<Long> readBy;
+    private List<UserInfo> readByUsers;
     private Map<String, Object> metadata;
     private Long createdAt;
     private Long updatedAt;
@@ -89,6 +91,7 @@ public class MessageResponse {
                 .deletedBy(entity.getDeletedBy())
                 .reactions(reactionResponses)
                 .readCount(entity.getReadCount())
+                .readBy(entity.getReadBy())
                 .metadata(entity.getMetadata())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())

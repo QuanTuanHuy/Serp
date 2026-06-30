@@ -14,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.util.Pair;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
+import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
@@ -25,9 +27,12 @@ import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
 import serp.project.discuss_service.core.service.IAttachmentService;
+import serp.project.discuss_service.core.service.IAttachmentUrlService;
+import serp.project.discuss_service.core.service.IUserInfoService;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -59,6 +64,12 @@ class MessageUseCaseTest {
 
     @Mock
     private IAttachmentService attachmentService;
+
+    @Mock
+    private IAttachmentUrlService attachmentUrlService;
+
+    @Mock
+    private IUserInfoService userInfoService;
 
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
@@ -661,6 +672,61 @@ class MessageUseCaseTest {
 
             // Then
             assertEquals(25L, count);
+        }
+    }
+
+    @Nested
+    @DisplayName("enrichMessageResponseList")
+    class EnrichMessageResponseListTests {
+
+        @Test
+        @DisplayName("should include read receipt user info")
+        void testEnrichMessageResponseList_WithReadBy_IncludesReadByUsers() {
+            // Given
+            MessageEntity message = TestDataFactory.createTextMessage();
+            message.setReadBy(List.of(TestDataFactory.USER_ID_2, TestDataFactory.USER_ID_3));
+
+            UserInfo sender = UserInfo.builder()
+                    .id(TestDataFactory.USER_ID_1)
+                    .name("Sender")
+                    .email("sender@example.com")
+                    .build();
+            UserInfo readerOne = UserInfo.builder()
+                    .id(TestDataFactory.USER_ID_2)
+                    .name("Reader One")
+                    .email("reader1@example.com")
+                    .build();
+            UserInfo readerTwo = UserInfo.builder()
+                    .id(TestDataFactory.USER_ID_3)
+                    .name("Reader Two")
+                    .email("reader2@example.com")
+                    .build();
+
+            when(userInfoService.getUsersByIds(List.of(
+                    TestDataFactory.USER_ID_1,
+                    TestDataFactory.USER_ID_2,
+                    TestDataFactory.USER_ID_3
+            ))).thenReturn(List.of(sender, readerOne, readerTwo));
+            when(attachmentService.getAttachmentsByMessageIds(List.of(TestDataFactory.MESSAGE_ID)))
+                    .thenReturn(Map.of());
+            when(attachmentUrlService.enrichWithUrls(List.of()))
+                    .thenReturn(List.of());
+
+            // When
+            List<MessageResponse> responses = messageUseCase.enrichMessageResponseList(
+                    List.of(message),
+                    TestDataFactory.USER_ID_2
+            );
+
+            // Then
+            assertEquals(1, responses.size());
+            MessageResponse response = responses.get(0);
+            assertEquals(List.of(TestDataFactory.USER_ID_2, TestDataFactory.USER_ID_3), response.getReadBy());
+            assertEquals(2, response.getReadCount());
+            assertTrue(response.getIsReadByMe());
+            assertEquals(2, response.getReadByUsers().size());
+            assertEquals("Reader One", response.getReadByUsers().get(0).getName());
+            assertEquals("Reader Two", response.getReadByUsers().get(1).getName());
         }
     }
 }
