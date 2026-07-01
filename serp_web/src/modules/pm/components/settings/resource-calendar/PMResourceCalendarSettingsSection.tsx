@@ -19,6 +19,17 @@ import {
 } from '@/shared/components/ui/card';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { selectOrganizationId } from '@/modules/account/store';
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
+import { useAppSelector } from '@/shared/hooks';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui/tabs';
+import type { UserProfile } from '@/modules/admin/types';
 
 import {
   useCreatePmResourceCalendarExceptionMutation,
@@ -67,6 +78,34 @@ export function PMResourceCalendarSettingsSection({
     null
   );
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [activeTab, setActiveTab] = useState('profiles');
+
+  const organizationId = useAppSelector(selectOrganizationId);
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const pmModuleId = myModules?.find((m) => m.moduleCode === 'PM')?.moduleId;
+
+  const usersQuery = useGetOrganizationUsersQuery(
+    {
+      organizationId: organizationId as number,
+      page: 0,
+      pageSize: 100,
+      status: 'ACTIVE',
+      moduleId: pmModuleId,
+    },
+    {
+      skip: !organizationId,
+    }
+  );
+
+  const userMap = useMemo(() => {
+    const map = new Map<number, UserProfile>();
+    (usersQuery.data?.data.items ?? []).forEach((user) => {
+      map.set(user.id, user);
+    });
+    return map;
+  }, [usersQuery.data]);
 
   const [createProfile, createProfileState] =
     useCreatePmResourceCalendarProfileMutation();
@@ -245,66 +284,83 @@ export function PMResourceCalendarSettingsSection({
         />
       </div>
 
-      <Card className='border-border/60 bg-background/90 shadow-sm'>
-        <CardHeader className='flex flex-row items-center justify-between border-b py-4'>
-          <CardTitle className='flex items-center gap-2 text-sm'>
-            <CalendarClock className='h-4 w-4 text-muted-foreground' />
-            Calendar profiles
-          </CardTitle>
-        </CardHeader>
-        <CardContent className='p-0'>
-          <PMResourceCalendarProfileTable
-            profiles={profiles}
-            onEdit={(profile) =>
-              setProfileDialog({ mode: 'edit', item: profile })
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+        <TabsList className="grid w-full grid-cols-3 max-w-[400px]">
+          <TabsTrigger value="profiles">Profiles</TabsTrigger>
+          <TabsTrigger value="assignments">Assignments</TabsTrigger>
+          <TabsTrigger value="exceptions">Exceptions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profiles">
+          <Card className='border-border/60 bg-background/90 shadow-sm'>
+            <CardHeader className='flex flex-row items-center justify-between border-b py-4'>
+              <CardTitle className='flex items-center gap-2 text-sm'>
+                <CalendarClock className='h-4 w-4 text-muted-foreground' />
+                Calendar profiles
+              </CardTitle>
+            </CardHeader>
+            <CardContent className='p-0'>
+              <PMResourceCalendarProfileTable
+                profiles={profiles}
+                onEdit={(profile) =>
+                  setProfileDialog({ mode: 'edit', item: profile })
+                }
+                onDelete={(profile) =>
+                  setDeleteTarget({ kind: 'profile', item: profile })
+                }
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assignments">
+          <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.4fr)]'>
+            <PMResourceCalendarAssignmentPanel
+              profiles={profiles}
+              assignments={assignments}
+              selectedProfileId={selectedProfileId}
+              isSubmitting={replaceAssignmentsState.isLoading}
+              onProfileChange={setSelectedProfileId}
+              onSubmit={handleAssignmentsSubmit}
+              userMap={userMap}
+              users={usersQuery.data?.data.items ?? []}
+            />
+            <Card className='border-border/60 bg-background/90 shadow-sm self-start'>
+              <CardHeader className='border-b py-4'>
+                <CardTitle className='flex items-center gap-2 text-sm'>
+                  <Users className='h-4 w-4 text-muted-foreground' />
+                  Coverage
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-2 p-4 text-sm text-muted-foreground'>
+                <p>{assignedUserCount} assigned user(s) use calendar profiles.</p>
+                <p>
+                  Materialized window:{' '}
+                  {overview?.materializedWindowStart
+                    ? formatDate(overview.materializedWindowStart)
+                    : '-'}{' '}
+                  to{' '}
+                  {overview?.materializedWindowEnd
+                    ? formatDate(overview.materializedWindowEnd)
+                    : '-'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="exceptions">
+          <PMResourceCalendarExceptionPanel
+            exceptions={exceptions}
+            isSubmitting={isExceptionSaving}
+            onSubmit={handleExceptionSubmit}
+            onDelete={(exception) =>
+              setDeleteTarget({ kind: 'exception', item: exception })
             }
-            onDelete={(profile) =>
-              setDeleteTarget({ kind: 'profile', item: profile })
-            }
+            userMap={userMap}
           />
-        </CardContent>
-      </Card>
-
-      <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]'>
-        <PMResourceCalendarAssignmentPanel
-          profiles={profiles}
-          assignments={assignments}
-          selectedProfileId={selectedProfileId}
-          isSubmitting={replaceAssignmentsState.isLoading}
-          onProfileChange={setSelectedProfileId}
-          onSubmit={handleAssignmentsSubmit}
-        />
-        <Card className='border-border/60 bg-background/90 shadow-sm'>
-          <CardHeader className='border-b py-4'>
-            <CardTitle className='flex items-center gap-2 text-sm'>
-              <Users className='h-4 w-4 text-muted-foreground' />
-              Coverage
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-2 p-4 text-sm text-muted-foreground'>
-            <p>{assignedUserCount} assigned user(s) use calendar profiles.</p>
-            <p>
-              Materialized window:{' '}
-              {overview?.materializedWindowStart
-                ? formatDate(overview.materializedWindowStart)
-                : '-'}{' '}
-              to{' '}
-              {overview?.materializedWindowEnd
-                ? formatDate(overview.materializedWindowEnd)
-                : '-'}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <PMResourceCalendarExceptionPanel
-        exceptions={exceptions}
-        isSubmitting={isExceptionSaving}
-        onSubmit={handleExceptionSubmit}
-        onDelete={(exception) =>
-          setDeleteTarget({ kind: 'exception', item: exception })
-        }
-      />
+        </TabsContent>
+      </Tabs>
 
       <PMResourceCalendarProfileDialog
         state={profileDialog}

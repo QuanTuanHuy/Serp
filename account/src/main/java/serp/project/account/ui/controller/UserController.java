@@ -42,6 +42,7 @@ public class UserController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String userType,
             @RequestParam(required = false) Long roleId,
+            @RequestParam(required = false) Long moduleId,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long organizationId) {
         if (!authUtils.canAccessOrganization(organizationId)) {
@@ -54,6 +55,7 @@ public class UserController {
                 .status(status)
                 .userType(userType)
                 .roleId(roleId)
+                .moduleId(moduleId)
                 .departmentId(departmentId)
                 .organizationId(organizationId)
                 .build();

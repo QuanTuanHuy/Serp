@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/shared/components/ui/button';
 import { Checkbox } from '@/shared/components/ui/checkbox';
+import { cn } from '@/shared/utils';
 import {
   Dialog,
   DialogContent,
@@ -100,13 +101,15 @@ export function PMResourceCalendarProfileDialog({
     setIsDefault(state.item?.isDefault ?? false);
     setBlocks(
       state.mode === 'edit'
-        ? state.item.blocks.map((block) => ({
-            key: String(block.id),
-            dayOfWeek: block.dayOfWeek,
-            startTime: block.startTime,
-            endTime: block.endTime,
-            capacityFactor: String(block.capacityFactor),
-          }))
+        ? [...state.item.blocks]
+            .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+            .map((block) => ({
+                key: String(block.id),
+                dayOfWeek: block.dayOfWeek,
+                startTime: block.startTime,
+                endTime: block.endTime,
+                capacityFactor: String(block.capacityFactor),
+              }))
         : defaultBlocks()
     );
   }, [state]);
@@ -138,6 +141,37 @@ export function PMResourceCalendarProfileDialog({
 
   const removeBlock = (key: string) => {
     setBlocks((current) => current.filter((block) => block.key !== key));
+  };
+
+  const handleCopyMondayToWeekdays = () => {
+    const mondayBlocks = blocks.filter((b) => b.dayOfWeek === 1);
+    if (mondayBlocks.length === 0) {
+      toast.error("Please configure Monday's hours first.");
+      return;
+    }
+
+    const duplicatedBlocks: BlockDraft[] = [];
+    [2, 3, 4, 5].forEach((day) => {
+      mondayBlocks.forEach((monBlock) => {
+        duplicatedBlocks.push({
+          key: crypto.randomUUID(),
+          dayOfWeek: day,
+          startTime: monBlock.startTime,
+          endTime: monBlock.endTime,
+          capacityFactor: monBlock.capacityFactor,
+        });
+      });
+    });
+
+    setBlocks((current) => {
+      const nonWeekdayBlocks = current.filter(
+        (b) => b.dayOfWeek === 1 || b.dayOfWeek === 6 || b.dayOfWeek === 7
+      );
+      return [...nonWeekdayBlocks, ...duplicatedBlocks].sort(
+        (a, b) => a.dayOfWeek - b.dayOfWeek
+      );
+    });
+    toast.success("Copied Monday's schedule to weekdays (Tue-Fri).");
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -245,13 +279,56 @@ export function PMResourceCalendarProfileDialog({
             </label>
           </div>
 
-          <div className='space-y-3'>
+          <div className='space-y-3 border-t pt-4'>
             <div className='flex items-center justify-between gap-3'>
-              <Label>Weekly blocks</Label>
-              <Button type='button' variant='outline' onClick={addBlock}>
-                <Plus className='mr-2 h-4 w-4' />
-                Add block
-              </Button>
+              <div className='space-y-0.5'>
+                <Label className='text-base font-semibold'>Weekly blocks</Label>
+                <p className='text-xs text-muted-foreground'>Configure working blocks per day of the week.</p>
+              </div>
+              <div className='flex gap-2'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  onClick={handleCopyMondayToWeekdays}
+                >
+                  Copy Monday to Weekdays (Tue-Fri)
+                </Button>
+                <Button type='button' variant='outline' size='sm' onClick={addBlock}>
+                  <Plus className='mr-2 h-4 w-4' />
+                  Add block
+                </Button>
+              </div>
+            </div>
+
+            {/* Visual 7-day grid */}
+            <div className='grid grid-cols-7 gap-2 border rounded-md p-3 bg-muted/40'>
+              {[1, 2, 3, 4, 5, 6, 7].map((day) => {
+                const dayBlocks = blocks.filter(b => b.dayOfWeek === day);
+                const dayName = DAY_OPTIONS.find(d => d.value === day)?.label.substring(0, 3) ?? '';
+                return (
+                  <div
+                    key={day}
+                    className={cn(
+                      'flex flex-col items-center justify-center p-2 rounded-md border text-center text-xs transition-colors',
+                      dayBlocks.length > 0
+                        ? 'bg-primary/5 border-primary/20 text-primary font-medium'
+                        : 'bg-muted border-border text-muted-foreground'
+                    )}
+                  >
+                    <span className='font-semibold'>{dayName}</span>
+                    {dayBlocks.length > 0 ? (
+                      dayBlocks.map((b, i) => (
+                        <span key={i} className='text-[10px] mt-1 block opacity-90'>
+                          {b.startTime}-{b.endTime}
+                        </span>
+                      ))
+                    ) : (
+                      <span className='text-[10px] mt-1 opacity-70'>Off</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <div className='space-y-2'>
               {blocks.map((block) => (
