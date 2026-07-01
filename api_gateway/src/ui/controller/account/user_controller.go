@@ -40,6 +40,7 @@ func (u *UserController) GetUsers(c *gin.Context) {
 	roleId := utils.ParseInt64Query(c, "roleId")
 	departmentId := utils.ParseInt64Query(c, "departmentId")
 	organizationID := utils.ParseInt64Query(c, "organizationId")
+	moduleID := utils.ParseInt64Query(c, "moduleId")
 
 	params := &request.GetUserParams{
 		Page:           &page,
@@ -48,6 +49,7 @@ func (u *UserController) GetUsers(c *gin.Context) {
 		SortDir:        sortDir,
 		Search:         search,
 		OrganizationID: organizationID,
+		ModuleID:       moduleID,
 		Status:         status,
 		UserType:       userType,
 		RoleId:         roleId,

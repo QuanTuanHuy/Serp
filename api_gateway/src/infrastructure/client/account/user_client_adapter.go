@@ -81,6 +81,9 @@ func (u *UserClientAdapter) GetUsers(ctx context.Context, params *request.GetUse
 	if params.OrganizationID != nil {
 		queryParams["organizationId"] = fmt.Sprintf("%d", *params.OrganizationID)
 	}
+	if params.ModuleID != nil {
+		queryParams["moduleId"] = fmt.Sprintf("%d", *params.ModuleID)
+	}
 
 	var httpResponse *utils.HTTPResponse
 	err := u.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
