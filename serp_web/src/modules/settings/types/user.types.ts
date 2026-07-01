@@ -124,6 +124,7 @@ export interface SettingsUserFilters {
   userType?: string;
   roleId?: number;
   departmentId?: number;
+  moduleId?: number;
   page?: number;
   pageSize?: number;
   sortBy?: string;

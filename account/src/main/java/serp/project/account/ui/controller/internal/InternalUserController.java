@@ -37,13 +37,19 @@ public class InternalUserController {
             @RequestParam(required = false) String sortDir,
             @RequestParam(required = false) String search,
             @RequestParam(required = false, defaultValue = "ACTIVE") String status,
+            @RequestParam(required = false) String userType,
             @RequestParam(required = false) Long roleId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long moduleId,
             @RequestParam(required = false) Long organizationId) {
         GetUserParams params = GetUserParams.builder()
                 .page(page).pageSize(pageSize).sortBy(sortBy).sortDirection(sortDir)
                 .search(search)
                 .status(status)
+                .userType(userType)
                 .roleId(roleId)
+                .departmentId(departmentId)
+                .moduleId(moduleId)
                 .organizationId(organizationId)
                 .build();
         log.info("Received request to get users with params: {}", params);

@@ -7,6 +7,7 @@
 
 import { selectOrganizationId } from '@/modules/account/store';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import {
   Alert,
   AlertDescription,
@@ -137,12 +138,18 @@ export function PMProjectEditForm({
   }, [categoriesResponse, project.category, (project as any).categoryName]);
 
   const organizationId = useAppSelector(selectOrganizationId);
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const pmModuleId = myModules?.find((m) => m.moduleCode === 'PM')?.moduleId;
+
   const { data: usersResponse } = useGetOrganizationUsersQuery(
     {
       organizationId: organizationId as number,
       page: 0,
       pageSize: 100,
       status: 'ACTIVE',
+      moduleId: pmModuleId,
     },
     {
       skip: !organizationId,

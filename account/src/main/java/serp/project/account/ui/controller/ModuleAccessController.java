@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
+import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.usecase.ModuleAccessUseCase;
+import serp.project.account.core.usecase.UserUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
@@ -24,6 +26,7 @@ import serp.project.account.kernel.utils.ResponseUtils;
 public class ModuleAccessController {
 
     private final ModuleAccessUseCase moduleAccessUseCase;
+    private final UserUseCase userUseCase;
     private final AuthUtils authUtils;
     private final ResponseUtils responseUtils;
 
@@ -122,15 +125,38 @@ public class ModuleAccessController {
     @GetMapping("/modules/{moduleId}/users")
     public ResponseEntity<?> getUsersWithAccessToModule(
             @PathVariable Long organizationId,
-            @PathVariable Long moduleId) {
+            @PathVariable Long moduleId,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortDir,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false, defaultValue = "ACTIVE") String status,
+            @RequestParam(required = false) String userType,
+            @RequestParam(required = false) Long roleId,
+            @RequestParam(required = false) Long departmentId) {
         if (!authUtils.canAccessOrganization(organizationId)) {
             var response = responseUtils.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
             return ResponseEntity.status(response.getCode()).body(response);
         }
 
-        log.info("GET /api/v1/organizations/{}/modules/{}/users - Fetching users with access",
+        GetUserParams params = GetUserParams.builder()
+                .page(page)
+                .pageSize(pageSize)
+                .sortBy(sortBy)
+                .sortDirection(sortDir)
+                .search(search)
+                .status(status)
+                .userType(userType)
+                .roleId(roleId)
+                .departmentId(departmentId)
+                .organizationId(organizationId)
+                .moduleId(moduleId)
+                .build();
+
+        log.info("GET /api/v1/organizations/{}/modules/{}/users - Fetching users with active module access",
                 organizationId, moduleId);
-        var response = moduleAccessUseCase.getUsersWithAccessToModule(organizationId, moduleId);
+        var response = userUseCase.getUsers(params);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 

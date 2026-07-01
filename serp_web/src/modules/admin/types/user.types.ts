@@ -118,6 +118,7 @@ export interface UserFilters extends SearchParams {
   userType?: UserType;
   roleId?: number;
   departmentId?: number;
+  moduleId?: number;
   search?: string;
 }
 

@@ -43,6 +43,8 @@ const buildUserQueryParams = (filters: SettingsUserFilters): string => {
     params.append('roleId', String(filters.roleId));
   if (filters.departmentId !== undefined)
     params.append('departmentId', String(filters.departmentId));
+  if (filters.moduleId !== undefined)
+    params.append('moduleId', String(filters.moduleId));
   if (filters.page !== undefined) params.append('page', String(filters.page));
   if (filters.pageSize !== undefined)
     params.append('pageSize', String(filters.pageSize));

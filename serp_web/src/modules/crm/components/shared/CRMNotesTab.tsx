@@ -13,6 +13,7 @@ import {
   useDeleteNoteMutation,
 } from '../../api/crmApi';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import { selectOrganizationId } from '@/modules/account/store';
 import { useAppSelector } from '@/shared/hooks';
 import {
@@ -40,12 +41,22 @@ export const CRMNotesTab: React.FC<CRMNotesTabProps> = ({
   const [editContent, setEditContent] = useState('');
 
   const organizationId = useAppSelector(selectOrganizationId);
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const crmModuleId = myModules?.find((m) => m.moduleCode === 'CRM')?.moduleId;
+
   const { data: notesData, isLoading: isNotesLoading } = useGetNotesQuery({
     entityType,
     entityId,
   });
   const { data: orgUsersResponse } = useGetOrganizationUsersQuery(
-    { organizationId: organizationId as number, page: 0, pageSize: 100 },
+    {
+      organizationId: organizationId as number,
+      page: 0,
+      pageSize: 100,
+      moduleId: crmModuleId,
+    },
     { skip: !organizationId }
   );
 

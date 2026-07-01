@@ -33,6 +33,7 @@ import {
 } from '@/shared/components/ui';
 import { useGetMyOrganizationQuery } from '@/modules/settings/services/organizations/organizationsApi';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import {
   useCreateMeetingRequestMutation,
   useGetCustomersQuery,
@@ -168,6 +169,11 @@ export function RequestMeetingDialog({
     skip: !open,
   });
   const organizationId = organization?.id;
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !open || !organizationId,
+  });
+  const crmModuleId = myModules?.find((m) => m.moduleCode === 'CRM')?.moduleId;
+
   const { data: orgUsersResponse, isLoading: orgUsersLoading } =
     useGetOrganizationUsersQuery(
       {
@@ -175,6 +181,7 @@ export function RequestMeetingDialog({
         page: 0,
         pageSize: 100,
         status: 'ACTIVE',
+        moduleId: crmModuleId,
       },
       { skip: !open || !organizationId }
     );
