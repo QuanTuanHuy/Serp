@@ -4,7 +4,7 @@
  */
 
 import { api } from '@/lib/store/api/apiSlice';
-import { createDataTransform } from '@/lib/store/api/utils';
+import { createDataTransform, createPaginatedItemsTransform } from '@/lib/store/api/utils';
 import type {
   AccessibleModule,
   ModuleRole,
@@ -87,7 +87,7 @@ export const settingsModulesApi = api.injectEndpoints({
         url: `/organizations/${organizationId}/modules/${moduleId}/users`,
         method: 'GET',
       }),
-      transformResponse: createDataTransform<UserProfile[]>(),
+      transformResponse: createPaginatedItemsTransform<UserProfile>(),
       providesTags: (_result, _err, { moduleId }) => [
         { type: 'settings/ModuleUsers', id: moduleId },
       ],

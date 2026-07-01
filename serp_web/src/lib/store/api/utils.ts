@@ -119,6 +119,14 @@ export const createPaginatedTransform = <T>() => {
     return response;
   };
 };
+export const createPaginatedItemsTransform = <T>() => {
+  return (response: any): T[] => {
+    if (response?.code === 200 && response?.status === 'success') {
+      return transformTimestampFields(response.data?.items || []);
+    }
+    return [];
+  };
+};
 
 /**
  * Extract error message from API response

@@ -106,20 +106,22 @@ export function ModuleUsersDialog({
             <Building2 className='h-5 w-5 text-purple-600' />
             Module Access Management
           </DialogTitle>
-          <DialogDescription className='space-y-1'>
-            <div className='flex items-center gap-2'>
-              <span className='font-semibold text-foreground'>
-                {module?.moduleName || 'Module'}
-              </span>
-              <Badge variant='secondary' className='text-xs'>
-                {module?.moduleCode}
-              </Badge>
-            </div>
-            {organizationId && (
-              <div className='text-xs text-muted-foreground'>
-                Organization ID: {organizationId}
+          <DialogDescription asChild>
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <span className='font-semibold text-foreground'>
+                  {module?.moduleName || 'Module'}
+                </span>
+                <Badge variant='secondary' className='text-xs'>
+                  {module?.moduleCode}
+                </Badge>
               </div>
-            )}
+              {organizationId && (
+                <div className='text-xs text-muted-foreground'>
+                  Organization ID: {organizationId}
+                </div>
+              )}
+            </div>
           </DialogDescription>
         </DialogHeader>
 
