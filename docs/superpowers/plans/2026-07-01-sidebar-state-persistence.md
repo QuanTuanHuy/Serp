@@ -1,3 +1,27 @@
+# DynamicSidebar Collapse State Persistence Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Persist the expand/collapse state of the `DynamicSidebar` to browser `localStorage` with try-catch block wrapping for robust handling.
+
+**Architecture:** We will modify the `SidebarProvider` React context to load the initial collapsed/expanded state from client-side `localStorage` via a `useEffect` hook, and wrap all read/write accesses to storage in `try-catch` blocks to protect against private browsing limitations.
+
+**Tech Stack:** React, Next.js, localStorage API
+
+---
+
+### Task 1: Update SidebarContext.tsx
+
+**Files:**
+- Modify: `serp_web/src/shared/components/DynamicSidebar/SidebarContext.tsx`
+
+- [ ] **Step 1: Replace implementation of SidebarContext.tsx**
+
+Update `SidebarProvider` to use a persistent key `serp-dynamic-sidebar-collapsed`, load state on client-side mount using `useEffect`, and safely wrap `localStorage` actions in try-catch.
+
+Replace the contents of `d:\User2\open_source\serp\serp_web\src\shared\components\DynamicSidebar\SidebarContext.tsx` with:
+
+```tsx
 /**
  * Author: QuanTuanHuy
  * Description: Part of Serp Project - Sidebar Context for managing collapse state with localStorage persistence
@@ -79,3 +103,29 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
     </SidebarContext.Provider>
   );
 };
+```
+
+- [ ] **Step 2: Verify type correctness**
+
+Run the typescript type-checking command to ensure there are no compilation or type errors.
+
+Cwd: `d:\User2\open_source\serp\serp_web`
+Run: `npm run type-check`
+Expected output: No errors, command exits with code 0.
+
+- [ ] **Step 3: Verify linting and formatting**
+
+Run formatting and linting check on `serp_web`.
+
+Cwd: `d:\User2\open_source\serp\serp_web`
+Run: `npm run lint`
+Expected output: No ESLint errors.
+
+- [ ] **Step 4: Commit changes**
+
+Cwd: `d:\User2\open_source\serp`
+Run:
+```bash
+git add serp_web/src/shared/components/DynamicSidebar/SidebarContext.tsx
+git commit -m "feat(sidebar): persist dynamic sidebar collapse state to localStorage with try-catch"
+```

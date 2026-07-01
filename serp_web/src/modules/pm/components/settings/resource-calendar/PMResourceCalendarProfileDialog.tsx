@@ -221,7 +221,7 @@ export function PMResourceCalendarProfileDialog({
 
   return (
     <Dialog open={state !== null} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-4xl'>
+      <DialogContent className='sm:max-w-3xl'>
         <form onSubmit={handleSubmit} className='space-y-4'>
           <DialogHeader>
             <DialogTitle>
@@ -234,7 +234,8 @@ export function PMResourceCalendarProfileDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className='grid gap-4'>
+          <div className='max-h-[60vh] overflow-y-auto pr-2.5 space-y-4 scrollbar-thin'>
+            <div className='grid gap-4'>
             <div className='grid gap-4 md:grid-cols-2'>
               <div className='space-y-2'>
                 <Label htmlFor='resource-calendar-name'>Name</Label>
@@ -302,33 +303,35 @@ export function PMResourceCalendarProfileDialog({
             </div>
 
             {/* Visual 7-day grid */}
-            <div className='grid grid-cols-7 gap-2 border rounded-md p-3 bg-muted/40'>
-              {[1, 2, 3, 4, 5, 6, 7].map((day) => {
-                const dayBlocks = blocks.filter(b => b.dayOfWeek === day);
-                const dayName = DAY_OPTIONS.find(d => d.value === day)?.label.substring(0, 3) ?? '';
-                return (
-                  <div
-                    key={day}
-                    className={cn(
-                      'flex flex-col items-center justify-center p-2 rounded-md border text-center text-xs transition-colors',
-                      dayBlocks.length > 0
-                        ? 'bg-primary/5 border-primary/20 text-primary font-medium'
-                        : 'bg-muted border-border text-muted-foreground'
-                    )}
-                  >
-                    <span className='font-semibold'>{dayName}</span>
-                    {dayBlocks.length > 0 ? (
-                      dayBlocks.map((b, i) => (
-                        <span key={i} className='text-[10px] mt-1 block opacity-90'>
-                          {b.startTime}-{b.endTime}
-                        </span>
-                      ))
-                    ) : (
-                      <span className='text-[10px] mt-1 opacity-70'>Off</span>
-                    )}
-                  </div>
-                );
-              })}
+            <div className='overflow-x-auto pb-1 scrollbar-none'>
+              <div className='grid grid-cols-7 gap-1.5 border rounded-md p-3 bg-muted/40 min-w-[500px]'>
+                {[1, 2, 3, 4, 5, 6, 7].map((day) => {
+                  const dayBlocks = blocks.filter(b => b.dayOfWeek === day);
+                  const dayName = DAY_OPTIONS.find(d => d.value === day)?.label.substring(0, 3) ?? '';
+                  return (
+                    <div
+                      key={day}
+                      className={cn(
+                        'flex flex-col items-center justify-center p-1.5 rounded-md border text-center text-xs transition-colors',
+                        dayBlocks.length > 0
+                          ? 'bg-primary/5 border-primary/20 text-primary font-medium'
+                          : 'bg-muted border-border text-muted-foreground'
+                      )}
+                    >
+                      <span className='font-semibold'>{dayName}</span>
+                      {dayBlocks.length > 0 ? (
+                        dayBlocks.map((b, i) => (
+                          <span key={i} className='text-[10px] mt-1 block opacity-90'>
+                            {b.startTime}-{b.endTime}
+                          </span>
+                        ))
+                      ) : (
+                        <span className='text-[10px] mt-1 opacity-70'>Off</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div className='space-y-2'>
               {blocks.map((block) => (
@@ -409,8 +412,9 @@ export function PMResourceCalendarProfileDialog({
               ))}
             </div>
           </div>
+          </div>
 
-          <DialogFooter>
+          <DialogFooter className='border-t pt-3'>
             <Button
               type='button'
               variant='outline'
