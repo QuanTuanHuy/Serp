@@ -48,6 +48,7 @@ import type {
   PMResourceCalendarExceptionApi,
   PMResourceCalendarExceptionType,
 } from '../../../types/api';
+import type { UserProfile } from '@/modules/admin/types';
 import { normalizeOptionalText } from '../settings-page.types';
 import { PMResourceCalendarUserCombobox } from './PMResourceCalendarUserCombobox';
 
@@ -60,6 +61,7 @@ export function PMResourceCalendarExceptionPanel({
   isSubmitting,
   onSubmit,
   onDelete,
+  userMap,
 }: {
   exceptions: PMResourceCalendarExceptionApi[];
   isSubmitting: boolean;
@@ -69,6 +71,7 @@ export function PMResourceCalendarExceptionPanel({
     body: PMCreateResourceCalendarExceptionRequest
   ) => Promise<void>;
   onDelete: (exception: PMResourceCalendarExceptionApi) => void;
+  userMap?: Map<number, UserProfile>;
 }) {
   const [dialog, setDialog] = useState<ExceptionDialogState | null>(null);
 

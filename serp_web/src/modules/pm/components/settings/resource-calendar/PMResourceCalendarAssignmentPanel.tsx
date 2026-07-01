@@ -25,6 +25,7 @@ import {
 
 import { PMDatePicker } from '../../shared';
 import { toLocalDateInputValue } from '../../../utils/date';
+import type { UserProfile } from '@/modules/admin/types';
 import type {
   PMReplaceResourceCalendarAssignmentsRequest,
   PMResourceCalendarAssignmentApi,
@@ -46,6 +47,8 @@ export function PMResourceCalendarAssignmentPanel({
   isSubmitting,
   onProfileChange,
   onSubmit,
+  userMap,
+  users,
 }: {
   profiles: PMResourceCalendarProfileApi[];
   assignments: PMResourceCalendarAssignmentApi[];
@@ -56,6 +59,8 @@ export function PMResourceCalendarAssignmentPanel({
     profileId: number,
     body: PMReplaceResourceCalendarAssignmentsRequest
   ) => Promise<void>;
+  userMap?: Map<number, UserProfile>;
+  users?: UserProfile[];
 }) {
   const [rows, setRows] = useState<AssignmentDraft[]>([]);
   const selectedProfile = useMemo(
