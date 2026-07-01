@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
+import { useDebounce } from '@/shared/hooks';
 import {
   Button,
   Dialog,
@@ -61,12 +62,27 @@ export function ModuleUsersDialog({
   const { data: rolesData, isLoading: isLoadingRoles } =
     useModuleRoles(moduleId);
   const roles = (rolesData || []) as ModuleRole[];
+  const [managePage, setManagePage] = useState(0);
+  const [managePageSize] = useState(10);
+  const [manageSearch, setManageSearch] = useState('');
+  const debouncedManageSearch = useDebounce(manageSearch, 300);
+
   const {
-    data: moduleUsersData,
+    data: moduleUsersResponse,
     isLoading: isLoadingModuleUsers,
     refetch: refetchModuleUsers,
-  } = useModuleUsers(moduleId);
-  const moduleUsers = (moduleUsersData || []) as UserProfile[];
+  } = useModuleUsers(moduleId, {
+    page: managePage,
+    pageSize: managePageSize,
+    search: debouncedManageSearch,
+  });
+
+  const moduleUsers = useMemo(() => moduleUsersResponse?.data?.items || [], [moduleUsersResponse]);
+  const pagination = useMemo(() => ({
+    currentPage: moduleUsersResponse?.data?.currentPage || 0,
+    totalPages: moduleUsersResponse?.data?.totalPages || 0,
+    totalItems: moduleUsersResponse?.data?.totalItems || 0,
+  }), [moduleUsersResponse]);
   const { users, setSearch, organizationId } = useSettingsUsers();
   const [activeTab, setActiveTab] = useState<'assign' | 'manage'>('assign');
 
@@ -106,20 +122,22 @@ export function ModuleUsersDialog({
             <Building2 className='h-5 w-5 text-purple-600' />
             Module Access Management
           </DialogTitle>
-          <DialogDescription className='space-y-1'>
-            <div className='flex items-center gap-2'>
-              <span className='font-semibold text-foreground'>
-                {module?.moduleName || 'Module'}
-              </span>
-              <Badge variant='secondary' className='text-xs'>
-                {module?.moduleCode}
-              </Badge>
-            </div>
-            {organizationId && (
-              <div className='text-xs text-muted-foreground'>
-                Organization ID: {organizationId}
+          <DialogDescription asChild>
+            <div className='space-y-1'>
+              <div className='flex items-center gap-2'>
+                <span className='font-semibold text-foreground'>
+                  {module?.moduleName || 'Module'}
+                </span>
+                <Badge variant='secondary' className='text-xs'>
+                  {module?.moduleCode}
+                </Badge>
               </div>
-            )}
+              {organizationId && (
+                <div className='text-xs text-muted-foreground'>
+                  Organization ID: {organizationId}
+                </div>
+              )}
+            </div>
           </DialogDescription>
         </DialogHeader>
 
@@ -200,6 +218,14 @@ export function ModuleUsersDialog({
                       isLoading={isLoadingModuleUsers}
                       isRevoking={revokeStatus.isLoading}
                       onRevoke={handleRevoke}
+                      roles={roles}
+                      search={manageSearch}
+                      onSearchChange={(search) => {
+                        setManageSearch(search);
+                        setManagePage(0);
+                      }}
+                      pagination={pagination}
+                      onPageChange={setManagePage}
                     />
                   </CardContent>
                 </Card>

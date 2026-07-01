@@ -172,14 +172,43 @@ func (m *ModuleAccessClientAdapter) RevokeUserAccessToModule(ctx context.Context
 	return &result, nil
 }
 
-func (m *ModuleAccessClientAdapter) GetUsersWithAccessToModule(ctx context.Context, organizationId int64, moduleId int64) (*response.BaseResponse, error) {
+func (m *ModuleAccessClientAdapter) GetUsersWithAccessToModule(ctx context.Context, params *request.GetUserParams) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
-	path := fmt.Sprintf("/api/v1/organizations/%d/modules/%d/users", organizationId, moduleId)
+	queryParams := make(map[string]string)
+	if params.Page != nil {
+		queryParams["page"] = fmt.Sprintf("%d", *params.Page)
+	}
+	if params.PageSize != nil {
+		queryParams["pageSize"] = fmt.Sprintf("%d", *params.PageSize)
+	}
+	if params.SortBy != nil {
+		queryParams["sortBy"] = *params.SortBy
+	}
+	if params.SortDir != nil {
+		queryParams["sortDir"] = *params.SortDir
+	}
+	if params.Search != nil {
+		queryParams["search"] = *params.Search
+	}
+	if params.Status != nil {
+		queryParams["status"] = *params.Status
+	}
+	if params.UserType != nil {
+		queryParams["userType"] = *params.UserType
+	}
+	if params.RoleId != nil {
+		queryParams["roleId"] = fmt.Sprintf("%d", *params.RoleId)
+	}
+	if params.DepartmentId != nil {
+		queryParams["departmentId"] = fmt.Sprintf("%d", *params.DepartmentId)
+	}
+
+	path := fmt.Sprintf("/api/v1/organizations/%d/modules/%d/users", *params.OrganizationID, *params.ModuleID)
 	var httpResponse *utils.HTTPResponse
 	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
 		var err error
-		httpResponse, err = m.apiClient.GET(ctx, path, headers)
+		httpResponse, err = m.apiClient.GETWithQuery(ctx, path, queryParams, headers)
 		if err != nil {
 			return fmt.Errorf("failed to call get users with access API: %w", err)
 		}
