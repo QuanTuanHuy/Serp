@@ -19,6 +19,11 @@ import {
 } from '@/shared/components/ui/card';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { selectOrganizationId } from '@/modules/account/store';
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
+import { useAppSelector } from '@/shared/hooks';
+import type { UserProfile } from '@/modules/admin/types';
 
 import {
   useCreatePmResourceCalendarExceptionMutation,
@@ -67,6 +72,33 @@ export function PMResourceCalendarSettingsSection({
     null
   );
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+  const organizationId = useAppSelector(selectOrganizationId);
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const pmModuleId = myModules?.find((m) => m.moduleCode === 'PM')?.moduleId;
+
+  const usersQuery = useGetOrganizationUsersQuery(
+    {
+      organizationId: organizationId as number,
+      page: 0,
+      pageSize: 100,
+      status: 'ACTIVE',
+      moduleId: pmModuleId,
+    },
+    {
+      skip: !organizationId,
+    }
+  );
+
+  const userMap = useMemo(() => {
+    const map = new Map<number, UserProfile>();
+    (usersQuery.data?.data.items ?? []).forEach((user) => {
+      map.set(user.id, user);
+    });
+    return map;
+  }, [usersQuery.data]);
 
   const [createProfile, createProfileState] =
     useCreatePmResourceCalendarProfileMutation();
