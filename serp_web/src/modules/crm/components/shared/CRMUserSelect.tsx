@@ -8,6 +8,7 @@
 import React from 'react';
 import { selectOrganizationId } from '@/modules/account/store';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import { useAppSelector } from '@/shared/hooks';
 import {
   Select,
@@ -37,12 +38,18 @@ export const CRMUserSelect: React.FC<CRMUserSelectProps> = ({
   fallbackUserName,
 }) => {
   const organizationId = useAppSelector(selectOrganizationId);
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const crmModuleId = myModules?.find((m) => m.moduleCode === 'CRM')?.moduleId;
+
   const { data: orgUsersResponse, isLoading } = useGetOrganizationUsersQuery(
     {
       organizationId: organizationId as number,
       page: 0,
       pageSize: 100,
       status: 'ACTIVE',
+      moduleId: crmModuleId,
     },
     { skip: !organizationId }
   );
