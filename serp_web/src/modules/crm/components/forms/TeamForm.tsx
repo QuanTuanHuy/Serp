@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useGetMyOrganizationQuery } from '@/modules/settings/services/organizations/organizationsApi';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import {
   Button,
   Input,
@@ -56,6 +57,11 @@ export const TeamForm: React.FC<TeamFormProps> = ({
   const isEditing = !!team;
   const { data: organization } = useGetMyOrganizationQuery();
   const organizationId = organization?.id;
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const crmModuleId = myModules?.find((m) => m.moduleCode === 'CRM')?.moduleId;
+
   const { data: usersResponse, isLoading: isLoadingUsers } =
     useGetOrganizationUsersQuery(
       {
@@ -63,6 +69,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({
         page: 0,
         pageSize: 100,
         status: 'ACTIVE',
+        moduleId: crmModuleId,
       },
       { skip: !organizationId }
     );

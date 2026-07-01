@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { getErrorMessage } from '@/lib/store/api';
 import { useGetMyOrganizationQuery } from '@/modules/settings/services/organizations/organizationsApi';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import {
   Button,
   Card,
@@ -94,6 +95,10 @@ export const TeamDetailPage: React.FC = () => {
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const { data: organization } = useGetMyOrganizationQuery();
   const organizationId = organization?.id;
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const crmModuleId = myModules?.find((m) => m.moduleCode === 'CRM')?.moduleId;
 
   const { data: teamData, isLoading: isLoadingTeam } = useGetTeamQuery(teamId);
   const { data: membersData, isLoading: isLoadingMembers } =
@@ -107,6 +112,7 @@ export const TeamDetailPage: React.FC = () => {
         page: 0,
         pageSize: 100,
         status: 'ACTIVE',
+        moduleId: crmModuleId,
       },
       { skip: !organizationId }
     );
