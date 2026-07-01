@@ -116,11 +116,17 @@ export function useSettingsModules() {
   // Expose helpers to load roles/users per module (for dialogs)
   const useModuleRoles = (moduleId?: number) =>
     useGetModuleRolesQuery(moduleId as number, { skip: !moduleId });
-  const useModuleUsers = (moduleId?: number) =>
+  const useModuleUsers = (
+    moduleId?: number,
+    params?: { page?: number; pageSize?: number; search?: string }
+  ) =>
     useGetModuleUsersQuery(
       {
         organizationId: organizationId as number,
         moduleId: moduleId as number,
+        page: params?.page,
+        pageSize: params?.pageSize,
+        search: params?.search,
       },
       {
         skip: !organizationId || !moduleId,
