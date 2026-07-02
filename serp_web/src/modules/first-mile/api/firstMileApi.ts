@@ -1934,7 +1934,7 @@ export const firstMileApi = api.injectEndpoints({
       { orderId: number; body?: InitiateOrderPaymentRequest }
     >({
       query: ({ orderId, body }) => ({
-        url: `/orders/${orderId}/payment/initiate`,
+        url: `/order-payments/${orderId}/initiate`,
         method: 'POST',
         ...(body ? { body } : {}),
       }),
@@ -1947,7 +1947,7 @@ export const firstMileApi = api.injectEndpoints({
       { orderId: number; body: ConfirmOrderPaymentRequest }
     >({
       query: ({ orderId, body }) => ({
-        url: `/orders/${orderId}/payment/confirm`,
+        url: `/order-payments/${orderId}/confirm`,
         method: 'POST',
         body,
       }),
@@ -1961,7 +1961,7 @@ export const firstMileApi = api.injectEndpoints({
       { orderId: number; limit?: number }
     >({
       query: ({ orderId, limit = 5 }) => ({
-        url: `/orders/${orderId}/drop-off-post-office-suggestions`,
+        url: `/order-drop-offs/${orderId}/post-office-suggestions`,
         method: 'GET',
         params: {
           limit,
@@ -1978,7 +1978,7 @@ export const firstMileApi = api.injectEndpoints({
       { orderId: number; postOfficeId: number }
     >({
       query: ({ orderId, postOfficeId }) => ({
-        url: `/orders/${orderId}/drop-off-confirm`,
+        url: `/order-drop-offs/${orderId}/confirm`,
         method: 'POST',
         body: {
           post_office_id: postOfficeId,

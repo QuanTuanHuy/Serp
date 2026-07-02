@@ -20,7 +20,6 @@ import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
 import serp.project.tms_order.kafka.OrderSyncEventPublisher;
-import serp.project.tms_order.kernel.utils.TransactionAfterCommit;
 import serp.project.tms_order.repository.OrderRepository;
 import serp.project.tms_order.repository.OrderTransitionLogRepository;
 import serp.project.tms_order.service.OrderTimelineService;
@@ -182,7 +181,7 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
         }
 
         if (!changedOrders.isEmpty()) {
-            TransactionAfterCommit.run(() -> changedOrders.forEach(orderSyncEventPublisher::publish));
+            changedOrders.forEach(orderSyncEventPublisher::publish);
         }
 
         return new OrderStatusTransitionResponse(

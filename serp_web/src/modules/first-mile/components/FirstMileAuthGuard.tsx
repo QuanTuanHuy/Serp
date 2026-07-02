@@ -21,7 +21,7 @@ export const FirstMileAuthGuard: React.FC<FirstMileAuthGuardProps> = ({
 
   React.useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/auth/login?redirect=/first-mile');
+      router.push('/auth');
     }
   }, [isAuthenticated, router]);
 

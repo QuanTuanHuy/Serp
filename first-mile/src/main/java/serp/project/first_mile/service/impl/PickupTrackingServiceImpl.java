@@ -6,10 +6,7 @@ Description: Part of Serp Project
 package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import serp.project.first_mile.caller.TmsOrderClient;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
-import serp.project.first_mile.domain.PickupCheckin;
+import serp.project.first_mile.domain.Checkin;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.Trip;
@@ -29,21 +26,26 @@ import serp.project.first_mile.dto.response.PickupCheckinResponse;
 import serp.project.first_mile.dto.response.PickupCheckinDetailResponse;
 import serp.project.first_mile.dto.response.PickupTripLifecycleResponse;
 import serp.project.first_mile.dto.response.PickupTrackingOverviewResponse;
+import serp.project.first_mile.enums.CheckinType;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.TripStatus;
+import serp.project.first_mile.enums.TripType;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
+import serp.project.first_mile.kernel.utils.GeoPointUtils;
 import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
-import serp.project.first_mile.repository.PickupCheckinRepository;
+import serp.project.first_mile.mapper.PickupTrackingMapper;
+import serp.project.first_mile.mapper.PickupTrackingMapper.TripSummary;
+import serp.project.first_mile.repository.CheckinRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
 import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.repository.TripRepository;
 import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.PickupTrackingService;
-import serp.project.first_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.first_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.first_mile.service.dto.OrderTimelineContext;
 
 import java.io.IOException;
@@ -56,7 +58,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -64,15 +65,9 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class PickupTrackingServiceImpl implements PickupTrackingService {
 
-    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
     private static final double DEFAULT_PICKUP_CHECKIN_RADIUS_METERS = 100.0;
-    private static final double EARTH_RADIUS_METERS = 6_371_000.0;
     private static final String STORAGE_SERVICE_NAME = "first-mile";
     private static final String PICKUP_CHECKIN_IMAGE_FOLDER = "orders/pickup-checkin";
-
-    private static final String ACTOR_SCOPE_ADMIN_ALL = "ADMIN_ALL";
-    private static final String ACTOR_SCOPE_MANAGER_SCOPED = "MANAGER_SCOPED";
-    private static final String ACTOR_SCOPE_COURIER_SELF = "COURIER_SELF";
 
     private static final List<TripStatus> TRACKABLE_TRIP_STATUSES = List.of(
             TripStatus.PLANNED,
@@ -87,17 +82,16 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             OrderStatus.ASSIGNED_TO_PICKUP,
             OrderStatus.PICKING_UP
     );
-    private static final String TRANSITION_SOURCE = "FIRST_MILE_PICKUP_TRACKING";
-
     private final FirstMileAccessUtils firstMileAccessUtils;
+    private final PickupTrackingAccessPolicy pickupTrackingAccessPolicy;
     private final TmsOrderClient tmsOrderClient;
     private final TripRepository tripRepository;
     private final TripOrderRepository tripOrderRepository;
-    private final PickupCheckinRepository pickupCheckinRepository;
+    private final CheckinRepository checkinRepository;
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final FileStorageService fileStorageService;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
 
     @Value("${pickup.checkin.radius-meters:100}")
     private Double pickupCheckinRadiusMeters;
@@ -111,10 +105,10 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
         LocalDate effectiveTripDate = tripDate == null ? LocalDate.now() : tripDate;
 
-        ScopeContext scopeContext = resolveScopeContext(
+        PickupTrackingAccessPolicy.ScopeContext scopeContext = pickupTrackingAccessPolicy.resolveScopeContext(
                 tenantId,
-                normalizePositiveId(postOfficeId),
-                normalizePositiveId(courierStaffId)
+                pickupTrackingAccessPolicy.normalizePositiveId(postOfficeId),
+                pickupTrackingAccessPolicy.normalizePositiveId(courierStaffId)
         );
 
         if (scopeContext.visiblePostOfficeIds() != null
@@ -123,14 +117,15 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         }
 
         List<Trip> allTrips = tripRepository
-                .findByTenantIdAndTripDateAndStatusInOrderByPlannedStartTimeAscIdAsc(
+                .findByTenantIdAndTripTypeAndTripDateAndStatusInOrderByPlannedStartTimeAscIdAsc(
                         tenantId,
+                        TripType.PICKUP,
                         effectiveTripDate,
                         TRACKABLE_TRIP_STATUSES
                 );
 
         List<Trip> scopedTrips = allTrips.stream()
-                .filter(trip -> isTripInScope(trip, scopeContext))
+                .filter(trip -> pickupTrackingAccessPolicy.isTripInScope(trip, scopeContext))
                 .toList();
 
         if (scopedTrips.isEmpty()) {
@@ -163,10 +158,15 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 .filter(Objects::nonNull)
                 .toList();
 
-        Map<Long, PickupCheckin> pickupCheckinByTripOrderId = tripOrderIds.isEmpty()
+        Map<Long, Checkin> pickupCheckinByTripOrderId = tripOrderIds.isEmpty()
                 ? Map.of()
-                : pickupCheckinRepository.findByTenantIdAndTripOrderIdIn(tenantId, tripOrderIds).stream()
-                        .collect(Collectors.toMap(PickupCheckin::getTripOrderId, pickupCheckin -> pickupCheckin));
+                : checkinRepository.findByTenantIdAndCheckinTypeAndTripOrderIdIn(
+                                tenantId,
+                                CheckinType.PICKUP,
+                                tripOrderIds
+                        )
+                        .stream()
+                        .collect(Collectors.toMap(Checkin::getTripOrderId, pickupCheckin -> pickupCheckin));
 
         Map<Long, PostOffice> postOfficeById = loadPostOfficeById(tenantId, scopedTrips);
         Map<Long, PostOfficeStaff> courierById = loadCourierById(tenantId, scopedTrips);
@@ -201,7 +201,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 continue;
             }
 
-            PickupCheckin pickupCheckin = pickupCheckinByTripOrderId.get(tripOrder.getId());
+            Checkin pickupCheckin = pickupCheckinByTripOrderId.get(tripOrder.getId());
             boolean checkedIn = pickupCheckin != null;
 
             totalOrders += 1;
@@ -244,43 +244,13 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             PostOffice postOffice = postOfficeById.get(trip.getPostOfficeId());
             PostOfficeStaff courier = courierById.get(trip.getCourierStaffId());
 
-            Point senderLocation = order.getSenderLocation();
-            Point checkinLocation = pickupCheckin == null ? null : pickupCheckin.getCheckinLocation();
-
-            orderResponses.add(new PickupTrackingOverviewResponse.PickupTrackingOrderResponse(
-                    tripOrder.getId(),
-                    trip.getId(),
-                    trip.getTripCode(),
-                    trip.getStatus(),
-                    tripOrder.getSequenceNo(),
-                    order.getId(),
-                    order.getOrderCode(),
-                    order.getCustomerOrderCode(),
-                    order.getStatus(),
-                    order.getSenderName(),
-                    order.getSenderPhone(),
-                    order.getSenderAddressDetail(),
-                    getLatitude(senderLocation),
-                    getLongitude(senderLocation),
-                    order.getPickupTimeStart(),
-                    order.getPickupTimeEnd(),
-                    tripOrder.getPlannedArrivalTime(),
-                    tripOrder.getPlannedStartServiceTime(),
-                    tripOrder.getPlannedDepartureTime(),
-                    trip.getCourierStaffId(),
-                    courier == null ? null : courier.getCode(),
-                    courier == null ? null : courier.getFullName(),
-                    trip.getPostOfficeId(),
-                    postOffice == null ? null : postOffice.getCode(),
-                    postOffice == null ? null : postOffice.getName(),
-                    checkedIn,
-                    pickupCheckin == null ? null : pickupCheckin.getId(),
-                    pickupCheckin == null ? null : pickupCheckin.getCheckinTime(),
-                    getLatitude(checkinLocation),
-                    getLongitude(checkinLocation),
-                    pickupCheckin == null ? null : pickupCheckin.getPhotoUrl(),
-                    pickupCheckin == null ? null : pickupCheckin.getDistanceM(),
-                    pickupCheckin == null ? null : pickupCheckin.getAllowedRadiusM()
+            orderResponses.add(PickupTrackingMapper.toTrackingOrderResponse(
+                    tripOrder,
+                    trip,
+                    order,
+                    pickupCheckin,
+                    postOffice,
+                    courier
             ));
         }
 
@@ -294,24 +264,17 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             PostOffice postOffice = postOfficeById.get(trip.getPostOfficeId());
             PostOfficeStaff courier = courierById.get(trip.getCourierStaffId());
 
-            tripResponses.add(new PickupTrackingOverviewResponse.PickupTrackingTripResponse(
-                    trip.getId(),
-                    trip.getTripCode(),
-                    trip.getStatus(),
-                    trip.getShift(),
-                    trip.getPostOfficeId(),
-                    postOffice == null ? null : postOffice.getCode(),
-                    postOffice == null ? null : postOffice.getName(),
-                    trip.getCourierStaffId(),
-                    courier == null ? null : courier.getCode(),
-                    courier == null ? null : courier.getFullName(),
-                    trip.getPlannedStartTime(),
-                    trip.getPlannedEndTime(),
-                    tripSummary.totalOrders,
-                    tripSummary.checkedInOrders,
-                    tripSummary.pendingCheckinOrders,
-                    tripSummary.returnableToPostOfficeOrders,
-                    tripSummary.pendingPostOfficeInboundOrders
+            tripResponses.add(PickupTrackingMapper.toTrackingTripResponse(
+                    trip,
+                    postOffice,
+                    courier,
+                    new TripSummary(
+                            tripSummary.totalOrders,
+                            tripSummary.checkedInOrders,
+                            tripSummary.pendingCheckinOrders,
+                            tripSummary.returnableToPostOfficeOrders,
+                            tripSummary.pendingPostOfficeInboundOrders
+                    )
             ));
         }
 
@@ -359,9 +322,10 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         }
 
         var tripOrder = tripOrderRepository
-                .findFirstByTenantIdAndOrderIdAndTrip_CourierStaffIdAndTrip_StatusInOrderByTrip_IdDesc(
+                .findFirstByTenantIdAndOrderIdAndTrip_TripTypeAndTrip_CourierStaffIdAndTrip_StatusInOrderByTrip_IdDesc(
                         tenantId,
                         orderId,
+                        TripType.PICKUP,
                         courierStaffId,
                         List.of(TripStatus.PLANNED, TripStatus.IN_PROGRESS)
                 )
@@ -375,12 +339,12 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         }
 
         Point pickupLocation = order.getSenderLocation();
-        if (pickupLocation == null || !isValidCoordinate(pickupLocation.getY(), pickupLocation.getX())) {
+        if (pickupLocation == null || !GeoPointUtils.isValidCoordinate(pickupLocation.getY(), pickupLocation.getX())) {
             throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE, "Order pickup location is missing or invalid.");
         }
 
         double allowedRadiusMeters = resolvePickupCheckinRadiusMeters();
-        double distanceMeters = calculateDistanceMeters(
+        double distanceMeters = GeoPointUtils.distanceMeters(
                 checkinLatitude,
                 checkinLongitude,
                 pickupLocation.getY(),
@@ -402,28 +366,30 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         String contentType = ImageContentTypeUtils.normalizeImageContentType(photo.getContentType());
         FileUploadResponse uploadResponse = uploadPickupCheckinPhoto(photo, contentType, tenantId);
 
-        PickupCheckin pickupCheckin = pickupCheckinRepository
-                .findByTenantIdAndTripOrderId(tenantId, tripOrder.getId())
-                .orElseGet(PickupCheckin::new);
+        Checkin pickupCheckin = checkinRepository
+                .findByTenantIdAndCheckinTypeAndTripOrderId(tenantId, CheckinType.PICKUP, tripOrder.getId())
+                .orElseGet(Checkin::new);
 
         pickupCheckin.setTenantId(tenantId);
+        pickupCheckin.setCheckinType(CheckinType.PICKUP);
         pickupCheckin.setTripOrderId(tripOrder.getId());
         pickupCheckin.setOrderId(order.getId());
+        pickupCheckin.setOrderCode(order.getOrderCode());
         pickupCheckin.setTripId(tripOrder.getTrip().getId());
         pickupCheckin.setCourierStaffId(courierStaffId);
         pickupCheckin.setCheckinTime(LocalDateTime.now());
-        pickupCheckin.setCheckinLocation(toPoint(checkinLatitude, checkinLongitude));
-        pickupCheckin.setDistanceM(round3(distanceMeters));
-        pickupCheckin.setAllowedRadiusM(round3(allowedRadiusMeters));
+        pickupCheckin.setCheckinLocation(GeoPointUtils.toPoint(checkinLatitude, checkinLongitude));
+        pickupCheckin.setDistanceM(GeoPointUtils.round3(distanceMeters));
+        pickupCheckin.setAllowedRadiusM(GeoPointUtils.round3(allowedRadiusMeters));
         pickupCheckin.setPhotoUrl(uploadResponse.getUrl());
 
-        PickupCheckin savedCheckin = pickupCheckinRepository.save(pickupCheckin);
+        Checkin savedCheckin = checkinRepository.save(pickupCheckin);
 
         if (TripStatus.PLANNED.equals(tripOrder.getTrip().getStatus())) {
             tripOrder.getTrip().setStatus(TripStatus.IN_PROGRESS);
         }
 
-        enqueueTransitions(List.of(toTransitionItem(
+        enqueueTransitions(List.of(PickupOrderTransitionFactory.item(
                 order,
                 List.of(OrderStatus.ASSIGNED_TO_PICKUP, OrderStatus.PICKING_UP),
                 OrderStatus.PICKING_UP,
@@ -448,7 +414,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
 
         tryAutoCompleteTripAfterCheckin(tripOrder.getTrip(), tenantId);
 
-        return toPickupCheckinResponse(order, tripOrder.getTrip(), savedCheckin, pickupLocation);
+        return PickupTrackingMapper.toPickupCheckinResponse(order, tripOrder.getTrip(), savedCheckin, pickupLocation);
     }
 
     @Override
@@ -457,8 +423,8 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "orderId must be greater than 0.");
         }
 
-        PickupCheckin pickupCheckin = pickupCheckinRepository
-                .findByTenantIdAndOrderId(tenantId, orderId)
+        Checkin pickupCheckin = checkinRepository
+                .findByTenantIdAndCheckinTypeAndOrderId(tenantId, CheckinType.PICKUP, orderId)
                 .orElseThrow(() -> new AppException(
                         ErrorCode.ORDER_NOT_FOUND,
                         "Pickup check-in not found for this order."
@@ -468,8 +434,11 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
 
         Trip trip = tripRepository.findByIdAndTenantId(pickupCheckin.getTripId(), tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Pickup trip is invalid."));
+        if (!TripType.PICKUP.equals(trip.getTripType())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Pickup trip is invalid.");
+        }
 
-        ensureCanViewPickupCheckin(tenantId, trip, pickupCheckin);
+        pickupTrackingAccessPolicy.ensureCanViewPickupCheckin(tenantId, trip, pickupCheckin);
 
         PostOffice postOffice = trip.getPostOfficeId() == null
                 ? null
@@ -481,35 +450,12 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                         .findByIdAndTenantId(pickupCheckin.getCourierStaffId(), tenantId)
                         .orElse(null);
 
-        Point senderLocation = order.getSenderLocation();
-        Point checkinLocation = pickupCheckin.getCheckinLocation();
-
-        return new PickupCheckinDetailResponse(
-                pickupCheckin.getId(),
-                order.getId(),
-                order.getOrderCode(),
-                order.getCustomerOrderCode(),
-                order.getStatus(),
-                trip.getId(),
-                trip.getTripCode(),
-                trip.getStatus(),
-                pickupCheckin.getCourierStaffId(),
-                courier == null ? null : courier.getCode(),
-                courier == null ? null : courier.getFullName(),
-                trip.getPostOfficeId(),
-                postOffice == null ? null : postOffice.getCode(),
-                postOffice == null ? null : postOffice.getName(),
-                order.getSenderName(),
-                order.getSenderPhone(),
-                order.getSenderAddressDetail(),
-                getLatitude(senderLocation),
-                getLongitude(senderLocation),
-                pickupCheckin.getCheckinTime(),
-                getLatitude(checkinLocation),
-                getLongitude(checkinLocation),
-                pickupCheckin.getPhotoUrl(),
-                pickupCheckin.getDistanceM(),
-                pickupCheckin.getAllowedRadiusM()
+        return PickupTrackingMapper.toPickupCheckinDetailResponse(
+                pickupCheckin,
+                order,
+                trip,
+                postOffice,
+                courier
         );
     }
 
@@ -517,7 +463,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
     @Transactional(rollbackFor = Exception.class)
     public PickupTripLifecycleResponse completeTrip(Long tripId, Long tenantId) {
         Trip trip = resolveTripForLifecycle(tripId, tenantId);
-        ensureCanManageTrip(tenantId, trip);
+        pickupTrackingAccessPolicy.ensureCanManageTrip(tenantId, trip);
 
         if (TripStatus.CANCELLED.equals(trip.getStatus())) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Cancelled trip cannot be completed.");
@@ -546,8 +492,13 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
 
         Set<Long> checkedInTripOrderIds = tripOrderIds.isEmpty()
                 ? Set.of()
-                : pickupCheckinRepository.findByTenantIdAndTripOrderIdIn(tenantId, tripOrderIds).stream()
-                .map(PickupCheckin::getTripOrderId)
+                : checkinRepository.findByTenantIdAndCheckinTypeAndTripOrderIdIn(
+                                tenantId,
+                                CheckinType.PICKUP,
+                                tripOrderIds
+                        )
+                .stream()
+                .map(Checkin::getTripOrderId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
@@ -582,7 +533,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 continue;
             }
 
-            transitionItems.add(toTransitionItem(
+            transitionItems.add(PickupOrderTransitionFactory.item(
                     order,
                     AUTO_PICKUP_FAILED_CANDIDATE_STATUSES,
                     OrderStatus.PICKUP_FAILED,
@@ -612,7 +563,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
     @Transactional(rollbackFor = Exception.class)
     public PickupTripLifecycleResponse returnTripToPostOffice(Long tripId, Long tenantId) {
         Trip trip = resolveTripForLifecycle(tripId, tenantId);
-        ensureCanManageTrip(tenantId, trip);
+        pickupTrackingAccessPolicy.ensureCanManageTrip(tenantId, trip);
 
         if (!TripStatus.COMPLETED.equals(trip.getStatus())) {
             throw new AppException(
@@ -652,7 +603,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 continue;
             }
 
-            transitionItems.add(toTransitionItem(
+            transitionItems.add(PickupOrderTransitionFactory.item(
                     order,
                     RETURNABLE_ORDER_STATUSES,
                     OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND,
@@ -692,7 +643,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             Long tenantId
     ) {
         Trip trip = resolveTripForLifecycle(tripId, tenantId);
-        ensureCanConfirmPostOfficeInbound(tenantId, trip);
+        pickupTrackingAccessPolicy.ensureCanConfirmPostOfficeInbound(tenantId, trip);
 
         if (!TripStatus.COMPLETED.equals(trip.getStatus())) {
             throw new AppException(
@@ -747,7 +698,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 continue;
             }
 
-            transitionItems.add(toTransitionItem(
+            transitionItems.add(PickupOrderTransitionFactory.item(
                     matchedOrder,
                     List.of(OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND),
                     OrderStatus.AT_ORIGIN_POST_OFFICE,
@@ -785,95 +736,12 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
     }
 
-    private TmsOrderStatusTransitionRequest.Item toTransitionItem(
-            TmsOrderOperationView order,
-            List<OrderStatus> expectedStatuses,
-            OrderStatus targetStatus,
-            String description,
-            OrderTimelineContext context
-    ) {
-        TmsOrderStatusTransitionRequest.Context transitionContext = context == null
-                ? null
-                : TmsOrderStatusTransitionRequest.Context.builder()
-                .eventTime(context.eventTime())
-                .tripId(context.tripId())
-                .tripCode(context.tripCode())
-                .postOfficeId(context.postOfficeId())
-                .postOfficeCode(context.postOfficeCode())
-                .postOfficeName(context.postOfficeName())
-                .staffId(context.courierStaffId())
-                .staffCode(context.courierCode())
-                .staffName(context.courierName())
-                .vehicleId(context.vehicleId())
-                .vehicleLicensePlate(context.vehicleLicensePlate())
-                .latitude(context.latitude())
-                .longitude(context.longitude())
-                .locationLabel(context.locationLabel())
-                .build();
-
-        return TmsOrderStatusTransitionRequest.Item.builder()
-                .orderId(order.getId())
-                .orderCode(order.getOrderCode())
-                .expectedStatuses(expectedStatuses)
-                .targetStatus(targetStatus)
-                .description(description)
-                .context(transitionContext)
-                .build();
-    }
-
     private void enqueueTransitions(List<TmsOrderStatusTransitionRequest.Item> items, Long tenantId) {
         if (items == null || items.isEmpty()) {
             return;
         }
 
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
-                .source(TRANSITION_SOURCE)
-                .idempotencyKey(TRANSITION_SOURCE + "-" + UUID.randomUUID())
-                .items(items)
-                .build(), tenantId);
-    }
-
-    private void ensureCanViewPickupCheckin(Long tenantId, Trip trip, PickupCheckin pickupCheckin) {
-        if (firstMileAccessUtils.isAdmin()) {
-            return;
-        }
-
-        if (firstMileAccessUtils.isPostOfficerManager()) {
-            Set<Long> managedPostOfficeIds = firstMileAccessUtils.getManagedPostOfficeIdsOrThrow(tenantId);
-            if (trip.getPostOfficeId() == null || !managedPostOfficeIds.contains(trip.getPostOfficeId())) {
-                throw new AppException(ErrorCode.UNAUTHORIZED);
-            }
-            return;
-        }
-
-        if (firstMileAccessUtils.isCourier()) {
-            Long currentCourierStaffId = firstMileAccessUtils.resolveCurrentStaffIdByRoleOrThrow(
-                    tenantId,
-                    PostOfficeStaffRole.COURIER
-            );
-            if (!Objects.equals(currentCourierStaffId, pickupCheckin.getCourierStaffId())) {
-                throw new AppException(ErrorCode.UNAUTHORIZED);
-            }
-            return;
-        }
-
-        throw new AppException(ErrorCode.UNAUTHORIZED);
-    }
-
-    private void ensureCanConfirmPostOfficeInbound(Long tenantId, Trip trip) {
-        if (firstMileAccessUtils.isAdmin()) {
-            return;
-        }
-
-        if (firstMileAccessUtils.isPostOfficerManager()) {
-            Set<Long> managedPostOfficeIds = firstMileAccessUtils.getManagedPostOfficeIdsOrThrow(tenantId);
-            if (trip.getPostOfficeId() == null || !managedPostOfficeIds.contains(trip.getPostOfficeId())) {
-                throw new AppException(ErrorCode.UNAUTHORIZED);
-            }
-            return;
-        }
-
-        throw new AppException(ErrorCode.UNAUTHORIZED);
+        tmsOrderTransitionPublisherService.publish(PickupOrderTransitionFactory.request(items), tenantId);
     }
 
     private PostOfficeStaff resolveCurrentManagerStaff(Long tenantId) {
@@ -911,40 +779,18 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "tripId must be greater than 0.");
         }
         return tripRepository.findByIdAndTenantIdForUpdate(tripId, tenantId)
+                .filter(trip -> TripType.PICKUP.equals(trip.getTripType()))
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Pickup trip not found."));
-    }
-
-    private void ensureCanManageTrip(Long tenantId, Trip trip) {
-        if (firstMileAccessUtils.isAdmin()) {
-            return;
-        }
-
-        if (firstMileAccessUtils.isPostOfficerManager()) {
-            Set<Long> managedPostOfficeIds = firstMileAccessUtils.getManagedPostOfficeIdsOrThrow(tenantId);
-            if (trip.getPostOfficeId() == null || !managedPostOfficeIds.contains(trip.getPostOfficeId())) {
-                throw new AppException(ErrorCode.UNAUTHORIZED);
-            }
-            return;
-        }
-
-        if (firstMileAccessUtils.isCourier()) {
-            Long currentCourierStaffId = firstMileAccessUtils.resolveCurrentStaffIdByRoleOrThrow(
-                    tenantId,
-                    PostOfficeStaffRole.COURIER
-            );
-            if (!Objects.equals(currentCourierStaffId, trip.getCourierStaffId())) {
-                throw new AppException(ErrorCode.UNAUTHORIZED);
-            }
-            return;
-        }
-
-        throw new AppException(ErrorCode.UNAUTHORIZED);
     }
 
     private PickupTripLifecycleResponse buildTripLifecycleResponse(Trip trip, Long tenantId) {
         List<TripOrder> tripOrders = tripOrderRepository.findByTenantIdAndTrip_IdOrderBySequenceNoAsc(tenantId, trip.getId());
         int totalOrders = tripOrders.size();
-        int checkedInOrders = (int) pickupCheckinRepository.countByTenantIdAndTripId(tenantId, trip.getId());
+        int checkedInOrders = (int) checkinRepository.countByTenantIdAndCheckinTypeAndTripId(
+                tenantId,
+                CheckinType.PICKUP,
+                trip.getId()
+        );
 
         List<Long> orderIds = tripOrders.stream()
                 .map(TripOrder::getOrderId)
@@ -1007,102 +853,16 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                 .collect(Collectors.toMap(PostOfficeStaff::getId, courier -> courier));
     }
 
-    private ScopeContext resolveScopeContext(Long tenantId, Long postOfficeId, Long courierStaffId) {
-        if (firstMileAccessUtils.isAdmin()) {
-            return new ScopeContext(
-                    ACTOR_SCOPE_ADMIN_ALL,
-                    postOfficeId == null ? null : Set.of(postOfficeId),
-                    postOfficeId,
-                    courierStaffId,
-                    courierStaffId
-            );
-        }
-
-        if (firstMileAccessUtils.isPostOfficerManager()) {
-            Set<Long> managedPostOfficeIds = firstMileAccessUtils.getManagedPostOfficeIdsOrThrow(tenantId);
-
-            if (postOfficeId != null && !managedPostOfficeIds.contains(postOfficeId)) {
-                throw new AppException(ErrorCode.UNAUTHORIZED);
-            }
-
-            Set<Long> visiblePostOfficeIds = postOfficeId == null
-                    ? managedPostOfficeIds
-                    : Set.of(postOfficeId);
-
-            return new ScopeContext(
-                    ACTOR_SCOPE_MANAGER_SCOPED,
-                    visiblePostOfficeIds,
-                    postOfficeId,
-                    courierStaffId,
-                    courierStaffId
-            );
-        }
-
-        if (firstMileAccessUtils.isCourier()) {
-            Long currentCourierStaffId = firstMileAccessUtils.resolveCurrentStaffIdByRoleOrThrow(
-                    tenantId,
-                    PostOfficeStaffRole.COURIER
-            );
-
-            if (courierStaffId != null && !courierStaffId.equals(currentCourierStaffId)) {
-                throw new AppException(ErrorCode.UNAUTHORIZED);
-            }
-
-            return new ScopeContext(
-                    ACTOR_SCOPE_COURIER_SELF,
-                    postOfficeId == null ? null : Set.of(postOfficeId),
-                    postOfficeId,
-                    currentCourierStaffId,
-                    currentCourierStaffId
-            );
-        }
-
-        throw new AppException(ErrorCode.UNAUTHORIZED);
-    }
-
-    private boolean isTripInScope(Trip trip, ScopeContext scopeContext) {
-        if (trip == null || trip.getId() == null) {
-            return false;
-        }
-
-        if (scopeContext.visiblePostOfficeIds() != null
-                && !scopeContext.visiblePostOfficeIds().contains(trip.getPostOfficeId())) {
-            return false;
-        }
-
-        return scopeContext.effectiveCourierStaffId() == null
-                || Objects.equals(scopeContext.effectiveCourierStaffId(), trip.getCourierStaffId());
-    }
-
-    private PickupTrackingOverviewResponse buildEmptyOverview(LocalDate tripDate, ScopeContext scopeContext) {
-        return new PickupTrackingOverviewResponse(
+    private PickupTrackingOverviewResponse buildEmptyOverview(
+            LocalDate tripDate,
+            PickupTrackingAccessPolicy.ScopeContext scopeContext
+    ) {
+        return PickupTrackingMapper.emptyOverview(
                 tripDate,
                 scopeContext.actorScope(),
                 scopeContext.selectedPostOfficeId(),
-                scopeContext.selectedCourierStaffId(),
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                List.of(),
-                List.of()
+                scopeContext.selectedCourierStaffId()
         );
-    }
-
-    private Long normalizePositiveId(Long value) {
-        if (value == null) {
-            return null;
-        }
-
-        if (value <= 0) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        return value;
     }
 
     private void validatePickupCheckinRequest(
@@ -1120,7 +880,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         if (checkinLongitude == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "longitude is required.");
         }
-        if (!isValidCoordinate(checkinLatitude, checkinLongitude)) {
+        if (!GeoPointUtils.isValidCoordinate(checkinLatitude, checkinLongitude)) {
             throw new AppException(
                     ErrorCode.INVALID_REQUEST,
                     String.format(
@@ -1149,7 +909,11 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             return;
         }
 
-        long checkedInOrders = pickupCheckinRepository.countByTenantIdAndTripId(tenantId, trip.getId());
+        long checkedInOrders = checkinRepository.countByTenantIdAndCheckinTypeAndTripId(
+                tenantId,
+                CheckinType.PICKUP,
+                trip.getId()
+        );
         if (checkedInOrders >= totalOrders) {
             trip.setStatus(TripStatus.COMPLETED);
         }
@@ -1172,33 +936,6 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
         }
     }
 
-    private PickupCheckinResponse toPickupCheckinResponse(
-            TmsOrderOperationView order,
-            Trip trip,
-            PickupCheckin pickupCheckin,
-            Point pickupLocation
-    ) {
-        Point checkinLocation = pickupCheckin == null ? null : pickupCheckin.getCheckinLocation();
-
-        return new PickupCheckinResponse(
-                pickupCheckin == null ? null : pickupCheckin.getId(),
-                order == null ? null : order.getId(),
-                order == null ? null : order.getOrderCode(),
-                OrderStatus.PICKING_UP,
-                trip == null ? null : trip.getId(),
-                trip == null ? null : trip.getTripCode(),
-                pickupCheckin == null ? null : pickupCheckin.getCourierStaffId(),
-                pickupCheckin == null ? null : pickupCheckin.getCheckinTime(),
-                pickupCheckin == null ? null : pickupCheckin.getPhotoUrl(),
-                checkinLocation == null ? null : round3(checkinLocation.getY()),
-                checkinLocation == null ? null : round3(checkinLocation.getX()),
-                pickupLocation == null ? null : round3(pickupLocation.getY()),
-                pickupLocation == null ? null : round3(pickupLocation.getX()),
-                pickupCheckin == null ? null : pickupCheckin.getDistanceM(),
-                pickupCheckin == null ? null : pickupCheckin.getAllowedRadiusM()
-        );
-    }
-
     private double resolvePickupCheckinRadiusMeters() {
         Double configuredRadius = pickupCheckinRadiusMeters;
         if (configuredRadius == null
@@ -1208,76 +945,6 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             return DEFAULT_PICKUP_CHECKIN_RADIUS_METERS;
         }
         return configuredRadius;
-    }
-
-    private double calculateDistanceMeters(
-            double fromLatitude,
-            double fromLongitude,
-            double toLatitude,
-            double toLongitude
-    ) {
-        double latitudeDeltaRadians = Math.toRadians(toLatitude - fromLatitude);
-        double longitudeDeltaRadians = Math.toRadians(toLongitude - fromLongitude);
-
-        double fromLatitudeRadians = Math.toRadians(fromLatitude);
-        double toLatitudeRadians = Math.toRadians(toLatitude);
-
-        double haversineComponent = Math.sin(latitudeDeltaRadians / 2) * Math.sin(latitudeDeltaRadians / 2)
-                + Math.cos(fromLatitudeRadians) * Math.cos(toLatitudeRadians)
-                * Math.sin(longitudeDeltaRadians / 2) * Math.sin(longitudeDeltaRadians / 2);
-
-        double normalizedHaversineComponent = Math.max(0D, Math.min(1D, haversineComponent));
-        double centralAngle = 2 * Math.atan2(
-                Math.sqrt(normalizedHaversineComponent),
-                Math.sqrt(1D - normalizedHaversineComponent)
-        );
-
-        return EARTH_RADIUS_METERS * centralAngle;
-    }
-
-    private boolean isValidCoordinate(double latitude, double longitude) {
-        return !Double.isNaN(latitude)
-                && !Double.isNaN(longitude)
-                && !Double.isInfinite(latitude)
-                && !Double.isInfinite(longitude)
-                && latitude >= -90.0
-                && latitude <= 90.0
-                && longitude >= -180.0
-                && longitude <= 180.0;
-    }
-
-    private Point toPoint(Double latitude, Double longitude) {
-        if (latitude == null || longitude == null) {
-            return null;
-        }
-        return GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
-    }
-
-    private double round3(double value) {
-        return Math.round(value * 1000.0) / 1000.0;
-    }
-
-    private Double getLatitude(Point point) {
-        if (point == null) {
-            return null;
-        }
-        return point.getY();
-    }
-
-    private Double getLongitude(Point point) {
-        if (point == null) {
-            return null;
-        }
-        return point.getX();
-    }
-
-    private record ScopeContext(
-            String actorScope,
-            Set<Long> visiblePostOfficeIds,
-            Long selectedPostOfficeId,
-            Long effectiveCourierStaffId,
-            Long selectedCourierStaffId
-    ) {
     }
 
     private static class TripSummaryAccumulator {

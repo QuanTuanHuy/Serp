@@ -59,7 +59,6 @@ import {
   type OrderFilterFormState,
 } from './orderFilterModels';
 import {
-  OrderAccessScopeCard,
   OrderCancelDialog,
   OrderConfirmDialog,
   OrderDetailDialog,
@@ -70,6 +69,7 @@ import {
   OrderImportCard,
   OrderPageHeader,
   OrderResultsCard,
+  OrderStatsCards,
 } from './components';
 import {
   buildOrderAddressLabel,
@@ -80,8 +80,6 @@ import {
   formatPickupMethodLabel,
   formatStatusLabel,
   getProvinceNameByCode,
-  getScopeBadgeLabel,
-  getScopeDescription,
   getStatusBadgeVariant,
   isDropOffOrder,
   isConfirmableStatus,
@@ -1744,16 +1742,11 @@ export const OrderListPage: React.FC = () => {
         }
       />
 
-      <div className='flex flex-col gap-3 lg:flex-row lg:items-start'>
-        {canViewOrders ? (
-          <OrderAccessScopeCard
-            canViewOrders={canViewOrders}
-            badgeLabel={getScopeBadgeLabel(accessScope)}
-            description={getScopeDescription(accessScope)}
-            className='flex-1'
-          />
-        ) : null}
-      </div>
+      <OrderStatsCards
+        canViewOrders={canViewOrders}
+        data={data}
+        isFetching={isFetching}
+      />
 
       {canConfirmDropOffAtPostOffice ? (
         <OrderDropOffManagerConfirmCard

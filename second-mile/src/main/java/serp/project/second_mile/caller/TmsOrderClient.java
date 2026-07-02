@@ -16,8 +16,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import serp.project.second_mile.caller.dto.tms_order.TmsOrderLookupRequest;
 import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
-import serp.project.second_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
-import serp.project.second_mile.caller.dto.tms_order.TmsOrderStatusTransitionResponse;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
 import serp.project.second_mile.kernel.utils.AuthUtils;
@@ -35,9 +33,6 @@ public class TmsOrderClient {
 
     @Value("${tms-order.service.lookup-path:/api/v1/internal/orders/lookup}")
     private String lookupPath;
-
-    @Value("${tms-order.service.status-transitions-path:/api/v1/internal/orders/status-transitions}")
-    private String statusTransitionsPath;
 
     public TmsOrderClient(
             RestClient.Builder restClientBuilder,
@@ -68,20 +63,6 @@ public class TmsOrderClient {
         return lookup(TmsOrderLookupRequest.builder()
                 .orderCodes(orderCodes == null ? List.of() : orderCodes.stream().toList())
                 .build(), tenantId);
-    }
-
-    public TmsOrderStatusTransitionResponse applyTransitions(TmsOrderStatusTransitionRequest request) {
-        return applyTransitions(request, null);
-    }
-
-    public TmsOrderStatusTransitionResponse applyTransitions(TmsOrderStatusTransitionRequest request, Long tenantId) {
-        return post(
-                statusTransitionsPath,
-                request,
-                tenantId,
-                new ParameterizedTypeReference<TmsOrderStatusTransitionResponse>() {
-                }
-        );
     }
 
     private List<TmsOrderOperationView> lookup(TmsOrderLookupRequest request, Long tenantId) {
@@ -135,7 +116,7 @@ public class TmsOrderClient {
                 return new AppException(ErrorCode.BAG_ORDER_NOT_FOUND);
             }
             if (statusCode == 400 || statusCode == 409) {
-                return new AppException(ErrorCode.INVALID_REQUEST, "TMS order service rejected order transition.");
+                return new AppException(ErrorCode.INVALID_REQUEST, "TMS order service rejected request.");
             }
             return new AppException(
                     ErrorCode.UNCATEGORIZED_EXCEPTION,

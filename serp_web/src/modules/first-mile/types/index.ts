@@ -446,8 +446,6 @@ export interface CreateSecondMileBagRequest {
   destination_type: SecondMileBagDestinationType;
   destination_hub_id?: number;
   destination_post_office_code?: string;
-  vehicle_id?: number;
-  route_id?: number;
   max_weight?: number;
   max_volume?: number;
   max_orders?: number;

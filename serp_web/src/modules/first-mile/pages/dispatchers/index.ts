@@ -4,3 +4,4 @@
  */
 
 export * from './first-mile';
+export * from './last-mile';

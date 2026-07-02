@@ -21,24 +21,19 @@ import {
 } from '@/shared/components';
 
 import { TmsCombobox } from '../../../components/TmsCombobox';
-import type { Hub, SecondMileRoute, SecondMileVehicle } from '../../../types';
+import type { Hub } from '../../../types';
 import {
   BAG_DESTINATION_TYPE_OPTIONS,
   type BagFormValues,
 } from '../bagPageModels';
-
-const NONE_VALUE = '__NONE__';
 
 interface BagFormDialogProps {
   open: boolean;
   mode: 'create' | 'edit';
   values: BagFormValues;
   hubs: Hub[];
-  routes: SecondMileRoute[];
-  vehicles: SecondMileVehicle[];
   destinationPostOfficeOptions: Array<{ value: string; label: string }>;
   isLoadingDestinationPostOffices: boolean;
-  isLoadingRoutes: boolean;
   isSaving: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (event: React.FormEvent) => void;
@@ -53,11 +48,8 @@ export function BagFormDialog({
   mode,
   values,
   hubs,
-  routes,
-  vehicles,
   destinationPostOfficeOptions,
   isLoadingDestinationPostOffices,
-  isLoadingRoutes,
   isSaving,
   onOpenChange,
   onSubmit,
@@ -67,37 +59,6 @@ export function BagFormDialog({
     value: String(hub.id),
     label: `${hub.code} - ${hub.name}`,
   }));
-  const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
-  const selectedRoute = routes.find(
-    (route) => String(route.id) === values.routeId
-  );
-  const selectedVehicle = selectedRoute?.vehicleId
-    ? vehicleById.get(selectedRoute.vehicleId)
-    : undefined;
-  const routeOptions = routes.map((route) => {
-    const vehicle = route.vehicleId ? vehicleById.get(route.vehicleId) : null;
-    const driver = vehicle?.assignedStaffFullName
-      ? ` | ${vehicle.assignedStaffFullName}`
-      : '';
-    const vehicleLabel = vehicle?.licensePlate
-      ? ` | ${vehicle.licensePlate}${driver}`
-      : '';
-
-    return {
-      value: String(route.id),
-      label: `${route.routeCode} - ${route.routeName}${vehicleLabel}`,
-    };
-  });
-  const vehicleOptions = selectedVehicle
-    ? [
-        {
-          value: String(selectedVehicle.id),
-          label: selectedVehicle.assignedStaffFullName
-            ? `${selectedVehicle.licensePlate} - ${selectedVehicle.assignedStaffFullName}`
-            : selectedVehicle.licensePlate,
-        },
-      ]
-    : [{ value: NONE_VALUE, label: 'Select a route first' }];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -137,8 +98,6 @@ export function BagFormDialog({
                     onUpdateField('destinationHubId', '');
                   }
                   onUpdateField('destinationPostOfficeCode', '');
-                  onUpdateField('routeId', '');
-                  onUpdateField('vehicleId', '');
                 }}
                 options={hubOptions}
                 placeholder='Select origin hub'
@@ -159,8 +118,6 @@ export function BagFormDialog({
                   );
                   onUpdateField('destinationHubId', '');
                   onUpdateField('destinationPostOfficeCode', '');
-                  onUpdateField('routeId', '');
-                  onUpdateField('vehicleId', '');
                 }}
                 options={BAG_DESTINATION_TYPE_OPTIONS}
                 placeholder='Select destination type'
@@ -177,8 +134,6 @@ export function BagFormDialog({
                   value={values.destinationHubId}
                   onValueChange={(value) => {
                     onUpdateField('destinationHubId', value);
-                    onUpdateField('routeId', '');
-                    onUpdateField('vehicleId', '');
                   }}
                   options={hubOptions.filter(
                     (hub) => hub.value !== values.originHubId
@@ -198,8 +153,6 @@ export function BagFormDialog({
                   value={values.destinationPostOfficeCode}
                   onValueChange={(value) => {
                     onUpdateField('destinationPostOfficeCode', value);
-                    onUpdateField('routeId', '');
-                    onUpdateField('vehicleId', '');
                   }}
                   options={destinationPostOfficeOptions}
                   disabled={isSaving || isLoadingDestinationPostOffices}
@@ -214,54 +167,7 @@ export function BagFormDialog({
               </div>
             )}
 
-            <div className='space-y-2'>
-              <Label htmlFor='bag-route'>Route *</Label>
-              <TmsCombobox
-                id='bag-route'
-                value={values.routeId}
-                onValueChange={(value) => {
-                  const route = routes.find(
-                    (item) => String(item.id) === value
-                  );
-                  onUpdateField('routeId', value);
-                  onUpdateField(
-                    'vehicleId',
-                    route?.vehicleId ? String(route.vehicleId) : ''
-                  );
-                }}
-                options={routeOptions}
-                placeholder={
-                  values.originHubId
-                    ? 'Select route'
-                    : 'Select origin and destination first'
-                }
-                emptyText='No matching routes found'
-                disabled={
-                  isSaving ||
-                  isLoadingRoutes ||
-                  !values.originHubId ||
-                  (values.destinationType === 'HUB'
-                    ? !values.destinationHubId
-                    : !values.destinationPostOfficeCode)
-                }
-                loading={isLoadingRoutes}
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='bag-vehicle'>Vehicle and driver</Label>
-              <TmsCombobox
-                id='bag-vehicle'
-                value={values.vehicleId.trim() || NONE_VALUE}
-                onValueChange={() => undefined}
-                options={vehicleOptions}
-                placeholder='Derived from route'
-                emptyText='Select a route first'
-                disabled
-              />
-            </div>
-
-            <div className='grid grid-cols-3 gap-3'>
+            <div className='grid grid-cols-3 gap-3 sm:col-span-2'>
               <div className='space-y-2'>
                 <Label htmlFor='bag-max-weight'>Max kg</Label>
                 <Input

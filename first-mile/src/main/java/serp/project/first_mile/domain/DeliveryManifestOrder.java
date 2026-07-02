@@ -117,15 +117,6 @@ public class DeliveryManifestOrder extends AbstractAudit implements DeliveryStop
     @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
 
-    @Column(name = "delivery_checkin_lat")
-    private Double deliveryCheckinLat;
-
-    @Column(name = "delivery_checkin_lng")
-    private Double deliveryCheckinLng;
-
-    @Column(name = "delivery_checkin_distance_m")
-    private Double deliveryCheckinDistanceM;
-
     @Column(name = "note")
     private String note;
 

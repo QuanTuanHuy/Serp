@@ -36,12 +36,11 @@ import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kafka.HandoverManifestSyncEventPublisher;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
-import serp.project.first_mile.kernel.utils.TransactionAfterCommit;
 import serp.project.first_mile.repository.PostOfficeHandoverManifestOrderRepository;
 import serp.project.first_mile.repository.PostOfficeHandoverManifestRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.service.PostOfficeHandoverManifestService;
-import serp.project.first_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.first_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.first_mile.service.dto.OrderTimelineContext;
 
 import java.time.LocalDateTime;
@@ -75,7 +74,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeHandoverManifestRepository manifestRepository;
     private final PostOfficeHandoverManifestOrderRepository manifestOrderRepository;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
     private final HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
     private final SecondMileHandoverManifestClient secondMileHandoverManifestClient;
 
@@ -283,7 +282,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         releaseOriginPostOfficeLoad(manifest, manifestOrders.size());
 
         PostOfficeHandoverManifest savedManifest = manifestRepository.save(manifest);
-        TransactionAfterCommit.run(() -> handoverManifestSyncEventPublisher.publish(event));
+        handoverManifestSyncEventPublisher.publish(event);
         return toResponse(savedManifest, manifestOrders);
     }
 
@@ -366,7 +365,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                 HandoverManifestSyncEventType.CANCELLED,
                 HandoverManifestSyncOrigin.FIRST_MILE
         );
-        TransactionAfterCommit.run(() -> handoverManifestSyncEventPublisher.publish(event));
+        handoverManifestSyncEventPublisher.publish(event);
         return toResponse(savedManifest, manifestOrders);
     }
 
@@ -684,7 +683,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
         if (items == null || items.isEmpty()) {
             return;
         }
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
                 .source(TRANSITION_SOURCE)
                 .idempotencyKey(UUID.randomUUID().toString())
                 .items(items)

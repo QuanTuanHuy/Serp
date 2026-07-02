@@ -24,7 +24,6 @@ import serp.project.second_mile.dto.response.HubPostOfficeMappingResponse;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
 import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
-import serp.project.second_mile.kernel.utils.TransactionAfterCommit;
 import serp.project.second_mile.mapper.HubPostOfficeMappingMapper;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
@@ -86,13 +85,13 @@ public class HubPostOfficeServiceImpl implements HubPostOfficeService {
         Long hubIdForSync = hub.getId();
         Long tenantIdForSync = tenantId;
         String codeForSync = code;
-        TransactionAfterCommit.run(() -> hubPostOfficeSyncEventPublisher.publish(HubPostOfficeSyncEvent.builder()
+        hubPostOfficeSyncEventPublisher.publish(HubPostOfficeSyncEvent.builder()
                 .eventType(HubPostOfficeSyncEventType.ASSIGNED)
                 .origin(HubPostOfficeSyncOrigin.SECOND_MILE)
                 .tenantId(tenantIdForSync)
                 .hubId(hubIdForSync)
                 .postOfficeCode(codeForSync)
-                .build()));
+                .build());
 
         return HubPostOfficeMappingMapper.toResponse(saved);
     }
@@ -112,13 +111,13 @@ public class HubPostOfficeServiceImpl implements HubPostOfficeService {
         Long hubIdForSync = hub.getId();
         Long tenantIdForSync = tenantId;
         String codeForSync = code;
-        TransactionAfterCommit.run(() -> hubPostOfficeSyncEventPublisher.publish(HubPostOfficeSyncEvent.builder()
+        hubPostOfficeSyncEventPublisher.publish(HubPostOfficeSyncEvent.builder()
                 .eventType(HubPostOfficeSyncEventType.REMOVED)
                 .origin(HubPostOfficeSyncOrigin.SECOND_MILE)
                 .tenantId(tenantIdForSync)
                 .hubId(hubIdForSync)
                 .postOfficeCode(codeForSync)
-                .build()));
+                .build());
     }
 
     private Hub getHubOrThrow(Long id) {

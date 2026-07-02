@@ -43,26 +43,3 @@ CREATE INDEX IF NOT EXISTS idx_handover_manifest_orders_tenant_order_code_lower
 CREATE UNIQUE INDEX IF NOT EXISTS uq_handover_manifest_orders_manifest_order_code_lower
     ON handover_manifest_orders (manifest_id, lower(order_code))
     WHERE order_code IS NOT NULL;
-
-CREATE TABLE IF NOT EXISTS order_transition_outbox (
-    id BIGSERIAL PRIMARY KEY,
-    idempotency_key VARCHAR(255) NOT NULL,
-    source VARCHAR(100) NOT NULL,
-    request_payload TEXT NOT NULL,
-    status VARCHAR(30) NOT NULL,
-    retry_count INT NOT NULL DEFAULT 0,
-    last_error TEXT,
-    next_retry_at TIMESTAMP WITHOUT TIME ZONE,
-    processed_at TIMESTAMP WITHOUT TIME ZONE,
-    created_at TIMESTAMP WITHOUT TIME ZONE,
-    updated_at TIMESTAMP WITHOUT TIME ZONE,
-    created_by VARCHAR(255),
-    updated_by VARCHAR(255),
-    tenant_id BIGINT
-);
-
-CREATE INDEX IF NOT EXISTS idx_order_transition_outbox_due
-    ON order_transition_outbox (status, next_retry_at, id);
-
-CREATE UNIQUE INDEX IF NOT EXISTS uq_order_transition_outbox_tenant_key
-    ON order_transition_outbox (tenant_id, idempotency_key);

@@ -10,11 +10,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
 import serp.project.tms_order.domain.Order;
 import serp.project.tms_order.kafka.event.NotificationCreateRequestedEvent;
+import serp.project.tms_order.service.OutboxEventService;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -22,12 +21,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class OrderNotificationEventPublisher {
+    private static final String AGGREGATE_TYPE_TMS_ORDER = "TMS_ORDER";
     private static final String SOURCE_SERVICE = "tms-order";
     private static final String EVENT_TYPE_NOTIFICATION_CREATE_REQUESTED = "notification.create.requested";
     private static final String EVENT_VERSION = "1";
@@ -41,8 +40,8 @@ public class OrderNotificationEventPublisher {
     private static final String ENTITY_TYPE_TMS_ORDER = "TMS_ORDER";
     private static final String ORDER_ACTION_URL = "/first-mile/orders";
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final OutboxEventService outboxEventService;
 
     @Value("${app.kafka.topics.user-notification:serp.notification.user.events}")
     private String userNotificationTopic;
@@ -133,23 +132,23 @@ public class OrderNotificationEventPublisher {
                         .build())
                 .build();
 
-        publish(event, resolveOrderCode(order));
+        publish(event, order, resolveOrderCode(order));
     }
 
-    private void publish(NotificationCreateRequestedEvent event, String key) {
+    private void publish(NotificationCreateRequestedEvent event, Order order, String key) {
         try {
             String payload = objectMapper.writeValueAsString(event);
-            CompletableFuture<SendResult<String, String>> future =
-                    kafkaTemplate.send(userNotificationTopic, key, payload);
-            future.whenComplete((result, exception) -> {
-                if (exception != null) {
-                    log.error("Failed to publish TMS notification eventId={} topic={}",
-                            event.getMeta().getEventId(), userNotificationTopic, exception);
-                    return;
-                }
-                log.info("Published TMS notification eventId={} topic={}",
-                        event.getMeta().getEventId(), userNotificationTopic);
-            });
+            outboxEventService.enqueue(
+                    AGGREGATE_TYPE_TMS_ORDER,
+                    order.getId() == null ? key : String.valueOf(order.getId()),
+                    EVENT_TYPE_NOTIFICATION_CREATE_REQUESTED,
+                    userNotificationTopic,
+                    key,
+                    payload,
+                    order.getTenantId()
+            );
+            log.info("Enqueued TMS notification outbox eventId={} topic={}",
+                    event.getMeta().getEventId(), userNotificationTopic);
         } catch (JsonProcessingException exception) {
             log.error("Failed to serialize TMS notification eventId={}",
                     event.getMeta().getEventId(), exception);

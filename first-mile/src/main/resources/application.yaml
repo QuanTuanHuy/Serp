@@ -41,12 +41,13 @@ spring:
         - classpath:db/migration/post-office-staff-drop-shift-window.sql
         - classpath:db/migration/vehicle.sql
         - classpath:db/migration/trip.sql
-        - classpath:db/migration/pickup-checkin.sql
+        - classpath:db/migration/trip-type.sql
+        - classpath:db/migration/checkin.sql
         - classpath:db/migration/post-office-handover-manifests.sql
         - classpath:db/migration/post-office-handover-manifest-assignment.sql
         - classpath:db/migration/order-storage-compatibility.sql
-        - classpath:db/migration/order-transition-outbox.sql
         - classpath:db/migration/kafka-dlq-message.sql
+        - classpath:db/migration/outbox-events.sql
         - classpath:db/migration/delivery-manifests.sql
         - classpath:db/migration/delivery-manifest-orders.sql
   messages:
@@ -71,6 +72,7 @@ app:
       sync-user-first-mile: ${SYNC_USER_FIRST_MILE_TOPIC:SYNC_USER}
       sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
       sync-handover-manifest: ${SYNC_HANDOVER_MANIFEST_TOPIC:HANDOVER_MANIFEST_SYNC}
+      order-status-transition: ${ORDER_STATUS_TRANSITION_TOPIC:ORDER_STATUS_TRANSITIONS}
     hub-post-office-sync:
       consumer-group-id: ${KAFKA_FIRST_MILE_HUB_PO_GROUP:first-mile-sync-hub-post-office}
     handover-manifest-sync:
@@ -79,6 +81,11 @@ app:
       retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
+    outbox:
+      relay-interval-ms: ${KAFKA_OUTBOX_RELAY_INTERVAL_MS:10000}
+      batch-size: ${KAFKA_OUTBOX_BATCH_SIZE:50}
+      max-retries: ${KAFKA_OUTBOX_MAX_RETRIES:5}
+      send-timeout-ms: ${KAFKA_OUTBOX_SEND_TIMEOUT_MS:10000}
 
 internal-api:
   api-key: ${INTERNAL_API_KEY:}
@@ -89,10 +96,7 @@ tms-order:
     base-url: ${TMS_ORDER_SERVICE_BASE_URL:http://localhost:8105}
     lookup-path: ${TMS_ORDER_LOOKUP_PATH:/api/v1/internal/orders/lookup}
     pickup-candidates-path: ${TMS_ORDER_PICKUP_CANDIDATES_PATH:/api/v1/internal/orders/pickup-candidates}
-    status-transitions-path: ${TMS_ORDER_STATUS_TRANSITIONS_PATH:/api/v1/internal/orders/status-transitions}
     payment-status-path: ${TMS_ORDER_PAYMENT_STATUS_PATH:/api/v1/internal/orders/payment-status}
-  transition-outbox:
-    retry-interval-ms: ${TMS_ORDER_TRANSITION_OUTBOX_RETRY_INTERVAL_MS:30000}
 
 payment:
   service:

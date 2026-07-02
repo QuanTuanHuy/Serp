@@ -34,6 +34,7 @@ Includes: page titles, labels, placeholders, button text, table headers, empty s
 | `/first-mile/orders`                 | Orders                        |
 | `/first-mile/pickup`                 | Pickup tracking & check-in    |
 | `/first-mile/dispatchers/first-mile` | Pickup dispatch (auto/manual) |
+| `/first-mile/dispatchers/last-mile`  | Delivery courier dispatch     |
 | `/first-mile/network/hub`            | Hubs (second-mile API)        |
 | `/first-mile/network/hub-postoffice` | Hub to post office links      |
 | `/first-mile/network/route`          | Routes (second-mile API)      |
@@ -41,7 +42,6 @@ Includes: page titles, labels, placeholders, button text, table headers, empty s
 | `/first-mile/vehicles/second-mile`   | Hub vehicles                  |
 | `/first-mile/billing`                | Billing calculator & rules    |
 | `/first-mile/product-types`          | Product types                 |
-| `/first-mile/import-history`         | Import jobs                   |
 
 Legacy redirects (e.g. `/billing` → `/first-mile/billing`) live under `src/app/`; prefer new links under `/first-mile/`.
 
@@ -60,6 +60,7 @@ src/modules/first-mile/
     orders/
     pickup/
     dispatchers/first-mile/
+    dispatchers/last-mile/
     vehicles/
       first-mile/         # first-mile service
       second-mile/        # second-mile service
