@@ -40,10 +40,10 @@ Includes: page titles, labels, placeholders, button text, table headers, empty s
 | `/first-mile/network/route`          | Routes (second-mile API)      |
 | `/first-mile/vehicles/first-mile`    | Post-office vehicles          |
 | `/first-mile/vehicles/second-mile`   | Hub vehicles                  |
-| `/first-mile/billing`                | Billing calculator & rules    |
+| `/first-mile/settings/billing`       | Billing calculator & rules    |
 | `/first-mile/product-types`          | Product types                 |
 
-Legacy redirects (e.g. `/billing` → `/first-mile/billing`) live under `src/app/`; prefer new links under `/first-mile/`.
+Legacy redirects (e.g. `/billing` → `/first-mile/settings/billing`) live under `src/app/`; prefer new links under `/first-mile/`.
 
 ## Directory Conventions
 

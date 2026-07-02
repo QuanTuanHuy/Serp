@@ -4,5 +4,6 @@
  */
 
 export * from './SettingsPage';
+export * from './billing';
 export * from './product-types';
 export * from './vehicles';
