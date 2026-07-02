@@ -39,12 +39,6 @@ public class CreateBagRequest {
     @Size(max = 255)
     private String destinationPostOfficeCode;
 
-    @JsonProperty("vehicle_id")
-    private Long vehicleId;
-
-    @JsonProperty("route_id")
-    private Long routeId;
-
     @JsonProperty("max_weight")
     private Double maxWeight;
 

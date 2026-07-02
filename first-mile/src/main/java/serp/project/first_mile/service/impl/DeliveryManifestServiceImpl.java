@@ -54,7 +54,7 @@ import serp.project.first_mile.repository.DeliveryManifestRepository;
 import serp.project.first_mile.service.DeliveryManifestService;
 import serp.project.first_mile.service.DeliveryRouteOptimizationService;
 import serp.project.first_mile.service.FileStorageService;
-import serp.project.first_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.first_mile.service.TmsOrderTransitionPublisherService;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -90,7 +90,7 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
     private final DeliveryRouteOptimizationService routeOptimizationService;
     private final PaymentServiceCaller paymentServiceCaller;
     private final TmsOrderClient tmsOrderClient;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
     private final FirstMileAccessUtils firstMileAccessUtils;
     private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
@@ -707,7 +707,7 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
     }
 
     private void enqueueTransition(String orderCode, OrderStatus targetStatus, String description, Long tenantId) {
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
                 .source(TRANSITION_SOURCE)
                 .idempotencyKey(UUID.randomUUID().toString())
                 .items(List.of(TmsOrderStatusTransitionRequest.Item.builder()
@@ -729,7 +729,7 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
                         .build())
                 .toList();
 
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
                 .source(TRANSITION_SOURCE)
                 .idempotencyKey(UUID.randomUUID().toString())
                 .items(items)

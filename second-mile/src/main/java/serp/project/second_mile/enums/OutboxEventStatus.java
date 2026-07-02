@@ -5,9 +5,9 @@ Description: Part of Serp Project
 
 package serp.project.second_mile.enums;
 
-public enum OrderTransitionOutboxStatus {
+public enum OutboxEventStatus {
     PENDING,
-    PROCESSING,
-    SUCCEEDED,
-    FAILED
+    FAILED,
+    PUBLISHED,
+    DEAD
 }

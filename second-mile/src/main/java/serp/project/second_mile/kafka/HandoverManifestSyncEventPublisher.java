@@ -10,19 +10,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncEvent;
-
-import java.util.concurrent.CompletableFuture;
+import serp.project.second_mile.service.OutboxEventService;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class HandoverManifestSyncEventPublisher {
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private static final String AGGREGATE_TYPE_HANDOVER_MANIFEST = "HANDOVER_MANIFEST";
+
     private final ObjectMapper objectMapper;
+    private final OutboxEventService outboxEventService;
 
     @Value("${app.kafka.topics.sync-handover-manifest:HANDOVER_MANIFEST_SYNC}")
     private String topic;
@@ -41,18 +40,18 @@ public class HandoverManifestSyncEventPublisher {
             return;
         }
 
-        CompletableFuture<SendResult<String, String>> future = kafkaTemplate.send(topic, key, json);
-        future.whenComplete((result, ex) -> {
-            if (ex != null) {
-                log.error("Failed to send handover manifest sync topic={} key={}: {}", topic, key, ex.getMessage(), ex);
-            } else if (result != null && result.getRecordMetadata() != null) {
-                log.info("Handover manifest sync sent topic={} partition={} offset={} key={} status={}",
-                        result.getRecordMetadata().topic(),
-                        result.getRecordMetadata().partition(),
-                        result.getRecordMetadata().offset(),
-                        key,
-                        event.getStatus());
-            }
-        });
+        outboxEventService.enqueue(
+                AGGREGATE_TYPE_HANDOVER_MANIFEST,
+                key,
+                "handover-manifest." + event.getEventType(),
+                topic,
+                key,
+                json,
+                event.getTenantId()
+        );
+        log.info("Enqueued handover manifest sync outbox event key={} topic={} status={}",
+                key,
+                topic,
+                event.getStatus());
     }
 }

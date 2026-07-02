@@ -62,6 +62,32 @@ public class BagValidator {
             Long routeId,
             Long vehicleId
     ) {
+        validateBagLane(tenantId, originHubId, destinationType, destinationHubId, destinationPostOfficeCode);
+
+        if (routeId == null) {
+            return null;
+        }
+        Route route = routeRepository.findById(routeId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROUTE_NOT_FOUND));
+        validateRouteMatchesBagTarget(
+                tenantId,
+                route,
+                originHubId,
+                destinationType,
+                destinationHubId,
+                destinationPostOfficeCode,
+                vehicleId
+        );
+        return route;
+    }
+
+    public void validateBagLane(
+            Long tenantId,
+            Long originHubId,
+            BagDestinationType destinationType,
+            Long destinationHubId,
+            String destinationPostOfficeCode
+    ) {
         if (originHubId == null) {
             throw new AppException(ErrorCode.BAG_HUB_INVALID);
         }
@@ -79,22 +105,6 @@ public class BagValidator {
         } else {
             throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
         }
-
-        if (routeId == null) {
-            return null;
-        }
-        Route route = routeRepository.findById(routeId)
-                .orElseThrow(() -> new AppException(ErrorCode.ROUTE_NOT_FOUND));
-        validateRouteMatchesBagTarget(
-                tenantId,
-                route,
-                originHubId,
-                destinationType,
-                destinationHubId,
-                destinationPostOfficeCode,
-                vehicleId
-        );
-        return route;
     }
 
     public void validateBagEditable(Bag bag) {

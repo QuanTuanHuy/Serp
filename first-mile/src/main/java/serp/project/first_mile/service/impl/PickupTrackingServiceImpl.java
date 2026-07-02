@@ -45,7 +45,7 @@ import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.repository.TripRepository;
 import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.PickupTrackingService;
-import serp.project.first_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.first_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.first_mile.service.dto.OrderTimelineContext;
 
 import java.io.IOException;
@@ -91,7 +91,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final FileStorageService fileStorageService;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
 
     @Value("${pickup.checkin.radius-meters:100}")
     private Double pickupCheckinRadiusMeters;
@@ -741,7 +741,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
             return;
         }
 
-        tmsOrderTransitionOutboxService.enqueue(PickupOrderTransitionFactory.request(items), tenantId);
+        tmsOrderTransitionPublisherService.publish(PickupOrderTransitionFactory.request(items), tenantId);
     }
 
     private PostOfficeStaff resolveCurrentManagerStaff(Long tenantId) {

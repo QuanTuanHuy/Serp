@@ -45,7 +45,7 @@ import serp.project.second_mile.repository.HubStaffAssignmentRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.service.FileStorageService;
-import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.second_mile.service.dto.response.FileUploadResponse;
 
 import java.time.LocalDate;
@@ -105,7 +105,7 @@ class HandoverManifestServiceImplTest {
     private TmsOrderClient tmsOrderClient;
 
     @Mock
-    private TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
 
     @Mock
     private HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
@@ -184,7 +184,7 @@ class HandoverManifestServiceImplTest {
         assertEquals(DEPARTURE_AT, savedManifest.getPlannedDepartureAt());
         assertEquals(ARRIVAL_AT, savedManifest.getPlannedArrivalAt());
         assertEquals(HandoverManifestStatus.OUTBOUND_CONFIRMED, savedManifest.getStatus());
-        verify(tmsOrderTransitionOutboxService).enqueue(any(), eq(TENANT_ID));
+        verify(tmsOrderTransitionPublisherService).publish(any(), eq(TENANT_ID));
     }
 
     @Test
@@ -286,7 +286,7 @@ class HandoverManifestServiceImplTest {
         assertEquals(OrderStatus.OUTBOUND_READY_FROM_PO.name(), manifestOrder.getLastKnownStatus());
         verify(handoverManifestRepository).save(manifest);
         verify(handoverManifestOrderRepository, never()).saveAll(any());
-        verify(tmsOrderTransitionOutboxService, never()).enqueue(any(), eq(TENANT_ID));
+        verify(tmsOrderTransitionPublisherService, never()).publish(any(), eq(TENANT_ID));
         verify(handoverManifestSyncEventPublisher, never()).publish(any());
     }
 

@@ -16,8 +16,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderLookupRequest;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
-import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
-import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionResponse;
 import serp.project.first_mile.caller.dto.tms_order.TmsPickupCandidateRequest;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.exception.AppException;
@@ -41,9 +39,6 @@ public class TmsOrderClient {
 
     @Value("${tms-order.service.pickup-candidates-path:/api/v1/internal/orders/pickup-candidates}")
     private String pickupCandidatesPath;
-
-    @Value("${tms-order.service.status-transitions-path:/api/v1/internal/orders/status-transitions}")
-    private String statusTransitionsPath;
 
     @Value("${tms-order.service.payment-status-path:/api/v1/internal/orders/payment-status}")
     private String paymentStatusPath;
@@ -101,20 +96,6 @@ public class TmsOrderClient {
                 }
         );
         return response == null ? List.of() : response;
-    }
-
-    public TmsOrderStatusTransitionResponse applyTransitions(TmsOrderStatusTransitionRequest request) {
-        return applyTransitions(request, null);
-    }
-
-    public TmsOrderStatusTransitionResponse applyTransitions(TmsOrderStatusTransitionRequest request, Long tenantId) {
-        return post(
-                statusTransitionsPath,
-                request,
-                tenantId,
-                new ParameterizedTypeReference<TmsOrderStatusTransitionResponse>() {
-                }
-        );
     }
 
     public List<TmsOrderOperationView> lookupAtPostOffice(

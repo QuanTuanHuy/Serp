@@ -7,11 +7,15 @@
 
 import React from 'react';
 import {
+  Boxes,
+  CheckCircle2,
+  Clock3,
   FilterX,
   Loader2,
-  PackageOpen,
+  PackageCheck,
   Plus,
   RefreshCcw,
+  Search,
   ShieldAlert,
   SlidersHorizontal,
   WandSparkles,
@@ -22,6 +26,7 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
+  Badge,
   Button,
   Card,
   CardContent,
@@ -53,7 +58,6 @@ import {
   useGetSecondMileBaggingKpisQuery,
   useGetSecondMileBagsQuery,
   useGetSecondMileOrdersQuery,
-  useGetSecondMileRoutesQuery,
   useGetSecondMileVehiclesQuery,
   useRemoveSecondMileBagOrderMutation,
   useReopenSecondMileBagMutation,
@@ -93,6 +97,7 @@ import {
   canViewBags,
   emptyAutoBaggingFormValues,
   emptyBagFormValues,
+  formatNumber,
   normalizeOrderCode,
   toDefaultedBagFormValues,
   toBagFormValues,
@@ -124,6 +129,7 @@ export function BagListPage() {
 
   const [page, setPage] = React.useState(0);
   const [filters, setFilters] = React.useState<SecondMileBagListFilters>({});
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = React.useState(false);
   const [kpiFrom, setKpiFrom] = React.useState(() => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
@@ -163,7 +169,6 @@ export function BagListPage() {
   const [autoPlan, setAutoPlan] =
     React.useState<AutoSecondMileBaggingPlan | null>(null);
   const formOriginHubId = Number(formValues.originHubId);
-  const formDestinationHubId = Number(formValues.destinationHubId);
   const autoOriginHubId = Number(autoValues.originHubId);
   const autoDestinationHubId = Number(autoValues.destinationHubId);
   const scanOriginHubId = scanBag?.originHubId ?? 0;
@@ -173,13 +178,6 @@ export function BagListPage() {
     formValues.destinationType === 'POST_OFFICE' &&
     Number.isFinite(formOriginHubId) &&
     formOriginHubId > 0;
-  const shouldLoadFormRoutes =
-    formOpen &&
-    Number.isFinite(formOriginHubId) &&
-    formOriginHubId > 0 &&
-    (formValues.destinationType === 'HUB'
-      ? Number.isFinite(formDestinationHubId) && formDestinationHubId > 0
-      : normalizeCode(formValues.destinationPostOfficeCode).length > 0);
   const shouldLoadAutoOriginMappings =
     autoOpen && Number.isFinite(autoOriginHubId) && autoOriginHubId > 0;
   const shouldLoadAutoDestinationMappings =
@@ -222,25 +220,6 @@ export function BagListPage() {
     { hubId: formOriginHubId, page: 0, size: 500 },
     { skip: !canView || !shouldLoadFormDestinationMappings }
   );
-  const { data: formRoutesData, isFetching: isFetchingFormRoutes } =
-    useGetSecondMileRoutesQuery(
-      {
-        page: 0,
-        size: 500,
-        originType: 'HUB',
-        originHubId: formOriginHubId,
-        destinationType: formValues.destinationType,
-        ...(formValues.destinationType === 'HUB'
-          ? { destinationHubId: formDestinationHubId }
-          : {
-              destinationPostOfficeCode: normalizeCode(
-                formValues.destinationPostOfficeCode
-              ),
-            }),
-        status: 'ACTIVE',
-      },
-      { skip: !canView || !shouldLoadFormRoutes }
-    );
   const {
     data: autoOriginPostOfficesData,
     isFetching: isFetchingAutoOriginPostOffices,
@@ -319,6 +298,35 @@ export function BagListPage() {
         skip: !canView || !filters.originHubId || !kpiFrom || !kpiTo,
       }
     );
+  const bagPageItems = bagsData?.items ?? [];
+  const bagStats = [
+    {
+      label: 'Total results',
+      value: formatNumber(bagsData?.totalItems, 0),
+      icon: Boxes,
+    },
+    {
+      label: 'Current page',
+      value: formatNumber(bagPageItems.length, 0),
+      icon: Clock3,
+    },
+    {
+      label: 'Open bags',
+      value: formatNumber(
+        bagPageItems.filter((bag) => bag.status === 'CREATED').length,
+        0
+      ),
+      icon: PackageCheck,
+    },
+    {
+      label: 'Sealed bags',
+      value: formatNumber(
+        bagPageItems.filter((bag) => bag.status === 'SEALED').length,
+        0
+      ),
+      icon: CheckCircle2,
+    },
+  ];
 
   const [createBag, { isLoading: isCreating }] =
     useCreateSecondMileBagMutation();
@@ -345,7 +353,6 @@ export function BagListPage() {
   const hubs = hubsData?.items ?? [];
   const postOffices = postOfficesData?.items ?? [];
   const orders = ordersData?.items ?? [];
-  const formRoutes = formRoutesData?.items ?? [];
   const postOfficeByCode = React.useMemo(
     () =>
       postOffices.reduce<Record<string, PostOffice>>((acc, postOffice) => {
@@ -424,34 +431,6 @@ export function BagListPage() {
   const isSavingForm = isCreating || isUpdating;
 
   React.useEffect(() => {
-    if (!shouldLoadFormRoutes || isFetchingFormRoutes || !formValues.routeId) {
-      return;
-    }
-
-    const selectedRoute = formRoutes.find(
-      (route) => String(route.id) === formValues.routeId
-    );
-
-    if (!selectedRoute) {
-      setFormValues((current) => ({ ...current, routeId: '', vehicleId: '' }));
-      return;
-    }
-
-    const nextVehicleId = selectedRoute.vehicleId
-      ? String(selectedRoute.vehicleId)
-      : '';
-    if (formValues.vehicleId !== nextVehicleId) {
-      setFormValues((current) => ({ ...current, vehicleId: nextVehicleId }));
-    }
-  }, [
-    formRoutes,
-    formValues.routeId,
-    formValues.vehicleId,
-    isFetchingFormRoutes,
-    shouldLoadFormRoutes,
-  ]);
-
-  React.useEffect(() => {
     if (!autoOpen) {
       return;
     }
@@ -525,6 +504,13 @@ export function BagListPage() {
     { value: ALL_VALUE, label: 'All statuses' },
     ...BAG_STATUS_OPTIONS,
   ];
+  const advancedFilterCount = [
+    filters.bagCode,
+    filters.destinationType,
+    filters.destinationHubId,
+    filters.destinationPostOfficeCode,
+    filters.vehicleId,
+  ].filter(Boolean).length;
 
   const updateFilter = <K extends keyof SecondMileBagListFilters>(
     field: K,
@@ -878,19 +864,35 @@ export function BagListPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2 text-base'>
-            <PackageOpen className='h-4 w-4' />
-            Filters
-          </CardTitle>
+      <Card className='gap-3 py-5'>
+        <CardHeader className='px-5 py-0'>
+          <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+            <CardTitle className='text-base'>Search & filters</CardTitle>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={() => setAdvancedFiltersOpen(true)}
+              className='w-full justify-center sm:w-auto'
+            >
+              <SlidersHorizontal className='h-4 w-4' />
+              Advanced
+              {advancedFilterCount > 0 ? (
+                <Badge variant='secondary' className='ml-1.5 h-5 px-1.5'>
+                  {advancedFilterCount}
+                </Badge>
+              ) : null}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='grid gap-3 md:grid-cols-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='bag-keyword'>Keyword</Label>
+        <CardContent className='grid gap-3 px-5 py-0 md:grid-cols-[minmax(260px,1fr)_220px_220px_auto]'>
+          <div className='space-y-2'>
+            <Label htmlFor='bag-keyword'>Keyword</Label>
+            <div className='relative'>
+              <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
               <Input
                 id='bag-keyword'
+                className='pl-10'
                 value={filters.keyword ?? ''}
                 onChange={(event) =>
                   updateFilter('keyword', event.target.value || undefined)
@@ -898,6 +900,69 @@ export function BagListPage() {
                 placeholder='Search bags'
               />
             </div>
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='bag-origin-filter'>Origin hub</Label>
+            <TmsCombobox
+              id='bag-origin-filter'
+              value={
+                filters.originHubId ? String(filters.originHubId) : ALL_VALUE
+              }
+              onValueChange={(value) =>
+                updateFilter(
+                  'originHubId',
+                  value === ALL_VALUE ? undefined : Number(value)
+                )
+              }
+              options={hubOptions}
+              placeholder='All hubs'
+              emptyText='No hubs found'
+            />
+          </div>
+          <div className='space-y-2'>
+            <Label htmlFor='bag-status-filter'>Status</Label>
+            <TmsCombobox
+              id='bag-status-filter'
+              value={filters.status ?? ALL_VALUE}
+              onValueChange={(value) =>
+                updateFilter(
+                  'status',
+                  value === ALL_VALUE
+                    ? undefined
+                    : (value as SecondMileBagStatus)
+                )
+              }
+              options={statusOptions}
+              placeholder='All statuses'
+              emptyText='No statuses found'
+            />
+          </div>
+          <div className='flex items-end'>
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={resetFilters}
+              className='w-full md:w-auto'
+            >
+              <FilterX className='h-4 w-4' />
+              Clear
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={advancedFiltersOpen} onOpenChange={setAdvancedFiltersOpen}>
+        <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
+          <DialogHeader>
+            <DialogTitle>Advanced filters</DialogTitle>
+            <DialogDescription>
+              Narrow bags by destination, vehicle, exact bag code, and KPI time
+              window.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
             <div className='space-y-2'>
               <Label htmlFor='bag-code-filter'>Bag code</Label>
               <Input
@@ -907,42 +972,6 @@ export function BagListPage() {
                   updateFilter('bagCode', event.target.value || undefined)
                 }
                 placeholder='BAG-001'
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='bag-origin-filter'>Origin hub</Label>
-              <TmsCombobox
-                id='bag-origin-filter'
-                value={
-                  filters.originHubId ? String(filters.originHubId) : ALL_VALUE
-                }
-                onValueChange={(value) =>
-                  updateFilter(
-                    'originHubId',
-                    value === ALL_VALUE ? undefined : Number(value)
-                  )
-                }
-                options={hubOptions}
-                placeholder='All hubs'
-                emptyText='No hubs found'
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='bag-status-filter'>Status</Label>
-              <TmsCombobox
-                id='bag-status-filter'
-                value={filters.status ?? ALL_VALUE}
-                onValueChange={(value) =>
-                  updateFilter(
-                    'status',
-                    value === ALL_VALUE
-                      ? undefined
-                      : (value as SecondMileBagStatus)
-                  )
-                }
-                options={statusOptions}
-                placeholder='All statuses'
-                emptyText='No statuses found'
               />
             </div>
             <div className='space-y-2'>
@@ -1030,9 +1059,6 @@ export function BagListPage() {
                 emptyText='No vehicles found'
               />
             </div>
-          </div>
-
-          <div className='flex flex-wrap items-end gap-3'>
             <div className='space-y-2'>
               <Label htmlFor='bag-kpi-from'>KPI from</Label>
               <Input
@@ -1051,13 +1077,40 @@ export function BagListPage() {
                 onChange={(event) => setKpiTo(event.target.value)}
               />
             </div>
-            <Button variant='outline' onClick={resetFilters}>
-              <FilterX className='h-4 w-4' />
-              Clear filters
-            </Button>
           </div>
-        </CardContent>
-      </Card>
+
+          <DialogFooter className='gap-2 sm:gap-0'>
+            <Button type='button' variant='outline' onClick={resetFilters}>
+              Clear all
+            </Button>
+            <Button type='button' onClick={() => setAdvancedFiltersOpen(false)}>
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
+        {bagStats.map((stat) => {
+          const Icon = stat.icon;
+
+          return (
+            <Card key={stat.label} className='gap-2 py-3'>
+              <CardHeader className='flex flex-row items-center justify-between space-y-0 px-4 py-0'>
+                <CardTitle className='text-sm font-medium'>
+                  {stat.label}
+                </CardTitle>
+                <Icon className='h-4 w-4 text-muted-foreground' />
+              </CardHeader>
+              <CardContent className='px-4 py-0'>
+                <div className='text-xl font-semibold'>
+                  {isFetchingBags ? '-' : stat.value}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
       {filters.originHubId && (
         <BagKpiPanel data={kpiData} isFetching={isFetchingKpi} />
@@ -1092,11 +1145,8 @@ export function BagListPage() {
         mode={formMode}
         values={formValues}
         hubs={hubs}
-        routes={formRoutes}
-        vehicles={vehicles}
         destinationPostOfficeOptions={formDestinationPostOfficeOptions}
         isLoadingDestinationPostOffices={isFetchingFormDestinationPostOffices}
-        isLoadingRoutes={isFetchingFormRoutes}
         isSaving={isSavingForm}
         onOpenChange={setFormOpen}
         onSubmit={handleSubmitForm}

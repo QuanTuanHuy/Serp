@@ -19,8 +19,6 @@ export interface BagFormValues {
   destinationType: SecondMileBagDestinationType;
   destinationHubId: string;
   destinationPostOfficeCode: string;
-  routeId: string;
-  vehicleId: string;
   maxWeight: string;
   maxVolume: string;
   maxOrders: string;
@@ -68,8 +66,6 @@ export const emptyBagFormValues: BagFormValues = {
   destinationType: 'HUB',
   destinationHubId: '',
   destinationPostOfficeCode: '',
-  routeId: '',
-  vehicleId: '',
   maxWeight: '',
   maxVolume: '',
   maxOrders: '',
@@ -122,8 +118,6 @@ export const toBagFormValues = (bag?: SecondMileBag): BagFormValues => {
     destinationType: bag.destinationType ?? 'HUB',
     destinationHubId: bag.destinationHubId ? String(bag.destinationHubId) : '',
     destinationPostOfficeCode: bag.destinationPostOfficeCode ?? '',
-    routeId: bag.routeId ? String(bag.routeId) : '',
-    vehicleId: bag.vehicleId ? String(bag.vehicleId) : '',
     maxWeight: bag.maxWeight ? String(bag.maxWeight) : '',
     maxVolume: bag.maxVolume ? String(bag.maxVolume) : '',
     maxOrders: bag.maxOrders ? String(bag.maxOrders) : '',
@@ -160,9 +154,6 @@ export const validateBagForm = (values: BagFormValues): string | null => {
     !values.destinationPostOfficeCode.trim()
   ) {
     return 'Destination post office is required.';
-  }
-  if (!values.routeId) {
-    return 'Route is required.';
   }
 
   if (!isPositiveOptionalNumber(values.maxWeight)) {
@@ -211,7 +202,6 @@ export const buildBagRequest = (
     bag_code: values.bagCode.trim().toUpperCase(),
     origin_hub_id: Number(values.originHubId),
     destination_type: values.destinationType,
-    route_id: Number(values.routeId),
     status: 'CREATED',
   };
 
@@ -223,9 +213,6 @@ export const buildBagRequest = (
       .toUpperCase();
   }
 
-  if (values.vehicleId) {
-    request.vehicle_id = Number(values.vehicleId);
-  }
   if (values.maxWeight.trim()) {
     request.max_weight = Number(values.maxWeight);
   }

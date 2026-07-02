@@ -54,7 +54,7 @@ import serp.project.second_mile.repository.specification.BagSpecification;
 import serp.project.second_mile.service.BagCapacityCalculator;
 import serp.project.second_mile.service.BagCapacitySettingsService;
 import serp.project.second_mile.service.BagService;
-import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.second_mile.service.dto.BagDestinationTarget;
 import serp.project.second_mile.service.validator.BagValidator;
 
@@ -98,7 +98,7 @@ public class BagServiceImpl implements BagService {
     private final VehicleRepository vehicleRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final TmsOrderClient tmsOrderClient;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
     private final BagCapacitySettingsService bagCapacitySettingsService;
     private final BagValidator bagValidator;
 
@@ -156,25 +156,20 @@ public class BagServiceImpl implements BagService {
             throw new AppException(ErrorCode.BAG_CODE_EXISTED);
         }
 
-        Route route = bagValidator.validateRouteAndTransport(
+        bagValidator.validateBagLane(
                 tenantId,
                 request.getOriginHubId(),
                 request.getDestinationType(),
                 request.getDestinationHubId(),
-                request.getDestinationPostOfficeCode(),
-                request.getRouteId(),
-                request.getVehicleId()
+                request.getDestinationPostOfficeCode()
         );
-        if (route == null) {
-            throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID, "Route is required.");
-        }
 
         BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
         Bag bag = BagMapper.toEntity(request);
         bag.setBagCode(normalizedBagCode);
         bag.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
-        bag.setRouteId(route.getId());
-        bag.setVehicleId(route.getVehicleId());
+        bag.setRouteId(null);
+        bag.setVehicleId(null);
         bag.setStatus(BagStatus.CREATED);
         bag.setSealedAt(null);
         bag.setMaxWeight(normalizePositiveOrDefault(request.getMaxWeight(), capacitySettings.maxWeight()));
@@ -210,25 +205,20 @@ public class BagServiceImpl implements BagService {
             throw new AppException(ErrorCode.BAG_CODE_EXISTED);
         }
 
-        Route route = bagValidator.validateRouteAndTransport(
+        bagValidator.validateBagLane(
                 tenantId,
                 request.getOriginHubId(),
                 request.getDestinationType(),
                 request.getDestinationHubId(),
-                request.getDestinationPostOfficeCode(),
-                request.getRouteId(),
-                request.getVehicleId()
+                request.getDestinationPostOfficeCode()
         );
-        if (route == null) {
-            throw new AppException(ErrorCode.ROUTE_DEFINITION_INVALID, "Route is required.");
-        }
 
         BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
         BagMapper.mapForUpdate(request, bag);
         bag.setBagCode(normalizedBagCode);
         bag.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
-        bag.setRouteId(route.getId());
-        bag.setVehicleId(route.getVehicleId());
+        bag.setRouteId(null);
+        bag.setVehicleId(null);
         bag.setStatus(BagStatus.CREATED);
         bag.setMaxWeight(normalizePositiveOrDefault(request.getMaxWeight(), capacitySettings.maxWeight()));
         bag.setMaxVolume(normalizePositiveOrDefault(request.getMaxVolume(), capacitySettings.maxVolume()));
@@ -543,14 +533,12 @@ public class BagServiceImpl implements BagService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
         Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
-        bagValidator.validateRouteAndTransport(
+        bagValidator.validateBagLane(
                 tenantId,
                 request.getOriginHubId(),
                 request.getDestinationType(),
                 request.getDestinationHubId(),
-                request.getDestinationPostOfficeCode(),
-                null,
-                null
+                request.getDestinationPostOfficeCode()
         );
 
         List<String> normalizedOrderCodes = normalizeCodes(request.getOrderCodes());
@@ -789,7 +777,7 @@ public class BagServiceImpl implements BagService {
         if (items == null || items.isEmpty()) {
             return;
         }
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
                 .source(TRANSITION_SOURCE)
                 .idempotencyKey(idempotencyKey)
                 .items(items)

@@ -42,6 +42,7 @@ spring:
         - classpath:db.migration/order-transition-log.sql
         - classpath:db.migration/import_history.sql
         - classpath:db.migration/kafka-dlq-message.sql
+        - classpath:db.migration/outbox-events.sql
   messages:
     basename: i18n/messages
     use-code-as-default-message: true
@@ -62,16 +63,24 @@ app:
       sync-handover-manifest: ${SYNC_HANDOVER_MANIFEST_TOPIC:HANDOVER_MANIFEST_SYNC}
       delivery-status: ${DELIVERY_STATUS_TOPIC:DELIVERY_STATUS}
       user-notification: ${USER_NOTIFICATION_TOPIC:serp.notification.user.events}
+      order-status-transition: ${ORDER_STATUS_TRANSITION_TOPIC:ORDER_STATUS_TRANSITIONS}
     order-sync:
       consumer-group-id: ${KAFKA_LAST_MILE_ORDER_SYNC_GROUP:last-mile-sync-order}
     handover-manifest-sync:
       consumer-group-id: ${KAFKA_LAST_MILE_HANDOVER_MANIFEST_GROUP:last-mile-sync-handover-manifest}
     delivery-status:
       consumer-group-id: ${KAFKA_LAST_MILE_DELIVERY_STATUS_GROUP:last-mile-delivery-status}
+    order-status-transition:
+      consumer-group-id: ${KAFKA_TMS_ORDER_STATUS_TRANSITION_GROUP:tms-order-status-transition}
     dlq:
       retry-interval-ms: ${KAFKA_DLQ_RETRY_INTERVAL_MS:30000}
       batch-size: ${KAFKA_DLQ_BATCH_SIZE:50}
       max-retries: ${KAFKA_DLQ_MAX_RETRIES:5}
+    outbox:
+      relay-interval-ms: ${KAFKA_OUTBOX_RELAY_INTERVAL_MS:10000}
+      batch-size: ${KAFKA_OUTBOX_BATCH_SIZE:50}
+      max-retries: ${KAFKA_OUTBOX_MAX_RETRIES:5}
+      send-timeout-ms: ${KAFKA_OUTBOX_SEND_TIMEOUT_MS:10000}
 
 internal-api:
   api-key: ${INTERNAL_API_KEY:}

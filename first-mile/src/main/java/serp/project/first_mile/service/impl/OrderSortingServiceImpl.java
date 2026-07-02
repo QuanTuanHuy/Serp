@@ -23,7 +23,7 @@ import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.repository.DeliveryManifestOrderRepository;
 import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.service.OrderSortingService;
-import serp.project.first_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.first_mile.service.TmsOrderTransitionPublisherService;
 
 import java.util.List;
 import java.util.UUID;
@@ -41,7 +41,7 @@ public class OrderSortingServiceImpl implements OrderSortingService {
     );
 
     private final TmsOrderClient tmsOrderClient;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
     private final DeliveryManifestOrderRepository deliveryManifestOrderRepository;
     private final TripOrderRepository tripOrderRepository;
 
@@ -91,7 +91,7 @@ public class OrderSortingServiceImpl implements OrderSortingService {
                         .build())
                 .toList();
 
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
                 .source(TRANSITION_SOURCE)
                 .idempotencyKey(UUID.randomUUID().toString())
                 .items(items)
