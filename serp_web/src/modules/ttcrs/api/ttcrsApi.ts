@@ -40,7 +40,7 @@ export const ttcrsApi = api.injectEndpoints({
     // -------------------------------------------------------------------------
     getDispatcherRequests: builder.query<
       TtcrsApiResponse<TtcrsPageResponse<TtcrsRequest>>,
-      RequestFilterParams
+      RequestFilterParams //tham số truyền vào hook để lọc danh sách request
     >({
       query: (params) => {
         // Build URLSearchParams manually to support multi-value `statuses`
@@ -70,7 +70,7 @@ export const ttcrsApi = api.injectEndpoints({
           method: 'GET',
         };
       },
-      extraOptions: { service: 'ttcrs' },
+      extraOptions: { service: 'ttcrs' }, // gắn prefix /ttcrs trong apiSlice.ts
       providesTags: (result) =>
         result?.data?.items
           ? [
@@ -78,9 +78,9 @@ export const ttcrsApi = api.injectEndpoints({
                 type: 'ttcrs/Request' as const,
                 id,
               })),
-              { type: 'ttcrs/Request', id: 'LIST' },
+              { type: 'ttcrs/Request', id: 'LIST' }, // cung cấp tag cho cache từng request
             ]
-          : [{ type: 'ttcrs/Request', id: 'LIST' }],
+          : [{ type: 'ttcrs/Request', id: 'LIST' }], // cung cấp tag cho cache danh sách request, để khi tạo mới request thì cache sẽ bị invalidated
     }),
 
     // -------------------------------------------------------------------------
@@ -148,7 +148,7 @@ export const ttcrsApi = api.injectEndpoints({
     >({
       query: (id) => ({ url: `/dispatcher/requests/${id}`, method: 'GET' }),
       extraOptions: { service: 'ttcrs' },
-      providesTags: (_, __, id) => [{ type: 'ttcrs/Request', id }],
+      providesTags: (_, __, id) => [{ type: 'ttcrs/Request', id }], // cung cấp tag cho cache của request này, để khi update request này thì cache sẽ bị invalidated
     }),
 
     // -------------------------------------------------------------------------
@@ -164,7 +164,7 @@ export const ttcrsApi = api.injectEndpoints({
         body,
       }),
       extraOptions: { service: 'ttcrs' },
-      invalidatesTags: [{ type: 'ttcrs/Request', id: 'LIST' }],
+      invalidatesTags: [{ type: 'ttcrs/Request', id: 'LIST' }], // đánh dấu cache request list này đã cũ và cần refetch lại khi tạo mới request
     }),
 
     // -------------------------------------------------------------------------

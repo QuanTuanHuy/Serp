@@ -32,6 +32,7 @@ public class UpdateRequestDTO {
 
     private Double weight;
     private ContainerSize containerSize;
+    private String containerCode;
     private Boolean dropTrailerRequired;
     private String reason;
 }

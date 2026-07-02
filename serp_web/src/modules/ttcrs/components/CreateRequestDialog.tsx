@@ -47,6 +47,7 @@ interface FormState {
   destLocationCode: string;
   quantity: string;
   weight: string;
+  containerCode: string;
   dropTrailerRequired: boolean;
   earlyAtSrc: string;
   lateAtSrc: string;
@@ -61,6 +62,7 @@ const INITIAL_FORM: FormState = {
   destLocationCode: '',
   quantity: '1',
   weight: '',
+  containerCode: '',
   dropTrailerRequired: false,
   earlyAtSrc: '',
   lateAtSrc: '',
@@ -97,7 +99,7 @@ const TIME_WINDOW_FIELDS: Record<
     lateAtDest: true,
   },
   IE: {
-    earlyAtSrc: false,
+    earlyAtSrc: true,
     lateAtSrc: false,
     earlyAtDest: false,
     lateAtDest: true,
@@ -169,21 +171,29 @@ export function CreateRequestDialog({
       setForm((prev) => ({ ...prev, srcLocationCode: '' }));
       setErrors((prev) => ({ ...prev, srcLocationCode: undefined }));
     }
+    if (value === 'IE') {
+      setForm((prev) => ({ ...prev, destLocationCode: '' }));
+      setErrors((prev) => ({ ...prev, destLocationCode: undefined }));
+    }
   };
 
   // Validate
   function validate(): boolean {
     const next: Partial<Record<keyof FormState, string>> = {};
     const requiresOrigin = Boolean(form.type && form.type !== 'OE');
+    const requiresDest = Boolean(form.type && form.type !== 'IE');
 
     if (!form.customerId) next.customerId = 'Please select a customer';
     if (!form.type) next.type = 'Please select a request type';
     if (requiresOrigin && !form.srcLocationCode) {
       next.srcLocationCode = 'Please select a source location';
     }
-    if (!form.destLocationCode) next.destLocationCode = 'Please select a destination location';
+    if (requiresDest && !form.destLocationCode) {
+      next.destLocationCode = 'Please select a destination location';
+    }
     if (
       requiresOrigin &&
+      requiresDest &&
       form.srcLocationCode &&
       form.destLocationCode &&
       form.srcLocationCode === form.destLocationCode
@@ -202,6 +212,11 @@ export function CreateRequestDialog({
       next.weight = 'Weight must be a number';
     }
 
+    const requiresContainerCode = Boolean(form.type && form.type !== 'OE');
+    if (requiresContainerCode && !form.containerCode?.trim()) {
+      next.containerCode = 'Container code is required for this request type';
+    }
+
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -214,11 +229,12 @@ export function CreateRequestDialog({
     const timeFields =
       form.type ? TIME_WINDOW_FIELDS[form.type as RequestType] : undefined;
     const requiresOrigin = form.type !== 'OE';
+    const requiresDest = form.type !== 'IE';
 
     const payload: CreateRequestPayload = {
       customerId: parseInt(form.customerId, 10),
       type: form.type as RequestType,
-      destLocationCode: form.destLocationCode,
+      destLocationCode: requiresDest ? form.destLocationCode : null,
       quantity: parseInt(form.quantity, 10),
       weight: form.weight ? parseFloat(form.weight) : null,
       dropTrailerRequired: form.dropTrailerRequired,
@@ -234,6 +250,7 @@ export function CreateRequestDialog({
 
     if (requiresOrigin) {
       payload.srcLocationCode = form.srcLocationCode;
+      payload.containerCode = form.containerCode;
     } else {
       payload.srcLocationCode = null;
     }
@@ -391,14 +408,20 @@ export function CreateRequestDialog({
                     <SelectValue placeholder={locationsLoading ? 'Loading…' : 'Select origin'} />
                   </SelectTrigger>
                   <SelectContent>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.locationCode}>
-                        {loc.locationCode}
-                        <span className="ml-1.5 text-xs text-muted-foreground">
-                          ({loc.type})
-                        </span>
-                      </SelectItem>
-                    ))}
+                    {locations
+                      // .filter((loc) => {
+                      //   if (form.type === 'OF' || form.type === 'IE') return loc.type === 'WAREHOUSE';
+                      //   if (form.type === 'IF') return loc.type === 'PORT';
+                      //   return false;
+                      // })
+                      .map((loc) => (
+                        <SelectItem key={loc.id} value={loc.locationCode}>
+                          {loc.locationCode}
+                          <span>
+                            ({loc.type})
+                          </span>
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {errors.srcLocationCode && (
@@ -408,45 +431,61 @@ export function CreateRequestDialog({
             )}
 
             {/* Destination */}
-            <div className='min-w-0 space-y-1.5'>
-              <Label htmlFor={`${formId}-dest`}>
-                Destination <span className='text-destructive'>*</span>
-              </Label>
-              <Select
-                value={form.destLocationCode}
-                onValueChange={(v) => set('destLocationCode', v)}
-                disabled={locationsLoading}
-              >
-                <SelectTrigger
-                  id={`${formId}-dest`}
-                  className={cn(
-                    'w-full',
-                    errors.destLocationCode && 'border-destructive'
-                  )}
+            {form.type === 'IE' ? (
+              <div className="min-w-0 space-y-1.5">
+                <Label>Destination</Label>
+                <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  Destination for IE requests is determined by the algorithm when building a route.
+                </div>
+              </div>
+            ) : (
+              <div className='min-w-0 space-y-1.5'>
+                <Label htmlFor={`${formId}-dest`}>
+                  Destination <span className='text-destructive'>*</span>
+                </Label>
+                <Select
+                  value={form.destLocationCode}
+                  onValueChange={(v) => set('destLocationCode', v)}
+                  disabled={locationsLoading}
                 >
-                  <SelectValue
-                    placeholder={
-                      locationsLoading ? 'Loading…' : 'Select destination'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.locationCode}>
-                      {loc.locationCode}
-                      <span className='ml-1.5 text-xs text-muted-foreground'>
-                        ({loc.type})
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.destLocationCode && (
-                <p className='text-xs text-destructive'>
-                  {errors.destLocationCode}
-                </p>
-              )}
-            </div>
+                  <SelectTrigger
+                    id={`${formId}-dest`}
+                    className={cn(
+                      'w-full',
+                      errors.destLocationCode && 'border-destructive'
+                    )}
+                  >
+                    <SelectValue
+                      placeholder={
+                        locationsLoading ? 'Loading…' : 'Select destination'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations
+                    // .filter((loc) => {
+                    //       if (form.type === 'OE' || form.type === 'IF') return loc.type === 'WAREHOUSE';
+                    //       if (form.type === 'OF') return loc.type === 'PORT';
+                    //       if (form.type === 'IE') return loc.type === 'DEPOT_TRUCK';
+                    //       return false;
+                    //     })
+                    .map((loc) => (
+                      <SelectItem key={loc.id} value={loc.locationCode}>
+                        {loc.locationCode}
+                        <span>
+                          ({loc.type})
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.destLocationCode && (
+                  <p className='text-xs text-destructive'>
+                    {errors.destLocationCode}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Time window — conditional on type */}
@@ -547,6 +586,26 @@ export function CreateRequestDialog({
               </Label>
             </div>
           </div>
+
+          {/* Container Code — required for IE/IF/OF, hidden when type is OE or empty */}
+          {form.type !== 'OE' && form.type !== '' && (
+            <div className='space-y-1.5'>
+              <Label htmlFor={`${formId}-containerCode`}>
+                Container Code <span className='text-destructive'>*</span>
+              </Label>
+              <Input
+                id={`${formId}-containerCode`}
+                type='text'
+                placeholder='e.g. MSKU1234567'
+                value={form.containerCode}
+                onChange={(e) => set('containerCode', e.target.value)}
+                className={cn(errors.containerCode && 'border-destructive')}
+              />
+              {errors.containerCode && (
+                <p className='text-xs text-destructive'>{errors.containerCode}</p>
+              )}
+            </div>
+          )}
         </form>
 
         <DialogFooter className='gap-2 pt-2'>

@@ -1,0 +1,29 @@
+networks:
+  serp_net:
+    external: true
+    name: serp_net
+
+services:
+  serp-ttcrs:
+    image: quantuanhuy/serp-ttcrs:${IMAGE_TAG-latest}
+    container_name: serp-ttcrs
+    restart: unless-stopped
+    labels:
+      - "serp.logging.enable=true"
+    environment:
+      DB_USERNAME: serpuser
+      DB_PASSWORD: serppassword
+      DB_URL: jdbc:postgresql://serp-postgres:5432/serp_ttcrs
+      KEYCLOAK_CLIENT_SECRET: gjXnO5Cm6udGtSHrad13uV2Qx271reTu
+      KEYCLOAK_URL: https://auth.serp.texkis.com
+      ACCOUNT_SERVICE_URL: http://serp-account:8081/account-service
+      MINIO_ENDPOINT: http://serp-minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_REGION: us-east-1
+      MINIO_BUCKET: ttcrs-evidence
+      SERVER_PORT: "8094"
+    networks:
+      - serp_net
+    expose:
+      - "8094"

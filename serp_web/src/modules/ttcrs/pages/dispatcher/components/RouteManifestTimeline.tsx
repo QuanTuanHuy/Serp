@@ -147,6 +147,9 @@ export function RouteManifestTimeline({ stops, currentStopSeq }: Props) {
                           </span>
                         )}
                         {stop.requestId != null && <span>Request #{stop.requestId}</span>}
+                        {stop.containerCode && (
+                          <span className="font-mono">Container: {stop.containerCode}</span>
+                        )}
                       </div>
                     </div>
 

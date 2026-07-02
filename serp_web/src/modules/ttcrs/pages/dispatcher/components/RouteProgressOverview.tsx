@@ -171,11 +171,21 @@ export function RouteProgressOverview({ plan }: Props) {
               <p className="text-xs text-muted-foreground">
                 {atStop.action.replace(/_/g, ' ')}
               </p>
+              {atStop.containerCode && (
+                <p className="text-xs font-mono font-medium">
+                  Container: {atStop.containerCode}
+                </p>
+              )}
             </div>
           ) : nextStop ? (
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Next stop</p>
               <p className="font-mono font-bold">{nextStop.locationCode}</p>
+              {nextStop.containerCode && (
+                <p className="text-xs font-mono font-medium">
+                  Container: {nextStop.containerCode}
+                </p>
+              )}
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold">
                   {computedEta ? fmtTime(computedEta) : '—'}
