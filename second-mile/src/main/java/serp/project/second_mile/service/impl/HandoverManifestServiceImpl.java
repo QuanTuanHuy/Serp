@@ -45,7 +45,6 @@ import serp.project.second_mile.kafka.event.HandoverManifestSyncEventType;
 import serp.project.second_mile.kafka.event.HandoverManifestSyncOrigin;
 import serp.project.second_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
-import serp.project.second_mile.kernel.utils.TransactionAfterCommit;
 import serp.project.second_mile.repository.HandoverManifestOrderRepository;
 import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
@@ -56,7 +55,7 @@ import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.HandoverManifestSpecification;
 import serp.project.second_mile.service.FileStorageService;
 import serp.project.second_mile.service.HandoverManifestService;
-import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.second_mile.service.dto.request.FileUploadRequest;
 import serp.project.second_mile.service.dto.response.FileUploadResponse;
 
@@ -107,7 +106,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
     private final FileStorageService fileStorageService;
     private final HandoverManifestSyncEventPublisher handoverManifestSyncEventPublisher;
     private final TmsOrderClient tmsOrderClient;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -1067,7 +1066,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         }
         HandoverManifest savedManifest = handoverManifestRepository.save(manifest);
         HandoverManifestSyncEvent syncEvent = toInboundSyncEvent(savedManifest, allManifestOrders, now);
-        TransactionAfterCommit.run(() -> handoverManifestSyncEventPublisher.publish(syncEvent));
+        handoverManifestSyncEventPublisher.publish(syncEvent);
         return toResponse(
                 savedManifest,
                 allManifestOrders,
@@ -1261,7 +1260,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
         if (items == null || items.isEmpty()) {
             return;
         }
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
                 .source(TRANSITION_SOURCE)
                 .idempotencyKey(idempotencyKey)
                 .items(items)

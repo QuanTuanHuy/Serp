@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import {
@@ -14,7 +14,7 @@ import {
 import { cn } from '@/shared/utils';
 import { schoolBusThemeStyle, schoolBusUi } from '../theme';
 
-// ── Base confirm dialog ───────────────────────────────────────────────────────
+// -- Base confirm dialog -------------------------------------------------------
 
 export interface SchoolBusConfirmDialogProps {
   open: boolean;
@@ -29,8 +29,8 @@ export interface SchoolBusConfirmDialogProps {
   cancelLabel?: string;
   /**
    * Visual variant of the confirm button.
-   * - "danger"  → red / destructive (default for delete actions)
-   * - "primary" → slate / primary (default for non-destructive confirmations)
+   * - "danger"  -> red / destructive (default for delete actions)
+   * - "primary" -> slate / primary (default for non-destructive confirmations)
    */
   variant?: 'danger' | 'primary';
   /** Extra content rendered between description and footer (e.g. an input or checklist) */
@@ -120,7 +120,7 @@ export function SchoolBusConfirmDialog({
               }
             }}
           >
-            {isLoading ? `${confirmLabel}…` : confirmLabel}
+            {isLoading ? `${confirmLabel}...` : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -128,7 +128,7 @@ export function SchoolBusConfirmDialog({
   );
 }
 
-// ── Convenience hook ──────────────────────────────────────────────────────────
+// -- Convenience hook ----------------------------------------------------------
 
 interface UseConfirmOptions {
   onConfirm: () => void | Promise<void>;
@@ -190,3 +190,4 @@ export function useSchoolBusConfirm({
 
   return { confirmState: state, dialogProps, requestConfirm, closeConfirm };
 }
+

@@ -833,7 +833,7 @@ BEGIN
         v_request_source := CASE WHEN i % 5 = 0 THEN 'ADMIN' ELSE 'PARENT' END;
 
         INSERT INTO public.school_bus_transport_request (
-            tenant_id, parent_profile_id, school_id,
+            tenant_id, parent_profile_id,
             request_type, status, request_code, requested_at, request_source,
             effective_from, effective_to, notes,
             approved_by, approved_at, rejection_reason, change_reason,
@@ -842,7 +842,6 @@ BEGIN
         VALUES (
             v_tenant_id,
             v_parent_profile_id,
-            v_school_id,
             'NEW_SERVICE',
             'APPROVED',
             'REQ' || lpad(i::text, 6, '0'),
@@ -938,7 +937,7 @@ BEGIN
         END;
 
         INSERT INTO public.school_bus_transport_request (
-            tenant_id, parent_profile_id, school_id,
+            tenant_id, parent_profile_id,
             request_type, status, request_code, requested_at, request_source,
             effective_from, effective_to, notes,
             approved_by, approved_at, rejection_reason, change_reason,
@@ -947,7 +946,6 @@ BEGIN
         VALUES (
             v_tenant_id,
             v_record.parent_profile_id,
-            v_record.school_id,
             'NEW_SERVICE',
             v_request_status,
             'REQ' || lpad(i::text, 6, '0'),
@@ -1028,7 +1026,6 @@ BEGIN
         FROM public.school_bus_transport_request request
         WHERE request.tenant_id = v_tenant_id
           AND request.parent_profile_id = v_record.parent_profile_id
-          AND request.school_id = v_record.school_id
           AND request.status = 'APPROVED'
           AND request.created_by = v_seed_by
           AND request.is_deleted = false;
@@ -1040,7 +1037,7 @@ BEGIN
         END;
 
         INSERT INTO public.school_bus_student_subscription (
-            tenant_id, student_id, school_id,
+            tenant_id, student_id,
             pickup_point_id, dropoff_point_id,
             subscription_code, trip_option,
             is_monday, is_tuesday, is_wednesday, is_thursday, is_friday,
@@ -1051,7 +1048,6 @@ BEGIN
         VALUES (
             v_tenant_id,
             v_record.id,
-            v_record.school_id,
             v_record.pickup_point_id,
             v_record.default_dropoff_point_id,
             'SUB' || lpad(i::text, 6, '0'),
@@ -1204,7 +1200,8 @@ END $$;
 --     subscription.trip_option,
 --     count(*) AS total
 -- FROM public.school_bus_student_subscription subscription
--- JOIN public.school_bus_school school ON school.id = subscription.school_id
+-- JOIN public.school_bus_student student ON student.id = subscription.student_id
+-- JOIN public.school_bus_school school ON school.id = student.school_id
 -- WHERE subscription.created_by = 'SEED_DATA'
 --   AND subscription.status = 'ACTIVE'
 --   AND subscription.is_deleted = false
@@ -1227,14 +1224,14 @@ END $$;
 --       NOT EXISTS (
 --           SELECT 1
 --           FROM public.school_bus_school_pickup_point link
---           WHERE link.school_id = subscription.school_id
+--           WHERE link.school_id = student.school_id
 --             AND link.pickup_point_id = subscription.pickup_point_id
 --             AND link.is_deleted = false
 --       )
 --       OR NOT EXISTS (
 --           SELECT 1
 --           FROM public.school_bus_school_pickup_point link
---           WHERE link.school_id = subscription.school_id
+--           WHERE link.school_id = student.school_id
 --             AND link.pickup_point_id = subscription.dropoff_point_id
 --             AND link.is_deleted = false
 --       )

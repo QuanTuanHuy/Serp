@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { Eye, Plus, Loader2, Settings } from 'lucide-react';
@@ -80,7 +80,7 @@ export function PlanningContextPanel({
           onChange={(val) =>
             onFormChange((f) => ({ ...f, schoolId: val || '' }))
           }
-          placeholder='— Select school —'
+          placeholder='- Select school -'
           options={schools.map((s) => ({
             label: s.label,
             value: String(s.id),
@@ -142,7 +142,7 @@ export function PlanningContextPanel({
 
       {isPreviewContextMatch && !canCreate && createDisabledReason && (
         <div className='text-[10px] font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-2 flex items-start gap-1.5'>
-          <span className='mt-0.5'>⚠️</span>
+          <span className='mt-0.5'>Warning:</span>
           <span>{createDisabledReason}</span>
         </div>
       )}
@@ -155,3 +155,4 @@ export function PlanningContextPanel({
     </div>
   );
 }
+

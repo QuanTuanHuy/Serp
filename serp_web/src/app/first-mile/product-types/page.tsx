@@ -1,10 +1,10 @@
 /**
- * Author: Nguyễn Thế Anh
- * Description: Part of Serp Project - First-mile product types route page
+ * Author: Nguyen The Anh
+ * Description: Part of Serp Project - Legacy TMS product types redirect
  */
 
-import { ProductTypeListPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
 export default function FirstMileProductTypesRoutePage() {
-  return <ProductTypeListPage />;
+  redirect('/first-mile/settings/product-types');
 }

@@ -127,38 +127,6 @@ const formatNumber = (value?: number): string => {
   return String(value);
 };
 
-const getScopeLabel = (scope: PickupPageAccessScope): string => {
-  if (scope === 'ADMIN_ALL') {
-    return 'TMS admin';
-  }
-
-  if (scope === 'MANAGER_SCOPED') {
-    return 'Post office manager';
-  }
-
-  if (scope === 'COURIER_SELF') {
-    return 'Courier';
-  }
-
-  return 'No access';
-};
-
-const getScopeDescription = (scope: PickupPageAccessScope): string => {
-  if (scope === 'ADMIN_ALL') {
-    return 'Track pickup operations across post offices and couriers.';
-  }
-
-  if (scope === 'MANAGER_SCOPED') {
-    return 'Track pickup operations for couriers in your managed post offices.';
-  }
-
-  if (scope === 'COURIER_SELF') {
-    return 'Track and check in your assigned pickup orders.';
-  }
-
-  return 'Your account does not have permission to access pickup tracking.';
-};
-
 const canCheckinOrder = (
   order: PickupTrackingOrder,
   isCourier: boolean
@@ -780,26 +748,10 @@ export const PickupPage: React.FC = () => {
   };
 
   return (
-    <div className='space-y-6'>
-      <div className='flex flex-col gap-2'>
+    <div className='space-y-4'>
+      <div className='flex flex-col gap-1'>
         <h1 className='text-2xl font-bold tracking-tight'>Pickup Tracking</h1>
-        <p className='text-muted-foreground'>
-          Monitor assigned pickup orders on map, check in orders, and review
-          pickup statistics.
-        </p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-3'>
-            <span>Access Scope</span>
-            <Badge variant={canAccess ? 'default' : 'secondary'}>
-              {getScopeLabel(accessScope)}
-            </Badge>
-          </CardTitle>
-          <CardDescription>{getScopeDescription(accessScope)}</CardDescription>
-        </CardHeader>
-      </Card>
 
       {!canAccess ? (
         <Card>
@@ -812,15 +764,11 @@ export const PickupPage: React.FC = () => {
         </Card>
       ) : (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Tracking Filters</CardTitle>
-              <CardDescription>
-                Select trip date, narrow by province and ward, then choose post
-                office and courier.
-              </CardDescription>
+          <Card className='gap-3 py-5'>
+            <CardHeader className='px-5 py-0'>
+              <CardTitle className='text-base'>Tracking filters</CardTitle>
             </CardHeader>
-            <CardContent className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
+            <CardContent className='grid gap-3 px-5 py-0 md:grid-cols-2 xl:grid-cols-5'>
               <div className='space-y-2'>
                 <Label htmlFor='trip-date'>Trip date</Label>
                 <Input
@@ -911,73 +859,73 @@ export const PickupPage: React.FC = () => {
                   </div>
                 </>
               ) : (
-                <div className='md:col-span-2 rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground'>
+                <div className='rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground md:col-span-2'>
                   You are viewing your own assigned pickup orders.
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-            <Card>
-              <CardHeader className='pb-2'>
+          <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>Total trips</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.totalTrips)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>Total orders</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.totalOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>Checked-in orders</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.checkedInOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>Pending check-in</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.pendingCheckinOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>PICKING_UP orders</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.pickingUpOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>PICKED_UP orders</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.pickedUpOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
             {canManagePostOfficeInbound ? (
-              <Card>
-                <CardHeader className='pb-2'>
+              <Card className='gap-2 py-3'>
+                <CardHeader className='px-4 py-0'>
                   <CardDescription>Pending post office inbound</CardDescription>
-                  <CardTitle className='text-2xl'>
+                  <CardTitle className='text-xl'>
                     {formatNumber(
                       pickupOverview?.pendingPostOfficeInboundOrders
                     )}
@@ -987,17 +935,13 @@ export const PickupPage: React.FC = () => {
             ) : null}
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Assigned trips</CardTitle>
-              <CardDescription>
-                Couriers complete trips and return shipments. Post office staff
-                scan and confirm inbound receiving.
-              </CardDescription>
+          <Card className='gap-3 py-5'>
+            <CardHeader className='px-5 py-0'>
+              <CardTitle className='text-base'>Assigned trips</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className='px-5 py-0'>
               {trips.length === 0 ? (
-                <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
+                <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
                   No trips found for selected filters.
                 </div>
               ) : (
@@ -1108,16 +1052,16 @@ export const PickupPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Pickup map</CardTitle>
+          <Card className='gap-3 py-5'>
+            <CardHeader className='px-5 py-0'>
+              <CardTitle className='text-base'>Pickup map</CardTitle>
               <CardDescription>
                 {ordersWithCoordinates.length} assigned order(s) with location.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className='px-5 py-0'>
               {ordersWithCoordinates.length === 0 ? (
-                <div className='rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground'>
+                <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
                   No assigned pickup orders with coordinates for selected
                   filters.
                 </div>
@@ -1126,33 +1070,34 @@ export const PickupPage: React.FC = () => {
                   orders={ordersWithCoordinates}
                   selectedOrderId={selectedOrderId}
                   onSelectOrder={setSelectedOrderId}
+                  className='h-[320px]'
                 />
               )}
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Assigned orders</CardTitle>
-              <CardDescription>
-                {isLoadingOverview
-                  ? 'Loading assigned pickup orders...'
-                  : `${orders.length} order(s) found in ${trips.length} trip(s).`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='flex justify-end'>
-                <Button
-                  variant='outline'
-                  onClick={() => void refetchOverview()}
-                  disabled={isFetchingOverview}
-                >
-                  {isFetchingOverview ? 'Refreshing...' : 'Refresh'}
-                </Button>
+          <Card className='gap-3 py-5'>
+            <CardHeader className='flex flex-col gap-2 px-5 py-0 sm:flex-row sm:items-center sm:justify-between'>
+              <div>
+                <CardTitle className='text-base'>Assigned orders</CardTitle>
+                <CardDescription>
+                  {isLoadingOverview
+                    ? 'Loading assigned pickup orders...'
+                    : `${orders.length} order(s) in ${trips.length} trip(s).`}
+                </CardDescription>
               </div>
-
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => void refetchOverview()}
+                disabled={isFetchingOverview}
+              >
+                {isFetchingOverview ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            </CardHeader>
+            <CardContent className='px-5 py-0'>
               {orders.length === 0 ? (
-                <div className='rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground'>
+                <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
                   No assigned pickup orders for selected filters.
                 </div>
               ) : (
@@ -1272,18 +1217,18 @@ export const PickupPage: React.FC = () => {
           </Card>
 
           {selectedOrder ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>
+            <Card className='gap-3 py-5'>
+              <CardHeader className='px-5 py-0'>
+                <CardTitle className='text-base'>
                   Order detail:{' '}
                   {selectedOrder.orderCode || `#${selectedOrder.orderId}`}
                 </CardTitle>
                 <CardDescription>
-                  Trip {selectedOrder.tripCode || '--'} · Courier{' '}
+                  Trip {selectedOrder.tripCode || '--'} | Courier{' '}
                   {selectedOrder.courierName || '--'}
                 </CardDescription>
               </CardHeader>
-              <CardContent className='grid gap-3 sm:grid-cols-2'>
+              <CardContent className='grid gap-3 px-5 py-0 sm:grid-cols-3'>
                 <div>
                   <div className='text-xs text-muted-foreground'>Sender</div>
                   <div className='font-medium'>

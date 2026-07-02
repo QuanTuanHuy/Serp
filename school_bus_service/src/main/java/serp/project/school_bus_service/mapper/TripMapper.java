@@ -22,7 +22,7 @@ public class TripMapper extends BaseMapper {
         response.setRouteCode(entity.getRoute().getRouteCode());
         response.setRouteName(entity.getRoute().getRouteName());
         response.setServiceDate(entity.getServiceDate());
-        response.setRouteDirection(entity.getRouteDirection().name());
+        response.setRouteDirection(entity.getRouteDirection() == null ? null : entity.getRouteDirection().name());
         response.setStatus(entity.getStatus().name());
         response.setPlannedStartAt(entity.getPlannedStartAt());
         response.setPlannedEndAt(entity.getPlannedEndAt());
@@ -62,7 +62,15 @@ public class TripMapper extends BaseMapper {
         response.setTripId(entity.getTrip().getId());
         response.setRouteStopId(entity.getRouteStop().getId());
         response.setStopName(entity.getRouteStop().getDisplayName());
-        response.setStopOrder(entity.getStopOrder());
+        response.setLocationId(entity.getRouteStop().getLocationId());
+        response.setLocationType(entity.getRouteStop().getLocationType() == null
+                ? null
+                : entity.getRouteStop().getLocationType().name());
+        response.setLocationName(entity.getRouteStop().getDisplayName());
+        response.setLocationAddress(resolveRouteStopAddress(entity.getRouteStop()));
+        response.setLatitude(entity.getRouteStop().getLatitude());
+        response.setLongitude(entity.getRouteStop().getLongitude());
+        response.setStopOrder(entity.getRouteStop().getStopOrder());
         response.setStatus(entity.getStatus().name());
         response.setActualArrivalTime(entity.getActualArrivalTime());
         response.setActualDepartureTime(entity.getActualDepartureTime());
@@ -71,6 +79,19 @@ public class TripMapper extends BaseMapper {
         response.setActualDroppedCount(entity.getActualDroppedCount());
         response.setNote(entity.getNote());
         return response;
+    }
+
+    private String resolveRouteStopAddress(serp.project.school_bus_service.entity.RouteStopEntity stop) {
+        if (stop.getPickupPoint() != null) {
+            return stop.getPickupPoint().getAddress();
+        }
+        if (stop.getSchool() != null) {
+            return stop.getSchool().getAddress();
+        }
+        if (stop.getDepot() != null) {
+            return stop.getDepot().getAddress();
+        }
+        return null;
     }
 
     public TripStudentResponse toTripStudentResponse(TripStudentEntity entity) {

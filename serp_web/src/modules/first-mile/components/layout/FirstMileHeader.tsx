@@ -35,6 +35,9 @@ export const FirstMileHeader: React.FC<FirstMileHeaderProps> = ({
   const [showUserMenu, setShowUserMenu] = React.useState(false);
 
   const { user, getDisplayName, getInitials } = useUser();
+  const displayName = getDisplayName();
+  const initials = getInitials();
+  const avatarUrl = user?.avatarUrl?.trim();
 
   const breadcrumbs = React.useMemo(() => {
     const segments = pathname.split('/').filter(Boolean);
@@ -123,11 +126,15 @@ export const FirstMileHeader: React.FC<FirstMileHeaderProps> = ({
               onClick={() => setShowUserMenu((prev) => !prev)}
             >
               <Avatar className='h-8 w-8'>
-                <AvatarImage src={user?.avatarUrl} alt={getDisplayName()} />
-                <AvatarFallback>{getInitials()}</AvatarFallback>
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt={displayName} />
+                ) : null}
+                <AvatarFallback className='bg-primary text-primary-foreground text-xs font-semibold'>
+                  {initials}
+                </AvatarFallback>
               </Avatar>
               <span className='hidden md:inline-block text-sm font-medium'>
-                {getDisplayName()}
+                {displayName}
               </span>
               <ChevronDown className='h-4 w-4' />
             </Button>
@@ -140,10 +147,10 @@ export const FirstMileHeader: React.FC<FirstMileHeaderProps> = ({
                     Profile
                   </Button>
                 </Link>
-                <Link href='/first-mile/network/post-office'>
+                <Link href='/first-mile/settings'>
                   <Button variant='ghost' className='w-full justify-start'>
                     <Settings className='mr-2 h-4 w-4' />
-                    First Mile Settings
+                    TMS Settings
                   </Button>
                 </Link>
                 <Button

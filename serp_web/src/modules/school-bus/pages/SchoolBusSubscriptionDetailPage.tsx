@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
@@ -175,9 +175,9 @@ export function SchoolBusSubscriptionDetailPage({
       {/* Metadata row */}
       <div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400 font-semibold'>
         <SchoolBusStatusBadge status={sub.status} />
-        <span>·</span>
+        <span>-</span>
         <span>{TRIP_OPTION_LABELS[sub.tripOption] || sub.tripOption}</span>
-        <span>·</span>
+        <span>-</span>
         <span>
           Effective: {formatDate(sub.effectiveFrom)} -{' '}
           {sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Ongoing'}
@@ -198,7 +198,7 @@ export function SchoolBusSubscriptionDetailPage({
         </Button>
       </Link>
 
-      {/* Admin/Dispatcher: lifecycle actions — Parent cannot write subscriptions directly */}
+      {/* Admin/Dispatcher: lifecycle actions - Parent cannot write subscriptions directly */}
       {!access.isParentOnly && (
         <>
           {sub.status === 'ACTIVE' && (
@@ -506,7 +506,7 @@ export function SchoolBusSubscriptionDetailPage({
               </div>
             </SchoolBusSection>
 
-            {/* Planning Eligibility Checklist — Admin/Dispatcher only */}
+            {/* Planning Eligibility Checklist - Admin/Dispatcher only */}
             {!access.isParentOnly && (
               <SchoolBusSection title='Route Planning Eligibility'>
                 <div
@@ -537,9 +537,9 @@ export function SchoolBusSubscriptionDetailPage({
                     {/* 1. Status Check */}
                     <div className='flex items-center gap-2'>
                       {isStatusActive ? (
-                        <span className='text-emerald-600 font-bold'>✓</span>
+                        <span className='text-emerald-600 font-bold'>OK</span>
                       ) : (
-                        <span className='text-amber-500 font-bold'>⚠</span>
+                        <span className='text-amber-500 font-bold'>Warning:</span>
                       )}
                       <span className='text-slate-500 font-medium'>
                         Subscription status is Active
@@ -552,9 +552,9 @@ export function SchoolBusSubscriptionDetailPage({
                     {/* 2. Effective date check */}
                     <div className='flex items-center gap-2'>
                       {isDateValid ? (
-                        <span className='text-emerald-600 font-bold'>✓</span>
+                        <span className='text-emerald-600 font-bold'>OK</span>
                       ) : (
-                        <span className='text-amber-500 font-bold'>⚠</span>
+                        <span className='text-amber-500 font-bold'>Warning:</span>
                       )}
                       <span className='text-slate-500 font-medium'>
                         Effective date validity
@@ -569,9 +569,9 @@ export function SchoolBusSubscriptionDetailPage({
                     {/* 3. Days selected check */}
                     <div className='flex items-center gap-2'>
                       {hasDays ? (
-                        <span className='text-emerald-600 font-bold'>✓</span>
+                        <span className='text-emerald-600 font-bold'>OK</span>
                       ) : (
-                        <span className='text-amber-500 font-bold'>⚠</span>
+                        <span className='text-amber-500 font-bold'>Warning:</span>
                       )}
                       <span className='text-slate-500 font-medium'>
                         Active routing days defined
@@ -584,9 +584,9 @@ export function SchoolBusSubscriptionDetailPage({
                     {/* 4. Points configured check */}
                     <div className='flex items-center gap-2'>
                       {pickupPointConfigured && dropoffPointConfigured ? (
-                        <span className='text-emerald-600 font-bold'>✓</span>
+                        <span className='text-emerald-600 font-bold'>OK</span>
                       ) : (
-                        <span className='text-amber-500 font-bold'>⚠</span>
+                        <span className='text-amber-500 font-bold'>Warning:</span>
                       )}
                       <span className='text-slate-500 font-medium'>
                         Pickup/drop-off points configured
@@ -600,7 +600,7 @@ export function SchoolBusSubscriptionDetailPage({
                   </div>
 
                   <div className='rounded-xl bg-slate-50 p-3 text-slate-500 text-[11px] font-semibold leading-relaxed border border-slate-200/60'>
-                    ⚠️ Detailed route planning compatibility (such as
+                    Warning: Detailed route planning compatibility (such as
                     coordinates and school link compatibility) will be evaluated
                     during the route planning phase.
                   </div>
@@ -693,3 +693,4 @@ export function SchoolBusSubscriptionDetailPage({
     </SchoolBusPageShell>
   );
 }
+

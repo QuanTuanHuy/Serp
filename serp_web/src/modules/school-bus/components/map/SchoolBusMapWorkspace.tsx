@@ -84,7 +84,7 @@ export function SchoolBusMapWorkspace({
             <div
               className={cn(
                 'relative flex-1 min-h-0 min-w-0 isolate',
-                !expanded && (mapHeightClassName ?? 'h-[480px]')
+                !expanded && (mapHeightClassName || 'h-[480px]')
               )}
             >
               {map}
@@ -100,7 +100,7 @@ export function SchoolBusMapWorkspace({
                   isExpanded={expanded}
                   onToggleExpand={toggleExpand}
                   showExpand={allowFullscreen}
-                  compact={compact ?? Boolean(panel)}
+                  compact={compact || Boolean(panel)}
                 />
               </div>
 
@@ -117,7 +117,7 @@ export function SchoolBusMapWorkspace({
               <div
                 className={cn(
                   'shrink-0 overflow-y-auto border-l border-border bg-card text-card-foreground',
-                  panelClassName ?? 'w-[300px] p-4',
+                  panelClassName || 'w-[300px] p-4',
                   expanded ? 'h-full' : 'min-h-0'
                 )}
               >

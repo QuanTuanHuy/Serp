@@ -31,6 +31,7 @@ import serp.project.first_mile.enums.PickupOptimizationGoal;
 import serp.project.first_mile.enums.PickupShift;
 import serp.project.first_mile.enums.RoutingVehicle;
 import serp.project.first_mile.enums.TripStatus;
+import serp.project.first_mile.enums.TripType;
 import serp.project.first_mile.enums.VehicleStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
@@ -42,7 +43,7 @@ import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.repository.TripRepository;
 import serp.project.first_mile.repository.VehicleRepository;
 import serp.project.first_mile.service.PickupOptimizationService;
-import serp.project.first_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.first_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.first_mile.service.dto.*;
 
 import java.time.LocalDate;
@@ -125,7 +126,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private final TripOrderRepository tripOrderRepository;
     private final PickupOptimizationEngine pickupOptimizationEngine;
     private final FirstMileAccessUtils firstMileAccessUtils;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
 
     @Value("${distance-matrix.batch-size:20}")
     private Integer distanceMatrixBatchSize;
@@ -426,6 +427,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             boolean assignedInAnotherTrip = tripOrderRepository.existsByTenantIdAndOrderIdAndTripStatusIn(
                     tenantId,
                     orderId,
+                    TripType.PICKUP,
                     ACTIVE_ASSIGNMENT_TRIP_STATUSES,
                     excludeTripId
             );
@@ -513,8 +515,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         lockOrderIdsForAssignment(requestedOrderIds, tenantId);
         loadOrdersByIdMapOrThrow(requestedOrderIds, tenantId);
 
-        Trip trip = tripRepository.findFirstByTenantIdAndPostOfficeIdAndCourierStaffIdAndTripDateAndShiftAndStatusIn(
+        Trip trip = tripRepository.findFirstByTenantIdAndTripTypeAndPostOfficeIdAndCourierStaffIdAndTripDateAndShiftAndStatusIn(
                 tenantId,
+                TripType.PICKUP,
                 postOffice.getId(),
                 courier.getId(),
                 shiftPlanningWindow.tripDate(),
@@ -552,6 +555,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         finalTripOrderIds.addAll(requestedOrderIds);
 
         trip.setTenantId(tenantId);
+        trip.setTripType(TripType.PICKUP);
         trip.setPostOfficeId(postOffice.getId());
         trip.setCourierStaffId(courier.getId());
         trip.setShift(request.getShift());
@@ -567,6 +571,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         tripOrderRepository.deleteByTenantIdAndOrderIdInAndTripStatusInAndTripIdNot(
                 tenantId,
                 requestedOrderIds,
+                TripType.PICKUP,
                 ACTIVE_ASSIGNMENT_TRIP_STATUSES,
                 savedTrip.getId()
         );
@@ -717,6 +722,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             validateActiveTripConflict(route, tripDate, shift, trip.getId(), tenantId);
 
             trip.setTenantId(tenantId);
+            trip.setTripType(TripType.PICKUP);
             trip.setPostOfficeId(postOffice.getId());
             trip.setCourierStaffId(route.courierStaffId());
             trip.setVehicleId(route.vehicleId());
@@ -942,6 +948,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             boolean stillAssignedToActiveTrip = tripOrderRepository.existsByTenantIdAndOrderIdAndTripStatusIn(
                     tenantId,
                     releasedOrder.getId(),
+                    TripType.PICKUP,
                     ACTIVE_ASSIGNMENT_TRIP_STATUSES,
                     null
             );
@@ -1002,7 +1009,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             return;
         }
 
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
                 .source(TRANSITION_SOURCE)
                 .idempotencyKey(TRANSITION_SOURCE + "-" + UUID.randomUUID())
                 .items(items)
@@ -1025,8 +1032,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             return new HashMap<>();
         }
 
-        List<Trip> replannableTrips = tripRepository.findByTenantIdAndPostOfficeIdAndTripDateAndShiftAndStatusIn(
+        List<Trip> replannableTrips = tripRepository.findByTenantIdAndTripTypeAndPostOfficeIdAndTripDateAndShiftAndStatusIn(
                 tenantId,
+                TripType.PICKUP,
                 postOfficeId,
                 tripDate,
                 shift,
@@ -1166,6 +1174,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             boolean assignedInAnotherTrip = tripOrderRepository.existsByTenantIdAndOrderIdAndTripStatusIn(
                     tenantId,
                     assignableOrder.orderId(),
+                    TripType.PICKUP,
                     ACTIVE_ASSIGNMENT_TRIP_STATUSES,
                     excludeTripId
             );
@@ -1212,6 +1221,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     ) {
         boolean courierConflict = tripRepository.existsActiveTripByCourierAndShift(
                 tenantId,
+                TripType.PICKUP,
                 tripDate,
                 shift,
                 route.courierStaffId(),
@@ -1228,6 +1238,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
         boolean vehicleConflict = tripRepository.existsActiveTripByVehicleAndShift(
                 tenantId,
+                TripType.PICKUP,
                 tripDate,
                 shift,
                 route.vehicleId(),

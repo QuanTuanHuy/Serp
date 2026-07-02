@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.Getter;
 import lombok.Setter;
 import serp.project.school_bus_service.enums.RouteLocationType;
@@ -23,19 +24,19 @@ public class RouteStopEntity extends BaseModel {
     @JoinColumn(name = "route_id")
     private RoutePlanEntity route;
 
+    @Column(name = "location_id", nullable = false)
+    private Long locationId;
+
     /** Nullable — only set for PICKUP_POINT stops. */
-    @ManyToOne
-    @JoinColumn(name = "pickup_point_id")
+    @Transient
     private PickupPointEntity pickupPoint;
 
     /** Nullable — only set for SCHOOL stops. */
-    @ManyToOne
-    @JoinColumn(name = "school_id")
+    @Transient
     private SchoolEntity school;
 
     /** Nullable — only set for DEPOT stops. */
-    @ManyToOne
-    @JoinColumn(name = "depot_id")
+    @Transient
     private DepotEntity depot;
 
     @Enumerated(EnumType.STRING)
@@ -93,5 +94,35 @@ public class RouteStopEntity extends BaseModel {
             case SCHOOL       -> school  != null ? school.getLongitude() : null;
             case DEPOT        -> depot   != null ? depot.getLongitude()  : null;
         };
+    }
+
+    public void setPickupPoint(PickupPointEntity pickupPoint) {
+        this.pickupPoint = pickupPoint;
+        if (pickupPoint != null) {
+            this.school = null;
+            this.depot = null;
+            this.locationType = RouteLocationType.PICKUP_POINT;
+            this.locationId = pickupPoint.getId();
+        }
+    }
+
+    public void setSchool(SchoolEntity school) {
+        this.school = school;
+        if (school != null) {
+            this.pickupPoint = null;
+            this.depot = null;
+            this.locationType = RouteLocationType.SCHOOL;
+            this.locationId = school.getId();
+        }
+    }
+
+    public void setDepot(DepotEntity depot) {
+        this.depot = depot;
+        if (depot != null) {
+            this.pickupPoint = null;
+            this.school = null;
+            this.locationType = RouteLocationType.DEPOT;
+            this.locationId = depot.getId();
+        }
     }
 }

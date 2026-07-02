@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import {
@@ -287,7 +287,7 @@ export function SchoolBusSchoolDetailPage({
       const matchSearch =
         !pickupSearch ||
         lp.pickupPointName.toLowerCase().includes(pickupSearch.toLowerCase()) ||
-        (lp.pickupPointAddress ?? '')
+        (lp.pickupPointAddress || '')
           .toLowerCase()
           .includes(pickupSearch.toLowerCase());
       const matchUsage =
@@ -340,7 +340,7 @@ export function SchoolBusSchoolDetailPage({
   }
 
   const schoolPickupPointCount =
-    school.pickupPointCount ?? linkedPickupPoints?.length ?? 0;
+    school.pickupPointCount || linkedPickupPoints?.length || 0;
   const hasMissingCoords =
     school.anyLinkedPointMissingCoordinates ||
     (linkedPickupPoints &&
@@ -431,7 +431,7 @@ export function SchoolBusSchoolDetailPage({
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               )}
             >
-              Linked Pickups ({school.pickupPointCount ?? 0})
+              Linked Pickups ({school.pickupPointCount || 0})
             </button>
           </div>
 
@@ -463,7 +463,7 @@ export function SchoolBusSchoolDetailPage({
                   Identity Code
                 </span>
                 <span className='text-sm font-mono font-bold text-slate-800'>
-                  {school.code || '—'}
+                  {school.code || '-'}
                 </span>
               </div>
               <div className='flex flex-col gap-0.5'>
@@ -481,7 +481,7 @@ export function SchoolBusSchoolDetailPage({
                   Contact Phone
                 </span>
                 <span className='text-xs font-semibold text-slate-700'>
-                  {school.contactPhone || '—'}
+                  {school.contactPhone || '-'}
                 </span>
               </div>
               <div className='flex flex-col gap-0.5'>
@@ -489,7 +489,7 @@ export function SchoolBusSchoolDetailPage({
                   Contact Email
                 </span>
                 <span className='text-xs font-semibold text-slate-700'>
-                  {school.contactEmail || '—'}
+                  {school.contactEmail || '-'}
                 </span>
               </div>
               <div className='flex flex-col gap-0.5'>
@@ -497,7 +497,7 @@ export function SchoolBusSchoolDetailPage({
                   Address
                 </span>
                 <span className='text-xs leading-relaxed text-slate-600'>
-                  {school.address || '—'}
+                  {school.address || '-'}
                 </span>
               </div>
               <div className='flex flex-col gap-0.5'>
@@ -527,13 +527,13 @@ export function SchoolBusSchoolDetailPage({
               <div className='text-xs text-amber-700 space-y-1.5 leading-relaxed'>
                 {!school.latitude && (
                   <p>
-                    • The school itself is missing coordinates, preventing it
+                    - The school itself is missing coordinates, preventing it
                     from showing on map overlays.
                   </p>
                 )}
                 {school.anyLinkedPointMissingCoordinates && (
                   <p>
-                    • One or more linked pickup points do not have coordinates
+                    - One or more linked pickup points do not have coordinates
                     set. Check Linked Pickups list.
                   </p>
                 )}
@@ -805,3 +805,4 @@ export function SchoolBusSchoolDetailPage({
     );
   }
 }
+

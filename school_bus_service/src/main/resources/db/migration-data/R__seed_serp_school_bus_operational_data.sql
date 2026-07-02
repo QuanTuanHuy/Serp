@@ -235,42 +235,29 @@ JOIN public.school_bus_school school
  AND school.is_deleted = false;
 
 INSERT INTO public.school_bus_route_plan (
-    tenant_id, school_id, route_code, route_name, service_date, status,
+    tenant_id, route_code, route_name, status,
     planned_distance_km, planned_duration_min, planning_notes,
     started_at, completed_at,
-    route_direction,
-    start_location_type, start_school_id, start_depot_id,
-    end_location_type, end_school_id, end_depot_id,
     geometry_path, geometry_source,
-    planned_student_count, assigned_bus_capacity, version_no,
+    planned_student_count, version_no,
     planning_session_id, required_capacity,
     published_at, published_by,
-    planned_start_time, planned_end_time, selected_bus_id,
+    planned_start_time, planned_end_time,
     is_active, is_deleted, created_at, created_by, updated_at, updated_by
 )
 SELECT
     1,
-    school.id,
     definition.route_code,
     definition.route_name,
-    definition.service_date,
     definition.route_status,
     definition.planned_distance_km,
     definition.planned_duration_min,
     'Regular corridor planned from active student subscriptions.',
     NULL,
     NULL,
-    definition.route_direction,
-    CASE WHEN definition.route_direction = 'OUTBOUND' THEN 'DEPOT' ELSE 'SCHOOL' END,
-    CASE WHEN definition.route_direction = 'RETURN' THEN school.id ELSE NULL END,
-    CASE WHEN definition.route_direction = 'OUTBOUND' THEN depot.id ELSE NULL END,
-    CASE WHEN definition.route_direction = 'OUTBOUND' THEN 'SCHOOL' ELSE 'DEPOT' END,
-    CASE WHEN definition.route_direction = 'OUTBOUND' THEN school.id ELSE NULL END,
-    CASE WHEN definition.route_direction = 'RETURN' THEN depot.id ELSE NULL END,
     geometry.geometry_path,
     'OSRM',
     0,
-    NULL,
     1,
     session.id,
     0,
@@ -278,7 +265,6 @@ SELECT
     NULL,
     definition.planned_start_time,
     definition.planned_end_time,
-    NULL,
     true, false, CURRENT_TIMESTAMP, 'SEED_DATA', CURRENT_TIMESTAMP, 'SEED_DATA'
 FROM seed_route_definition definition
 JOIN seed_route_geometry geometry
@@ -301,7 +287,7 @@ JOIN public.school_bus_route_planning_session session
 
 -- Start terminals.
 INSERT INTO public.school_bus_route_stop (
-    tenant_id, route_id, pickup_point_id, school_id, depot_id,
+    tenant_id, route_id, location_id,
     location_type, stop_purpose, stop_order,
     estimated_student_count, planned_boarding_count, planned_dropoff_count,
     estimated_travel_time_from_previous, distance_from_previous_km,
@@ -310,9 +296,7 @@ INSERT INTO public.school_bus_route_stop (
 SELECT
     1,
     route.id,
-    NULL,
-    CASE WHEN definition.route_direction = 'RETURN' THEN school.id ELSE NULL END,
-    CASE WHEN definition.route_direction = 'OUTBOUND' THEN depot.id ELSE NULL END,
+    CASE WHEN definition.route_direction = 'RETURN' THEN school.id ELSE depot.id END,
     CASE WHEN definition.route_direction = 'OUTBOUND' THEN 'DEPOT' ELSE 'SCHOOL' END,
     'START_TERMINAL',
     1,
@@ -334,7 +318,7 @@ JOIN public.school_bus_depot depot
 
 -- Service stops.
 INSERT INTO public.school_bus_route_stop (
-    tenant_id, route_id, pickup_point_id, school_id, depot_id,
+    tenant_id, route_id, location_id,
     location_type, stop_purpose, stop_order,
     estimated_student_count, planned_boarding_count, planned_dropoff_count,
     estimated_travel_time_from_previous, distance_from_previous_km,
@@ -344,8 +328,6 @@ SELECT
     1,
     route.id,
     point.id,
-    NULL,
-    NULL,
     'PICKUP_POINT',
     CASE WHEN definition.route_direction = 'OUTBOUND' THEN 'PICKUP' ELSE 'DROPOFF' END,
     point_order.ordinality::integer + 1,
@@ -366,7 +348,7 @@ JOIN public.school_bus_pickup_point point
 
 -- End terminals.
 INSERT INTO public.school_bus_route_stop (
-    tenant_id, route_id, pickup_point_id, school_id, depot_id,
+    tenant_id, route_id, location_id,
     location_type, stop_purpose, stop_order,
     estimated_student_count, planned_boarding_count, planned_dropoff_count,
     estimated_travel_time_from_previous, distance_from_previous_km,
@@ -375,9 +357,7 @@ INSERT INTO public.school_bus_route_stop (
 SELECT
     1,
     route.id,
-    NULL,
-    CASE WHEN definition.route_direction = 'OUTBOUND' THEN school.id ELSE NULL END,
-    CASE WHEN definition.route_direction = 'RETURN' THEN depot.id ELSE NULL END,
+    CASE WHEN definition.route_direction = 'OUTBOUND' THEN school.id ELSE depot.id END,
     CASE WHEN definition.route_direction = 'OUTBOUND' THEN 'SCHOOL' ELSE 'DEPOT' END,
     'END_TERMINAL',
     cardinality(definition.point_codes) + 2,
@@ -398,14 +378,13 @@ JOIN public.school_bus_depot depot
  AND depot.is_deleted = false;
 
 INSERT INTO public.school_bus_route_plan_student (
-    tenant_id, route_id, student_id, subscription_id,
+    tenant_id, route_id, subscription_id,
     pickup_stop_id, dropoff_stop_id,
     is_active, is_deleted, created_at, created_by, updated_at, updated_by
 )
 SELECT
     1,
     route.id,
-    subscription.student_id,
     subscription.id,
     CASE
         WHEN definition.route_direction = 'OUTBOUND' THEN service_stop.id
@@ -427,7 +406,6 @@ JOIN public.school_bus_school school
  AND school.is_deleted = false
 JOIN public.school_bus_student_subscription subscription
   ON subscription.tenant_id = 1
- AND subscription.school_id = school.id
  AND subscription.status = 'ACTIVE'
  AND subscription.is_active = true
  AND subscription.is_deleted = false
@@ -450,9 +428,14 @@ JOIN public.school_bus_pickup_point service_point
   END
  AND service_point.code = ANY(definition.point_codes)
  AND service_point.is_deleted = false
+JOIN public.school_bus_student student
+  ON student.id = subscription.student_id
+ AND student.school_id = school.id
+ AND student.is_active = true
+ AND student.is_deleted = false
 JOIN public.school_bus_route_stop service_stop
   ON service_stop.route_id = route.id
- AND service_stop.pickup_point_id = service_point.id
+ AND service_stop.location_id = service_point.id
  AND service_stop.location_type = 'PICKUP_POINT'
  AND service_stop.is_deleted = false
 JOIN public.school_bus_route_stop start_terminal
@@ -483,15 +466,15 @@ SET estimated_student_count = counts.student_count,
 FROM (
     SELECT
         stop_inner.id AS stop_id,
-        route.route_direction,
+        session.route_direction,
         CASE
             WHEN stop_inner.stop_purpose = 'PICKUP'
                 THEN count(student.id) FILTER (WHERE student.pickup_stop_id = stop_inner.id)
             WHEN stop_inner.stop_purpose = 'DROPOFF'
                 THEN count(student.id) FILTER (WHERE student.dropoff_stop_id = stop_inner.id)
-            WHEN stop_inner.stop_purpose = 'START_TERMINAL' AND route.route_direction = 'RETURN'
+            WHEN stop_inner.stop_purpose = 'START_TERMINAL' AND session.route_direction = 'RETURN'
                 THEN count(student.id)
-            WHEN stop_inner.stop_purpose = 'END_TERMINAL' AND route.route_direction = 'OUTBOUND'
+            WHEN stop_inner.stop_purpose = 'END_TERMINAL' AND session.route_direction = 'OUTBOUND'
                 THEN count(student.id)
             ELSE 0
         END::integer AS student_count,
@@ -501,13 +484,15 @@ FROM (
       ON route.id = stop_inner.route_id
      AND route.created_by = 'SEED_DATA'
      AND route.is_deleted = false
+    JOIN public.school_bus_route_planning_session session
+      ON session.id = route.planning_session_id
     LEFT JOIN public.school_bus_route_plan_student student
       ON student.route_id = route.id
      AND student.created_by = 'SEED_DATA'
      AND student.is_deleted = false
     WHERE stop_inner.created_by = 'SEED_DATA'
       AND stop_inner.is_deleted = false
-    GROUP BY stop_inner.id, route.route_direction, stop_inner.stop_purpose
+    GROUP BY stop_inner.id, session.route_direction, stop_inner.stop_purpose
 ) counts
 WHERE stop.id = counts.stop_id;
 
@@ -585,39 +570,26 @@ SELECT
     bus.id,
     driver.id,
     attendant.id,
-    (route.service_date + route.planned_start_time) - interval '3 days',
+    (session.service_date + route.planned_start_time) - interval '3 days',
     'CONFIRMED',
     NULL,
-    (route.service_date + route.planned_start_time) - interval '2 days',
+    (session.service_date + route.planned_start_time) - interval '2 days',
     NULL,
     'Vehicle crew confirmed for the scheduled corridor.',
     true, false, CURRENT_TIMESTAMP, 'SEED_DATA', CURRENT_TIMESTAMP, 'SEED_DATA'
 FROM target_routes target
 JOIN public.school_bus_route_plan route ON route.id = target.route_id
+JOIN public.school_bus_route_planning_session session ON session.id = route.planning_session_id
 JOIN available_buses bus
   ON bus.resource_rank = target.resource_rank
  AND bus.capacity >= target.planned_student_count
 JOIN available_drivers driver ON driver.resource_rank = target.resource_rank
 JOIN available_attendants attendant ON attendant.resource_rank = target.resource_rank;
 
-UPDATE public.school_bus_route_plan route
-SET selected_bus_id = assignment.bus_id,
-    assigned_bus_capacity = bus.capacity,
-    updated_at = CURRENT_TIMESTAMP,
-    updated_by = 'SEED_DATA'
-FROM public.school_bus_route_assignment assignment
-JOIN public.school_bus_bus bus ON bus.id = assignment.bus_id
-WHERE assignment.route_id = route.id
-  AND assignment.created_by = 'SEED_DATA'
-  AND assignment.is_deleted = false;
-
 INSERT INTO public.school_bus_trip_execution (
-    tenant_id, trip_code, route_id, service_date, route_direction, status,
+    tenant_id, trip_code, route_id, status,
     planned_start_at, planned_end_at, started_at, completed_at,
     completion_note,
-    bus_id, driver_id, attendant_id, route_geometry_path,
-    start_location_type, start_school_id, start_depot_id,
-    end_location_type, end_school_id, end_depot_id,
     cancelled_at, cancelled_by, cancellation_reason,
     is_active, is_deleted, created_at, created_by, updated_at, updated_by
 )
@@ -625,38 +597,26 @@ SELECT
     1,
     definition.trip_code,
     route.id,
-    route.service_date,
-    route.route_direction,
     definition.trip_status,
-    (route.service_date + route.planned_start_time),
-    (route.service_date + route.planned_end_time),
+    (session.service_date + route.planned_start_time),
+    (session.service_date + route.planned_end_time),
     CASE
         WHEN definition.trip_status IN ('IN_PROGRESS', 'COMPLETED')
-            THEN (route.service_date + route.planned_start_time) + interval '4 minutes'
+            THEN (session.service_date + route.planned_start_time) + interval '4 minutes'
         ELSE NULL
     END,
     CASE
         WHEN definition.trip_status = 'COMPLETED'
-            THEN (route.service_date + route.planned_end_time) + interval '3 minutes'
+            THEN (session.service_date + route.planned_end_time) + interval '3 minutes'
         ELSE NULL
     END,
     CASE
         WHEN definition.trip_status = 'COMPLETED' THEN 'Trip completed according to the approved route plan.'
         ELSE NULL
     END,
-    assignment.bus_id,
-    assignment.driver_id,
-    assignment.attendant_id,
-    route.geometry_path,
-    route.start_location_type,
-    route.start_school_id,
-    route.start_depot_id,
-    route.end_location_type,
-    route.end_school_id,
-    route.end_depot_id,
     CASE
         WHEN definition.trip_status = 'CANCELLED'
-            THEN (route.service_date + route.planned_start_time) - interval '30 minutes'
+            THEN (session.service_date + route.planned_start_time) - interval '30 minutes'
         ELSE NULL
     END,
     NULL,
@@ -675,17 +635,18 @@ JOIN public.school_bus_route_assignment assignment
   ON assignment.route_id = route.id
  AND assignment.created_by = 'SEED_DATA'
  AND assignment.is_deleted = false
+JOIN public.school_bus_route_planning_session session
+  ON session.id = route.planning_session_id
 WHERE definition.trip_code IS NOT NULL;
 
 INSERT INTO public.school_bus_trip_student (
-    tenant_id, trip_id, student_id, pickup_stop_id, dropoff_stop_id,
+    tenant_id, trip_id, pickup_stop_id, dropoff_stop_id,
     subscription_id, status, note,
     is_active, is_deleted, created_at, created_by, updated_at, updated_by
 )
 SELECT
     1,
     trip.id,
-    route_student.student_id,
     route_student.pickup_stop_id,
     route_student.dropoff_stop_id,
     route_student.subscription_id,
@@ -713,17 +674,20 @@ WITH ranked_students AS (
         row_number() OVER (
             PARTITION BY trip_student.trip_id,
                          CASE
-                             WHEN trip.route_direction = 'OUTBOUND' THEN trip_student.pickup_stop_id
+                             WHEN session.route_direction = 'OUTBOUND' THEN trip_student.pickup_stop_id
                              ELSE trip_student.dropoff_stop_id
                          END
             ORDER BY student.student_code
         ) AS stop_rank
     FROM public.school_bus_trip_student trip_student
     JOIN public.school_bus_trip_execution trip ON trip.id = trip_student.trip_id
-    JOIN public.school_bus_student student ON student.id = trip_student.student_id
+    JOIN public.school_bus_route_plan route ON route.id = trip.route_id
+    JOIN public.school_bus_route_planning_session session ON session.id = route.planning_session_id
+    JOIN public.school_bus_student_subscription subscription ON subscription.id = trip_student.subscription_id
+    JOIN public.school_bus_student student ON student.id = subscription.student_id
     JOIN public.school_bus_route_stop service_stop
       ON service_stop.id = CASE
-          WHEN trip.route_direction = 'OUTBOUND' THEN trip_student.pickup_stop_id
+          WHEN session.route_direction = 'OUTBOUND' THEN trip_student.pickup_stop_id
           ELSE trip_student.dropoff_stop_id
       END
     WHERE trip_student.created_by = 'SEED_DATA'
@@ -772,7 +736,7 @@ FROM ranked_students ranked
 WHERE trip_student.id = ranked.id;
 
 INSERT INTO public.school_bus_trip_stop_log (
-    tenant_id, trip_id, route_stop_id, stop_order, status,
+    tenant_id, trip_id, route_stop_id, status,
     actual_arrival_time, actual_departure_time, delay_minutes,
     actual_boarded_count, actual_dropped_count, note,
     is_active, is_deleted, created_at, created_by, updated_at, updated_by
@@ -781,7 +745,6 @@ SELECT
     1,
     trip.id,
     stop.id,
-    stop.stop_order,
     CASE
         WHEN trip.status IN ('ASSIGNED', 'CANCELLED') THEN 'PENDING'
         WHEN trip.status = 'COMPLETED' AND stop.stop_purpose = 'END_TERMINAL' THEN 'ARRIVED'
@@ -812,7 +775,7 @@ SELECT
     END,
     CASE WHEN trip.status IN ('COMPLETED', 'IN_PROGRESS') THEN stop.stop_order % 3 ELSE NULL END,
     CASE
-        WHEN trip.route_direction = 'OUTBOUND' AND stop.stop_purpose = 'PICKUP'
+        WHEN session.route_direction = 'OUTBOUND' AND stop.stop_purpose = 'PICKUP'
         THEN (
             SELECT count(*)::integer
             FROM public.school_bus_trip_student student
@@ -821,7 +784,7 @@ SELECT
               AND student.status IN ('BOARDED', 'DROPPED_OFF')
               AND student.is_deleted = false
         )
-        WHEN trip.route_direction = 'RETURN' AND stop.stop_purpose = 'START_TERMINAL'
+        WHEN session.route_direction = 'RETURN' AND stop.stop_purpose = 'START_TERMINAL'
         THEN (
             SELECT count(*)::integer
             FROM public.school_bus_trip_student student
@@ -832,7 +795,7 @@ SELECT
         ELSE 0
     END,
     CASE
-        WHEN trip.route_direction = 'OUTBOUND' AND stop.stop_purpose = 'END_TERMINAL'
+        WHEN session.route_direction = 'OUTBOUND' AND stop.stop_purpose = 'END_TERMINAL'
         THEN (
             SELECT count(*)::integer
             FROM public.school_bus_trip_student student
@@ -840,7 +803,7 @@ SELECT
               AND student.status = 'DROPPED_OFF'
               AND student.is_deleted = false
         )
-        WHEN trip.route_direction = 'RETURN' AND stop.stop_purpose = 'DROPOFF'
+        WHEN session.route_direction = 'RETURN' AND stop.stop_purpose = 'DROPOFF'
         THEN (
             SELECT count(*)::integer
             FROM public.school_bus_trip_student student
@@ -859,6 +822,10 @@ SELECT
     END,
     true, false, CURRENT_TIMESTAMP, 'SEED_DATA', CURRENT_TIMESTAMP, 'SEED_DATA'
 FROM public.school_bus_trip_execution trip
+JOIN public.school_bus_route_plan route
+  ON route.id = trip.route_id
+JOIN public.school_bus_route_planning_session session
+  ON session.id = route.planning_session_id
 JOIN public.school_bus_route_stop stop
   ON stop.route_id = trip.route_id
  AND stop.created_by = 'SEED_DATA'
@@ -868,27 +835,28 @@ WHERE trip.created_by = 'SEED_DATA'
 
 -- Boarding events for students who boarded or completed the trip.
 INSERT INTO public.school_bus_attendance (
-    tenant_id, route_id, student_id, trip_id, route_stop_id,
+    tenant_id, trip_student_id, route_stop_id,
     attendance_type, status, event_type, event_source,
     recorded_at, recorded_by, notes,
     is_active, is_deleted, created_at, created_by, updated_at, updated_by
 )
 SELECT
     1,
-    trip.route_id,
-    student.student_id,
-    trip.id,
+    student.id,
     student.pickup_stop_id,
     'CHECKED_IN',
     'PRESENT',
     'BOARDED',
     'MANUAL',
     trip.started_at + make_interval(mins => pickup_stop.stop_order * 7),
-    COALESCE(trip.attendant_id, trip.driver_id),
+    COALESCE(assignment.attendant_id, assignment.driver_id),
     'Boarding confirmed by the assigned crew.',
     true, false, CURRENT_TIMESTAMP, 'SEED_DATA', CURRENT_TIMESTAMP, 'SEED_DATA'
 FROM public.school_bus_trip_student student
 JOIN public.school_bus_trip_execution trip ON trip.id = student.trip_id
+JOIN public.school_bus_route_assignment assignment
+  ON assignment.route_id = trip.route_id
+ AND assignment.is_deleted = false
 JOIN public.school_bus_route_stop pickup_stop ON pickup_stop.id = student.pickup_stop_id
 WHERE student.created_by = 'SEED_DATA'
   AND student.status IN ('BOARDED', 'DROPPED_OFF')
@@ -896,30 +864,33 @@ WHERE student.created_by = 'SEED_DATA'
 
 -- Drop-off events for successfully completed students.
 INSERT INTO public.school_bus_attendance (
-    tenant_id, route_id, student_id, trip_id, route_stop_id,
+    tenant_id, trip_student_id, route_stop_id,
     attendance_type, status, event_type, event_source,
     recorded_at, recorded_by, notes,
     is_active, is_deleted, created_at, created_by, updated_at, updated_by
 )
 SELECT
     1,
-    trip.route_id,
-    student.student_id,
-    trip.id,
+    student.id,
     student.dropoff_stop_id,
     'CHECKED_OUT',
     'PRESENT',
     'DROPPED_OFF',
     'MANUAL',
     CASE
-        WHEN trip.route_direction = 'OUTBOUND' THEN trip.completed_at - interval '2 minutes'
+        WHEN session.route_direction = 'OUTBOUND' THEN trip.completed_at - interval '2 minutes'
         ELSE trip.started_at + make_interval(mins => dropoff_stop.stop_order * 9)
     END,
-    COALESCE(trip.attendant_id, trip.driver_id),
+    COALESCE(assignment.attendant_id, assignment.driver_id),
     'Drop-off confirmed by the assigned crew.',
     true, false, CURRENT_TIMESTAMP, 'SEED_DATA', CURRENT_TIMESTAMP, 'SEED_DATA'
 FROM public.school_bus_trip_student student
 JOIN public.school_bus_trip_execution trip ON trip.id = student.trip_id
+JOIN public.school_bus_route_plan route ON route.id = trip.route_id
+JOIN public.school_bus_route_planning_session session ON session.id = route.planning_session_id
+JOIN public.school_bus_route_assignment assignment
+  ON assignment.route_id = trip.route_id
+ AND assignment.is_deleted = false
 JOIN public.school_bus_route_stop dropoff_stop ON dropoff_stop.id = student.dropoff_stop_id
 WHERE student.created_by = 'SEED_DATA'
   AND student.status = 'DROPPED_OFF'
@@ -927,18 +898,16 @@ WHERE student.created_by = 'SEED_DATA'
 
 -- Absence, no-show, and cancelled-service events.
 INSERT INTO public.school_bus_attendance (
-    tenant_id, route_id, student_id, trip_id, route_stop_id,
+    tenant_id, trip_student_id, route_stop_id,
     attendance_type, status, event_type, event_source,
     recorded_at, recorded_by, notes,
     is_active, is_deleted, created_at, created_by, updated_at, updated_by
 )
 SELECT
     1,
-    trip.route_id,
-    student.student_id,
-    trip.id,
+    student.id,
     CASE
-        WHEN student.status = 'NOT_SERVED' AND trip.route_direction = 'RETURN'
+        WHEN student.status = 'NOT_SERVED' AND session.route_direction = 'RETURN'
             THEN student.dropoff_stop_id
         ELSE student.pickup_stop_id
     END,
@@ -950,11 +919,16 @@ SELECT
         WHEN student.status = 'NOT_SERVED' THEN trip.cancelled_at
         ELSE trip.started_at + interval '14 minutes'
     END,
-    COALESCE(trip.attendant_id, trip.driver_id),
+    COALESCE(assignment.attendant_id, assignment.driver_id),
     student.note,
     true, false, CURRENT_TIMESTAMP, 'SEED_DATA', CURRENT_TIMESTAMP, 'SEED_DATA'
 FROM public.school_bus_trip_student student
 JOIN public.school_bus_trip_execution trip ON trip.id = student.trip_id
+JOIN public.school_bus_route_plan route ON route.id = trip.route_id
+JOIN public.school_bus_route_planning_session session ON session.id = route.planning_session_id
+JOIN public.school_bus_route_assignment assignment
+  ON assignment.route_id = trip.route_id
+ AND assignment.is_deleted = false
 WHERE student.created_by = 'SEED_DATA'
   AND student.status IN ('ABSENT', 'NO_SHOW', 'NOT_SERVED')
   AND student.is_deleted = false;
@@ -975,8 +949,10 @@ FROM (
         (
             SELECT count(*)::integer
             FROM public.school_bus_student_subscription subscription
+            JOIN public.school_bus_student student
+              ON student.id = subscription.student_id
             WHERE subscription.tenant_id = session_inner.tenant_id
-              AND subscription.school_id = session_inner.school_id
+              AND student.school_id = session_inner.school_id
               AND subscription.status = 'ACTIVE'
               AND subscription.is_active = true
               AND subscription.is_deleted = false
@@ -1144,11 +1120,14 @@ JOIN public.school_bus_route_stop stop
   ON stop.route_id = route.id
  AND stop.is_deleted = false
 LEFT JOIN public.school_bus_pickup_point point
-  ON point.id = stop.pickup_point_id
+  ON stop.location_type = 'PICKUP_POINT'
+ AND point.id = stop.location_id
 LEFT JOIN public.school_bus_school school
-  ON school.id = stop.school_id
+  ON stop.location_type = 'SCHOOL'
+ AND school.id = stop.location_id
 LEFT JOIN public.school_bus_depot depot
-  ON depot.id = stop.depot_id
+  ON stop.location_type = 'DEPOT'
+ AND depot.id = stop.location_id
 CROSS JOIN LATERAL (
     SELECT
         geometry_point.ordinality::integer AS geometry_index,
@@ -1242,13 +1221,14 @@ BEGIN
         SELECT 1
         FROM public.school_bus_route_plan_student route_student
         JOIN public.school_bus_route_plan route ON route.id = route_student.route_id
+        JOIN public.school_bus_route_planning_session session ON session.id = route.planning_session_id
         WHERE route_student.created_by = v_seed_by
           AND route_student.is_deleted = false
           AND route.is_deleted = false
         GROUP BY
-            route.school_id,
-            route.service_date,
-            route.route_direction,
+            session.school_id,
+            session.service_date,
+            session.route_direction,
             route_student.subscription_id
         HAVING count(*) > 1
     ) THEN
@@ -1303,6 +1283,7 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM public.school_bus_route_plan route
+        JOIN public.school_bus_route_planning_session session ON session.id = route.planning_session_id
         JOIN LATERAL (
             SELECT stop.location_type, stop.stop_purpose
             FROM public.school_bus_route_stop stop
@@ -1320,7 +1301,7 @@ BEGIN
             LIMIT 1
         ) last_stop ON true
         WHERE route.created_by = v_seed_by
-          AND route.route_direction = 'OUTBOUND'
+          AND session.route_direction = 'OUTBOUND'
           AND route.is_deleted = false
           AND (
               first_stop.location_type <> 'DEPOT'
@@ -1336,6 +1317,7 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM public.school_bus_route_plan route
+        JOIN public.school_bus_route_planning_session session ON session.id = route.planning_session_id
         JOIN LATERAL (
             SELECT stop.location_type, stop.stop_purpose
             FROM public.school_bus_route_stop stop
@@ -1353,7 +1335,7 @@ BEGIN
             LIMIT 1
         ) last_stop ON true
         WHERE route.created_by = v_seed_by
-          AND route.route_direction = 'RETURN'
+          AND session.route_direction = 'RETURN'
           AND route.is_deleted = false
           AND (
               first_stop.location_type <> 'SCHOOL'
@@ -1444,19 +1426,6 @@ BEGIN
     ) THEN
         RAISE EXCEPTION
             'Seed validation failed: route geometry waypoint order is invalid';
-    END IF;
-
-    IF EXISTS (
-        SELECT 1
-        FROM public.school_bus_trip_execution trip
-        JOIN public.school_bus_route_plan route ON route.id = trip.route_id
-        WHERE trip.created_by = v_seed_by
-          AND trip.is_deleted = false
-          AND route.is_deleted = false
-          AND trip.route_geometry_path IS DISTINCT FROM route.geometry_path
-    ) THEN
-        RAISE EXCEPTION
-            'Seed validation failed: trip route_geometry_path differs from its route geometry_path';
     END IF;
 
     IF EXISTS (

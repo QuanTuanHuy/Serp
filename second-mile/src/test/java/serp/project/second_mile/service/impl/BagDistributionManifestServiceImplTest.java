@@ -47,7 +47,7 @@ import serp.project.second_mile.repository.HubStaffAssignmentRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.service.FileStorageService;
-import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -115,7 +115,7 @@ class BagDistributionManifestServiceImplTest {
     private FileStorageService fileStorageService;
 
     @Mock
-    private TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
 
     @Mock
     private BagDistributionPlanningService planningService;
@@ -238,7 +238,7 @@ class BagDistributionManifestServiceImplTest {
         assertEquals(BagStatus.IN_TRANSIT, bag.getStatus());
         assertNotNull(manifestBag.getScanOutTime());
         assertEquals(OrderStatus.BAG_IN_TRANSIT.name(), bagOrder.getLastKnownStatus());
-        verify(tmsOrderTransitionOutboxService).enqueue(any(), eq(TENANT_ID));
+        verify(tmsOrderTransitionPublisherService).publish(any(), eq(TENANT_ID));
     }
 
     @Test
@@ -269,7 +269,7 @@ class BagDistributionManifestServiceImplTest {
         assertEquals(BagStatus.ARRIVED, bag.getStatus());
         assertNotNull(manifestBag.getScanInTime());
         assertEquals(OrderStatus.INBOUND_AT_DESTINATION_HUB.name(), bagOrder.getLastKnownStatus());
-        verify(tmsOrderTransitionOutboxService).enqueue(any(), eq(TENANT_ID));
+        verify(tmsOrderTransitionPublisherService).publish(any(), eq(TENANT_ID));
     }
 
     @Test

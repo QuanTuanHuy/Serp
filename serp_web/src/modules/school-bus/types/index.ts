@@ -1,4 +1,4 @@
-export interface ApiResponse<T> {
+﻿export interface ApiResponse<T> {
   code: number;
   status: string;
   message: string;
@@ -75,6 +75,7 @@ export interface SchoolBusParent extends SchoolBusBaseRecord {
   phone?: string | null;
   email?: string | null;
   address?: string | null;
+  studentCount?: number | null;
   user?: SchoolBusAccountUser | null;
 }
 
@@ -268,7 +269,6 @@ export interface SchoolBusRoute extends SchoolBusBaseRecord {
   plannedDistanceKm?: number | null;
   plannedDurationMin?: number | null;
   plannedStudentCount?: number | null;
-  assignedBusCapacity?: number | null;
   busId?: number | null;
   busPlateNumber?: string | null;
   busName?: string | null;
@@ -370,6 +370,13 @@ export interface SchoolBusRouteDetail {
   assignment: SchoolBusRouteAssignment | null;
 }
 
+export interface SchoolBusRouteMapDetail {
+  route: SchoolBusRoute;
+  stops: SchoolBusRouteStop[];
+  assignment: SchoolBusRouteAssignment | null;
+  path: SchoolBusRoutePath | null;
+}
+
 export interface SchoolBusAttendance extends SchoolBusBaseRecord {
   routeId: number;
   routeCode: string;
@@ -441,7 +448,7 @@ export interface SchoolBusTripStudent extends SchoolBusBaseRecord {
   note?: string | null;
 }
 
-export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
+  export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
   tripCode: string;
   routeId: number;
   routeCode: string;
@@ -468,10 +475,52 @@ export interface SchoolBusTripExecution extends SchoolBusBaseRecord {
   startLocationType?: string | null;
   startLocationName?: string | null;
   endLocationType?: string | null;
-  endLocationName?: string | null;
-}
+    endLocationName?: string | null;
+  }
 
-export interface SchoolBusCapacityUtilization {
+  export interface SchoolBusTripExecutionListItem extends SchoolBusBaseRecord {
+    tripCode: string;
+    routeId: number;
+    routeCode: string;
+    routeName: string;
+    serviceDate: string;
+    routeDirection: 'OUTBOUND' | 'RETURN';
+    status: string;
+    plannedStartAt?: string | null;
+    plannedEndAt?: string | null;
+    startedAt?: string | null;
+    completedAt?: string | null;
+    cancelledAt?: string | null;
+    cancellationReason?: string | null;
+    busId?: number | null;
+    busPlateNumber?: string | null;
+    driverId?: number | null;
+    driverName?: string | null;
+    attendantId?: number | null;
+    attendantName?: string | null;
+    startLocationType?: string | null;
+    startLocationName?: string | null;
+    endLocationType?: string | null;
+    endLocationName?: string | null;
+    totalStops: number;
+    completedStops: number;
+    nextRouteStopId?: number | null;
+    nextStopName?: string | null;
+    nextStopStatus?: string | null;
+  }
+
+export interface SchoolBusTripOperationAction {
+  tripId: number;
+  tripStatus?: string | null;
+  routeStopId?: number | null;
+  stopStatus?: string | null;
+  actualArrivalTime?: string | null;
+  actualDepartureTime?: string | null;
+  updatedAt?: string | null;
+  message?: string | null;
+}
+  
+  export interface SchoolBusCapacityUtilization {
   tripId: number;
   tripCode: string;
   routeCode: string;
@@ -538,6 +587,26 @@ export interface SchoolBusTripAttendanceManifest {
   summary: SchoolBusTripAttendanceSummary;
   stops: TripAttendanceStopItem[];
   students: TripAttendanceStudentItem[];
+}
+
+export interface SchoolBusTripOperationOverview {
+  tripId: number;
+  tripCode?: string | null;
+  routeId?: number | null;
+  routeCode?: string | null;
+  routeName?: string | null;
+  routeDirection?: string | null;
+  tripStatus: string;
+  serviceDate?: string | null;
+  busPlateNumber?: string | null;
+  driverName?: string | null;
+  attendantName?: string | null;
+  routeGeometry?: string | null;
+  distanceKm?: number | null;
+  durationMin?: number | null;
+  cancellationReason?: string | null;
+  summary: SchoolBusTripAttendanceSummary;
+  stops: TripAttendanceStopItem[];
 }
 
 export interface DashboardSummary {
@@ -764,7 +833,7 @@ export interface SchoolBusMapLocation {
   addressParts?: SchoolBusMapAddressParts;
 }
 
-// --- School ↔ Pickup Point link ---
+// --- School <-> Pickup Point link ---
 
 export interface SchoolBusSchoolPickupPoint extends SchoolBusBaseRecord {
   schoolId: number;
@@ -784,7 +853,7 @@ export interface SchoolBusSchoolPickupPointUpsertRequest {
   isActive?: boolean;
 }
 
-// ── Planning Session ──────────────────────────────────────────────────────
+// -- Planning Session ------------------------------------------------------
 
 export type PlanningSessionStatus =
   | 'DRAFT'
@@ -901,7 +970,7 @@ export interface SchoolBusPlanningPreview {
   createDisabledReason?: string | null;
 }
 
-// ── Requests ─────────────────────────────────────────────────────────────
+// -- Requests -------------------------------------------------------------
 
 export interface PlanningSessionCreateRequest {
   schoolId: number;
@@ -983,3 +1052,4 @@ export interface SchoolBusDropdownOption {
   description?: string;
   metadata?: Record<string, any>;
 }
+

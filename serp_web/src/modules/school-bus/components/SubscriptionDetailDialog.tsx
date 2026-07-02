@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   X,
@@ -15,7 +15,7 @@ import { SchoolBusStatusBadge } from './SchoolBusStatusBadge';
 import { formatDate } from '../utils';
 import { cn } from '@/shared/utils';
 
-/* ── Day chip helpers ─────────────────────────────────────────────────────── */
+/* -- Day chip helpers ------------------------------------------------------- */
 const DAYS: { key: keyof DayFields; label: string }[] = [
   { key: 'monday', label: 'Mon' },
   { key: 'tuesday', label: 'Tue' },
@@ -36,7 +36,7 @@ interface DayFields {
   sunday: boolean;
 }
 
-/* ── Field row ────────────────────────────────────────────────────────────── */
+/* -- Field row -------------------------------------------------------------- */
 function Field({
   label,
   value,
@@ -52,13 +52,13 @@ function Field({
         {label}
       </span>
       <span className={cn('text-sm text-foreground', mono && 'font-mono')}>
-        {value || '—'}
+        {value || '-'}
       </span>
     </div>
   );
 }
 
-/* ── Section ──────────────────────────────────────────────────────────────── */
+/* -- Section ---------------------------------------------------------------- */
 function Section({
   title,
   icon: Icon,
@@ -81,7 +81,7 @@ function Section({
   );
 }
 
-/* ── Main dialog ──────────────────────────────────────────────────────────── */
+/* -- Main dialog ------------------------------------------------------------ */
 interface Props {
   subscriptionId: number;
   onClose: () => void;
@@ -161,7 +161,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
                 />
                 <Field
                   label='Source Request ID'
-                  value={sub.sourceRequestId ?? '—'}
+                  value={sub.sourceRequestId || '-'}
                 />
                 <div /> {/* spacer */}
               </Section>
@@ -178,11 +178,11 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
               <Section title='Pickup & Dropoff' icon={MapPin}>
                 <Field
                   label='Pickup Point'
-                  value={sub.pickupPointName ?? '—'}
+                  value={sub.pickupPointName || '-'}
                 />
                 <Field
                   label='Dropoff Point'
-                  value={sub.dropoffPointName ?? '—'}
+                  value={sub.dropoffPointName || '-'}
                 />
               </Section>
 
@@ -238,3 +238,4 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
     </div>
   );
 }
+

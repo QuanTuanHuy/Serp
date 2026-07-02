@@ -1,17 +1,16 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
-import { useMemo } from 'react';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
 import {
   Calendar,
   Clock3,
   Eye,
   GraduationCap,
+  Loader2,
   Map,
   MapPin,
-  Pencil,
   PlayCircle,
   Plus,
   Route,
@@ -22,8 +21,7 @@ import {
 import { cn } from '@/shared/utils';
 import { Button, Badge } from '@/shared/components/ui';
 import {
-  useGetRoutePathQuery,
-  useGetRouteByIdQuery,
+  useGetRouteMapQuery,
   useGetRoutesQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
@@ -35,7 +33,12 @@ import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { schoolBusUi } from '../theme';
-import { formatDate, formatDateTime, getPageItems } from '../utils';
+import {
+  SCHOOL_BUS_PAGE_QUERY_OPTIONS,
+  formatDate,
+  formatDateTime,
+  getPageItems,
+} from '../utils';
 
 const routeStatusMap: Record<string, { label: string; className: string }> = {
   PUBLISHED: {
@@ -94,13 +97,16 @@ export function SchoolBusDispatchPage() {
     sortBy: 'lastModifiedDate',
     sortDirection: 'DESC',
   });
-  const { data, isLoading } = useGetRoutesQuery(pagination.params);
+  const { data, isLoading } = useGetRoutesQuery(
+    pagination.params,
+    SCHOOL_BUS_PAGE_QUERY_OPTIONS
+  );
   const [selectedRouteId, setSelectedRouteId] = React.useState<number | null>(
     null
   );
   const routes = getPageItems(data?.data);
 
-  // Route-level status — reflects planning/dispatch state, NOT execution state
+  // Route-level status - reflects planning/dispatch state, NOT execution state
   const plannedRoutes = routes.filter((route) =>
     ['PLANNED', 'ASSIGNED'].includes(route.status)
   ).length;
@@ -109,18 +115,31 @@ export function SchoolBusDispatchPage() {
   ).length;
 
   const prioritizedRoutes = routes;
-  const { data: selectedRouteDetail } = useGetRouteByIdQuery(
+  const {
+    data: selectedRouteMap,
+    isLoading: isRouteMapLoading,
+    isFetching: isRouteMapFetching,
+  } = useGetRouteMapQuery(
     selectedRouteId as number,
-    { skip: !selectedRouteId }
+    { skip: !selectedRouteId, refetchOnMountOrArgChange: true }
   );
-  const { data: selectedRoutePath } = useGetRoutePathQuery(
-    selectedRouteId as number,
-    { skip: !selectedRouteId }
-  );
+  const selectedRouteData = selectedRouteMap?.data;
+  const isSelectedRouteDetailCurrent =
+    selectedRouteId != null && selectedRouteData?.route?.id === selectedRouteId;
+  const routePreviewData = isSelectedRouteDetailCurrent
+    ? selectedRouteData
+    : null;
+  const isRoutePreviewInitialLoading =
+    Boolean(selectedRouteId) &&
+    (isRouteMapLoading || !isSelectedRouteDetailCurrent);
+  const isRoutePreviewRefreshing =
+    Boolean(selectedRouteId) &&
+    Boolean(routePreviewData) &&
+    isRouteMapFetching;
 
   // Middle stops that lack coordinates (terminals use route-level coords instead)
   const selectedRouteMissingCoordinates =
-    selectedRouteDetail?.data.stops.filter(
+    routePreviewData?.stops.filter(
       (stop: any) =>
         stop.stopPurpose !== 'START_TERMINAL' &&
         stop.stopPurpose !== 'END_TERMINAL' &&
@@ -216,18 +235,23 @@ export function SchoolBusDispatchPage() {
               />
             ) : (
               <div className='space-y-4'>
-                {prioritizedRoutes.map((route) => (
-                  <div
-                    key={route.id}
-                    className={cn(
-                      schoolBusUi.interactiveCard,
-                      'p-5 cursor-pointer relative transition-all duration-200 flex flex-col gap-4',
-                      selectedRouteId === route.id
-                        ? 'border-l-4 border-l-[#C81E3A] border-y-slate-300 border-r-slate-300 bg-slate-50/50 ring-1 ring-slate-100 shadow-sm'
-                        : ''
-                    )}
-                    onClick={() => setSelectedRouteId(route.id)}
-                  >
+                {prioritizedRoutes.map((route) => {
+                  const hasBus = Boolean(route.busId);
+                  const hasDriver = Boolean(route.driverId);
+                  const hasAttendant = Boolean(route.attendantId);
+
+                  return (
+                    <div
+                      key={route.id}
+                      className={cn(
+                        schoolBusUi.interactiveCard,
+                        'p-5 cursor-pointer relative transition-all duration-200 flex flex-col gap-4',
+                        selectedRouteId === route.id
+                          ? 'border-l-4 border-l-[#C81E3A] border-y-slate-300 border-r-slate-300 bg-slate-50/50 ring-1 ring-slate-100 shadow-sm'
+                          : ''
+                      )}
+                      onClick={() => setSelectedRouteId(route.id)}
+                    >
                     {/* Header: Code, Name and Status */}
                     <div className='flex flex-wrap items-center justify-between gap-3'>
                       <div className='flex items-center gap-2.5 min-w-0'>
@@ -312,56 +336,36 @@ export function SchoolBusDispatchPage() {
                       <span
                         className={cn(
                           'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
-                          route.status === 'ASSIGNED' ||
-                            route.status === 'TRIP_CREATED' ||
-                            route.status === 'IN_PROGRESS' ||
-                            route.status === 'COMPLETED'
+                          hasBus
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                             : 'bg-amber-50 text-amber-700 border-amber-100'
                         )}
                       >
-                        {route.status === 'ASSIGNED' ||
-                        route.status === 'TRIP_CREATED' ||
-                        route.status === 'IN_PROGRESS' ||
-                        route.status === 'COMPLETED'
-                          ? '✓ Bus assigned'
-                          : '⚠ Missing bus'}
+                        {hasBus ? 'OK Bus assigned' : 'Warning: Missing bus'}
                       </span>
                       <span
                         className={cn(
                           'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
-                          route.status === 'ASSIGNED' ||
-                            route.status === 'TRIP_CREATED' ||
-                            route.status === 'IN_PROGRESS' ||
-                            route.status === 'COMPLETED'
+                          hasDriver
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                             : 'bg-amber-50 text-amber-700 border-amber-100'
                         )}
                       >
-                        {route.status === 'ASSIGNED' ||
-                        route.status === 'TRIP_CREATED' ||
-                        route.status === 'IN_PROGRESS' ||
-                        route.status === 'COMPLETED'
-                          ? '✓ Driver assigned'
-                          : '⚠ Missing driver'}
+                        {hasDriver
+                          ? 'OK Driver assigned'
+                          : 'Warning: Missing driver'}
                       </span>
                       <span
                         className={cn(
                           'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium border shadow-none',
-                          route.status === 'ASSIGNED' ||
-                            route.status === 'TRIP_CREATED' ||
-                            route.status === 'IN_PROGRESS' ||
-                            route.status === 'COMPLETED'
+                          hasAttendant
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                             : 'bg-amber-50 text-amber-750 border-amber-100'
                         )}
                       >
-                        {route.status === 'ASSIGNED' ||
-                        route.status === 'TRIP_CREATED' ||
-                        route.status === 'IN_PROGRESS' ||
-                        route.status === 'COMPLETED'
-                          ? '✓ Attendant assigned'
-                          : '⚠ Missing attendant'}
+                        {hasAttendant
+                          ? 'OK Attendant assigned'
+                          : 'Warning: Missing attendant'}
                       </span>
                     </div>
 
@@ -371,13 +375,13 @@ export function SchoolBusDispatchPage() {
                         <span>
                           Distance:{' '}
                           <strong className='text-slate-700'>
-                            {route.plannedDistanceKm ?? 0} km
+                            {route.plannedDistanceKm || 0} km
                           </strong>
                         </span>
                         <span>
                           Duration:{' '}
                           <strong className='text-slate-700'>
-                            {route.plannedDurationMin ?? 0} mins
+                            {route.plannedDurationMin || 0} mins
                           </strong>
                         </span>
                         {route.startedAt && (
@@ -449,8 +453,9 @@ export function SchoolBusDispatchPage() {
                         </Button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
 
                 <div className='pt-2'>
                   <SchoolBusPaginationBar
@@ -480,17 +485,42 @@ export function SchoolBusDispatchPage() {
               </p>
             </div>
 
-            {selectedRouteDetail?.data ? (
-              <div className='rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col flex-1 min-h-0'>
+            {isRoutePreviewInitialLoading ? (
+              <div className='flex flex-col items-center justify-center p-12 text-center flex-1 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 min-h-[400px]'>
+                <div className='mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#C81E3A] shadow-sm ring-1 ring-slate-200'>
+                  <Loader2 className='h-6 w-6 animate-spin' />
+                </div>
+                <h3 className='text-sm font-semibold text-slate-800'>
+                  Loading route preview...
+                </h3>
+                <p className='text-xs text-slate-500 max-w-[260px] mt-1'>
+                  Preparing stops and map path for the selected route.
+                </p>
+                <div className='mt-6 w-full max-w-sm space-y-2'>
+                  <div className='h-3 rounded-full bg-slate-200/80 animate-pulse' />
+                  <div className='h-3 w-3/4 rounded-full bg-slate-200/70 animate-pulse mx-auto' />
+                  <div className='h-3 w-1/2 rounded-full bg-slate-200/60 animate-pulse mx-auto' />
+                </div>
+              </div>
+            ) : routePreviewData ? (
+              <div className='relative rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col flex-1 min-h-0'>
+                {isRoutePreviewRefreshing && (
+                  <div className='absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]'>
+                    <div className='flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm'>
+                      <Loader2 className='h-4 w-4 animate-spin text-[#C81E3A]' />
+                      Updating route preview...
+                    </div>
+                  </div>
+                )}
                 <SchoolBusMapWorkspace
                   flat={true}
                   mapHeightClassName='h-[400px] xl:h-full'
                   map={
                     <RouteMap
-                      route={selectedRouteDetail.data.route}
-                      stops={selectedRouteDetail.data.stops}
-                      assignment={selectedRouteDetail.data.assignment}
-                      routePath={selectedRoutePath?.data}
+                      route={routePreviewData.route}
+                      stops={routePreviewData.stops}
+                      assignment={routePreviewData.assignment}
+                      routePath={routePreviewData.path}
                       className='h-full w-full'
                     />
                   }
@@ -514,12 +544,11 @@ export function SchoolBusDispatchPage() {
                               <p
                                 className='font-medium text-slate-700 truncate mt-0.5'
                                 title={
-                                  selectedRouteDetail.data.route
-                                    .startLocationName
+                                  routePreviewData.route.startLocationName
                                 }
                               >
-                                {selectedRouteDetail.data.route
-                                  .startLocationName || 'Not set'}
+                                {routePreviewData.route.startLocationName ||
+                                  'Not set'}
                               </p>
                             </div>
                           </div>
@@ -535,11 +564,11 @@ export function SchoolBusDispatchPage() {
                               <p
                                 className='font-medium text-slate-700 truncate mt-0.5'
                                 title={
-                                  selectedRouteDetail.data.route.endLocationName
+                                  routePreviewData.route.endLocationName
                                 }
                               >
-                                {selectedRouteDetail.data.route
-                                  .endLocationName || 'Not set'}
+                                {routePreviewData.route.endLocationName ||
+                                  'Not set'}
                               </p>
                             </div>
                           </div>
@@ -553,7 +582,7 @@ export function SchoolBusDispatchPage() {
                                 Stops Count
                               </p>
                               <p className='font-medium text-slate-700 mt-0.5'>
-                                {selectedRouteDetail.data.stops.length} stop(s)
+                                {routePreviewData.stops.length} stop(s)
                               </p>
                             </div>
                           </div>
@@ -568,7 +597,7 @@ export function SchoolBusDispatchPage() {
                               </p>
                               <div className='mt-0.5'>
                                 <RouteStatusBadge
-                                  status={selectedRouteDetail.data.route.status}
+                                  status={routePreviewData.route.status}
                                 />
                               </div>
                             </div>
@@ -589,8 +618,7 @@ export function SchoolBusDispatchPage() {
                               Distance
                             </p>
                             <p className='font-bold text-slate-800 mt-0.5'>
-                              {selectedRouteDetail.data.route
-                                .plannedDistanceKm ?? 0}{' '}
+                              {routePreviewData.route.plannedDistanceKm || 0}{' '}
                               km
                             </p>
                           </div>
@@ -599,8 +627,7 @@ export function SchoolBusDispatchPage() {
                               Duration
                             </p>
                             <p className='font-bold text-slate-800 mt-0.5'>
-                              {selectedRouteDetail.data.route
-                                .plannedDurationMin ?? 0}{' '}
+                              {routePreviewData.route.plannedDurationMin || 0}{' '}
                               mins
                             </p>
                           </div>
@@ -613,7 +640,7 @@ export function SchoolBusDispatchPage() {
                       {selectedRouteMissingCoordinates > 0 && (
                         <div className='rounded-lg border border-amber-200 bg-amber-50/50 p-2.5 text-xs text-amber-700 leading-normal'>
                           <p className='font-semibold'>
-                            ⚠️ {selectedRouteMissingCoordinates} stop(s) missing
+                            Warning: {selectedRouteMissingCoordinates} stop(s) missing
                             coordinates.
                           </p>
                           <p className='text-[10px] text-amber-600 mt-0.5'>
@@ -642,3 +669,4 @@ export function SchoolBusDispatchPage() {
     </SchoolBusPageShell>
   );
 }
+

@@ -5,9 +5,9 @@ Description: Part of Serp Project
 
 package serp.project.second_mile.service.impl;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.second_mile.caller.TmsOrderClient;
@@ -15,9 +15,6 @@ import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.domain.HubPostOfficeMapping;
-import serp.project.second_mile.domain.HubStaffAssignment;
-import serp.project.second_mile.domain.Route;
-import serp.project.second_mile.domain.Vehicle;
 import serp.project.second_mile.dto.request.AutoBaggingPlanRequest;
 import serp.project.second_mile.dto.request.CreateBagRequest;
 import serp.project.second_mile.dto.response.AutoBaggingPlanResponse;
@@ -27,11 +24,6 @@ import serp.project.second_mile.dto.response.BagSuggestionResponse;
 import serp.project.second_mile.enums.BagDestinationType;
 import serp.project.second_mile.enums.BagStatus;
 import serp.project.second_mile.enums.OrderStatus;
-import serp.project.second_mile.enums.RouteDestinationType;
-import serp.project.second_mile.enums.RouteEndpointType;
-import serp.project.second_mile.enums.RouteStatus;
-import serp.project.second_mile.enums.VehicleStatus;
-import serp.project.second_mile.enums.VehicleType;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
 import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
@@ -43,16 +35,16 @@ import serp.project.second_mile.repository.HubStaffAssignmentRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.service.BagCapacitySettingsService;
-import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
+import serp.project.second_mile.service.validator.BagValidator;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,9 +54,6 @@ class BagServiceImplTest {
     private static final Long TENANT_ID = 1L;
     private static final Long HUB_ID = 10L;
     private static final Long DESTINATION_HUB_ID = 11L;
-    private static final Long ROUTE_ID = 20L;
-    private static final Long VEHICLE_ID = 30L;
-    private static final Long DRIVER_ID = 40L;
     private static final String ORIGIN_POST_OFFICE_CODE = "PO-ORIGIN";
     private static final String DESTINATION_POST_OFFICE_CODE = "PO-DEST";
 
@@ -96,17 +85,41 @@ class BagServiceImplTest {
     private TmsOrderClient tmsOrderClient;
 
     @Mock
-    private TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
 
     @Mock
     private BagCapacitySettingsService bagCapacitySettingsService;
 
-    @InjectMocks
     private BagServiceImpl service;
+
+    @BeforeEach
+    void setUp() {
+        BagValidator bagValidator = new BagValidator(
+                hubRepository,
+                hubPostOfficeMappingRepository,
+                routeRepository,
+                vehicleRepository,
+                hubStaffAssignmentRepository,
+                secondMileAccessUtils
+        );
+        service = new BagServiceImpl(
+                bagRepository,
+                bagOrderRepository,
+                hubRepository,
+                hubPostOfficeMappingRepository,
+                routeRepository,
+                vehicleRepository,
+                secondMileAccessUtils,
+                tmsOrderClient,
+                tmsOrderTransitionPublisherService,
+                bagCapacitySettingsService,
+                bagValidator
+        );
+    }
 
     @Test
     void createBagRejectsHubDestinationMatchingOriginHub() {
-        CreateBagRequest request = createHubBagRequest(HUB_ID, ROUTE_ID, null);
+        CreateBagRequest request = createHubBagRequest(HUB_ID);
 
         when(secondMileAccessUtils.getCurrentTenantIdOrThrow()).thenReturn(TENANT_ID);
         when(hubRepository.findById(HUB_ID)).thenReturn(Optional.of(hub()));
@@ -118,20 +131,12 @@ class BagServiceImplTest {
     }
 
     @Test
-    void createBagUsesRouteVehicleAndValidatesDriverHubAssignment() {
-        CreateBagRequest request = createHubBagRequest(DESTINATION_HUB_ID, ROUTE_ID, null);
+    void createBagLeavesRouteAndVehicleForDistributionFlow() {
+        CreateBagRequest request = createHubBagRequest(DESTINATION_HUB_ID);
 
         when(secondMileAccessUtils.getCurrentTenantIdOrThrow()).thenReturn(TENANT_ID);
         when(hubRepository.findById(HUB_ID)).thenReturn(Optional.of(hub(HUB_ID)));
         when(hubRepository.findById(DESTINATION_HUB_ID)).thenReturn(Optional.of(hub(DESTINATION_HUB_ID)));
-        when(routeRepository.findById(ROUTE_ID)).thenReturn(Optional.of(route()));
-        when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle()));
-        when(hubStaffAssignmentRepository.findFirstActiveAssignmentByStaffIdAndHubIdAndTenantId(
-                eq(DRIVER_ID),
-                eq(HUB_ID),
-                eq(TENANT_ID),
-                any(LocalDate.class)
-        )).thenReturn(Optional.of(driverAssignment()));
         when(bagCapacitySettingsService.getSettingsForTenant(TENANT_ID))
                 .thenReturn(new BagCapacitySettingsResponse(1L, 50.0, 0.5, 30));
         when(bagOrderRepository.findByBag_IdAndTenantId(100L, TENANT_ID)).thenReturn(List.of());
@@ -143,9 +148,10 @@ class BagServiceImplTest {
 
         BagResponse response = service.createBag(request);
 
-        assertEquals(ROUTE_ID, response.routeId());
-        assertEquals(VEHICLE_ID, response.vehicleId());
-        verify(secondMileAccessUtils).ensureActiveDriverStaffOrThrow(TENANT_ID, DRIVER_ID);
+        assertNull(response.routeId());
+        assertNull(response.vehicleId());
+        verify(routeRepository, never()).findById(any());
+        verify(vehicleRepository, never()).findById(any());
     }
 
     @Test
@@ -260,50 +266,12 @@ class BagServiceImplTest {
                 .build();
     }
 
-    private Route route() {
-        return Route.builder()
-                .id(ROUTE_ID)
-                .routeCode("R-001")
-                .routeName("Origin to destination")
-                .originType(RouteEndpointType.HUB)
-                .originHubId(HUB_ID)
-                .destinationType(RouteDestinationType.HUB)
-                .destinationHubId(DESTINATION_HUB_ID)
-                .vehicleId(VEHICLE_ID)
-                .status(RouteStatus.ACTIVE)
-                .tenantId(TENANT_ID)
-                .build();
-    }
-
-    private Vehicle vehicle() {
-        return Vehicle.builder()
-                .id(VEHICLE_ID)
-                .licensePlate("51A-12345")
-                .vehicleType(VehicleType.TRUCK)
-                .hubId(HUB_ID)
-                .assignedStaffId(DRIVER_ID)
-                .status(VehicleStatus.ACTIVE)
-                .tenantId(TENANT_ID)
-                .build();
-    }
-
-    private HubStaffAssignment driverAssignment() {
-        return HubStaffAssignment.builder()
-                .id(1L)
-                .hub(hub())
-                .assignedFrom(LocalDate.now().minusDays(1))
-                .tenantId(TENANT_ID)
-                .build();
-    }
-
-    private CreateBagRequest createHubBagRequest(Long destinationHubId, Long routeId, Long vehicleId) {
+    private CreateBagRequest createHubBagRequest(Long destinationHubId) {
         CreateBagRequest request = new CreateBagRequest();
         request.setBagCode("BAG-001");
         request.setOriginHubId(HUB_ID);
         request.setDestinationType(BagDestinationType.HUB);
         request.setDestinationHubId(destinationHubId);
-        request.setRouteId(routeId);
-        request.setVehicleId(vehicleId);
         return request;
     }
 

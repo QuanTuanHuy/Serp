@@ -1,16 +1,16 @@
-/**
+﻿/**
  * School Bus Module - Role-Based Access Control Helper
  *
  * Provides pure utility functions for role checking and action visibility.
- * These functions are UX helpers only — backend authorization is the source of truth.
+ * These functions are UX helpers only - backend authorization is the source of truth.
  *
  * Usage:
  *   const { user } = useUser();
- *   const roles = user?.roles ?? [];
+ *   const roles = user?.roles || [];
  *   if (isSchoolBusAdmin(roles)) { ... }
  */
 
-// ─── Role Constants ────────────────────────────────────────────────────────────
+// --- Role Constants ------------------------------------------------------------
 
 export const SCHOOL_BUS_ROLES = {
   ADMIN: 'SCHOOL_BUS_ADMIN',
@@ -23,7 +23,7 @@ export const SCHOOL_BUS_ROLES = {
 export type SchoolBusRole =
   (typeof SCHOOL_BUS_ROLES)[keyof typeof SCHOOL_BUS_ROLES];
 
-// ─── Role Predicates ───────────────────────────────────────────────────────────
+// --- Role Predicates -----------------------------------------------------------
 
 export function hasSchoolBusRole(
   roles: string[],
@@ -77,7 +77,7 @@ export function isSchoolBusParentOnly(roles: string[]): boolean {
   return isSchoolBusParent(roles) && !isSchoolBusOperator(roles);
 }
 
-// ─── Landing Path ─────────────────────────────────────────────────────────────
+// --- Landing Path -------------------------------------------------------------
 
 /**
  * Role priority order (higher index = lower priority).
@@ -106,10 +106,10 @@ export function getEffectiveSchoolBusRole(
 /**
  * Get the appropriate landing path for the user's highest-priority School Bus role.
  *
- * - ADMIN / DISPATCHER → /school-bus/dashboard (full ops cockpit)
- * - DRIVER             → /school-bus/trips      (assigned trips)
- * - ATTENDANT          → /school-bus/trips      (assigned trips and attendance)
- * - PARENT             → /school-bus/dashboard  (child status dashboard)
+ * - ADMIN / DISPATCHER -> /school-bus/dashboard (full ops cockpit)
+ * - DRIVER             -> /school-bus/trips      (assigned trips)
+ * - ATTENDANT          -> /school-bus/trips      (assigned trips and attendance)
+ * - PARENT             -> /school-bus/dashboard  (child status dashboard)
  */
 export function getSchoolBusLandingPath(roles: string[]): string {
   const role = getEffectiveSchoolBusRole(roles);
@@ -133,7 +133,7 @@ export function getSchoolBusLandingPath(roles: string[]): string {
   }
 }
 
-// ─── Action Visibility Helpers ─────────────────────────────────────────────────
+// --- Action Visibility Helpers -------------------------------------------------
 
 /**
  * Can the user perform trip lifecycle operations (Start, Arrive, Depart, Complete).
@@ -224,7 +224,7 @@ export function canWriteRequest(roles: string[]): boolean {
   ]);
 }
 
-// ─── useSchoolBusAccess Hook ───────────────────────────────────────────────────
+// --- useSchoolBusAccess Hook ---------------------------------------------------
 
 /**
  * Convenience hook that wraps all access checks with the current user's roles.
@@ -242,7 +242,7 @@ import { selectUserProfile } from '@/modules/account/store';
 
 export function useSchoolBusAccess() {
   const user = useAppSelector(selectUserProfile);
-  const roles: string[] = user?.roles ?? [];
+  const roles: string[] = user?.roles || [];
 
   return useMemo(
     () => ({
@@ -274,3 +274,4 @@ export function useSchoolBusAccess() {
     [roles.join(','), user?.email, user?.id]
   );
 }
+

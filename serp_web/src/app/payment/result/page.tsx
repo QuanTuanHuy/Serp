@@ -129,7 +129,7 @@ export default function PaymentResultPage() {
             onClick={() =>
               window.location.assign(
                 query.source === 'first-mile'
-                  ? '/first-mile/last-mile'
+                  ? '/first-mile/dispatchers/last-mile'
                   : '/first-mile/orders'
               )
             }

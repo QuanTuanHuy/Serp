@@ -54,10 +54,12 @@ public class TransportMapper extends BaseMapper {
         TransportRequestResponse r = enrich(new TransportRequestResponse(), entity);
         r.setParentProfileId(entity.getParentProfile().getId());
         r.setParentProfileName(entity.getParentProfile().getFullName());
-        r.setSchoolId(entity.getSchool().getId());
-        r.setSchoolName(entity.getSchool().getName());
-        r.setSchoolLatitude(entity.getSchool().getLatitude());
-        r.setSchoolLongitude(entity.getSchool().getLongitude());
+        if (entity.getSchool() != null) {
+            r.setSchoolId(entity.getSchool().getId());
+            r.setSchoolName(entity.getSchool().getName());
+            r.setSchoolLatitude(entity.getSchool().getLatitude());
+            r.setSchoolLongitude(entity.getSchool().getLongitude());
+        }
         r.setRequestCode(entity.getRequestCode());
         r.setRequestedAt(entity.getRequestedAt());
         r.setRequestSource(entity.getRequestSource() == null ? null : entity.getRequestSource().name());

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import {
@@ -45,6 +45,7 @@ import {
   useGetAllActiveSchoolPickupLinksQuery,
   useGetDepotsQuery,
   useGetPickupPointsQuery,
+  useGetSchoolByIdQuery,
   useGetSchoolPickupPointsQuery,
   useGetSchoolsQuery,
   useLinkSchoolPickupPointMutation,
@@ -61,6 +62,7 @@ import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
+import { SchoolBusReadOnlyDetailDialog } from '../components/SchoolBusReadOnlyDetailDialog';
 import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
@@ -78,7 +80,12 @@ import type {
   SchoolBusPickupPoint,
   SchoolBusSchool,
 } from '../types';
-import { formatDate, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
+import {
+  formatDate,
+  getPageItems,
+  SCHOOL_BUS_OPTION_QUERY,
+  SCHOOL_BUS_PAGE_QUERY_OPTIONS,
+} from '../utils';
 import {
   Table,
   TableBody,
@@ -96,7 +103,7 @@ type DeleteTarget =
 type ViewMode = 'directory' | 'network';
 
 const formatDaysCompact = (days: string[] | undefined | null) => {
-  if (!days || days.length === 0) return 'Mon–Fri';
+  if (!days || days.length === 0) return 'Mon-Fri';
   const dayMap: Record<string, string> = {
     MONDAY: 'Mon',
     TUESDAY: 'Tue',
@@ -124,9 +131,9 @@ const getUsageTypeBadgeClasses = (type: string | undefined | null) => {
   return 'bg-indigo-50 text-indigo-700 border border-indigo-200';
 };
 
-// ── Shared InfoRow ────────────────────────────────────────────────────────────
+// -- Shared InfoRow ------------------------------------------------------------
 
-// ── DetailField Helper ────────────────────────────────────────────────────────
+// -- DetailField Helper --------------------------------------------------------
 function DetailField({
   label,
   value,
@@ -153,7 +160,7 @@ function DetailField({
   );
 }
 
-// ── Network Map Detail Panel ──────────────────────────────────────────────────
+// -- Network Map Detail Panel --------------------------------------------------
 
 interface DetailPanelProps {
   selectedSchool: SchoolBusSchool | null;
@@ -219,7 +226,7 @@ function NetworkDetailPanel({
               Identity
             </p>
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
-              <DetailField label='Code' value={selectedSchool.code ?? '—'} />
+              <DetailField label='Code' value={selectedSchool.code || '-'} />
               <DetailField
                 label='Status'
                 value={
@@ -245,7 +252,7 @@ function NetworkDetailPanel({
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
               <DetailField
                 label='Address'
-                value={selectedSchool.address ?? '—'}
+                value={selectedSchool.address || '-'}
               />
               <DetailField
                 label='Coordinates'
@@ -253,7 +260,7 @@ function NetworkDetailPanel({
                   typeof selectedSchool.latitude === 'number' &&
                   typeof selectedSchool.longitude === 'number'
                     ? `${selectedSchool.latitude.toFixed(5)}, ${selectedSchool.longitude.toFixed(5)}`
-                    : '⚠ Not set'
+                    : 'Warning: Not set'
                 }
                 warn={typeof selectedSchool.latitude !== 'number'}
               />
@@ -268,7 +275,7 @@ function NetworkDetailPanel({
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
               <DetailField
                 label='Contact'
-                value={selectedSchool.contactPhone ?? '—'}
+                value={selectedSchool.contactPhone || '-'}
               />
               <DetailField
                 label='Linked pickups'
@@ -382,7 +389,7 @@ function NetworkDetailPanel({
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
               <DetailField
                 label='Address'
-                value={selectedPickup.address ?? '—'}
+                value={selectedPickup.address || '-'}
               />
               <DetailField
                 label='Coordinates'
@@ -390,7 +397,7 @@ function NetworkDetailPanel({
                   typeof selectedPickup.latitude === 'number' &&
                   typeof selectedPickup.longitude === 'number'
                     ? `${selectedPickup.latitude.toFixed(5)}, ${selectedPickup.longitude.toFixed(5)}`
-                    : '⚠ Not set'
+                    : 'Warning: Not set'
                 }
                 warn={typeof selectedPickup.latitude !== 'number'}
               />
@@ -426,7 +433,7 @@ function NetworkDetailPanel({
   return null;
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// -- Main Page -----------------------------------------------------------------
 
 export function SchoolBusSchoolsPage() {
   return (
@@ -492,7 +499,7 @@ function SchoolBusSchoolsPageContent() {
   const [activeTab, setActiveTab] = React.useState('schools');
   const [networkFilter, setNetworkFilter] = React.useState('');
 
-  // ─── Directory search & filter states ────────────────────────────
+  // --- Directory search & filter states ----------------------------
   const [schoolSearchValue, setSchoolSearchValue] = React.useState('');
   const [schoolStatusFilter, setSchoolStatusFilter] = React.useState<
     'ALL' | 'ACTIVE' | 'INACTIVE'
@@ -521,23 +528,42 @@ function SchoolBusSchoolsPageContent() {
     sortBy: 'name',
     sortDirection: 'ASC',
   });
+  const [viewingSchoolId, setViewingSchoolId] = React.useState<number | null>(
+    null
+  );
 
   const {
     data,
     isLoading: loadingSchools,
     refetch: refetchSchools,
-  } = useGetSchoolsQuery(schoolsPagination.params);
+  } = useGetSchoolsQuery(schoolsPagination.params, SCHOOL_BUS_PAGE_QUERY_OPTIONS);
+  const {
+    data: viewingSchoolData,
+    isFetching: loadingViewingSchool,
+    isError: viewingSchoolError,
+  } = useGetSchoolByIdQuery(viewingSchoolId || 0, {
+    skip: !viewingSchoolId,
+  });
   const { data: allSchoolsData, refetch: refetchAllSchools } =
-    useGetSchoolsQuery({ ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' });
+    useGetSchoolsQuery(
+      { ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' },
+      SCHOOL_BUS_PAGE_QUERY_OPTIONS
+    );
   const {
     data: pickupPointsData,
     isLoading: loadingPickups,
     refetch: refetchPickups,
-  } = useGetPickupPointsQuery(pickupPagination.params);
-  const { data: depotsData, refetch: refetchDepots } = useGetDepotsQuery({
-    ...SCHOOL_BUS_OPTION_QUERY,
-    sortBy: 'name',
-  });
+  } = useGetPickupPointsQuery(
+    pickupPagination.params,
+    SCHOOL_BUS_PAGE_QUERY_OPTIONS
+  );
+  const { data: depotsData, refetch: refetchDepots } = useGetDepotsQuery(
+    {
+      ...SCHOOL_BUS_OPTION_QUERY,
+      sortBy: 'name',
+    },
+    SCHOOL_BUS_PAGE_QUERY_OPTIONS
+  );
   const { data: allLinksData, refetch: refetchLinks } =
     useGetAllActiveSchoolPickupLinksQuery();
 
@@ -561,12 +587,13 @@ function SchoolBusSchoolsPageContent() {
   const [unlinkPickupPoint] = useUnlinkSchoolPickupPointMutation();
 
   const schools = getPageItems(data?.data);
+  const viewingSchool = viewingSchoolData?.data || null;
   const allSchools = getPageItems(allSchoolsData?.data);
   const pickupPoints = getPageItems(pickupPointsData?.data);
   const depots = getPageItems(depotsData?.data);
-  const allLinks = allLinksData?.data ?? [];
+  const allLinks = allLinksData?.data || [];
 
-  // ─── Selection state ─────────────────────────────────────────────
+  // --- Selection state ---------------------------------------------
   const [selectedSchoolId, setSelectedSchoolId] = React.useState<number | null>(
     null
   );
@@ -574,7 +601,7 @@ function SchoolBusSchoolsPageContent() {
     number | null
   >(null);
 
-  // ─── Dialog state ────────────────────────────────────────────────
+  // --- Dialog state ------------------------------------------------
   const [schoolDialogOpen, setSchoolDialogOpen] = React.useState(false);
   const [pickupDialogOpen, setPickupDialogOpen] = React.useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
@@ -605,7 +632,7 @@ function SchoolBusSchoolsPageContent() {
     refetchDepots,
   ]);
 
-  // ─── Map fit controls ────────────────────────────────────────────
+  // --- Map fit controls --------------------------------------------
   const [fitAllKey, setFitAllKey] = React.useState(0);
   const [fitSelectedKey, setFitSelectedKey] = React.useState(0);
   const handleFitAll = React.useCallback(() => setFitAllKey((k) => k + 1), []);
@@ -619,7 +646,7 @@ function SchoolBusSchoolsPageContent() {
       setSelectedSchoolId(schools[0].id);
   }, [schools, selectedSchoolId]);
 
-  // ─── Linked data ─────────────────────────────────────────────────
+  // --- Linked data -------------------------------------------------
   const { data: linkedPickupData } = useGetSchoolPickupPointsQuery(
     { schoolId: selectedSchoolId!, page: 0, size: 50 },
     { skip: !selectedSchoolId }
@@ -627,7 +654,7 @@ function SchoolBusSchoolsPageContent() {
   const linkedPickupPoints = getPageItems(linkedPickupData?.data);
   const allPickupPointsForLink = getPageItems(pickupPointsData?.data);
 
-  // ─── Memoized directory filtered tables ──────────────────────────
+  // --- Memoized directory filtered tables --------------------------
   const filteredSchoolsTable = React.useMemo(() => {
     return schools.filter((school) => {
       const matchesStatus =
@@ -669,11 +696,11 @@ function SchoolBusSchoolsPageContent() {
     return linkedPickupPoints.filter(
       (lp) =>
         lp.pickupPointName.toLowerCase().includes(q) ||
-        (lp.pickupPointAddress ?? '').toLowerCase().includes(q)
+        (lp.pickupPointAddress || '').toLowerCase().includes(q)
     );
   }, [linkedPickupPoints, linkedSearch]);
 
-  // ─── Derived stats ───────────────────────────────────────────────
+  // --- Derived stats -----------------------------------------------
   const missingCoordsCount =
     schools.filter((s) => typeof s.latitude !== 'number').length +
     pickupPoints.filter((p) => typeof p.latitude !== 'number').length;
@@ -684,18 +711,18 @@ function SchoolBusSchoolsPageContent() {
     depots.some((d) => typeof d.latitude === 'number');
 
   const selectedSchoolObj =
-    schools.find((s) => s.id === selectedSchoolId) ??
-    allSchools.find((s) => s.id === selectedSchoolId) ??
+    schools.find((s) => s.id === selectedSchoolId) ||
+    allSchools.find((s) => s.id === selectedSchoolId) ||
     null;
   const selectedPickupObj =
-    pickupPoints.find((p) => p.id === selectedPickupPointId) ?? null;
+    pickupPoints.find((p) => p.id === selectedPickupPointId) || null;
   const canFitSelected =
     (selectedSchoolObj != null &&
       typeof selectedSchoolObj.latitude === 'number') ||
     (selectedPickupObj != null &&
       typeof selectedPickupObj.latitude === 'number');
 
-  // ─── Handlers ────────────────────────────────────────────────────
+  // --- Handlers ----------------------------------------------------
   const handleSaveSchool = async (values: any) => {
     try {
       const response = editingSchool
@@ -770,14 +797,14 @@ function SchoolBusSchoolsPageContent() {
     }
   };
 
-  // ─── Network list filtering ──────────────────────────────────────
+  // --- Network list filtering --------------------------------------
   const filteredSchools = React.useMemo(() => {
     if (!networkFilter) return allSchools;
     const q = networkFilter.toLowerCase();
     return allSchools.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
-        (s.code ?? '').toLowerCase().includes(q)
+        (s.code || '').toLowerCase().includes(q)
     );
   }, [allSchools, networkFilter]);
 
@@ -787,11 +814,11 @@ function SchoolBusSchoolsPageContent() {
     return pickupPoints.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
-        (p.address ?? '').toLowerCase().includes(q)
+        (p.address || '').toLowerCase().includes(q)
     );
   }, [pickupPoints, networkFilter]);
 
-  // ─── View mode toggle ───────────────────────────────────────────
+  // --- View mode toggle -------------------------------------------
   const viewModeToggle = (
     <div className='inline-flex items-center rounded-full border border-slate-200 bg-slate-100 p-0.5'>
       <button
@@ -822,13 +849,13 @@ function SchoolBusSchoolsPageContent() {
   );
 
   const DIRECTION_LABELS: Record<string, string> = {
-    PICKUP_TO_SCHOOL: '🏫 Pickup → School',
-    DROPOFF_FROM_SCHOOL: '🏠 School → Drop-off',
+    PICKUP_TO_SCHOOL: ' Pickup -> School',
+    DROPOFF_FROM_SCHOOL: ' School -> Drop-off',
   };
 
-  // ═══════════════════════════════════════════════════════════════════
+  // -------------------------------------------------------------------
   // NETWORK MAP VIEW
-  // ═══════════════════════════════════════════════════════════════════
+  // -------------------------------------------------------------------
   if (viewMode === 'network') {
     return (
       <>
@@ -907,7 +934,7 @@ function SchoolBusSchoolsPageContent() {
               className='flex overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,42,0.08)]'
               style={{ height: 'calc(100vh - 225px)', minHeight: '520px' }}
             >
-              {/* ── Left panel: list ──────────────────────────────── */}
+              {/* -- Left panel: list -------------------------------- */}
               <div className='flex w-[300px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
                 <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-3.5 py-3'>
                   <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>
@@ -1069,7 +1096,7 @@ function SchoolBusSchoolsPageContent() {
                 </div>
               </div>
 
-              {/* ── Right side: Map + Detail Panel ────────────────── */}
+              {/* -- Right side: Map + Detail Panel ------------------ */}
               <SchoolBusMapWorkspace
                 flat
                 className='flex-1 min-h-0'
@@ -1145,9 +1172,9 @@ function SchoolBusSchoolsPageContent() {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
+  // -------------------------------------------------------------------
   // DIRECTORY VIEW
-  // ═══════════════════════════════════════════════════════════════════
+  // -------------------------------------------------------------------
 
   const schoolScopeSelector = (
     <div className='flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-1.5 shadow-sm'>
@@ -1155,7 +1182,7 @@ function SchoolBusSchoolsPageContent() {
         School:
       </label>
       <SchoolBusSelect
-        value={selectedSchoolId ?? ''}
+        value={selectedSchoolId || ''}
         onChange={(val) => {
           setSelectedSchoolId(val ? Number(val) : null);
           setSelectedPickupPointId(null);
@@ -1236,7 +1263,7 @@ function SchoolBusSchoolsPageContent() {
       key: 'network',
       header: 'Network',
       render: (school) => {
-        const linkedCount = school.pickupPointCount ?? 0;
+        const linkedCount = school.pickupPointCount || 0;
         const missingLinked = school.anyLinkedPointMissingCoordinates;
         return (
           <div className='flex items-center gap-2'>
@@ -1272,100 +1299,25 @@ function SchoolBusSchoolsPageContent() {
       key: 'pickupPoints',
       header: 'Pickup points',
       render: (school) => {
-        const points = school.pickupPoints || [];
-        if (points.length === 0)
-          return <span className='text-slate-400 font-medium text-xs'>—</span>;
-
-        const limit = 2;
-        const visible = points.slice(0, limit);
-        const extra = points.length - limit;
+        const linkedCount = school.pickupPointCount || 0;
+        const missingLinked = school.anyLinkedPointMissingCoordinates;
+        if (linkedCount === 0)
+          return <span className='text-slate-400 font-medium text-xs'>-</span>;
 
         return (
-          <TooltipProvider>
-            <div className='flex flex-col gap-1 items-start py-1'>
-              {visible.map((pt) => {
-                const hasCoords = !!pt.hasCoordinates;
-                const isPickup =
-                  pt.usageType === 'PICKUP' || pt.usageType === 'PICKUP_ONLY';
-                const isDropoff =
-                  pt.usageType === 'DROPOFF' || pt.usageType === 'DROPOFF_ONLY';
-
-                return (
-                  <Tooltip key={pt.code}>
-                    <TooltipTrigger asChild>
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold border font-mono cursor-help',
-                          !hasCoords
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : isPickup
-                              ? 'bg-blue-50 text-blue-700 border-blue-150'
-                              : isDropoff
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
-                                : 'bg-indigo-50 text-indigo-700 border-indigo-150'
-                        )}
-                      >
-                        {!hasCoords && (
-                          <AlertTriangle className='h-2.5 w-2.5 text-amber-600' />
-                        )}
-                        {pt.code}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent className='p-3.5 max-w-[280px] bg-white text-slate-900 rounded-[16px] shadow-xl border border-slate-200 space-y-2 text-xs'>
-                      <div className='flex items-center justify-between gap-3 border-b border-slate-100 pb-2 mb-2'>
-                        <div className='min-w-0'>
-                          <p className='font-bold text-slate-900 truncate'>
-                            {pt.name}
-                          </p>
-                          {pt.code && (
-                            <p className='text-[10px] text-slate-500 font-mono font-semibold mt-0.5'>
-                              {pt.code}
-                            </p>
-                          )}
-                        </div>
-                        <div className='flex items-center gap-1.5 shrink-0'>
-                          {pt.isDefault && (
-                            <span className='bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-100 text-[8px] font-bold font-sans'>
-                              Default
-                            </span>
-                          )}
-                          <span
-                            className={cn(
-                              'px-1.5 py-0.5 rounded border text-[8px] font-bold font-sans',
-                              isPickup
-                                ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                : isDropoff
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                  : 'bg-indigo-50 text-indigo-700 border-indigo-100'
-                            )}
-                          >
-                            {isPickup
-                              ? 'Pickup'
-                              : isDropoff
-                                ? 'Drop-off'
-                                : 'Both'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className='space-y-1.5 text-slate-600 font-medium'>
-                        <p className='truncate' title={pt.address || ''}>
-                          <span className='text-slate-400'>Addr:</span>{' '}
-                          <span className='text-slate-800 font-semibold'>
-                            {pt.address || 'N/A'}
-                          </span>
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-              {extra > 0 && (
-                <span className='text-[10px] font-semibold text-slate-400 pl-1'>
-                  +{extra} more
-                </span>
-              )}
-            </div>
-          </TooltipProvider>
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold border',
+              missingLinked
+                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                : 'bg-indigo-50 text-indigo-700 border-indigo-150'
+            )}
+          >
+            {missingLinked && (
+              <AlertTriangle className='h-2.5 w-2.5 text-amber-600' />
+            )}
+            {linkedCount} linked
+          </span>
         );
       },
     },
@@ -1378,7 +1330,7 @@ function SchoolBusSchoolsPageContent() {
             {school.code}
           </span>
         ) : (
-          <span className='text-slate-400 font-medium'>—</span>
+          <span className='text-slate-400 font-medium'>-</span>
         ),
     },
     {
@@ -1386,7 +1338,7 @@ function SchoolBusSchoolsPageContent() {
       header: 'Contact',
       render: (school) => (
         <span className='text-xs font-medium text-slate-600'>
-          {school.contactPhone || '—'}
+          {school.contactPhone || '-'}
         </span>
       ),
     },
@@ -1411,9 +1363,7 @@ function SchoolBusSchoolsPageContent() {
             variant='outline'
             className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
             onClick={() => {
-              router.push(
-                `/school-bus/schools/${school.id}&tab=general&view=directory`
-              );
+              setViewingSchoolId(school.id);
             }}
           >
             <Eye className='h-3.5 w-3.5' />
@@ -1479,7 +1429,7 @@ function SchoolBusSchoolsPageContent() {
                 className='text-left outline-none'
                 onClick={() => {
                   setSelectedPickupPointId(pp.id);
-                  setSelectedSchoolId(pp.schools?.[0]?.id ?? null);
+                  setSelectedSchoolId(pp.schools?.[0]?.id || null);
                 }}
               >
                 <p className='font-bold text-slate-900 hover:text-[#C81E3A] text-sm transition-colors'>
@@ -1513,7 +1463,7 @@ function SchoolBusSchoolsPageContent() {
             {pp.code}
           </span>
         ) : (
-          <span className='text-slate-400 font-medium'>—</span>
+          <span className='text-slate-400 font-medium'>-</span>
         ),
     },
     {
@@ -2018,7 +1968,7 @@ function SchoolBusSchoolsPageContent() {
     </>
   );
 
-  // ─── Shared dialogs renderer ──────────────────────────────────────
+  // --- Shared dialogs renderer --------------------------------------
   function renderDialogs() {
     return (
       <>
@@ -2043,6 +1993,44 @@ function SchoolBusSchoolsPageContent() {
           isLoading={creatingPickup || updatingPickup}
           onSubmit={handleSavePickupPoint}
         />
+        <SchoolBusReadOnlyDetailDialog
+          open={Boolean(viewingSchoolId)}
+          onOpenChange={(open) => {
+            if (!open) setViewingSchoolId(null);
+          }}
+          title='School detail'
+          description='Read-only school information loaded from the detail API.'
+          isLoading={loadingViewingSchool}
+          isError={viewingSchoolError}
+          sections={[
+            {
+              title: 'School information',
+              fields: [
+                { label: 'School code', value: viewingSchool?.code },
+                { label: 'School name', value: viewingSchool?.name },
+                {
+                  label: 'Status',
+                  value:
+                    viewingSchool?.isActive === false ? 'Inactive' : 'Active',
+                },
+                { label: 'Contact phone', value: viewingSchool?.contactPhone },
+                { label: 'Contact email', value: viewingSchool?.contactEmail },
+                {
+                  label: 'Address',
+                  value: viewingSchool?.address,
+                  fullWidth: true,
+                },
+              ],
+            },
+            {
+              title: 'Coordinates',
+              fields: [
+                { label: 'Latitude', value: viewingSchool?.latitude },
+                { label: 'Longitude', value: viewingSchool?.longitude },
+              ],
+            },
+          ]}
+        />
         <SchoolBusDeleteDialog
           open={Boolean(deleteTarget)}
           onOpenChange={(open) => {
@@ -2061,7 +2049,7 @@ function SchoolBusSchoolsPageContent() {
           isLoading={deletingSchool || deletingPickup}
           onConfirm={handleDelete}
         />
-        {/* ScheduleFormDialog removed � Phase 3 */}
+        {/* ScheduleFormDialog removed - Phase 3 */}
         <LinkPickupPointDialog
           open={linkDialogOpen}
           onOpenChange={setLinkDialogOpen}

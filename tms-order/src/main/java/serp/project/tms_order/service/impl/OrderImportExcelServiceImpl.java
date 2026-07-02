@@ -69,6 +69,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static serp.project.tms_order.kernel.utils.ExcelImportUtils.*;
+import static serp.project.tms_order.kernel.utils.NumberUtils.safeDouble;
+import static serp.project.tms_order.kernel.utils.NumberUtils.safeInt;
+import static serp.project.tms_order.kernel.utils.NumberUtils.safeLong;
 
 @Service
 @RequiredArgsConstructor
@@ -574,18 +577,6 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                 customerOrderCode,
                 ImportErrorUtils.resolveExceptionMessage(exception, key -> message(key))
         );
-    }
-
-    private double safeDouble(Double value) {
-        return value == null ? 0D : value;
-    }
-
-    private long safeLong(Long value) {
-        return value == null ? 0L : value;
-    }
-
-    private int safeInt(Integer value) {
-        return value == null ? 0 : value;
     }
 
     private ValidateImportFileDTO<OrderImportDTO> buildBaseValidateResponse() {

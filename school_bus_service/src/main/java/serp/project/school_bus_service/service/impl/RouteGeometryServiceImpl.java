@@ -10,6 +10,8 @@ import serp.project.school_bus_service.entity.RouteStopEntity;
 import serp.project.school_bus_service.enums.RouteGeometrySource;
 import serp.project.school_bus_service.repository.RouteStopRepository;
 import serp.project.school_bus_service.service.IRouteGeometryService;
+import serp.project.school_bus_service.service.IRouteStopService;
+import org.springframework.context.annotation.Lazy;
 import tools.jackson.databind.JsonNode;
 
 import java.util.List;
@@ -26,6 +28,7 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
 
     private final RestClient.Builder restClientBuilder;
     private final RouteStopRepository routeStopRepository;
+    private final IRouteStopService routeStopService;
 
     @Value("${map.routing.osrm.base-url:https://router.project-osrm.org}")
     private String osrmBaseUrl;
@@ -34,15 +37,16 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
     private String osrmProfile;
 
     public RouteGeometryServiceImpl(RestClient.Builder restClientBuilder,
+                                     @Lazy IRouteStopService routeStopService,
                                      RouteStopRepository routeStopRepository) {
         this.restClientBuilder = restClientBuilder;
         this.routeStopRepository = routeStopRepository;
+        this.routeStopService = routeStopService;
     }
 
     @Override
     public void recalculateGeometry(RoutePlanEntity route, Long tenantId) {
-        List<RouteStopEntity> stops = routeStopRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalseOrderByStopOrderAsc(route.getId(), tenantId);
+        List<RouteStopEntity> stops = routeStopService.findByRoute(route.getId(), tenantId);
 
         // Filter stops with valid coordinates
         List<RouteStopEntity> validStops = stops.stream()
@@ -50,11 +54,11 @@ public class RouteGeometryServiceImpl implements IRouteGeometryService {
                 .toList();
 
         if (validStops.size() < 2) {
-            // Not enough points to compute a route
-            route.setPlannedDistanceKm(null);
-            route.setPlannedDurationMin(null);
-            route.setGeometryPath(null);
-            route.setGeometrySource(RouteGeometrySource.UNKNOWN);
+            log.warn("Skipping geometry calculation for route {} because only {}/{} stops have coordinates",
+                    route.getId(), validStops.size(), stops.size());
+            if (route.getGeometryPath() == null) {
+                route.setGeometrySource(RouteGeometrySource.UNKNOWN);
+            }
             return;
         }
 

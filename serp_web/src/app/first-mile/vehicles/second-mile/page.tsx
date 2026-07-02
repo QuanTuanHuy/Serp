@@ -1,10 +1,10 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Second-mile vehicles route
+ * Description: Part of Serp Project - Legacy second-mile vehicles redirect
  */
 
-import { SecondMileVehicleListPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
 export default function SecondMileVehiclesRoutePage() {
-  return <SecondMileVehicleListPage />;
+  redirect('/first-mile/settings/vehicles?scope=second-mile');
 }

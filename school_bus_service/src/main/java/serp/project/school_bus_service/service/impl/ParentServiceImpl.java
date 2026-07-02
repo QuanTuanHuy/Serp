@@ -54,39 +54,19 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
 
     @Override
     public PageResponse<ParentProfileResponse> getParents(ParentProfileParamsRequest params, Long tenantId) {
-        PageResponse<ParentProfileResponse> page = PageResponse.from(parentProfileRepository.findAll(
-                BaseSpecification.tenantActiveWithKeyword(tenantId,
-                        params == null ? null : params.getKeyword(),
-                        "fullName", "phone", "email", "address"),
+        return PageResponse.from(parentProfileRepository.findParentListItems(
+                tenantId,
+                keywordPattern(params == null ? null : params.getKeyword()),
                 PageableUtils.from(params,
                         Set.of("id", "fullName", "email", "createdAt", "updatedAt"), "fullName")),
-                mapper::toParentProfileResponse);
+                response -> response);
+    }
 
-        // Enrich with SchoolBusUser details
-        java.util.List<Long> schoolBusUserIds = page.getItems().stream()
-                .map(ParentProfileResponse::getUserId)
-                .filter(java.util.Objects::nonNull)
-                .distinct()
-                .toList();
-
-        if (!schoolBusUserIds.isEmpty()) {
-            Map<Long, SchoolBusUserEntity> userMap = schoolBusUserService.findAllByIds(schoolBusUserIds).stream()
-                    .collect(Collectors.toMap(
-                            SchoolBusUserEntity::getId,
-                            java.util.function.Function.identity()
-                    ));
-            page.getItems().forEach(r -> {
-                Long internalId = r.getUserId();
-                r.setSchoolBusUserId(internalId);
-                SchoolBusUserEntity u = userMap.get(internalId);
-                if (u != null) {
-                    r.setAccountUserId(u.getAccountUserId());
-                    r.setUserId(u.getAccountUserId()); // Map to accountUserId for UI select dropdown compatibility
-                    r.setUser(mapper.toSchoolBusUserResponse(u));
-                }
-            });
+    private String keywordPattern(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
         }
-        return page;
+        return "%" + keyword.trim().toLowerCase() + "%";
     }
 
     @Override

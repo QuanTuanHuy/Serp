@@ -1,6 +1,7 @@
 package serp.project.school_bus_service.service.domain;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import serp.project.school_bus_service.dto.request.NotificationSendCommand;
 import serp.project.school_bus_service.entity.RouteAssignmentEntity;
@@ -12,7 +13,9 @@ import serp.project.school_bus_service.enums.AttendanceEventType;
 import serp.project.school_bus_service.enums.NotificationCategory;
 import serp.project.school_bus_service.enums.NotificationPriority;
 import serp.project.school_bus_service.enums.NotificationType;
+import serp.project.school_bus_service.enums.RouteAssignmentStatus;
 import serp.project.school_bus_service.enums.SubscriptionStatus;
+import serp.project.school_bus_service.repository.RouteAssignmentRepository;
 import serp.project.school_bus_service.service.ISchoolBusDomainNotificationService;
 import serp.project.school_bus_service.service.ISchoolBusNotificationService;
 import serp.project.school_bus_service.service.ISchoolBusNotificationRecipientService;
@@ -30,12 +33,17 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
 
     private final ISchoolBusNotificationService notificationService;
     private final ISchoolBusNotificationRecipientService recipientService;
+    private final RouteAssignmentRepository routeAssignmentRepository;
+    private static final List<RouteAssignmentStatus> CURRENT_ASSIGNMENT_STATUSES =
+            List.of(RouteAssignmentStatus.ASSIGNED, RouteAssignmentStatus.CONFIRMED);
 
     public SchoolBusDomainNotificationService(
             ISchoolBusNotificationService notificationService,
-            ISchoolBusNotificationRecipientService recipientService) {
+            ISchoolBusNotificationRecipientService recipientService,
+            RouteAssignmentRepository routeAssignmentRepository) {
         this.notificationService = notificationService;
         this.recipientService = recipientService;
+        this.routeAssignmentRepository = routeAssignmentRepository;
     }
 
     @Override
@@ -190,8 +198,11 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
     public void notifyTripCreated(TripExecutionEntity trip, Long actorId) {
         safely("TRIP_CREATED", trip, () -> {
             Set<Long> recipients = recipientService.findTripParentAccountUserIds(trip);
-            recipients.addAll(recipientService.findDriverAccountUserIds(trip.getDriver()));
-            recipients.addAll(recipientService.findAttendantAccountUserIds(trip.getAttendant()));
+            RouteAssignmentEntity assignment = currentAssignment(trip);
+            recipients.addAll(recipientService.findDriverAccountUserIds(
+                    assignment == null ? null : assignment.getDriver()));
+            recipients.addAll(recipientService.findAttendantAccountUserIds(
+                    assignment == null ? null : assignment.getAttendant()));
             sendTrip(
                     trip,
                     recipients,
@@ -234,8 +245,11 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
     public void notifyTripCancelled(TripExecutionEntity trip, Long actorId) {
         safely("TRIP_CANCELLED", trip, () -> {
             Set<Long> recipients = recipientService.findTripParentAccountUserIds(trip);
-            recipients.addAll(recipientService.findDriverAccountUserIds(trip.getDriver()));
-            recipients.addAll(recipientService.findAttendantAccountUserIds(trip.getAttendant()));
+            RouteAssignmentEntity assignment = currentAssignment(trip);
+            recipients.addAll(recipientService.findDriverAccountUserIds(
+                    assignment == null ? null : assignment.getDriver()));
+            recipients.addAll(recipientService.findAttendantAccountUserIds(
+                    assignment == null ? null : assignment.getAttendant()));
             recipients.addAll(recipientService.findOperatorAccountUserIds(trip.getTenantId()));
             sendTrip(
                     trip,
@@ -452,6 +466,20 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
 
     private String appendReason(String message, String reason) {
         return reason == null || reason.isBlank() ? message : message + " Reason: " + reason.trim();
+    }
+
+    private RouteAssignmentEntity currentAssignment(TripExecutionEntity trip) {
+        if (trip == null || trip.getRoute() == null || trip.getRoute().getId() == null) {
+            return null;
+        }
+        return routeAssignmentRepository.findCurrentByRoute(
+                        trip.getRoute().getId(),
+                        trip.getTenantId(),
+                        CURRENT_ASSIGNMENT_STATUSES,
+                        PageRequest.of(0, 1))
+                .stream()
+                .findFirst()
+                .orElse(null);
     }
 
     private void safely(String eventType, Object entity, Runnable action) {

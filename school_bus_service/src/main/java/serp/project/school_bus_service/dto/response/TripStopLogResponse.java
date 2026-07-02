@@ -11,6 +11,12 @@ public class TripStopLogResponse extends BaseResponse {
     private Long tripId;
     private Long routeStopId;
     private String stopName;
+    private Long locationId;
+    private String locationType;
+    private String locationName;
+    private String locationAddress;
+    private Double latitude;
+    private Double longitude;
     private Integer stopOrder;
     private String status;
     private LocalDateTime actualArrivalTime;

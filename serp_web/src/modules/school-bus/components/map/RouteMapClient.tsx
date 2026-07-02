@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useEffect } from 'react';
 import { Marker, Polyline, Popup, useMap } from 'react-leaflet';
@@ -21,7 +21,7 @@ import {
   type MarkerKind,
 } from './mapIcons';
 
-// ── Auto-fit bounds ───────────────────────────────────────────────────────────
+// -- Auto-fit bounds -----------------------------------------------------------
 
 interface FitBoundsProps {
   positions: [number, number][];
@@ -41,7 +41,7 @@ function FitBounds({ positions, fitKey }: FitBoundsProps) {
   return null;
 }
 
-// ── Map size invalidator ──────────────────────────────────────────────────────
+// -- Map size invalidator ------------------------------------------------------
 
 function MapInvalidator({ trigger }: { trigger?: number | boolean }) {
   const map = useMap();
@@ -52,7 +52,7 @@ function MapInvalidator({ trigger }: { trigger?: number | boolean }) {
   return null;
 }
 
-// ── Props ─────────────────────────────────────────────────────────────────────
+// -- Props ---------------------------------------------------------------------
 
 interface RouteMapClientProps {
   route: SchoolBusRoute;
@@ -63,7 +63,7 @@ interface RouteMapClientProps {
   fitKey?: number;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// -- Component -----------------------------------------------------------------
 
 export default function RouteMapClient({
   route,
@@ -90,7 +90,7 @@ export default function RouteMapClient({
       ? [route.endLocationLatitude, route.endLocationLongitude]
       : null;
 
-  // Middle stops only — terminals have no pickupPointLatitude in new model
+  // Middle stops only - terminals have no pickupPointLatitude in new model
   const sortedMiddleStops = [...stops]
     .filter(
       (s) =>
@@ -137,7 +137,7 @@ export default function RouteMapClient({
           (p) =>
             typeof p.latitude === 'number' && typeof p.longitude === 'number'
         )
-        .map((p) => [p.latitude, p.longitude] as [number, number]) ?? []
+        .map((p) => [p.latitude, p.longitude] as [number, number]) || []
     ).length >= 2
       ? (routePath?.coordinates
           ?.filter(
@@ -150,7 +150,7 @@ export default function RouteMapClient({
         ][])
       : parseGeometryPath(route.geometryPath);
 
-  // Fallback: straight lines depot/school → middle stops → school/depot
+  // Fallback: straight lines depot/school -> middle stops -> school/depot
   const fallbackPositions: [number, number][] = [
     ...(startCoord ? [startCoord] : []),
     ...sortedMiddleStops.map((s) => {
@@ -198,21 +198,21 @@ export default function RouteMapClient({
           <Popup>
             <div className='space-y-1'>
               <p className='text-xs font-semibold text-amber-700'>
-                {route.startLocationType === 'DEPOT' ? '🏭 Depot' : '🎓 School'}
+                {route.startLocationType === 'DEPOT' ? ' Depot' : ' School'}
               </p>
               <p className='font-medium'>{route.startLocationName}</p>
               <p className='text-xs text-slate-500'>Route start</p>
               {assignment && (
                 <>
                   <p className='text-xs text-slate-500'>
-                    🚌 {assignment.busPlateNumber}
+                     {assignment.busPlateNumber}
                   </p>
                   <p className='text-xs text-slate-500'>
-                    👤 {assignment.driverName}
+                     {assignment.driverName}
                   </p>
                   {assignment.attendantName && (
                     <p className='text-xs text-slate-500'>
-                      🙋 {assignment.attendantName}
+                       {assignment.attendantName}
                     </p>
                   )}
                 </>
@@ -231,7 +231,7 @@ export default function RouteMapClient({
           <Popup>
             <div className='space-y-1'>
               <p className='text-xs font-semibold text-slate-700'>
-                {route.endLocationType === 'DEPOT' ? '🏭 Depot' : '🎓 School'}
+                {route.endLocationType === 'DEPOT' ? ' Depot' : ' School'}
               </p>
               <p className='font-medium'>{route.endLocationName}</p>
               <p className='text-xs text-slate-500'>Route end</p>
@@ -240,7 +240,7 @@ export default function RouteMapClient({
         </Marker>
       )}
 
-      {/* Numbered middle-stop markers (indigo, size 26 — consistent with planning map) */}
+      {/* Numbered middle-stop markers (indigo, size 26 - consistent with planning map) */}
       {sortedMiddleStops.map((stop, idx) => {
         const lat =
           typeof stop.latitude === 'number'
@@ -263,12 +263,12 @@ export default function RouteMapClient({
                   Stop {idx + 1}
                 </p>
                 <p className='font-medium'>
-                  {stop.displayName ??
-                    stop.pickupPointName ??
+                  {stop.displayName ||
+                    stop.pickupPointName ||
                     `Stop #${stop.id}`}
                 </p>
                 <p className='text-xs text-slate-500'>
-                  {stop.estimatedStudentCount ?? 0} student(s)
+                  {stop.estimatedStudentCount || 0} student(s)
                 </p>
               </div>
             </Popup>
@@ -276,7 +276,7 @@ export default function RouteMapClient({
         );
       })}
 
-      {/* Route polyline — real road geometry if available, else straight-line fallback */}
+      {/* Route polyline - real road geometry if available, else straight-line fallback */}
       {resolvedLine.length >= 2 && (
         <Polyline
           positions={resolvedLine}
@@ -324,7 +324,7 @@ export default function RouteMapClient({
       <LeafletMapShell
         center={initialCenter}
         zoom={initialZoom}
-        className={className ?? 'h-full w-full'}
+        className={className || 'h-full w-full'}
       >
         {shellContent}
       </LeafletMapShell>
@@ -332,3 +332,4 @@ export default function RouteMapClient({
     </div>
   );
 }
+

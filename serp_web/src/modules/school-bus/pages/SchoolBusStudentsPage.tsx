@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import {
@@ -20,6 +20,7 @@ import { cn } from '@/shared/utils';
 import {
   useCreateStudentMutation,
   useDeleteStudentMutation,
+  useGetStudentByIdQuery,
   useGetStudentsQuery,
   useUpdateStudentMutation,
   useGetSchoolDropdownOptionsQuery,
@@ -28,15 +29,15 @@ import {
 import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { SchoolBusDeleteDialog } from '../components/SchoolBusDeleteDialog';
 import { StudentFormDialog } from '../components/SchoolBusMasterDataForms';
-import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
+import { SchoolBusReadOnlyDetailDialog } from '../components/SchoolBusReadOnlyDetailDialog';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
-import type { SchoolBusStudent } from '../types';
-import { getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
+import type { SchoolBusStudent, SchoolBusStudentUpsertRequest } from '../types';
+import { getPageItems, SCHOOL_BUS_PAGE_QUERY_OPTIONS } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
 function UnassignedBadge() {
@@ -47,7 +48,7 @@ function UnassignedBadge() {
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// -- Main Page -----------------------------------------------------------------
 
 export function SchoolBusStudentsPage() {
   const access = useSchoolBusAccess();
@@ -57,10 +58,36 @@ export function SchoolBusStudentsPage() {
     sortBy: 'fullName',
     sortDirection: 'ASC',
   });
-  const { data, isLoading } = useGetStudentsQuery(pagination.params);
-  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editingStudentId, setEditingStudentId] = React.useState<number | null>(
+    null
+  );
+  const [viewingStudentId, setViewingStudentId] = React.useState<number | null>(
+    null
+  );
+  const [deletingStudent, setDeletingStudent] =
+    React.useState<SchoolBusStudent | null>(null);
+
+  const { data, isLoading } = useGetStudentsQuery(
+    pagination.params,
+    SCHOOL_BUS_PAGE_QUERY_OPTIONS
+  );
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery(undefined, {
+    skip: !dialogOpen,
+  });
   const { data: parentsData } = useGetParentDropdownOptionsQuery(undefined, {
-    skip: access.isParentOnly,
+    skip: !dialogOpen || access.isParentOnly,
+  });
+  const { data: editingStudentData } = useGetStudentByIdQuery(
+    editingStudentId || 0,
+    { skip: !dialogOpen || !editingStudentId }
+  );
+  const {
+    data: viewingStudentData,
+    isFetching: loadingViewingStudent,
+    isError: viewingStudentError,
+  } = useGetStudentByIdQuery(viewingStudentId || 0, {
+    skip: !viewingStudentId,
   });
   const [createStudent, { isLoading: creating }] = useCreateStudentMutation();
   const [updateStudent, { isLoading: updating }] = useUpdateStudentMutation();
@@ -70,7 +97,7 @@ export function SchoolBusStudentsPage() {
   const schools = schoolsData?.data || [];
   const parents = parentsData?.data || [];
 
-  // ─── Stats ───────────────────────────────────────────────────────
+  // --- Stats -------------------------------------------------------
   const uniqueSchools = new Set(
     students.map((s) => s.schoolName).filter(Boolean)
   ).size;
@@ -79,7 +106,7 @@ export function SchoolBusStudentsPage() {
   ).size;
   const activeStudents = students.filter((s) => s.isActive !== false).length;
 
-  // ─── Filter state ────────────────────────────────────────────────
+  // --- Filter state ------------------------------------------------
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterSchool, setFilterSchool] = React.useState<string>('');
   const [filterStatus, setFilterStatus] = React.useState<string>('');
@@ -113,23 +140,22 @@ export function SchoolBusStudentsPage() {
     [students]
   );
 
-  // ─── Dialog state ────────────────────────────────────────────────
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editingStudent, setEditingStudent] =
-    React.useState<SchoolBusStudent | null>(null);
-  const [deletingStudent, setDeletingStudent] =
-    React.useState<SchoolBusStudent | null>(null);
+  // --- Dialog state ------------------------------------------------
 
-  const handleSave = async (values: any) => {
+
+  const editingStudent = editingStudentData?.data || null;
+  const viewingStudent = viewingStudentData?.data || null;
+
+  const handleSave = async (values: SchoolBusStudentUpsertRequest) => {
     try {
-      const response = editingStudent
-        ? await updateStudent({ id: editingStudent.id, body: values }).unwrap()
+      const response = editingStudentId
+        ? await updateStudent({ id: editingStudentId, body: values }).unwrap()
         : await createStudent(values).unwrap();
       toast.success(response.message || 'Student saved');
       setDialogOpen(false);
-      setEditingStudent(null);
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save student');
+      setEditingStudentId(null);
+    } catch {
+      toast.error('Failed to save student');
     }
   };
 
@@ -139,8 +165,8 @@ export function SchoolBusStudentsPage() {
       const response = await deleteStudent(deletingStudent.id).unwrap();
       toast.success(response.message || 'Student deleted');
       setDeletingStudent(null);
-    } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to delete student');
+    } catch {
+      toast.error('Failed to delete student');
     }
   };
 
@@ -167,7 +193,7 @@ export function SchoolBusStudentsPage() {
               ) : (
                 <span className='text-slate-400'>No code</span>
               )}
-              <span className='text-slate-300'>•</span>
+              <span className='text-slate-300'>-</span>
               <span>
                 {[student.grade, student.className]
                   .filter(Boolean)
@@ -181,22 +207,11 @@ export function SchoolBusStudentsPage() {
     {
       key: 'school',
       header: 'School',
-      render: (student) => {
-        const schoolObj = schools.find((s) => s.id === student.schoolId);
-        const schoolCode = schoolObj?.code;
-        return (
-          <div className='flex flex-col gap-1 items-start'>
-            <span className='font-medium text-slate-700'>
-              {student.schoolName || '—'}
-            </span>
-            {schoolCode && (
-              <span className='inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-[#C81E3A] ring-1 ring-inset ring-[#C81E3A]/10'>
-                {schoolCode}
-              </span>
-            )}
-          </div>
-        );
-      },
+      render: (student) => (
+        <span className='font-medium text-slate-700'>
+          {student.schoolName || 'Not available'}
+        </span>
+      ),
     },
     {
       key: 'parent',
@@ -217,12 +232,12 @@ export function SchoolBusStudentsPage() {
     {
       key: 'pickup',
       header: 'Default pickup',
-      render: (student) => student.pickupPointName || '—',
+      render: (student) => student.pickupPointName || '-',
     },
     {
       key: 'dropoff',
       header: 'Default drop-off',
-      render: (student) => student.defaultDropoffPointName || '—',
+      render: (student) => student.defaultDropoffPointName || '-',
     },
     {
       key: 'status',
@@ -245,8 +260,7 @@ export function SchoolBusStudentsPage() {
             variant='outline'
             className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
             onClick={() => {
-              setEditingStudent(student);
-              setDialogOpen(true);
+              setViewingStudentId(student.id);
             }}
           >
             <Eye className='h-3.5 w-3.5' />
@@ -258,7 +272,7 @@ export function SchoolBusStudentsPage() {
                 variant='outline'
                 className='h-8 w-8 text-slate-500 hover:text-slate-900 border-slate-200'
                 onClick={() => {
-                  setEditingStudent(student);
+                  setEditingStudentId(student.id);
                   setDialogOpen(true);
                 }}
               >
@@ -365,7 +379,7 @@ export function SchoolBusStudentsPage() {
             <Button
               className='rounded-full bg-[#C81E3A] hover:bg-[#A6142D] text-white'
               onClick={() => {
-                setEditingStudent(null);
+                setEditingStudentId(null);
                 setDialogOpen(true);
               }}
             >
@@ -438,10 +452,10 @@ export function SchoolBusStudentsPage() {
       </SchoolBusPageShell>
 
       <StudentFormDialog
-        open={dialogOpen}
+        open={dialogOpen && (!editingStudentId || Boolean(editingStudent))}
         onOpenChange={(open) => {
           setDialogOpen(open);
-          if (!open) setEditingStudent(null);
+          if (!open) setEditingStudentId(null);
         }}
         initialData={editingStudent}
         schools={schools}
@@ -449,6 +463,65 @@ export function SchoolBusStudentsPage() {
         isLoading={creating || updating}
         onSubmit={handleSave}
         isParent={access.isParentOnly}
+      />
+
+      <SchoolBusReadOnlyDetailDialog
+        open={Boolean(viewingStudentId)}
+        onOpenChange={(open) => {
+          if (!open) setViewingStudentId(null);
+        }}
+        title='Student detail'
+        description='Read-only student information loaded from the detail API.'
+        isLoading={loadingViewingStudent}
+        isError={viewingStudentError}
+        sections={[
+          {
+            title: 'Basic information',
+            fields: [
+              { label: 'Student name', value: viewingStudent?.fullName },
+              { label: 'Student code', value: viewingStudent?.studentCode },
+              { label: 'School', value: viewingStudent?.schoolName },
+              {
+                label: 'Grade / class',
+                value:
+                  [viewingStudent?.grade, viewingStudent?.className]
+                    .filter(Boolean)
+                    .join(' / ') || null,
+              },
+              { label: 'Date of birth', value: viewingStudent?.dateOfBirth },
+              { label: 'Gender', value: viewingStudent?.gender },
+              {
+                label: 'Status',
+                value:
+                  viewingStudent?.isActive === false ? 'Inactive' : 'Active',
+              },
+            ],
+          },
+          {
+            title: 'Parent and transport defaults',
+            fields: [
+              { label: 'Parent', value: viewingStudent?.parentProfileName },
+              {
+                label: 'Default pickup point',
+                value: viewingStudent?.pickupPointName,
+              },
+              {
+                label: 'Default drop-off point',
+                value: viewingStudent?.defaultDropoffPointName,
+              },
+              {
+                label: 'Home address',
+                value: viewingStudent?.homeAddress,
+                fullWidth: true,
+              },
+              {
+                label: 'Special note',
+                value: viewingStudent?.specialNote,
+                fullWidth: true,
+              },
+            ],
+          },
+        ]}
       />
 
       <SchoolBusDeleteDialog
@@ -464,3 +537,5 @@ export function SchoolBusStudentsPage() {
     </>
   );
 }
+
+

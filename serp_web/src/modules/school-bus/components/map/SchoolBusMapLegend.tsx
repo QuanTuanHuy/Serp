@@ -86,7 +86,7 @@ export function SchoolBusMapLegend({
       {!isCollapsed && (
         <>
           <div className='mt-2 grid gap-1 text-xs text-foreground'>
-            {(items ?? DEFAULT_LEGEND_ITEMS).map((item) => (
+            {(items || DEFAULT_LEGEND_ITEMS).map((item) => (
               <LegendRow
                 key={item.kind}
                 {...item}

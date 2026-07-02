@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,7 +52,7 @@ export function LinkPickupPointDialog({
   const form = useForm<LinkFormValues>({
     resolver: zodResolver(linkSchema) as any,
     defaultValues: {
-      pickupPointId: pickupPoints[0]?.id ?? 0,
+      pickupPointId: pickupPoints[0]?.id || 0,
       isDefault: false,
       isActive: true,
     },
@@ -61,7 +61,7 @@ export function LinkPickupPointDialog({
   React.useEffect(() => {
     if (open) {
       form.reset({
-        pickupPointId: pickupPoints[0]?.id ?? 0,
+        pickupPointId: pickupPoints[0]?.id || 0,
         isDefault: false,
         isActive: true,
       });
@@ -101,7 +101,7 @@ export function LinkPickupPointDialog({
                     onChange={(v) => field.onChange(v ? Number(v) : null)}
                     placeholder='Select pickup point'
                     options={pickupPoints.map((pp) => ({
-                      label: `${pp.name} — ${pp.address} (${pp.usageType || 'N/A'})`,
+                      label: `${pp.name} - ${pp.address} (${pp.usageType || 'N/A'})`,
                       value: String(pp.id),
                     }))}
                     searchable
@@ -134,3 +134,4 @@ export function LinkPickupPointDialog({
     </SchoolBusFormDialog>
   );
 }
+

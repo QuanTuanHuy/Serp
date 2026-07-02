@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
@@ -37,7 +37,7 @@ import { formatDate, formatDateTime } from '../utils';
 import type { SchoolBusRequestStudent } from '../types';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// --- helpers ----------------------------------------------------------------
 
 const TRIP_OPTION_LABELS: Record<string, string> = {
   MORNING: 'To school only',
@@ -119,7 +119,7 @@ function deriveEligibility(
   return { state: 'complete', label: 'Complete', issues: [] };
 }
 
-// ─── sub-components ─────────────────────────────────────────────────────────
+// --- sub-components ---------------------------------------------------------
 
 function Pill({ label, className }: { label: string; className: string }) {
   return (
@@ -178,7 +178,7 @@ function InfoRow({
   );
 }
 
-// ─── main page ───────────────────────────────────────────────────────────────
+// --- main page ---------------------------------------------------------------
 
 interface SchoolBusRequestDetailPageProps {
   requestId: number;
@@ -231,11 +231,11 @@ export function SchoolBusRequestDetailPage({
     return (
       <SchoolBusPageShell
         title='Transport Request Detail'
-        description='Loading…'
+        description='Loading...'
       >
         <SchoolBusEmptyState
           title='Loading request detail'
-          description='Fetching data…'
+          description='Fetching data...'
         />
       </SchoolBusPageShell>
     );
@@ -250,7 +250,7 @@ export function SchoolBusRequestDetailPage({
   ].includes(request.requestType);
   const isSubmitted = request.status === 'SUBMITTED';
 
-  // ── Eligibility analysis
+  // -- Eligibility analysis
   const rowEligibility = students.map((s) =>
     deriveEligibility(s, requiresRouting)
   );
@@ -259,7 +259,7 @@ export function SchoolBusRequestDetailPage({
   );
   const allReady = blockingIssues.length === 0;
 
-  // ── Map data
+  // -- Map data
   const studentMarkers: StudentMapMarker[] = students.reduce<
     StudentMapMarker[]
   >((acc, s) => {
@@ -352,7 +352,7 @@ export function SchoolBusRequestDetailPage({
       return acc;
     }, []);
 
-  // ── Approval Checklist metrics
+  // -- Approval Checklist metrics
   const checklist = [
     {
       label: 'Students selected',
@@ -431,7 +431,7 @@ export function SchoolBusRequestDetailPage({
         }
         actions={
           <div className='flex flex-wrap items-center gap-2'>
-            {/* Parent: Edit (if editable) and Cancel (if cancellable) — no Approve/Reject */}
+            {/* Parent: Edit (if editable) and Cancel (if cancellable) - no Approve/Reject */}
             {access.isParentOnly ? (
               <>
                 {(isSubmitted || request.status === 'REJECTED') && (
@@ -485,7 +485,7 @@ export function SchoolBusRequestDetailPage({
                     onClick={handleApprove}
                   >
                     <CheckCircle2 className='h-4 w-4' />
-                    {approving ? 'Approving…' : 'Approve'}
+                    {approving ? 'Approving...' : 'Approve'}
                   </Button>
                 )}
               </>
@@ -494,25 +494,25 @@ export function SchoolBusRequestDetailPage({
         }
       >
         <div className='space-y-6'>
-          {/* ── Status subtitle row */}
+          {/* -- Status subtitle row */}
           <div className='flex flex-wrap items-center gap-2.5 bg-slate-50 border border-slate-200/60 rounded-xl p-3.5'>
             <SchoolBusStatusBadge status={request.status} />
-            <span className='text-slate-300'>·</span>
+            <span className='text-slate-300'>-</span>
             <span className='text-sm font-semibold text-slate-700'>
-              {REQUEST_TYPE_LABELS[request.requestType] ?? request.requestType}
+              {REQUEST_TYPE_LABELS[request.requestType] || request.requestType}
             </span>
-            <span className='text-slate-300'>·</span>
+            <span className='text-slate-300'>-</span>
             <span className='text-sm font-medium text-slate-500'>
               Effective {formatDate(request.effectiveFrom)}
               {request.effectiveTo
-                ? ` – ${formatDate(request.effectiveTo)}`
+                ? ` - ${formatDate(request.effectiveTo)}`
                 : ''}
             </span>
           </div>
 
-          {/* ── Status / Eligibility Banner */}
+          {/* -- Status / Eligibility Banner */}
           {access.isParentOnly ? (
-            /* ── Parent-friendly status banner */
+            /* -- Parent-friendly status banner */
             <div
               className={cn(
                 'flex items-center gap-3 rounded-2xl border p-4.5 shadow-sm',
@@ -562,7 +562,7 @@ export function SchoolBusRequestDetailPage({
               </div>
             </div>
           ) : (
-            /* ── Admin/Dispatcher approval banner */
+            /* -- Admin/Dispatcher approval banner */
             <>
               {request.status === 'SUBMITTED' ? (
                 <div
@@ -587,7 +587,7 @@ export function SchoolBusRequestDetailPage({
                     >
                       {allReady
                         ? 'Eligible for approval'
-                        : `Cannot approve yet — ${blockingIssues.length} approval blocker${blockingIssues.length > 1 ? 's' : ''} must be fixed`}
+                        : `Cannot approve yet - ${blockingIssues.length} approval blocker${blockingIssues.length > 1 ? 's' : ''} must be fixed`}
                     </p>
                     {allReady ? (
                       <p className='text-xs text-emerald-700 mt-1 font-medium'>
@@ -631,7 +631,7 @@ export function SchoolBusRequestDetailPage({
                     <Clock className='h-5 w-5 shrink-0 text-slate-500' />
                   )}
                   <span className='text-sm font-bold'>
-                    Request is currently {request.status.toLowerCase()} — no
+                    Request is currently {request.status.toLowerCase()} - no
                     further actions required.
                   </span>
                 </div>
@@ -639,9 +639,9 @@ export function SchoolBusRequestDetailPage({
             </>
           )}
 
-          {/* ── Main layout grid */}
+          {/* -- Main layout grid */}
           <div className='grid gap-6 lg:grid-cols-12 items-start'>
-            {/* ── Left column (Main content) */}
+            {/* -- Left column (Main content) */}
             <div className='lg:col-span-8 space-y-6'>
               {/* Requested students */}
               <SchoolBusSection
@@ -702,7 +702,7 @@ export function SchoolBusRequestDetailPage({
                             </span>
                             {s.tripOption ? (
                               <Pill
-                                label={TRIP_OPTION_LABELS[opt] ?? s.tripOption}
+                                label={TRIP_OPTION_LABELS[opt] || s.tripOption}
                                 className='bg-blue-50 text-blue-700 border border-blue-200'
                               />
                             ) : (
@@ -740,7 +740,7 @@ export function SchoolBusRequestDetailPage({
                                   )}
                                 >
                                   {needsPickup
-                                    ? 'Required — not configured'
+                                    ? 'Required - not configured'
                                     : 'Not required'}
                                 </span>
                               )}
@@ -775,7 +775,7 @@ export function SchoolBusRequestDetailPage({
                                   )}
                                 >
                                   {needsDropoff
-                                    ? 'Required — not configured'
+                                    ? 'Required - not configured'
                                     : 'Not required'}
                                 </span>
                               )}
@@ -847,7 +847,7 @@ export function SchoolBusRequestDetailPage({
                             Stop context
                           </p>
                           <p className='text-xs text-slate-500 mt-0.5'>
-                            {REQUEST_TYPE_LABELS[request.requestType] ??
+                            {REQUEST_TYPE_LABELS[request.requestType] ||
                               request.requestType}
                           </p>
                         </div>
@@ -912,7 +912,7 @@ export function SchoolBusRequestDetailPage({
               </SchoolBusSection>
             </div>
 
-            {/* ── Right column (Sidebar panel) */}
+            {/* -- Right column (Sidebar panel) */}
             <div className='lg:col-span-4 space-y-6'>
               {/* Request summary */}
               <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
@@ -930,7 +930,7 @@ export function SchoolBusRequestDetailPage({
                   <InfoRow
                     label='Request type'
                     value={
-                      REQUEST_TYPE_LABELS[request.requestType] ??
+                      REQUEST_TYPE_LABELS[request.requestType] ||
                       request.requestType
                     }
                   />
@@ -959,7 +959,7 @@ export function SchoolBusRequestDetailPage({
                     value={
                       request.approvedAt
                         ? formatDateTime(request.approvedAt)
-                        : '—'
+                        : '-'
                     }
                   />
                   {request.rejectionReason && (
@@ -985,7 +985,7 @@ export function SchoolBusRequestDetailPage({
                 </div>
               </div>
 
-              {/* Approval checklist — Admin/Dispatcher only */}
+              {/* Approval checklist - Admin/Dispatcher only */}
               {isSubmitted && !access.isParentOnly && (
                 <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
                   <h3 className='font-bold text-slate-900 text-base'>
@@ -1034,3 +1034,4 @@ export function SchoolBusRequestDetailPage({
     </>
   );
 }
+

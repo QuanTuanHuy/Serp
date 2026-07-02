@@ -102,7 +102,7 @@ export function SchoolBusSelect({
   }, [open]);
 
   const selectedOption = options.find(
-    (opt) => String(opt.value) === String(value ?? '')
+    (opt) => String(opt.value) === String(value || '')
   );
 
   const displayLabel = selectedOption ? selectedOption.label : placeholder;
@@ -212,7 +212,7 @@ export function SchoolBusSelect({
             </div>
           ) : (
             filteredOptions.map((opt) => {
-              const isSelected = String(opt.value) === String(value ?? '');
+              const isSelected = String(opt.value) === String(value || '');
               const IconComp = opt.icon;
               const colorInfo = opt.color ? colorMaps[opt.color] : null;
 

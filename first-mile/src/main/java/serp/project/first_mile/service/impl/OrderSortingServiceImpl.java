@@ -16,11 +16,14 @@ import serp.project.first_mile.dto.request.SortInboundOrdersRequest;
 import serp.project.first_mile.dto.response.InboundOrderResponse;
 import serp.project.first_mile.enums.DeliveryOrderStatus;
 import serp.project.first_mile.enums.OrderStatus;
+import serp.project.first_mile.enums.TripStatus;
+import serp.project.first_mile.enums.TripType;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.repository.DeliveryManifestOrderRepository;
+import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.service.OrderSortingService;
-import serp.project.first_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.first_mile.service.TmsOrderTransitionPublisherService;
 
 import java.util.List;
 import java.util.UUID;
@@ -38,8 +41,9 @@ public class OrderSortingServiceImpl implements OrderSortingService {
     );
 
     private final TmsOrderClient tmsOrderClient;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
     private final DeliveryManifestOrderRepository deliveryManifestOrderRepository;
+    private final TripOrderRepository tripOrderRepository;
 
     @Override
     public List<InboundOrderResponse> getInboundOrders(String postOfficeCode, OrderStatus status, Long tenantId) {
@@ -49,13 +53,7 @@ public class OrderSortingServiceImpl implements OrderSortingService {
         List<TmsOrderOperationView> orders = tmsOrderClient.lookupAtPostOffice(postOfficeCode, statuses, tenantId);
         if (status == OrderStatus.READY_FOR_DELIVERY) {
             orders = orders.stream()
-                    .filter(order -> deliveryManifestOrderRepository
-                            .findByTenantIdAndOrderCodeAndStatusIn(
-                                    tenantId,
-                                    order.getOrderCode(),
-                                    ACTIVE_DELIVERY_ORDER_STATUSES
-                            )
-                            .isEmpty())
+                    .filter(order -> !isAssignedToActiveDeliveryDispatch(order, tenantId))
                     .toList();
         }
         return orders.stream().map(this::toInboundResponse).toList();
@@ -93,7 +91,7 @@ public class OrderSortingServiceImpl implements OrderSortingService {
                         .build())
                 .toList();
 
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
                 .source(TRANSITION_SOURCE)
                 .idempotencyKey(UUID.randomUUID().toString())
                 .items(items)
@@ -115,5 +113,27 @@ public class OrderSortingServiceImpl implements OrderSortingService {
                 .totalShippingFee(view.getTotalShippingFee())
                 .feePayer(view.getFeePayer())
                 .build();
+    }
+
+    private boolean isAssignedToActiveDeliveryDispatch(TmsOrderOperationView order, Long tenantId) {
+        boolean hasNoActiveManifest = deliveryManifestOrderRepository
+                .findByTenantIdAndOrderCodeAndStatusIn(
+                        tenantId,
+                        order.getOrderCode(),
+                        ACTIVE_DELIVERY_ORDER_STATUSES
+                )
+                .isEmpty();
+        if (!hasNoActiveManifest) {
+            return true;
+        }
+        if (order.getId() == null) {
+            return false;
+        }
+        return tripOrderRepository.existsByTenantIdAndOrderIdAndTripTypeAndTripStatusIn(
+                tenantId,
+                order.getId(),
+                TripType.DELIVERY,
+                List.of(TripStatus.PLANNED, TripStatus.IN_PROGRESS)
+        );
     }
 }

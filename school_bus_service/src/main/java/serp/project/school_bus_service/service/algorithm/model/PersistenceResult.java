@@ -4,6 +4,7 @@ import lombok.Data;
 import serp.project.school_bus_service.entity.RouteStopEntity;
 
 import java.util.List;
+import java.util.Set;
 
 @Data
 public class PersistenceResult {
@@ -12,4 +13,5 @@ public class PersistenceResult {
     private int addedStops;
     private int totalAssignedStudents;
     private List<RouteStopEntity> orderedStops;
+    private Set<Long> addedStudentIds;
 }

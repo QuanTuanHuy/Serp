@@ -19,14 +19,16 @@ public class RouteMapper extends BaseMapper {
 
     public RoutePlanResponse toRoutePlanResponse(RoutePlanEntity entity) {
         RoutePlanResponse response = enrich(new RoutePlanResponse(), entity);
-        response.setSchoolId(entity.getSchool().getId());
-        response.setSchoolName(entity.getSchool().getName());
-        response.setSchoolLatitude(entity.getSchool().getLatitude());
-        response.setSchoolLongitude(entity.getSchool().getLongitude());
-        response.setRouteDirection(entity.getRouteDirection().name());
-        response.setStartLocationType(entity.getStartLocationType().name());
+        if (entity.getSchool() != null) {
+            response.setSchoolId(entity.getSchool().getId());
+            response.setSchoolName(entity.getSchool().getName());
+            response.setSchoolLatitude(entity.getSchool().getLatitude());
+            response.setSchoolLongitude(entity.getSchool().getLongitude());
+        }
+        response.setRouteDirection(entity.getRouteDirection() == null ? null : entity.getRouteDirection().name());
+        response.setStartLocationType(entity.getStartLocationType() == null ? null : entity.getStartLocationType().name());
         applyStartLocation(response, entity);
-        response.setEndLocationType(entity.getEndLocationType().name());
+        response.setEndLocationType(entity.getEndLocationType() == null ? null : entity.getEndLocationType().name());
         applyEndLocation(response, entity);
         response.setRouteCode(entity.getRouteCode());
         response.setRouteName(entity.getRouteName());
@@ -35,16 +37,12 @@ public class RouteMapper extends BaseMapper {
         response.setPlannedDistanceKm(entity.getPlannedDistanceKm());
         response.setPlannedDurationMin(entity.getPlannedDurationMin());
         response.setPlannedStudentCount(entity.getPlannedStudentCount());
-        response.setAssignedBusCapacity(entity.getAssignedBusCapacity());
         if (entity.getSelectedBus() != null) {
             response.setBusId(entity.getSelectedBus().getId());
             response.setBusPlateNumber(entity.getSelectedBus().getPlateNumber());
             response.setBusName(entity.getSelectedBus().getPlateNumber());
             response.setBusCapacity(entity.getSelectedBus().getCapacity());
             response.setBusStatus(entity.getSelectedBus().getStatus());
-            if (response.getAssignedBusCapacity() == null) {
-                response.setAssignedBusCapacity(entity.getSelectedBus().getCapacity());
-            }
         }
         if (entity.getStartDepot() != null) {
             response.setStartDepotName(entity.getStartDepot().getName());
@@ -70,9 +68,12 @@ public class RouteMapper extends BaseMapper {
         response.setLocationType(entity.getLocationType() != null ? entity.getLocationType().name() : null);
         response.setStopPurpose(entity.getStopPurpose() != null ? entity.getStopPurpose().name() : null);
         response.setDisplayName(entity.getDisplayName());
+        response.setLocationId(entity.getLocationId());
+        response.setLocationName(entity.getDisplayName());
         response.setLatitude(entity.getLatitude());
         response.setLongitude(entity.getLongitude());
         if (entity.getPickupPoint() != null) {
+            response.setLocationAddress(entity.getPickupPoint().getAddress());
             response.setPickupPointId(entity.getPickupPoint().getId());
             response.setPickupPointName(entity.getPickupPoint().getName());
             response.setPickupPointAddress(entity.getPickupPoint().getAddress());
@@ -80,10 +81,12 @@ public class RouteMapper extends BaseMapper {
             response.setPickupPointLongitude(entity.getPickupPoint().getLongitude());
         }
         if (entity.getSchool() != null) {
+            response.setLocationAddress(entity.getSchool().getAddress());
             response.setSchoolId(entity.getSchool().getId());
             response.setSchoolName(entity.getSchool().getName());
         }
         if (entity.getDepot() != null) {
+            response.setLocationAddress(entity.getDepot().getAddress());
             response.setDepotId(entity.getDepot().getId());
             response.setDepotName(entity.getDepot().getName());
         }
@@ -104,8 +107,8 @@ public class RouteMapper extends BaseMapper {
         response.setBusId(entity.getBus().getId());
         response.setBusPlateNumber(entity.getBus().getPlateNumber());
         response.setBusCapacity(entity.getBus().getCapacity());
-        response.setDriverId(entity.getDriver().getId());
-        response.setDriverName(entity.getDriver().getFullName());
+        response.setDriverId(entity.getDriver() == null ? null : entity.getDriver().getId());
+        response.setDriverName(entity.getDriver() == null ? null : entity.getDriver().getFullName());
 
 
 

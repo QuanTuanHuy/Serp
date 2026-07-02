@@ -61,7 +61,7 @@ import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.BagDistributionManifestSpecification;
 import serp.project.second_mile.service.BagDistributionManifestService;
 import serp.project.second_mile.service.FileStorageService;
-import serp.project.second_mile.service.TmsOrderTransitionOutboxService;
+import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.second_mile.service.dto.request.FileUploadRequest;
 import serp.project.second_mile.service.dto.response.FileUploadResponse;
 
@@ -109,7 +109,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
     private final HubStaffAssignmentRepository hubStaffAssignmentRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final FileStorageService fileStorageService;
-    private final TmsOrderTransitionOutboxService tmsOrderTransitionOutboxService;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
     private final BagDistributionPlanningService planningService;
 
     @Override
@@ -1216,7 +1216,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         if (items == null || items.isEmpty()) {
             return;
         }
-        tmsOrderTransitionOutboxService.enqueue(TmsOrderStatusTransitionRequest.builder()
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
                 .source(TRANSITION_SOURCE)
                 .idempotencyKey(idempotencyKey)
                 .items(items)

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import type { ReactNode } from 'react';
 import { cn } from '@/shared/utils';
@@ -10,7 +10,7 @@ interface SchoolBusPageShellProps {
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
-  /** Compact variant: smaller hero, tighter spacing — used for workspace-heavy pages. */
+  /** Compact variant: smaller hero, tighter spacing - used for workspace-heavy pages. */
   compact?: boolean;
   /**
    * Optional breadcrumb rendered above the module label in the hero card.
@@ -54,3 +54,4 @@ export function SchoolBusPageShell({
     </div>
   );
 }
+

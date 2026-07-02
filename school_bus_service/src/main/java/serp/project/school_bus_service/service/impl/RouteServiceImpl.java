@@ -2,6 +2,7 @@ package serp.project.school_bus_service.service.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -11,7 +12,9 @@ import serp.project.school_bus_service.dto.request.*;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
+import serp.project.school_bus_service.dto.response.RouteMapResponse;
 import serp.project.school_bus_service.dto.response.RoutePathResponse;
+import serp.project.school_bus_service.dto.response.RoutePlanListItemResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanStudentResponse;
 import serp.project.school_bus_service.dto.response.RouteStopResponse;
@@ -36,8 +39,13 @@ import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
 import serp.project.school_bus_service.entity.SchoolEntity;
 import serp.project.school_bus_service.enums.RouteStatus;
+import serp.project.school_bus_service.repository.RouteAssignmentRepository;
 import serp.project.school_bus_service.repository.RoutePlanRepository;
 import serp.project.school_bus_service.repository.RoutePlanningSessionRepository;
+import serp.project.school_bus_service.repository.RouteStopRepository;
+import serp.project.school_bus_service.repository.projection.RouteAssignmentSummaryProjection;
+import serp.project.school_bus_service.repository.projection.RouteStopCountProjection;
+import serp.project.school_bus_service.repository.projection.RouteTerminalStopProjection;
 import serp.project.school_bus_service.entity.RoutePlanningSessionEntity;
 import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
@@ -49,6 +57,10 @@ import serp.project.school_bus_service.shared.pagination.PageableUtils;
 import serp.project.school_bus_service.shared.base.specification.BaseSpecification;
 
 import java.util.List;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 
 @Service
@@ -57,6 +69,8 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private static final Logger log = LoggerFactory.getLogger(RouteServiceImpl.class);
 
     private final RoutePlanRepository routePlanRepository;
+    private final RouteStopRepository routeStopRepository;
+    private final RouteAssignmentRepository routeAssignmentRepository;
     private final RoutePlanningSessionRepository planningSessionRepository;
     private final IRoutePlanStudentService routePlanStudentService;
     private final ISchoolService schoolService;
@@ -69,6 +83,8 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     private final MessageCommon messageCommon;
 
     public RouteServiceImpl(RoutePlanRepository routePlanRepository,
+                            RouteStopRepository routeStopRepository,
+                            RouteAssignmentRepository routeAssignmentRepository,
                             RoutePlanningSessionRepository planningSessionRepository,
                             IRoutePlanStudentService routePlanStudentService,
                             ISchoolService schoolService,
@@ -80,6 +96,8 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                             SchoolBusMapper mapper,
                             MessageCommon messageCommon) {
         this.routePlanRepository = routePlanRepository;
+        this.routeStopRepository = routeStopRepository;
+        this.routeAssignmentRepository = routeAssignmentRepository;
         this.planningSessionRepository = planningSessionRepository;
         this.routePlanStudentService = routePlanStudentService;
         this.schoolService = schoolService;
@@ -98,13 +116,14 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     }
 
     @Override
-    public PageResponse<RoutePlanResponse> getRoutes(RoutePlanParamsRequest params, Long tenantId) {
-        return PageResponse.from(routePlanRepository.findAll(
-                spec(tenantId, params == null ? null : params.getKeyword(), "routeCode", "routeName", "status",
-                        "routeDirection", "school.name"),
-                pageable(params, Set.of("id", "routeCode", "routeName", "serviceDate", "status", "createdAt",
-                        "updatedAt", "routeDirection", "lastModifiedDate"), "lastModifiedDate")),
-                route -> toRoutePlanResponse(route, tenantId));
+    public PageResponse<RoutePlanListItemResponse> getRoutes(RoutePlanParamsRequest params, Long tenantId) {
+        Page<RoutePlanListItemResponse> page = routePlanRepository.findRouteListItems(
+                tenantId,
+                keywordPattern(params == null ? null : params.getKeyword()),
+                pageable(params, Set.of("id", "routeCode", "routeName", "status", "createdAt",
+                        "updatedAt", "lastModifiedDate"), "lastModifiedDate"));
+        enrichRouteListItems(page.getContent(), tenantId);
+        return PageResponse.from(page, route -> route);
     }
 
     @Override
@@ -115,6 +134,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     @Override
     public RouteDetailResponse getRoute(Long id, Long tenantId) {
         RoutePlanEntity route = findById(routePlanRepository, id, tenantId);
+        populateRouteDerivedFields(route, tenantId);
         RouteDetailResponse response = mapper.toRouteDetailResponse(route,
                 routeStopService.findByRoute(id, tenantId),
                 routePlanStudentService.findByRoute(id),
@@ -124,8 +144,29 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     }
 
     @Override
+    public RouteMapResponse getRouteMap(Long id, Long tenantId) {
+        RoutePlanEntity route = findById(routePlanRepository, id, tenantId);
+        populateRouteDerivedFields(route, tenantId);
+
+        RouteMapResponse response = new RouteMapResponse();
+        response.setRoute(toRoutePlanResponse(route, tenantId));
+        response.setStops(routeStopService.findByRoute(id, tenantId).stream()
+                .map(mapper::toRouteStopResponse)
+                .toList());
+        response.setAssignment(routeDispatchService.findAssignmentEntityByRoute(id, tenantId)
+                .map(mapper::toRouteAssignmentResponse)
+                .orElse(null));
+        response.setPath(buildRoutePath(route));
+        return response;
+    }
+
+    @Override
     public RoutePathResponse getRoutePath(Long id, Long tenantId) {
         RoutePlanEntity route = findById(routePlanRepository, id, tenantId);
+        return buildRoutePath(route);
+    }
+
+    private RoutePathResponse buildRoutePath(RoutePlanEntity route) {
         RoutePathResponse response = new RoutePathResponse();
         response.setRouteId(route.getId());
         response.setDistanceKm(route.getPlannedDistanceKm());
@@ -196,7 +237,12 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
             throw new AppException(AppErrorCode.Route.INVALID_STATE, messageCommon.getMessage(AppErrorCode.Route.INVALID_STATE));
         }
         route.markUpdated(actor(actorId));
-        Long currentBusId = route.getSelectedBus() == null ? null : route.getSelectedBus().getId();
+        if (route.getPlanningSession() != null && !request.getSchoolId().equals(route.getPlanningSession().getSchool().getId())) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "School ID cannot be changed and must match the planning session's school.");
+        }
+        Long currentBusId = routeDispatchService.findAssignmentEntityByRoute(id, tenantId)
+                .map(assignment -> assignment.getBus().getId())
+                .orElseGet(() -> route.getSelectedBus() == null ? null : route.getSelectedBus().getId());
         applyRoute(route, request, tenantId);
         if (request.getBusId() != null && !request.getBusId().equals(currentBusId)) {
             validateBusCanBeChanged(route, tenantId);
@@ -205,6 +251,9 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                     route.getId());
         }
         RoutePlanEntity saved = routePlanRepository.save(route);
+        if (request.getBusId() != null && !request.getBusId().equals(currentBusId)) {
+            routeDispatchService.reserveBusForRoute(saved.getId(), request.getBusId(), tenantId, actorId);
+        }
         routeStopService.updateTerminalStops(saved, tenantId, actorId);
         return toRoutePlanResponse(saved, tenantId);
     }
@@ -266,6 +315,58 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     }
 
     // ---- Private helpers ----
+
+    private String keywordPattern(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return "%" + keyword.trim().toLowerCase() + "%";
+    }
+
+    private void enrichRouteListItems(List<RoutePlanListItemResponse> routes, Long tenantId) {
+        if (routes == null || routes.isEmpty()) {
+            return;
+        }
+        List<Long> routeIds = routes.stream().map(RoutePlanListItemResponse::getId).toList();
+        Map<Long, Integer> stopCounts = new HashMap<>();
+        for (RouteStopCountProjection projection : routeStopRepository.countActiveStopsByRouteIds(tenantId, routeIds)) {
+            stopCounts.put(projection.getRouteId(), projection.getStopsCount());
+        }
+
+        Map<Long, String> startNames = new HashMap<>();
+        Map<Long, String> endNames = new HashMap<>();
+        for (RouteTerminalStopProjection projection : routeStopRepository.findTerminalStopsByRouteIds(tenantId, routeIds)) {
+            if ("START_TERMINAL".equals(projection.getStopPurpose())) {
+                startNames.put(projection.getRouteId(), projection.getLocationName());
+            }
+            if ("END_TERMINAL".equals(projection.getStopPurpose())) {
+                endNames.put(projection.getRouteId(), projection.getLocationName());
+            }
+        }
+
+        Map<Long, RouteAssignmentSummaryProjection> assignments = new HashMap<>();
+        for (RouteAssignmentSummaryProjection projection : routeAssignmentRepository.findCurrentSummariesByRouteIds(tenantId, routeIds)) {
+            assignments.put(projection.getRouteId(), projection);
+        }
+
+        for (RoutePlanListItemResponse route : routes) {
+            route.setStopsCount(stopCounts.getOrDefault(route.getId(), 0));
+            route.setStartLocationName(startNames.get(route.getId()));
+            route.setEndLocationName(endNames.get(route.getId()));
+            RouteAssignmentSummaryProjection assignment = assignments.get(route.getId());
+            if (assignment != null) {
+                route.setBusId(assignment.getBusId());
+                route.setBusPlateNumber(assignment.getBusPlateNumber());
+                route.setBusName(assignment.getBusPlateNumber());
+                route.setBusCapacity(assignment.getBusCapacity());
+                route.setBusStatus(assignment.getBusStatus());
+                route.setDriverId(assignment.getDriverId());
+                route.setDriverName(assignment.getDriverName());
+                route.setAttendantId(assignment.getAttendantId());
+                route.setAttendantName(assignment.getAttendantName());
+            }
+        }
+    }
 
     private void applyRoute(RoutePlanEntity route, RoutePlanUpsertRequest request, Long tenantId) {
         SchoolEntity school = schoolService.getSchool(request.getSchoolId(), tenantId);
@@ -348,7 +449,41 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     }
 
     private Pageable pageable(BaseParamsRequest params, Set<String> allowedSorts, String defaultSortBy) {
-        return PageableUtils.from(params, allowedSorts, defaultSortBy);
+        BaseParamsRequest sortParams = params;
+        Set<String> effectiveAllowedSorts = allowedSorts;
+        String mappedSortBy = mapDerivedRouteSort(params == null ? null : params.getSortBy());
+        if (mappedSortBy != null) {
+            sortParams = copyParamsWithSort(params, mappedSortBy);
+            effectiveAllowedSorts = new HashSet<>(allowedSorts);
+            effectiveAllowedSorts.add(mappedSortBy);
+        }
+        return PageableUtils.from(sortParams, effectiveAllowedSorts, defaultSortBy);
+    }
+
+    private String mapDerivedRouteSort(String sortBy) {
+        if ("schoolId".equals(sortBy) || "schoolName".equals(sortBy)) {
+            return "planningSession.school.name";
+        }
+        if ("serviceDate".equals(sortBy)) {
+            return "planningSession.serviceDate";
+        }
+        if ("routeDirection".equals(sortBy)) {
+            return "planningSession.routeDirection";
+        }
+        return null;
+    }
+
+    private BaseParamsRequest copyParamsWithSort(BaseParamsRequest source, String sortBy) {
+        BaseParamsRequest copy = new BaseParamsRequest() {
+        };
+        if (source != null) {
+            copy.setPage(source.getPage());
+            copy.setSize(source.getSize());
+            copy.setSortDirection(source.getSortDirection());
+            copy.setKeyword(source.getKeyword());
+        }
+        copy.setSortBy(sortBy);
+        return copy;
     }
 
     @Override
@@ -382,6 +517,13 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                     messageCommon.getMessage(AppErrorCode.Session.FROZEN, planningSession.getStatus()));
         }
 
+        if (request.getSchoolId() == null
+                || planningSession.getSchool() == null
+                || !planningSession.getSchool().getId().equals(request.getSchoolId())) {
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    "Route school must match the planning session school.");
+        }
+
         if (request.getRouteDirection() != null) {
             RouteDirection reqDir = RouteDirection.parse(request.getRouteDirection());
             if (reqDir != planningSession.getRouteDirection()) {
@@ -402,6 +544,7 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
         route.setPlanningSession(planningSession);
         RoutePlanEntity saved = routePlanRepository.save(route);
         routeStopService.updateTerminalStops(saved, tenantId, actorId);
+        routeDispatchService.reserveBusForRoute(saved.getId(), request.getBusId(), tenantId, actorId);
 
         log.info("Created route in session: sessionId={}, routeId={}", sessionId, saved.getId());
         return toRoutePlanResponse(saved, tenantId);
@@ -436,7 +579,6 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                     "This bus is already assigned to another route in the current planning session.");
         }
         route.setSelectedBus(bus);
-        route.setAssignedBusCapacity(bus.getCapacity());
         route.setRequiredCapacity(0);
     }
 
@@ -445,13 +587,16 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
                     "Cannot change bus when the route already has students.");
         }
-        if (routeDispatchService.findAssignmentEntityByRoute(route.getId(), tenantId).isPresent()) {
+        RouteAssignmentEntity assignment = routeDispatchService.findAssignmentEntityByRoute(route.getId(), tenantId)
+                .orElse(null);
+        if (assignment != null && (assignment.getDriver() != null || assignment.getAttendant() != null)) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
                     "Cannot change bus when staff has already been assigned.");
         }
     }
 
     private RoutePlanResponse toRoutePlanResponse(RoutePlanEntity route, Long tenantId) {
+        populateRouteDerivedFields(route, tenantId);
         RoutePlanResponse response = mapper.toRoutePlanResponse(route);
         response.setStopsCount(routeStopService.findByRoute(route.getId(), tenantId).size());
         RouteAssignmentEntity assignment = routeDispatchService
@@ -468,6 +613,36 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
             }
         }
         return response;
+    }
+
+    private void populateRouteDerivedFields(RoutePlanEntity route, Long tenantId) {
+        if (route == null || route.getId() == null) {
+            return;
+        }
+        routeDispatchService.findAssignmentEntityByRoute(route.getId(), tenantId)
+                .ifPresent(assignment -> route.setSelectedBus(assignment.getBus()));
+        List<RouteStopEntity> stops = routeStopService.findByRoute(route.getId(), tenantId);
+        stops.stream()
+                .min(Comparator.comparingInt(RouteStopEntity::getStopOrder))
+                .ifPresent(stop -> applyRouteEndpoint(route, stop, true));
+        stops.stream()
+                .max(Comparator.comparingInt(RouteStopEntity::getStopOrder))
+                .ifPresent(stop -> applyRouteEndpoint(route, stop, false));
+    }
+
+    private void applyRouteEndpoint(RoutePlanEntity route, RouteStopEntity stop, boolean start) {
+        if (stop == null || stop.getLocationType() == null) {
+            return;
+        }
+        if (start) {
+            route.setStartLocationType(stop.getLocationType());
+            route.setStartSchool(stop.getSchool());
+            route.setStartDepot(stop.getDepot());
+        } else {
+            route.setEndLocationType(stop.getLocationType());
+            route.setEndSchool(stop.getSchool());
+            route.setEndDepot(stop.getDepot());
+        }
     }
     @Override
     @Transactional

@@ -18,7 +18,7 @@ import serp.project.tms_order.dto.request.PaymentOrderConfirmedWebhookRequest;
 import serp.project.tms_order.dto.response.PaymentWebhookProcessResponse;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
-import serp.project.tms_order.service.OrderService;
+import serp.project.tms_order.service.OrderPaymentService;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -34,7 +34,7 @@ public class PaymentWebhookController {
     @Value("${payment.webhook.secret:change-me}")
     private String paymentWebhookSecret;
 
-    private final OrderService orderService;
+    private final OrderPaymentService orderPaymentService;
 
     @PostMapping("/orders/payment-confirmed")
     public PaymentWebhookProcessResponse handleOrderPaymentConfirmedWebhook(
@@ -48,7 +48,7 @@ public class PaymentWebhookController {
                 request.getOrderCode(),
                 request.getTenantId()
         );
-        return orderService.processPaymentOrderConfirmedWebhook(request);
+        return orderPaymentService.processPaymentOrderConfirmedWebhook(request);
     }
 
     private void validateWebhookSecret(String providedSecret) {

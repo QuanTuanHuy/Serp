@@ -28,4 +28,13 @@ public enum OrderStatus {
     RETURNED_TO_SENDER,          // Hoàn trả cho người gửi
     CANCELLED,
     LOST_OR_DAMAGED,
+    ;
+
+    public boolean isReadyForBagging() {
+        return this == INBOUND_AT_ORIGIN_HUB || this == BAGGING_IN_PROGRESS;
+    }
+
+    public static boolean isReadyForBagging(OrderStatus status) {
+        return status != null && status.isReadyForBagging();
+    }
 }

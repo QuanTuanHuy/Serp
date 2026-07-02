@@ -9,21 +9,24 @@ import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
 import serp.project.school_bus_service.entity.RoutePlanningSessionEntity;
 import serp.project.school_bus_service.entity.RouteStopEntity;
-import serp.project.school_bus_service.entity.SchoolPickupPointEntity;
-import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.enums.PlanningSessionStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.RouteGeometrySource;
 import serp.project.school_bus_service.enums.RouteLocationType;
 import serp.project.school_bus_service.enums.RouteStatus;
 import serp.project.school_bus_service.enums.RouteStopPurpose;
+import serp.project.school_bus_service.enums.TripOption;
+import serp.project.school_bus_service.repository.RouteAssignmentRepository;
+import serp.project.school_bus_service.repository.RoutePlanStudentRepository;
+import serp.project.school_bus_service.repository.StudentSubscriptionRepository;
+import serp.project.school_bus_service.repository.projection.GreedyFillCandidateProjection;
+import serp.project.school_bus_service.repository.projection.RoutePlanStudentAssignmentProjection;
+import serp.project.school_bus_service.repository.projection.RouteStopStudentCountProjection;
 import serp.project.school_bus_service.service.IRouteGeometryService;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
 import serp.project.school_bus_service.service.IRoutePlanningSessionService;
 import serp.project.school_bus_service.service.IRouteService;
 import serp.project.school_bus_service.service.IRouteStopService;
-import serp.project.school_bus_service.service.ISchoolPickupPointService;
-import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.service.ITripExecutionService;
 import serp.project.school_bus_service.service.algorithm.model.CandidateResolution;
 import serp.project.school_bus_service.service.algorithm.model.CapacityState;
@@ -67,27 +70,30 @@ public class RouteGreedyFillService {
     private final IRouteService routeService;
     private final IRouteStopService routeStopService;
     private final IRoutePlanStudentService routePlanStudentService;
-    private final IStudentSubscriptionService subscriptionService;
-    private final ISchoolPickupPointService schoolPickupPointService;
     private final ITripExecutionService tripExecutionService;
     private final IRouteGeometryService routeGeometryService;
+    private final StudentSubscriptionRepository subscriptionRepository;
+    private final RoutePlanStudentRepository routePlanStudentRepository;
+    private final RouteAssignmentRepository routeAssignmentRepository;
 
     public RouteGreedyFillService(IRoutePlanningSessionService planningSessionService,
                                   IRouteService routeService,
                                   IRouteStopService routeStopService,
                                   IRoutePlanStudentService routePlanStudentService,
-                                  IStudentSubscriptionService subscriptionService,
-                                  ISchoolPickupPointService schoolPickupPointService,
                                   ITripExecutionService tripExecutionService,
-                                  IRouteGeometryService routeGeometryService) {
+                                  IRouteGeometryService routeGeometryService,
+                                  StudentSubscriptionRepository subscriptionRepository,
+                                  RoutePlanStudentRepository routePlanStudentRepository,
+                                  RouteAssignmentRepository routeAssignmentRepository) {
         this.planningSessionService = planningSessionService;
         this.routeService = routeService;
         this.routeStopService = routeStopService;
         this.routePlanStudentService = routePlanStudentService;
-        this.subscriptionService = subscriptionService;
-        this.schoolPickupPointService = schoolPickupPointService;
         this.tripExecutionService = tripExecutionService;
         this.routeGeometryService = routeGeometryService;
+        this.subscriptionRepository = subscriptionRepository;
+        this.routePlanStudentRepository = routePlanStudentRepository;
+        this.routeAssignmentRepository = routeAssignmentRepository;
     }
 
     /**
@@ -109,7 +115,7 @@ public class RouteGreedyFillService {
         GreedyFillRouteRequest resolvedRequest = request == null ? new GreedyFillRouteRequest() : request;
         RouteContext context = loadAndValidateRouteForGreedyFill(
                 sessionId, routeId, resolvedRequest, tenantId);
-        CapacityState capacity = calculateRemainingCapacity(context.getRoute());
+        CapacityState capacity = calculateRemainingCapacity(context.getRoute(), tenantId);
         CandidateResolution candidates = resolveEligibleUnassignedCandidates(context, tenantId);
         List<StopDemand> demands = groupCandidatesByServicePoint(candidates.getAssignable(), context.getDirection());
         SelectionResult selection = selectStopDemands(
@@ -179,11 +185,10 @@ public class RouteGreedyFillService {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
                     "Route school and service date must match the planning session.");
         }
-        validateRouteEndpoints(route);
-
         List<RouteStopEntity> stops = routeStopService.findByRoute(routeId, tenantId);
         RouteStopEntity startTerminal = requireTerminal(stops, RouteStopPurpose.START_TERMINAL);
         RouteStopEntity endTerminal = requireTerminal(stops, RouteStopPurpose.END_TERMINAL);
+        validateRouteEndpoints(route, startTerminal, endTerminal);
         validateCoordinate(startTerminal, "Start terminal must have coordinates before running Greedy Fill.");
         validateCoordinate(endTerminal, "End terminal must have coordinates before running Greedy Fill.");
 
@@ -215,12 +220,12 @@ public class RouteGreedyFillService {
      * Next:
      * - The caller resolves eligible unassigned student demand.
      */
-    private CapacityState calculateRemainingCapacity(RoutePlanEntity route) {
-        if (route.getSelectedBus() == null) {
+    private CapacityState calculateRemainingCapacity(RoutePlanEntity route, Long tenantId) {
+        Integer capacity = routeAssignmentRepository.findCurrentBusCapacity(route.getId(), tenantId).orElse(null);
+        if (capacity == null) {
             throw new AppException(AppErrorCode.Bus.SELECTED_BUS_REQUIRED,
                     "Route must have a selected bus before running Greedy Fill.");
         }
-        Integer capacity = route.getSelectedBus().getCapacity();
         if (capacity == null || capacity <= 0) {
             throw new AppException(AppErrorCode.Bus.CAPACITY_NOT_CONFIGURED,
                     "The selected bus must have a positive capacity.");
@@ -251,29 +256,31 @@ public class RouteGreedyFillService {
      * - The caller groups assignable subscriptions by their physical service point.
      */
     private CandidateResolution resolveEligibleUnassignedCandidates(RouteContext context, Long tenantId) {
-        List<StudentSubscriptionEntity> eligible = subscriptionService.findEligibleSubscriptions(
+        boolean outbound = context.getDirection() == RouteDirection.OUTBOUND;
+        int dayIndex = context.getSession().getServiceDate().getDayOfWeek().getValue();
+        List<String> allowedTripOptions = outbound
+                ? List.of(TripOption.MORNING.name(), TripOption.ROUND_TRIP.name())
+                : List.of(TripOption.AFTERNOON.name(), TripOption.ROUND_TRIP.name());
+        List<GreedyFillCandidateProjection> eligible = subscriptionRepository.findGreedyFillCandidates(
                 context.getSession().getSchool().getId(),
-                context.getDirection(),
+                tenantId,
                 context.getSession().getServiceDate(),
-                tenantId);
+                dayIndex,
+                allowedTripOptions,
+                outbound);
 
-        Set<Long> currentRouteStudents = routePlanStudentService.findByRoute(context.getRoute().getId()).stream()
-                .map(item -> item.getStudent().getId())
-                .collect(Collectors.toSet());
-        Set<Long> otherRouteStudents = routePlanStudentService
-                .findStudentsInOtherRoutesOfSessionAndDirection(
-                        context.getSession().getId(), context.getRoute().getId(), context.getDirection())
+        Set<Long> currentRouteStudents = routePlanStudentRepository
+                .findAssignmentKeysByRoute(context.getRoute().getId())
                 .stream()
-                .map(item -> item.getStudent().getId())
+                .map(RoutePlanStudentAssignmentProjection::getStudentId)
                 .collect(Collectors.toSet());
-        Set<Long> linkedPointIds = schoolPickupPointService
-                .getPickupPointLinksForSchools(
-                        List.of(context.getSession().getSchool().getId()), tenantId)
+        Set<Long> otherRouteStudents = routePlanStudentRepository
+                .findOtherAssignmentKeysInSessionAndDirection(
+                        context.getSession().getId(),
+                        context.getRoute().getId(),
+                        context.getDirection().name())
                 .stream()
-                .filter(link -> Boolean.TRUE.equals(link.getIsActive())
-                        && !Boolean.TRUE.equals(link.getIsDeleted()))
-                .map(SchoolPickupPointEntity::getPickupPoint)
-                .map(PickupPointEntity::getId)
+                .map(RoutePlanStudentAssignmentProjection::getStudentId)
                 .collect(Collectors.toSet());
 
         Map<Long, StudentCandidate> uniqueCandidates = new LinkedHashMap<>();
@@ -282,10 +289,8 @@ public class RouteGreedyFillService {
         int missingCoordinates = 0;
         int invalidPoint = 0;
 
-        for (StudentSubscriptionEntity subscription : eligible.stream()
-                .sorted(Comparator.comparing(StudentSubscriptionEntity::getId))
-                .toList()) {
-            Long studentId = subscription.getStudent().getId();
+        for (GreedyFillCandidateProjection projection : eligible) {
+            Long studentId = projection.getStudentId();
             if (!eligibleStudentIds.add(studentId) || currentRouteStudents.contains(studentId)) {
                 continue;
             }
@@ -293,18 +298,18 @@ public class RouteGreedyFillService {
                 assignedElsewhere++;
                 continue;
             }
-            PickupPointEntity point = relevantPoint(subscription, context.getDirection());
-            if (!isValidServicePoint(point, context.getDirection(), linkedPointIds)) {
+            if (!isValidServicePoint(projection, context.getDirection())) {
                 invalidPoint++;
                 continue;
             }
-            if (point.getLatitude() == null || point.getLongitude() == null) {
+            if (projection.getLatitude() == null || projection.getLongitude() == null) {
                 missingCoordinates++;
                 continue;
             }
             StudentCandidate candidate = new StudentCandidate();
-            candidate.setSubscription(subscription);
-            candidate.setPoint(point);
+            candidate.setStudentId(studentId);
+            candidate.setSubscriptionId(projection.getSubscriptionId());
+            candidate.setPoint(toPickupPoint(projection));
             uniqueCandidates.put(studentId, candidate);
         }
         CandidateResolution resolution = new CandidateResolution();
@@ -331,7 +336,7 @@ public class RouteGreedyFillService {
                                                            RouteDirection direction) {
         Map<Long, StopDemand> grouped = new LinkedHashMap<>();
         for (StudentCandidate candidate : candidates) {
-            PickupPointEntity point = relevantPoint(candidate.getSubscription(), direction);
+            PickupPointEntity point = candidate.getPoint();
             StopDemand demand = grouped.computeIfAbsent(point.getId(), ignored -> {
                 StopDemand newDemand = new StopDemand();
                 newDemand.setPoint(point);
@@ -341,7 +346,7 @@ public class RouteGreedyFillService {
             demand.getCandidates().add(candidate);
         }
         grouped.values().forEach(demand -> demand.getCandidates()
-                .sort(Comparator.comparing(candidate -> candidate.getSubscription().getStudent().getId())));
+                .sort(Comparator.comparing(StudentCandidate::getStudentId)));
         return new ArrayList<>(grouped.values());
     }
 
@@ -457,33 +462,39 @@ public class RouteGreedyFillService {
                         LinkedHashMap::new));
         Map<Long, RouteStopEntity> selectedStops = new HashMap<>();
         Map<Long, List<StudentCandidate>> acceptedCandidatesByPoint = new LinkedHashMap<>();
-        Set<Long> routeStudentIds = routePlanStudentService.findByRoute(context.getRoute().getId()).stream()
-                .map(item -> item.getStudent().getId())
+        Set<Long> routeStudentIds = new HashSet<>();
+        Set<String> routeAssignmentKeys = new HashSet<>();
+        for (RoutePlanStudentAssignmentProjection assignment : routePlanStudentRepository
+                .findAssignmentKeysByRoute(context.getRoute().getId())) {
+            routeStudentIds.add(assignment.getStudentId());
+            routeAssignmentKeys.add(assignmentKey(assignment.getStudentId(), assignment.getSubscriptionId()));
+        }
+        Set<Long> otherRouteStudentIds = routePlanStudentRepository
+                .findOtherAssignmentKeysInSessionAndDirection(
+                        context.getSession().getId(),
+                        context.getRoute().getId(),
+                        context.getDirection().name())
+                .stream()
+                .map(RoutePlanStudentAssignmentProjection::getStudentId)
                 .collect(Collectors.toSet());
         Set<String> batchAssignmentKeys = new HashSet<>();
+        Set<Long> addedStudentIds = new LinkedHashSet<>();
         int createdStopCount = 0;
 
         for (SelectedDemand demand : selection.getSelectedDemands()) {
             List<StudentCandidate> acceptedCandidates = new ArrayList<>();
             for (StudentCandidate candidate : demand.getStudents()) {
-                StudentSubscriptionEntity subscription = candidate.getSubscription();
-                Long studentId = subscription.getStudent().getId();
-                Long subscriptionId = subscription.getId();
-                String assignmentKey = studentId + ":" + subscriptionId;
+                Long studentId = candidate.getStudentId();
+                Long subscriptionId = candidate.getSubscriptionId();
+                String assignmentKey = assignmentKey(studentId, subscriptionId);
                 if (routeStudentIds.contains(studentId)
                         || !batchAssignmentKeys.add(assignmentKey)
-                        || routePlanStudentService.existsByRouteAndStudent(
-                                context.getRoute().getId(), studentId)
-                        || routePlanStudentService.existsByRouteStudentAndSubscription(
-                                context.getRoute().getId(), studentId, subscriptionId)
-                        || routePlanStudentService.existsInOtherRoutesOfSessionAndDirection(
-                                context.getSession().getId(),
-                                context.getRoute().getId(),
-                                studentId,
-                                context.getDirection())) {
+                        || routeAssignmentKeys.contains(assignmentKey)
+                        || otherRouteStudentIds.contains(studentId)) {
                     continue;
                 }
                 routeStudentIds.add(studentId);
+                addedStudentIds.add(studentId);
                 acceptedCandidates.add(candidate);
             }
             if (acceptedCandidates.isEmpty()) {
@@ -514,7 +525,7 @@ public class RouteGreedyFillService {
             }
             for (StudentCandidate candidate : acceptedCandidates) {
                 newAssignments.add(buildRouteStudent(
-                        context, candidate.getSubscription(), serviceStop, tenantId, actorId));
+                        context, candidate, serviceStop, tenantId, actorId));
             }
         }
         routePlanStudentService.saveAll(newAssignments);
@@ -527,7 +538,6 @@ public class RouteGreedyFillService {
         RoutePlanEntity route = context.getRoute();
         route.setPlannedStudentCount(totalAssigned);
         route.setRequiredCapacity(totalAssigned);
-        route.setAssignedBusCapacity(capacity);
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
         PersistenceResult result = new PersistenceResult();
@@ -535,6 +545,7 @@ public class RouteGreedyFillService {
         result.setAddedStops(createdStopCount);
         result.setTotalAssignedStudents(totalAssigned);
         result.setOrderedStops(orderedStops);
+        result.setAddedStudentIds(addedStudentIds);
         return result;
     }
 
@@ -574,9 +585,9 @@ public class RouteGreedyFillService {
                                                   int capacity) {
         Set<Long> assignedAfterFill = new HashSet<>(candidates.getCurrentRouteStudents());
         assignedAfterFill.addAll(candidates.getOtherRouteStudents());
-        routePlanStudentService.findByRoute(context.getRoute().getId()).stream()
-                .map(item -> item.getStudent().getId())
-                .forEach(assignedAfterFill::add);
+        if (persisted.getAddedStudentIds() != null) {
+            assignedAfterFill.addAll(persisted.getAddedStudentIds());
+        }
         int unassigned = (int) candidates.getEligibleStudentIds().stream()
                 .filter(studentId -> !assignedAfterFill.contains(studentId))
                 .count();
@@ -601,28 +612,23 @@ public class RouteGreedyFillService {
         return response;
     }
 
-    private void validateRouteEndpoints(RoutePlanEntity route) {
-        if (route.getStartLocationType() == null || route.getEndLocationType() == null) {
-            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "Route must have start and end terminals before running Greedy Fill.");
-        }
-        boolean startMissing = route.getStartLocationType() == RouteLocationType.SCHOOL
-                ? route.getStartSchool() == null : route.getStartDepot() == null;
-        boolean endMissing = route.getEndLocationType() == RouteLocationType.SCHOOL
-                ? route.getEndSchool() == null : route.getEndDepot() == null;
-        if (startMissing || endMissing) {
+    private void validateRouteEndpoints(RoutePlanEntity route,
+                                        RouteStopEntity startTerminal,
+                                        RouteStopEntity endTerminal) {
+        if (startTerminal.getLocationType() == null || startTerminal.getLocationId() == null
+                || endTerminal.getLocationType() == null || endTerminal.getLocationId() == null) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
                     "Route must have start and end terminals before running Greedy Fill.");
         }
         if (route.getRouteDirection() == RouteDirection.OUTBOUND
-                && (route.getStartLocationType() != RouteLocationType.DEPOT
-                || route.getEndLocationType() != RouteLocationType.SCHOOL)) {
+                && (startTerminal.getLocationType() != RouteLocationType.DEPOT
+                || endTerminal.getLocationType() != RouteLocationType.SCHOOL)) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
                     "OUTBOUND Greedy Fill requires Depot to School terminals.");
         }
         if (route.getRouteDirection() == RouteDirection.RETURN
-                && (route.getStartLocationType() != RouteLocationType.SCHOOL
-                || route.getEndLocationType() != RouteLocationType.DEPOT)) {
+                && (startTerminal.getLocationType() != RouteLocationType.SCHOOL
+                || endTerminal.getLocationType() != RouteLocationType.DEPOT)) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
                     "RETURN Greedy Fill requires School to Depot terminals.");
         }
@@ -642,29 +648,37 @@ public class RouteGreedyFillService {
         }
     }
 
-    private PickupPointEntity relevantPoint(StudentSubscriptionEntity subscription,
-                                            RouteDirection direction) {
-        return direction == RouteDirection.OUTBOUND
-                ? subscription.getPickupPoint()
-                : subscription.getDropoffPoint();
-    }
-
-    private boolean isValidServicePoint(PickupPointEntity point,
-                                        RouteDirection direction,
-                                        Set<Long> linkedPointIds) {
-        if (point == null
-                || Boolean.TRUE.equals(point.getIsDeleted())
-                || Boolean.FALSE.equals(point.getIsActive())
-                || !linkedPointIds.contains(point.getId())) {
+    private boolean isValidServicePoint(GreedyFillCandidateProjection candidate,
+                                        RouteDirection direction) {
+        if (candidate.getPointId() == null
+                || Boolean.TRUE.equals(candidate.getPointDeleted())
+                || Boolean.FALSE.equals(candidate.getPointActive())
+                || !Boolean.TRUE.equals(candidate.getLinkedToSchool())) {
             return false;
         }
-        String usageType = point.getUsageType();
+        String usageType = candidate.getUsageType();
         if (usageType == null || "PICKUP_DROPOFF".equalsIgnoreCase(usageType)) {
             return true;
         }
         return direction == RouteDirection.OUTBOUND
                 ? "PICKUP_ONLY".equalsIgnoreCase(usageType)
                 : "DROPOFF_ONLY".equalsIgnoreCase(usageType);
+    }
+
+    private PickupPointEntity toPickupPoint(GreedyFillCandidateProjection projection) {
+        PickupPointEntity point = new PickupPointEntity();
+        point.setId(projection.getPointId());
+        point.setName(projection.getPointName());
+        point.setLatitude(projection.getLatitude());
+        point.setLongitude(projection.getLongitude());
+        point.setUsageType(projection.getUsageType());
+        point.setIsActive(projection.getPointActive());
+        point.setIsDeleted(projection.getPointDeleted());
+        return point;
+    }
+
+    private String assignmentKey(Long studentId, Long subscriptionId) {
+        return studentId + ":" + subscriptionId;
     }
 
     private double addedDistanceKm(Coordinate current, Coordinate candidate, Coordinate end) {
@@ -699,23 +713,22 @@ public class RouteGreedyFillService {
     private List<RouteStopEntity> recalculateRouteStopPlannedCounts(Long routeId,
                                                                     Long tenantId,
                                                                     Long actorId) {
-        List<RoutePlanStudentEntity> assignments = routePlanStudentService.findByRoute(routeId);
-        Map<Long, Integer> boardingByStop = assignments.stream()
-                .filter(item -> item.getPickupStop() != null)
-                .collect(Collectors.groupingBy(
-                        item -> item.getPickupStop().getId(),
-                        Collectors.summingInt(item -> 1)));
-        Map<Long, Integer> dropoffByStop = assignments.stream()
-                .filter(item -> item.getDropoffStop() != null)
-                .collect(Collectors.groupingBy(
-                        item -> item.getDropoffStop().getId(),
-                        Collectors.summingInt(item -> 1)));
+        Map<Long, RouteStopStudentCountProjection> countsByStop = routePlanStudentRepository
+                .countStudentsByRouteStops(routeId)
+                .stream()
+                .collect(Collectors.toMap(
+                        RouteStopStudentCountProjection::getRouteStopId,
+                        Function.identity(),
+                        (left, right) -> left));
 
         List<RouteStopEntity> stops = routeStopService.findByRoute(routeId, tenantId);
         for (RouteStopEntity stop : stops) {
             boolean terminal = stop.getStopPurpose() != null && stop.getStopPurpose().isTerminal();
-            int boarding = terminal ? 0 : boardingByStop.getOrDefault(stop.getId(), 0);
-            int dropoff = terminal ? 0 : dropoffByStop.getOrDefault(stop.getId(), 0);
+            RouteStopStudentCountProjection counts = countsByStop.get(stop.getId());
+            int boarding = terminal || counts == null || counts.getBoardingCount() == null
+                    ? 0 : counts.getBoardingCount();
+            int dropoff = terminal || counts == null || counts.getDropoffCount() == null
+                    ? 0 : counts.getDropoffCount();
             stop.setPlannedBoardingCount(boarding);
             stop.setPlannedDropoffCount(dropoff);
             stop.setEstimatedStudentCount(boarding + dropoff);
@@ -725,22 +738,14 @@ public class RouteGreedyFillService {
     }
 
     private void normalizeTerminalMetadata(RouteContext context, Long actorId) {
-        applyTerminalLocation(context.getStartTerminal(), context.getRoute(), true, actorId);
-        applyTerminalLocation(context.getEndTerminal(), context.getRoute(), false, actorId);
+        applyTerminalLocation(context.getStartTerminal(), true, actorId);
+        applyTerminalLocation(context.getEndTerminal(), false, actorId);
     }
 
     private void applyTerminalLocation(RouteStopEntity terminal,
-                                       RoutePlanEntity route,
                                        boolean start,
                                        Long actorId) {
-        RouteLocationType type = start ? route.getStartLocationType() : route.getEndLocationType();
-        terminal.setLocationType(type);
         terminal.setStopPurpose(start ? RouteStopPurpose.START_TERMINAL : RouteStopPurpose.END_TERMINAL);
-        terminal.setPickupPoint(null);
-        terminal.setSchool(type == RouteLocationType.SCHOOL
-                ? (start ? route.getStartSchool() : route.getEndSchool()) : null);
-        terminal.setDepot(type == RouteLocationType.DEPOT
-                ? (start ? route.getStartDepot() : route.getEndDepot()) : null);
         terminal.setEstimatedStudentCount(0);
         terminal.setPlannedBoardingCount(0);
         terminal.setPlannedDropoffCount(0);
@@ -772,15 +777,14 @@ public class RouteGreedyFillService {
     }
 
     private RoutePlanStudentEntity buildRouteStudent(RouteContext context,
-                                                     StudentSubscriptionEntity subscription,
+                                                     StudentCandidate candidate,
                                                      RouteStopEntity serviceStop,
                                                      Long tenantId,
                                                      Long actorId) {
         RoutePlanStudentEntity assignment = new RoutePlanStudentEntity();
         assignment.markCreated(tenantId, actor(actorId));
         assignment.setRoute(context.getRoute());
-        assignment.setStudent(subscription.getStudent());
-        assignment.setSubscription(subscription);
+        assignment.setSubscription(subscriptionRepository.getReferenceById(candidate.getSubscriptionId()));
         if (context.getDirection() == RouteDirection.OUTBOUND) {
             assignment.setPickupStop(serviceStop);
             assignment.setDropoffStop(context.getEndTerminal());

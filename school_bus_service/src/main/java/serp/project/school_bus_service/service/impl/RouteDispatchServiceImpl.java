@@ -1,6 +1,7 @@
 package serp.project.school_bus_service.service.impl;
 
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.request.ManualDispatchRequest;
@@ -34,6 +35,7 @@ import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -43,6 +45,8 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
     // Sentinel window used when a route has no planned times — covers the full day
     private static final LocalTime DAY_START = LocalTime.of(0, 0);
     private static final LocalTime DAY_END   = LocalTime.of(23, 59, 59);
+    private static final List<RouteAssignmentStatus> CURRENT_ASSIGNMENT_STATUSES =
+            List.of(RouteAssignmentStatus.ASSIGNED, RouteAssignmentStatus.CONFIRMED);
 
     private final RouteAssignmentRepository routeAssignmentRepository;
     private final IRouteService routeService;
@@ -83,6 +87,42 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         return routeAssignmentRepository;
     }
 
+    @Override
+    @Transactional
+    public RouteAssignmentEntity reserveBusForRoute(Long routeId, Long busId, Long tenantId, Long actorId) {
+        RoutePlanEntity route = routeService.getRouteEntity(routeId, tenantId);
+        if (busId == null) {
+            throw new AppException(AppErrorCode.Dispatch.BUS_REQUIRED,
+                    messageCommon.getMessage(AppErrorCode.Dispatch.BUS_REQUIRED));
+        }
+        BusEntity bus = busService.getBus(busId, tenantId);
+        validateBusAvailable(bus);
+
+        String capacityWarning = checkCapacity(route, bus);
+        if (capacityWarning != null) {
+            throw new AppException(AppErrorCode.Bus.CAPACITY_EXCEEDED, capacityWarning);
+        }
+
+        LocalTime windowStart = route.getPlannedStartTime() != null ? route.getPlannedStartTime() : DAY_START;
+        LocalTime windowEnd = route.getPlannedEndTime() != null ? route.getPlannedEndTime() : DAY_END;
+        validateTimeWindowConflicts(routeId, route.getServiceDate(), bus.getId(), null, null,
+                windowStart, windowEnd, tenantId);
+
+        RouteAssignmentEntity assignment = findAssignmentEntityByRoute(routeId, tenantId)
+                .orElseGet(RouteAssignmentEntity::new);
+        if (assignment.getId() == null) {
+            assignment.markCreated(tenantId, actor(actorId));
+            assignment.setRoute(route);
+            assignment.setAssignedAt(LocalDateTime.now());
+            assignment.setAssignedBy(actorId);
+            assignment.setStatus(RouteAssignmentStatus.ASSIGNED);
+        } else {
+            assignment.markUpdated(actor(actorId));
+        }
+        assignment.setBus(bus);
+        return routeAssignmentRepository.save(assignment);
+    }
+
     // ── Assign route (Phase 3 — strict PUBLISHED gate) ───────────────────────
 
     @Override
@@ -98,15 +138,11 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
         }
 
         // Load resources first — validates they exist and belong to tenant
-        BusEntity bus = route.getSelectedBus();
-        if (bus == null) {
+        if (request.getBusId() == null) {
             throw new AppException(AppErrorCode.Dispatch.BUS_REQUIRED,
                     messageCommon.getMessage(AppErrorCode.Dispatch.BUS_REQUIRED));
         }
-        if (request.getBusId() != null && !request.getBusId().equals(bus.getId())) {
-            throw new AppException(AppErrorCode.Dispatch.CANNOT_CHANGE_BUS,
-                    messageCommon.getMessage(AppErrorCode.Dispatch.CANNOT_CHANGE_BUS));
-        }
+        BusEntity bus = busService.getBus(request.getBusId(), tenantId);
         DriverProfileEntity driver = driverService.getDriver(request.getDriverId(), tenantId);
         BusAttendantProfileEntity attendant = request.getAttendantId() == null ? null
                 : attendantService.getAttendant(request.getAttendantId(), tenantId);
@@ -131,8 +167,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
                 windowStart, windowEnd, tenantId);
 
         // 6 — Upsert assignment
-        RouteAssignmentEntity assignment = routeAssignmentRepository
-                .findByRouteIdAndTenantIdAndIsDeletedFalse(routeId, tenantId)
+        RouteAssignmentEntity assignment = findAssignmentEntityByRoute(routeId, tenantId)
                 .orElseGet(RouteAssignmentEntity::new);
 
         boolean isNew = assignment.getId() == null;
@@ -162,7 +197,6 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
 
         // 7 — Update route status + capacity
         route.setStatus(RouteStatus.ASSIGNED);
-        route.setAssignedBusCapacity(bus.getCapacity());
         route.markUpdated(actor(actorId));
         routeService.saveRouteEntity(route);
 
@@ -293,7 +327,7 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
             throw new AppException(AppErrorCode.Dispatch.BUS_TIME_CONFLICT,
                     messageCommon.getMessage(AppErrorCode.Dispatch.BUS_TIME_CONFLICT));
         }
-        if (!routeAssignmentRepository
+        if (driverId != null && !routeAssignmentRepository
                 .findDriverConflicts(tenantId, driverId, routeId, serviceDate, windowStart, windowEnd)
                 .isEmpty()) {
             throw new AppException(AppErrorCode.Dispatch.DRIVER_TIME_CONFLICT,
@@ -309,6 +343,12 @@ public class RouteDispatchServiceImpl extends AbstractBaseService<RouteAssignmen
 
     @Override
     public Optional<RouteAssignmentEntity> findAssignmentEntityByRoute(Long routeId, Long tenantId) {
-        return routeAssignmentRepository.findByRouteIdAndTenantIdAndIsDeletedFalse(routeId, tenantId);
+        return routeAssignmentRepository.findCurrentByRoute(
+                        routeId,
+                        tenantId,
+                        CURRENT_ASSIGNMENT_STATUSES,
+                        PageRequest.of(0, 1))
+                .stream()
+                .findFirst();
     }
 }

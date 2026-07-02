@@ -60,7 +60,6 @@ import serp.project.first_mile.repository.specification.PostOfficeSpecification;
 import serp.project.first_mile.kernel.utils.ExcelTemplateUtils;
 import serp.project.first_mile.kafka.HubPostOfficeSyncEventPublisher;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
-import serp.project.first_mile.kernel.utils.TransactionAfterCommit;
 import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.PostOfficeImportExcelService;
@@ -271,11 +270,11 @@ public class PostOfficeServiceImpl implements PostOfficeService {
         Long tenantIdForSync = updated.getTenantId();
         String postOfficeCodeForSync = updated.getCode();
         Long hubIdForSync = hubId;
-        TransactionAfterCommit.run(() -> publishHubPostOfficeSyncFromFirstMile(
+        publishHubPostOfficeSyncFromFirstMile(
                 tenantIdForSync,
                 postOfficeCodeForSync,
                 hubIdForSync
-        ));
+        );
 
         return PostOfficeMapper.toResponse(updated);
     }

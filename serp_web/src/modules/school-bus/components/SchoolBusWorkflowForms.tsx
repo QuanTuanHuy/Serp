@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -93,7 +93,7 @@ export function SchoolBusFormSection({
   );
 }
 
-/** Blocking: missing required field → cannot save.
+/** Blocking: missing required field -> cannot save.
  *  Needs-config: all required fields present but approval blocker exists (missing window / coords).
  *  Ready: fully configured, can be approved. */
 type RowReadiness =
@@ -109,7 +109,7 @@ function getRowReadiness(
   needsTarget: boolean,
   requiresRouting: boolean
 ): RowReadiness {
-  // ── Blocking checks ────────────────────────────────────────────────
+  // -- Blocking checks ------------------------------------------------
   if (!sv.studentId || Number(sv.studentId) === 0) return 'missing-student';
 
   if (!requiresRouting) {
@@ -167,7 +167,7 @@ function RowStatusBadge({ readiness }: { readiness: RowReadiness }) {
       className: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
     },
   };
-  const cfg = configs[readiness] ?? configs.ready;
+  const cfg = configs[readiness] || configs.ready;
   return (
     <span
       className={cn(
@@ -322,6 +322,7 @@ const rejectSchema = z.object({
 });
 
 const assignmentSchema = z.object({
+  busId: z.coerce.number().min(1, 'Bus is required'),
   driverId: z.coerce.number().min(1, 'Driver is required'),
   attendantId: z.string().optional(),
   assignmentNote: z.string().optional(),
@@ -371,7 +372,7 @@ function PickupDropoffPointsFields({
   const makePickupOptions = React.useMemo(
     () =>
       pickupCapablePoints.map((pp) => {
-        const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
+        const name: string = pp.pickupPointName || `Point #${pp.pickupPointId}`;
         return { value: String(pp.pickupPointId), label: name };
       }),
     [pickupCapablePoints]
@@ -380,7 +381,7 @@ function PickupDropoffPointsFields({
   const makeDropoffOptions = React.useMemo(
     () =>
       dropoffCapablePoints.map((pp) => {
-        const name: string = pp.pickupPointName ?? `Point #${pp.pickupPointId}`;
+        const name: string = pp.pickupPointName || `Point #${pp.pickupPointId}`;
         return { value: String(pp.pickupPointId), label: name };
       }),
     [dropoffCapablePoints]
@@ -450,13 +451,13 @@ export function TransportRequestForm({
         pickupPointId: item.pickupPointId ? String(item.pickupPointId) : '',
         dropoffPointId: item.dropoffPointId ? String(item.dropoffPointId) : '',
         tripOption: item.tripOption || '',
-        monday: item.monday ?? true,
-        tuesday: item.tuesday ?? true,
-        wednesday: item.wednesday ?? true,
-        thursday: item.thursday ?? true,
-        friday: item.friday ?? true,
-        saturday: item.saturday ?? false,
-        sunday: item.sunday ?? false,
+        monday: item.monday || true,
+        tuesday: item.tuesday || true,
+        wednesday: item.wednesday || true,
+        thursday: item.thursday || true,
+        friday: item.friday || true,
+        saturday: item.saturday || false,
+        sunday: item.sunday || false,
         targetSubscriptionId: item.targetSubscriptionId
           ? String(item.targetSubscriptionId)
           : '',
@@ -469,9 +470,9 @@ export function TransportRequestForm({
     resolver: zodResolver(transportRequestSchema) as any,
     defaultValues: {
       parentProfileId:
-        initialData?.request.parentProfileId ??
-        (isParentRole ? (currentParentId ?? 0) : (parents[0]?.id ?? 0)),
-      schoolId: initialData?.request.schoolId ?? schools[0]?.id ?? 0,
+        initialData?.request.parentProfileId ||
+        (isParentRole ? (currentParentId || 0) : (parents[0]?.id || 0)),
+      schoolId: initialData?.request.schoolId || schools[0]?.id || 0,
       requestType:
         initialData?.request.requestType || REQUEST_TYPE_OPTIONS[0].value,
       effectiveFrom: initialData?.request.effectiveFrom || '',
@@ -481,19 +482,19 @@ export function TransportRequestForm({
       students: initialData?.students
         ? mapStudentDefaults(initialData.students)
         : [EMPTY_STUDENT],
-      isActive: initialData?.request.isActive ?? true,
+      isActive: initialData?.request.isActive || true,
     },
   });
 
   // Reset form ONLY when initialData changes (edit mode data arrives or is cleared).
-  // Do NOT include parents/schools in deps — they are option lists only.
+  // Do NOT include parents/schools in deps - they are option lists only.
   // Including them caused re-reset after async API data loaded, destroying user input.
   React.useEffect(() => {
     form.reset({
       parentProfileId:
-        initialData?.request.parentProfileId ??
-        (isParentRole ? (currentParentId ?? 0) : 0),
-      schoolId: initialData?.request.schoolId ?? 0,
+        initialData?.request.parentProfileId ||
+        (isParentRole ? (currentParentId || 0) : 0),
+      schoolId: initialData?.request.schoolId || 0,
       requestType:
         initialData?.request.requestType || REQUEST_TYPE_OPTIONS[0].value,
       effectiveFrom: initialData?.request.effectiveFrom || '',
@@ -503,7 +504,7 @@ export function TransportRequestForm({
       students: initialData?.students
         ? mapStudentDefaults(initialData.students)
         : [EMPTY_STUDENT],
-      isActive: initialData?.request.isActive ?? true,
+      isActive: initialData?.request.isActive || true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
@@ -592,13 +593,13 @@ export function TransportRequestForm({
     prevSchoolParentRef.current = { schoolId, parentProfileId };
   }, [schoolId, parentProfileId, form]);
 
-  // ── Load linked pickup points reactively per school ───────────────
+  // -- Load linked pickup points reactively per school ---------------
   const { data: linkedPPData } = useGetActiveSchoolPickupPointsQuery(
     Number(schoolId),
     { skip: !schoolId || Number(schoolId) === 0 }
   );
   const linkedPickupPoints = React.useMemo(
-    () => linkedPPData?.data ?? [],
+    () => linkedPPData?.data || [],
     [linkedPPData]
   );
   // Map to SchoolBusPickupPoint-compatible format for the map component
@@ -625,7 +626,7 @@ export function TransportRequestForm({
     [linkedPickupPoints]
   );
 
-  // ── Load subscriptions reactively ───────────────────
+  // -- Load subscriptions reactively -------------------
   const { data: subscriptionsData } = useGetSchoolBusSubscriptionsQuery(
     { ...SCHOOL_BUS_OPTION_QUERY, schoolId: Number(schoolId) } as any,
     { skip: !schoolId || Number(schoolId) === 0 }
@@ -635,7 +636,7 @@ export function TransportRequestForm({
     [subscriptionsData]
   );
 
-  // ── Reset school-dependent fields when school changes ─────────────
+  // -- Reset school-dependent fields when school changes -------------
   const prevSchoolIdRef = React.useRef(schoolId);
   React.useEffect(() => {
     if (
@@ -663,8 +664,8 @@ export function TransportRequestForm({
   React.useEffect(() => {
     allStudentValues.forEach((sv, idx) => {
       const rawId = sv.studentId;
-      const currentKey = String(rawId ?? '');
-      const prevKey = String(prevStudentIdRef.current[idx] ?? '');
+      const currentKey = String(rawId || '');
+      const prevKey = String(prevStudentIdRef.current[idx] || '');
 
       // A valid id is non-empty and not '0'
       const isValidId =
@@ -692,16 +693,16 @@ export function TransportRequestForm({
           return {
             id: found.studentId,
             fullName: found.studentName,
-            schoolId: initialData?.request?.schoolId ?? 0,
-            parentProfileId: initialData?.request?.parentProfileId ?? 0,
-            pickupPointId: found.pickupPointId ?? undefined,
-            defaultDropoffPointId: found.dropoffPointId ?? undefined,
+            schoolId: initialData?.request?.schoolId || 0,
+            parentProfileId: initialData?.request?.parentProfileId || 0,
+            pickupPointId: found.pickupPointId || undefined,
+            defaultDropoffPointId: found.dropoffPointId || undefined,
           } as SchoolBusStudent;
         })();
       if (!st) return;
 
       // Auto-fill pickup from student default (entity field: pickup_point_id)
-      const defaultPickup = st.pickupPointId ?? null;
+      const defaultPickup = st.pickupPointId || null;
       const currentPickup = sv.pickupPointId;
       if (
         defaultPickup &&
@@ -714,7 +715,7 @@ export function TransportRequestForm({
       }
 
       // Auto-fill dropoff from student default (entity field: default_dropoff_point_id)
-      const defaultDropoff = st.defaultDropoffPointId ?? null;
+      const defaultDropoff = st.defaultDropoffPointId || null;
       const currentDropoff = sv.dropoffPointId;
       if (
         defaultDropoff &&
@@ -735,7 +736,7 @@ export function TransportRequestForm({
     // Rerun when any studentId in any row changes, or when student list (option data) updates
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    JSON.stringify(allStudentValues.map((s) => String(s.studentId ?? ''))),
+    JSON.stringify(allStudentValues.map((s) => String(s.studentId || ''))),
     students,
   ]);
 
@@ -779,7 +780,7 @@ export function TransportRequestForm({
   const handleFitAll = () => setFitAllKey((k) => k + 1);
   const handleFitSelected = () => setFitSelectedKey((k) => k + 1);
 
-  // ── Filter linked pickup points by usage type per trip option ─────
+  // -- Filter linked pickup points by usage type per trip option -----
   const pickupCapablePoints = React.useMemo(
     () =>
       linkedPickupPoints.filter((lp) => {
@@ -797,7 +798,7 @@ export function TransportRequestForm({
     [linkedPickupPoints]
   );
 
-  // ── Build student markers for the map ─────────────────────────────
+  // -- Build student markers for the map -----------------------------
   const studentMarkers = React.useMemo<StudentMapMarker[]>(() => {
     const markers: StudentMapMarker[] = [];
     allStudentValues.forEach((sv, idx) => {
@@ -850,7 +851,7 @@ export function TransportRequestForm({
     selectedSchool?.id || selectedPickupPointId || selectedDropoffPointId
   );
 
-  // ── Smart point selection handler from map click ──────────────────
+  // -- Smart point selection handler from map click ------------------
   const handleMapPointSelect = React.useCallback(
     (pickupPointId: number) => {
       const opt = (activeTripOption || '').toUpperCase();
@@ -861,7 +862,7 @@ export function TransportRequestForm({
           { shouldDirty: true }
         );
       } else {
-        // MORNING, ROUND_TRIP, or default — set pickup
+        // MORNING, ROUND_TRIP, or default - set pickup
         form.setValue(
           `students.${activeStudentIndex}.pickupPointId`,
           String(pickupPointId),
@@ -872,8 +873,8 @@ export function TransportRequestForm({
     [form, activeStudentIndex, activeTripOption]
   );
 
-  // ── Single source of truth: compute readiness for each student row ──
-  // MUST NOT be wrapped in useMemo — form.watch('students') can return the same
+  // -- Single source of truth: compute readiness for each student row --
+  // MUST NOT be wrapped in useMemo - form.watch('students') can return the same
   // array reference even after RHF mutates internal state in-place, causing a
   // stale memo hit. Direct computation on each render is always fresh.
   const rowReadinessList: RowReadiness[] = allStudentValues.map((sv) =>
@@ -983,7 +984,7 @@ export function TransportRequestForm({
                     : 'grid-cols-1 md:grid-cols-3'
                 )}
               >
-                {/* Parent dropdown — hidden for SCHOOL_BUS_PARENT role (backend resolves from token) */}
+                {/* Parent dropdown - hidden for SCHOOL_BUS_PARENT role (backend resolves from token) */}
                 {!isParentRole && (
                   <SelectField
                     form={form}
@@ -1040,7 +1041,7 @@ export function TransportRequestForm({
                       <FormControl>
                         <Textarea
                           {...field}
-                          value={field.value ?? ''}
+                          value={field.value || ''}
                           rows={2}
                           className='text-sm'
                         />
@@ -1089,7 +1090,7 @@ export function TransportRequestForm({
                         </span>
                         <RowStatusBadge
                           readiness={
-                            rowReadinessList[index] ?? 'missing-student'
+                            rowReadinessList[index] || 'missing-student'
                           }
                         />
                       </div>
@@ -1182,7 +1183,7 @@ export function TransportRequestForm({
                           emptyLabel='No target'
                           options={filteredSubscriptions.map((s) => ({
                             value: String(s.id),
-                            label: `${s.subscriptionCode} — ${s.studentName}`,
+                            label: `${s.subscriptionCode} - ${s.studentName}`,
                           }))}
                         />
                       </div>
@@ -1239,7 +1240,7 @@ export function TransportRequestForm({
                           <FormControl>
                             <Input
                               {...noteField}
-                              value={noteField.value ?? ''}
+                              value={noteField.value || ''}
                               placeholder='Optional note for this student'
                               className='text-xs'
                             />
@@ -1270,20 +1271,20 @@ export function TransportRequestForm({
                     {validationSummary.readyCount ===
                       validationSummary.totalCount &&
                     validationSummary.isAllReady
-                      ? ' · All ready'
+                      ? ' - All ready'
                       : validationSummary.needsConfigCount > 0
-                        ? ' ready · ' +
+                        ? ' ready - ' +
                           validationSummary.needsConfigCount +
                           ' need config'
                         : ' ready'}
                   </span>
                 </div>
 
-                {/* Blocking issues — prevent save */}
+                {/* Blocking issues - prevent save */}
                 {validationSummary.blockingMessages.length > 0 && (
                   <div className='space-y-1'>
                     <p className='font-bold text-red-700 uppercase text-[10px] tracking-wider'>
-                      Missing required fields — prevent submission:
+                      Missing required fields - prevent submission:
                     </p>
                     <ul className='list-disc list-inside space-y-1 text-[11px] font-medium'>
                       {validationSummary.blockingMessages.map((msg, i) => (
@@ -1293,11 +1294,11 @@ export function TransportRequestForm({
                   </div>
                 )}
 
-                {/* Approval blockers — can save, but cannot approve */}
+                {/* Approval blockers - can save, but cannot approve */}
                 {validationSummary.approvalBlockerMessages.length > 0 && (
                   <div className='space-y-1 pt-1'>
                     <p className='font-bold text-amber-700 uppercase text-[10px] tracking-wider'>
-                      Configuration required — can save but cannot approve:
+                      Configuration required - can save but cannot approve:
                     </p>
                     <ul className='list-disc list-inside space-y-1 text-[11px] font-medium text-amber-800'>
                       {validationSummary.approvalBlockerMessages.map(
@@ -1314,7 +1315,7 @@ export function TransportRequestForm({
                   validationSummary.blockingMessages.length === 0 &&
                   validationSummary.approvalBlockerMessages.length === 0 && (
                     <p className='text-[11px] font-medium text-emerald-700'>
-                      ✓ All students are fully configured and ready for
+                      OK All students are fully configured and ready for
                       transport planning.
                     </p>
                   )}
@@ -1436,7 +1437,7 @@ export function TransportRequestForm({
                         </div>
                         <div className='pt-2.5 border-t border-slate-100'>
                           <p className='text-[10px] text-slate-400 italic leading-relaxed'>
-                            💡 Click a map marker to assign it to this row as{' '}
+                             Click a map marker to assign it to this row as{' '}
                             {activeTripOption === 'AFTERNOON'
                               ? 'Drop-off'
                               : 'Pickup'}
@@ -1457,7 +1458,7 @@ export function TransportRequestForm({
 
             {!selectedSchoolLat || !selectedSchoolLng ? (
               <div className='rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3 text-xs text-amber-800 leading-relaxed shadow-sm'>
-                ⚠️ Missing coordinates: this school is not pinned yet, so only
+                Warning: Missing coordinates: this school is not pinned yet, so only
                 pickup points with coordinates will appear on the map.
               </div>
             ) : null}
@@ -1511,7 +1512,7 @@ export function RoutePlanForm({
   const form = useForm<RouteFormValues>({
     resolver: zodResolver(routeSchema) as any,
     defaultValues: {
-      schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
+      schoolId: initialData?.schoolId || schools[0]?.id || 0,
       routeDirection: initialData?.routeDirection || 'OUTBOUND',
       startLocationType: initialData?.startLocationType || 'SCHOOL',
       startDepotId:
@@ -1526,13 +1527,13 @@ export function RoutePlanForm({
       routeName: initialData?.routeName || '',
       serviceDate: initialData?.serviceDate || '',
       planningNotes: initialData?.planningNotes || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     },
   });
 
   React.useEffect(() => {
     form.reset({
-      schoolId: initialData?.schoolId ?? schools[0]?.id ?? 0,
+      schoolId: initialData?.schoolId || schools[0]?.id || 0,
       routeDirection: initialData?.routeDirection || 'OUTBOUND',
       startLocationType: initialData?.startLocationType || 'SCHOOL',
       startDepotId:
@@ -1547,7 +1548,7 @@ export function RoutePlanForm({
       routeName: initialData?.routeName || '',
       serviceDate: initialData?.serviceDate || '',
       planningNotes: initialData?.planningNotes || '',
-      isActive: initialData?.isActive ?? true,
+      isActive: initialData?.isActive || true,
     });
   }, [form, initialData, schools]);
 
@@ -1718,7 +1719,7 @@ export function RoutePlanForm({
             <FormItem>
               <FormLabel>Planning notes</FormLabel>
               <FormControl>
-                <Textarea {...field} value={field.value ?? ''} />
+                <Textarea {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -1792,7 +1793,7 @@ export function RejectTransportRequestDialog({
               <FormItem>
                 <FormLabel>Reason</FormLabel>
                 <FormControl>
-                  <Textarea {...field} value={field.value ?? ''} />
+                  <Textarea {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -1826,9 +1827,11 @@ interface RouteAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: {
+    busId?: number | null;
     driverId?: number | null;
     attendantId?: number | null;
   } | null;
+  buses: SchoolBusDropdownOption[];
   drivers: SchoolBusDropdownOption[];
   attendants: SchoolBusDropdownOption[];
   onSubmit: (values: SchoolBusRouteAssignmentRequest) => Promise<void>;
@@ -1839,6 +1842,7 @@ export function RouteAssignmentDialog({
   open,
   onOpenChange,
   initialData,
+  buses,
   drivers,
   attendants,
   onSubmit,
@@ -1847,7 +1851,8 @@ export function RouteAssignmentDialog({
   const form = useForm<AssignmentFormValues>({
     resolver: zodResolver(assignmentSchema) as any,
     defaultValues: {
-      driverId: initialData?.driverId ?? drivers[0]?.id ?? 0,
+      busId: initialData?.busId || buses[0]?.id || 0,
+      driverId: initialData?.driverId || drivers[0]?.id || 0,
       attendantId: initialData?.attendantId
         ? String(initialData.attendantId)
         : '',
@@ -1859,7 +1864,8 @@ export function RouteAssignmentDialog({
 
   React.useEffect(() => {
     form.reset({
-      driverId: initialData?.driverId ?? drivers[0]?.id ?? 0,
+      busId: initialData?.busId || buses[0]?.id || 0,
+      driverId: initialData?.driverId || drivers[0]?.id || 0,
       attendantId: initialData?.attendantId
         ? String(initialData.attendantId)
         : '',
@@ -1867,7 +1873,7 @@ export function RouteAssignmentDialog({
       reason: '',
       isActive: true,
     });
-  }, [form, initialData, drivers]);
+  }, [form, initialData, buses, drivers]);
 
   return (
     <SchoolBusFormDialog
@@ -1880,6 +1886,7 @@ export function RouteAssignmentDialog({
         <form
           onSubmit={form.handleSubmit(async (values) =>
             onSubmit({
+              busId: values.busId,
               driverId: values.driverId,
               attendantId: values.attendantId
                 ? Number(values.attendantId)
@@ -1892,6 +1899,15 @@ export function RouteAssignmentDialog({
           className='space-y-4'
         >
           <div className='grid gap-4 md:grid-cols-2'>
+            <SelectField
+              form={form}
+              name='busId'
+              label='Bus'
+              options={buses.map((bus) => ({
+                value: String(bus.id),
+                label: bus.label,
+              }))}
+            />
             <SelectField
               form={form}
               name='driverId'
@@ -1976,7 +1992,7 @@ function TextField({
               <Input
                 {...field}
                 type={type}
-                value={(field.value as string) ?? ''}
+                value={(field.value as string) || ''}
               />
             )}
           </FormControl>
@@ -2047,7 +2063,7 @@ function SelectField({
     return list;
   }, [options, allowEmpty, emptyLabel, emptyValue]);
 
-  const isSearchable = searchable ?? options.length > 6;
+  const isSearchable = searchable || options.length > 6;
 
   return (
     <FormField
@@ -2063,7 +2079,7 @@ function SelectField({
               size='md'
               className='h-11 rounded-xl w-full max-w-full text-slate-900 border-slate-200 shadow-sm'
               disabled={disabled}
-              value={String(field.value ?? (allowEmpty ? emptyValue : ''))}
+              value={String(field.value || (allowEmpty ? emptyValue : ''))}
               onChange={(value) => {
                 const val = value === emptyValue ? '' : value;
                 field.onChange(val);

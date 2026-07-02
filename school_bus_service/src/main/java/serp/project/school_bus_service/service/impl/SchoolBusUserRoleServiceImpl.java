@@ -10,10 +10,13 @@ import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class SchoolBusUserRoleServiceImpl extends AbstractBaseService<SchoolBusUserRoleEntity, Long>
@@ -39,17 +42,43 @@ public class SchoolBusUserRoleServiceImpl extends AbstractBaseService<SchoolBusU
             return;
         }
 
-        schoolBusUserRoleRepository.deleteBySchoolBusUserId(user.getId());
-
         Set<String> normalizedRoles = normalizeRoles(roleNames);
-        if (normalizedRoles.isEmpty()) {
-            return;
+        List<SchoolBusUserRoleEntity> existingRoles =
+                schoolBusUserRoleRepository.findAllBySchoolBusUserIdAndTenantId(user.getId(), user.getTenantId());
+        Map<String, SchoolBusUserRoleEntity> existingByRole = existingRoles.stream()
+                .collect(Collectors.toMap(
+                        SchoolBusUserRoleEntity::getRoleName,
+                        Function.identity(),
+                        (first, ignored) -> first));
+
+        List<SchoolBusUserRoleEntity> rolesToSave = new java.util.ArrayList<>();
+
+        for (SchoolBusUserRoleEntity existingRole : existingRoles) {
+            if (!normalizedRoles.contains(existingRole.getRoleName())
+                    && !Boolean.TRUE.equals(existingRole.getIsDeleted())) {
+                existingRole.markSoftDeleted("SYSTEM");
+                existingRole.setIsActive(false);
+                rolesToSave.add(existingRole);
+            }
         }
 
-        List<SchoolBusUserRoleEntity> entities = normalizedRoles.stream()
-                .map(roleName -> createRole(user, roleName))
-                .toList();
-        schoolBusUserRoleRepository.saveAll(entities);
+        for (String roleName : normalizedRoles) {
+            SchoolBusUserRoleEntity existingRole = existingByRole.get(roleName);
+            if (existingRole == null) {
+                rolesToSave.add(createRole(user, roleName));
+                continue;
+            }
+            if (Boolean.TRUE.equals(existingRole.getIsDeleted()) || Boolean.FALSE.equals(existingRole.getIsActive())) {
+                existingRole.setIsDeleted(false);
+                existingRole.setIsActive(true);
+                existingRole.markUpdated("SYSTEM");
+                rolesToSave.add(existingRole);
+            }
+        }
+
+        if (!rolesToSave.isEmpty()) {
+            schoolBusUserRoleRepository.saveAll(rolesToSave);
+        }
     }
 
     @Override
