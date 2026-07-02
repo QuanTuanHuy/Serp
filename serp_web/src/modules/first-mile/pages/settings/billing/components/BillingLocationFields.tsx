@@ -43,7 +43,7 @@ export const BillingLocationFields: React.FC<BillingLocationFieldsProps> = ({
       <div className='grid gap-3 md:grid-cols-2'>
         <div className='space-y-2'>
           <Label htmlFor={provinceId} className='text-xs'>
-            Province
+            Tỉnh/Thành phố
           </Label>
           <TmsCombobox
             id={provinceId}
@@ -51,16 +51,16 @@ export const BillingLocationFields: React.FC<BillingLocationFieldsProps> = ({
             onValueChange={onProvinceChange}
             options={provinceOptions}
             placeholder={
-              isFetchingProvinces ? 'Loading provinces...' : 'Select province'
+              isFetchingProvinces ? 'Đang tải tỉnh/thành...' : 'Chọn tỉnh/thành'
             }
-            emptyText='No provinces found'
+            emptyText='Không tìm thấy tỉnh/thành'
             loading={isFetchingProvinces}
           />
         </div>
 
         <div className='space-y-2'>
           <Label htmlFor={wardId} className='text-xs'>
-            Ward
+            Phường/Xã
           </Label>
           <TmsCombobox
             id={wardId}
@@ -69,12 +69,12 @@ export const BillingLocationFields: React.FC<BillingLocationFieldsProps> = ({
             options={wardOptions}
             placeholder={
               !hasProvince
-                ? 'Select province first'
+                ? 'Chọn tỉnh/thành trước'
                 : isFetchingWards
-                  ? 'Loading wards...'
-                  : 'Select ward'
+                  ? 'Đang tải phường/xã...'
+                  : 'Chọn phường/xã'
             }
-            emptyText='No wards found'
+            emptyText='Không tìm thấy phường/xã'
             disabled={!hasProvince}
             loading={isFetchingWards}
           />

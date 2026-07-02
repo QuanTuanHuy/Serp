@@ -39,10 +39,10 @@ export const useSurchargeRuleForm = () => {
         buildUpsertSurchargeRuleRequest(form)
       ).unwrap();
       setLastSaved(response);
-      notification.success('Surcharge rule saved successfully.');
+      notification.success('Đã lưu quy tắc phụ phí.');
       return true;
     } catch (error) {
-      notification.error('Unable to save surcharge rule.', {
+      notification.error('Không thể lưu quy tắc phụ phí.', {
         description: getErrorMessage(error),
       });
       return false;

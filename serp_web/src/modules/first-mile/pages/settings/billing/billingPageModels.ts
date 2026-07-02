@@ -8,14 +8,11 @@ import type {
   BillingDeliveryService,
   BillingRouteType,
   BillingSurchargeRuleCode,
-  BillingVasRuleCode,
   CalculateShippingFeeRequest,
   SurchargeRuleAdminResponse,
   TariffAdminResponse,
   UpsertSurchargeRuleRequest,
   UpsertTariffRequest,
-  UpsertVasRuleRequest,
-  VasRuleAdminResponse,
 } from '../../../types';
 
 export interface BillingFormState {
@@ -28,7 +25,6 @@ export interface BillingFormState {
   lengthCm: string;
   widthCm: string;
   heightCm: string;
-  codAmount: string;
 }
 
 export interface BillingSelectOption {
@@ -46,7 +42,6 @@ export const DEFAULT_BILLING_FORM: BillingFormState = {
   lengthCm: '',
   widthCm: '',
   heightCm: '',
-  codAmount: '',
 };
 
 export const DELIVERY_SERVICE_OPTIONS: Array<{
@@ -56,17 +51,17 @@ export const DELIVERY_SERVICE_OPTIONS: Array<{
 }> = [
   {
     value: 'TIEU_CHUAN',
-    label: 'Standard',
-    description: 'Suitable for regular shipments with optimized cost.',
+    label: 'Tiêu chuẩn',
+    description: 'Phù hợp với đơn hàng thông thường, tối ưu chi phí.',
   },
 ];
 
 const ROUTE_TYPE_LABELS: Record<BillingRouteType, string> = {
-  NOI_TINH_NOI_CUM: 'Intra-province (same cluster)',
-  NOI_TINH_LIEN_CUM: 'Intra-province (cross-cluster)',
-  NOI_MIEN: 'Intra-region',
-  LIEN_MIEN: 'Inter-region',
-  LIEN_MIEN_DAC_BIET: 'Special inter-region',
+  NOI_TINH_NOI_CUM: 'Nội tỉnh cùng cụm',
+  NOI_TINH_LIEN_CUM: 'Nội tỉnh liên cụm',
+  NOI_MIEN: 'Nội miền',
+  LIEN_MIEN: 'Liên miền',
+  LIEN_MIEN_DAC_BIET: 'Liên miền đặc biệt',
 };
 
 export const getRouteTypeLabel = (value: BillingRouteType): string => {
@@ -74,6 +69,15 @@ export const getRouteTypeLabel = (value: BillingRouteType): string => {
 };
 
 export const normalizeCategoryLabel = (value: string): string => {
+  const categoryLabels: Record<string, string> = {
+    BASE: 'Phí cơ bản',
+    SURCHARGE: 'Phụ phí',
+  };
+  const normalizedKey = value.trim().toUpperCase();
+  if (categoryLabels[normalizedKey]) {
+    return categoryLabels[normalizedKey];
+  }
+
   return value
     .trim()
     .toLowerCase()
@@ -89,22 +93,7 @@ const parseRequiredPositiveNumber = (
   const parsed = Number(normalized);
 
   if (!normalized || !Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`${fieldLabel} must be a positive number.`);
-  }
-
-  return parsed;
-};
-
-const parseOptionalNonNegativeNumber = (value: string): number | undefined => {
-  const normalized = value.trim();
-
-  if (!normalized) {
-    return undefined;
-  }
-
-  const parsed = Number(normalized);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error('COD amount must be a number greater than or equal to 0.');
+    throw new Error(`${fieldLabel} phải là số dương.`);
   }
 
   return parsed;
@@ -124,7 +113,7 @@ export const buildCalculateRequest = (
     !receiverProvinceCode ||
     !receiverWardCode
   ) {
-    throw new Error('Please select sender/receiver province and ward.');
+    throw new Error('Vui lòng chọn tỉnh/thành và phường/xã gửi, nhận.');
   }
 
   return {
@@ -133,12 +122,11 @@ export const buildCalculateRequest = (
     receiverWardCode,
     actualWeightGram: parseRequiredPositiveNumber(
       form.actualWeightGram,
-      'Actual weight'
+      'Trọng lượng thực'
     ),
-    lengthCm: parseRequiredPositiveNumber(form.lengthCm, 'Length'),
-    widthCm: parseRequiredPositiveNumber(form.widthCm, 'Width'),
-    heightCm: parseRequiredPositiveNumber(form.heightCm, 'Height'),
-    codAmount: parseOptionalNonNegativeNumber(form.codAmount),
+    lengthCm: parseRequiredPositiveNumber(form.lengthCm, 'Chiều dài'),
+    widthCm: parseRequiredPositiveNumber(form.widthCm, 'Chiều rộng'),
+    heightCm: parseRequiredPositiveNumber(form.heightCm, 'Chiều cao'),
   };
 };
 
@@ -188,7 +176,7 @@ export interface SurchargeRuleFormState {
 
 export const DEFAULT_SURCHARGE_FORM: SurchargeRuleFormState = {
   code: 'VUNG_XA',
-  name: 'Remote area surcharge',
+  name: 'Phụ phí vùng xa',
   calculationType: 'STEP_WEIGHT',
   ratePercent: '',
   fixedAmount: '',
@@ -199,24 +187,6 @@ export const DEFAULT_SURCHARGE_FORM: SurchargeRuleFormState = {
   stepPrice: '500',
   effectiveDate: '2025-07-10',
   expirationDate: '',
-};
-
-export interface VasRuleFormState {
-  code: BillingVasRuleCode;
-  name: string;
-  calculationType: BillingCalculationType;
-  ratePercent: string;
-  fixedAmount: string;
-  minAmount: string;
-}
-
-export const DEFAULT_VAS_FORM: VasRuleFormState = {
-  code: 'COD',
-  name: 'COD fee',
-  calculationType: 'FIXED_PER_ORDER',
-  ratePercent: '',
-  fixedAmount: '0',
-  minAmount: '',
 };
 
 const toFormNumber = (value?: number): string => {
@@ -256,26 +226,15 @@ export const surchargeResponseToForm = (
   expirationDate: rule.expirationDate ?? '',
 });
 
-export const vasResponseToForm = (
-  rule: VasRuleAdminResponse
-): VasRuleFormState => ({
-  code: rule.code,
-  name: rule.name,
-  calculationType: rule.calculationType,
-  ratePercent: toFormNumber(rule.ratePercent),
-  fixedAmount: toFormNumber(rule.fixedAmount),
-  minAmount: toFormNumber(rule.minAmount),
-});
-
 export const ROUTE_TYPE_OPTIONS: Array<{
   value: BillingRouteType;
   label: string;
 }> = [
-  { value: 'NOI_TINH_NOI_CUM', label: 'Intra-province (same cluster)' },
-  { value: 'NOI_TINH_LIEN_CUM', label: 'Intra-province (cross-cluster)' },
-  { value: 'NOI_MIEN', label: 'Intra-region' },
-  { value: 'LIEN_MIEN', label: 'Inter-region' },
-  { value: 'LIEN_MIEN_DAC_BIET', label: 'Special inter-region' },
+  { value: 'NOI_TINH_NOI_CUM', label: 'Nội tỉnh cùng cụm' },
+  { value: 'NOI_TINH_LIEN_CUM', label: 'Nội tỉnh liên cụm' },
+  { value: 'NOI_MIEN', label: 'Nội miền' },
+  { value: 'LIEN_MIEN', label: 'Liên miền' },
+  { value: 'LIEN_MIEN_DAC_BIET', label: 'Liên miền đặc biệt' },
 ];
 
 export const CALCULATION_TYPE_OPTIONS: Array<{
@@ -285,41 +244,45 @@ export const CALCULATION_TYPE_OPTIONS: Array<{
 }> = [
   {
     value: 'FIXED_PER_ORDER',
-    label: 'Fixed / Order',
-    helper: 'A fixed amount applied once per shipment.',
+    label: 'Cố định / đơn',
+    helper: 'Áp dụng một số tiền cố định cho mỗi đơn hàng.',
   },
   {
     value: 'FIXED_PER_KG',
-    label: 'Fixed / Kg',
-    helper: 'A fixed amount multiplied by weight.',
+    label: 'Cố định / kg',
+    helper: 'Số tiền cố định nhân theo trọng lượng.',
   },
   {
     value: 'PERCENTAGE',
-    label: 'Percentage',
-    helper: 'A percentage applied on the relevant base value.',
+    label: 'Phần trăm',
+    helper: 'Áp dụng tỷ lệ phần trăm trên giá trị cơ sở liên quan.',
   },
   {
     value: 'STEP_WEIGHT',
-    label: 'Step Weight',
+    label: 'Theo bước trọng lượng',
     helper:
-      'Base amount at a threshold plus step amount for each extra weight step.',
+      'Số tiền cơ bản tại ngưỡng ban đầu cộng thêm theo từng bước trọng lượng vượt ngưỡng.',
   },
 ];
+
+export const getCalculationTypeLabel = (
+  value: BillingCalculationType | string
+): string => {
+  return (
+    CALCULATION_TYPE_OPTIONS.find((option) => option.value === value)?.label ??
+    value
+  );
+};
 
 export const SURCHARGE_RULE_CODE_OPTIONS: Array<{
   value: BillingSurchargeRuleCode;
   label: string;
-}> = [{ value: 'VUNG_XA', label: 'Remote Area' }];
-
-export const VAS_RULE_CODE_OPTIONS: Array<{
-  value: BillingVasRuleCode;
-  label: string;
-}> = [{ value: 'COD', label: 'Cash On Delivery' }];
+}> = [{ value: 'VUNG_XA', label: 'Vùng xa' }];
 
 const parseRequiredDate = (value: string, fieldLabel: string): string => {
   const normalized = value.trim();
   if (!normalized) {
-    throw new Error(`${fieldLabel} is required.`);
+    throw new Error(`${fieldLabel} là bắt buộc.`);
   }
   return normalized;
 };
@@ -337,7 +300,7 @@ export const parseOptionalNumber = (value: string): number | undefined => {
 
   const parsed = Number(normalized);
   if (!Number.isFinite(parsed)) {
-    throw new Error('Numeric values must be valid numbers.');
+    throw new Error('Giá trị số phải là số hợp lệ.');
   }
   return parsed;
 };
@@ -348,11 +311,17 @@ export const buildUpsertTariffRequest = (
   return {
     serviceCode: form.serviceCode,
     routeTypeCode: form.routeTypeCode,
-    baseWeight: parseRequiredPositiveNumber(form.baseWeight, 'Base weight'),
-    basePrice: parseRequiredPositiveNumber(form.basePrice, 'Base price'),
-    stepWeight: parseRequiredPositiveNumber(form.stepWeight, 'Step weight'),
-    stepPrice: parseRequiredPositiveNumber(form.stepPrice, 'Step price'),
-    effectiveDate: parseRequiredDate(form.effectiveDate, 'Effective date'),
+    baseWeight: parseRequiredPositiveNumber(
+      form.baseWeight,
+      'Khối lượng cơ bản'
+    ),
+    basePrice: parseRequiredPositiveNumber(form.basePrice, 'Giá cơ bản'),
+    stepWeight: parseRequiredPositiveNumber(
+      form.stepWeight,
+      'Khối lượng mỗi bước'
+    ),
+    stepPrice: parseRequiredPositiveNumber(form.stepPrice, 'Giá mỗi bước'),
+    effectiveDate: parseRequiredDate(form.effectiveDate, 'Ngày hiệu lực'),
     expirationDate: parseOptionalDate(form.expirationDate),
   };
 };
@@ -362,7 +331,7 @@ export const buildUpsertSurchargeRuleRequest = (
 ): UpsertSurchargeRuleRequest => {
   const name = form.name.trim();
   if (!name) {
-    throw new Error('Surcharge name is required.');
+    throw new Error('Tên phụ phí là bắt buộc.');
   }
 
   return {
@@ -378,23 +347,5 @@ export const buildUpsertSurchargeRuleRequest = (
     stepPrice: parseOptionalNumber(form.stepPrice),
     effectiveDate: parseOptionalDate(form.effectiveDate),
     expirationDate: parseOptionalDate(form.expirationDate),
-  };
-};
-
-export const buildUpsertVasRuleRequest = (
-  form: VasRuleFormState
-): UpsertVasRuleRequest => {
-  const name = form.name.trim();
-  if (!name) {
-    throw new Error('VAS name is required.');
-  }
-
-  return {
-    code: form.code,
-    name,
-    calculationType: form.calculationType,
-    ratePercent: parseOptionalNumber(form.ratePercent),
-    fixedAmount: parseOptionalNumber(form.fixedAmount),
-    minAmount: parseOptionalNumber(form.minAmount),
   };
 };

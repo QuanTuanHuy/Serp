@@ -27,9 +27,9 @@ export const useBillingCalculator = () => {
     try {
       const payload = buildCalculateRequest(formValues);
       await calculateShippingFee(payload).unwrap();
-      notification.success('Shipping fee calculated successfully.');
+      notification.success('Tính phí vận chuyển thành công.');
     } catch (error) {
-      notification.error('Unable to calculate shipping fee.', {
+      notification.error('Không thể tính phí vận chuyển.', {
         description: getErrorMessage(error),
       });
     }

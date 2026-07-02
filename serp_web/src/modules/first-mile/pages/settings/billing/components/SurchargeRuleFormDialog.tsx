@@ -53,19 +53,17 @@ export const SurchargeRuleFormDialog: React.FC<
       <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-3xl'>
         <DialogHeader>
           <DialogTitle>
-            {mode === 'create'
-              ? 'Create Surcharge Rule'
-              : 'Edit Surcharge Rule'}
+            {mode === 'create' ? 'Tạo quy tắc phụ phí' : 'Sửa quy tắc phụ phí'}
           </DialogTitle>
           <DialogDescription>
-            Configure additional fee logic for remote-area deliveries.
+            Cấu hình logic phí bổ sung cho các đơn giao khu vực xa.
           </DialogDescription>
         </DialogHeader>
 
         <form className='space-y-4' onSubmit={onSubmit}>
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='surchargeCode'>Rule Code</Label>
+              <Label htmlFor='surchargeCode'>Mã quy tắc</Label>
               <TmsCombobox
                 id='surchargeCode'
                 value={form.code}
@@ -77,14 +75,14 @@ export const SurchargeRuleFormDialog: React.FC<
                   }))
                 }
                 options={SURCHARGE_RULE_CODE_OPTIONS}
-                placeholder='Select rule code'
-                emptyText='No rule codes found'
+                placeholder='Chọn mã quy tắc'
+                emptyText='Không tìm thấy mã quy tắc'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeName'>Display Name</Label>
+              <Label htmlFor='surchargeName'>Tên hiển thị</Label>
               <Input
                 id='surchargeName'
                 value={form.name}
@@ -94,13 +92,13 @@ export const SurchargeRuleFormDialog: React.FC<
                     name: event.target.value,
                   }))
                 }
-                placeholder='Example: Remote area surcharge'
+                placeholder='Ví dụ: Phụ phí vùng xa'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeCalculationType'>Calculation Type</Label>
+              <Label htmlFor='surchargeCalculationType'>Cách tính</Label>
               <TmsCombobox
                 id='surchargeCalculationType'
                 value={form.calculationType}
@@ -112,8 +110,8 @@ export const SurchargeRuleFormDialog: React.FC<
                   }))
                 }
                 options={CALCULATION_TYPE_OPTIONS}
-                placeholder='Select type'
-                emptyText='No calculation types found'
+                placeholder='Chọn cách tính'
+                emptyText='Không tìm thấy cách tính'
                 disabled={isLoading}
               />
               {calculationTypeHelper ? (
@@ -124,7 +122,7 @@ export const SurchargeRuleFormDialog: React.FC<
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeRatePercent'>Rate Percent</Label>
+              <Label htmlFor='surchargeRatePercent'>Tỷ lệ phần trăm</Label>
               <Input
                 id='surchargeRatePercent'
                 inputMode='decimal'
@@ -135,13 +133,13 @@ export const SurchargeRuleFormDialog: React.FC<
                     ratePercent: event.target.value,
                   }))
                 }
-                placeholder='Optional'
+                placeholder='Không bắt buộc'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeFixedAmount'>Fixed Amount</Label>
+              <Label htmlFor='surchargeFixedAmount'>Số tiền cố định</Label>
               <Input
                 id='surchargeFixedAmount'
                 inputMode='decimal'
@@ -152,13 +150,13 @@ export const SurchargeRuleFormDialog: React.FC<
                     fixedAmount: event.target.value,
                   }))
                 }
-                placeholder='Optional'
+                placeholder='Không bắt buộc'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeMinAmount'>Min Amount</Label>
+              <Label htmlFor='surchargeMinAmount'>Số tiền tối thiểu</Label>
               <Input
                 id='surchargeMinAmount'
                 inputMode='decimal'
@@ -169,13 +167,13 @@ export const SurchargeRuleFormDialog: React.FC<
                     minAmount: event.target.value,
                   }))
                 }
-                placeholder='Optional'
+                placeholder='Không bắt buộc'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeBaseWeight'>Base Weight</Label>
+              <Label htmlFor='surchargeBaseWeight'>Khối lượng cơ bản</Label>
               <Input
                 id='surchargeBaseWeight'
                 inputMode='decimal'
@@ -186,13 +184,13 @@ export const SurchargeRuleFormDialog: React.FC<
                     baseWeight: event.target.value,
                   }))
                 }
-                placeholder='Optional'
+                placeholder='Không bắt buộc'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeBasePrice'>Base Price</Label>
+              <Label htmlFor='surchargeBasePrice'>Giá cơ bản</Label>
               <Input
                 id='surchargeBasePrice'
                 inputMode='decimal'
@@ -203,13 +201,13 @@ export const SurchargeRuleFormDialog: React.FC<
                     basePrice: event.target.value,
                   }))
                 }
-                placeholder='Optional'
+                placeholder='Không bắt buộc'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeStepWeight'>Step Weight</Label>
+              <Label htmlFor='surchargeStepWeight'>Khối lượng mỗi bước</Label>
               <Input
                 id='surchargeStepWeight'
                 inputMode='decimal'
@@ -220,13 +218,13 @@ export const SurchargeRuleFormDialog: React.FC<
                     stepWeight: event.target.value,
                   }))
                 }
-                placeholder='Optional'
+                placeholder='Không bắt buộc'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeStepPrice'>Step Price</Label>
+              <Label htmlFor='surchargeStepPrice'>Giá mỗi bước</Label>
               <Input
                 id='surchargeStepPrice'
                 inputMode='decimal'
@@ -237,13 +235,13 @@ export const SurchargeRuleFormDialog: React.FC<
                     stepPrice: event.target.value,
                   }))
                 }
-                placeholder='Optional'
+                placeholder='Không bắt buộc'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeEffectiveDate'>Effective Date</Label>
+              <Label htmlFor='surchargeEffectiveDate'>Ngày hiệu lực</Label>
               <Input
                 id='surchargeEffectiveDate'
                 type='date'
@@ -259,7 +257,7 @@ export const SurchargeRuleFormDialog: React.FC<
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='surchargeExpirationDate'>Expiration Date</Label>
+              <Label htmlFor='surchargeExpirationDate'>Ngày hết hạn</Label>
               <Input
                 id='surchargeExpirationDate'
                 type='date'
@@ -282,18 +280,18 @@ export const SurchargeRuleFormDialog: React.FC<
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  Saving...
+                  Đang lưu...
                 </>
               ) : mode === 'create' ? (
-                'Create Surcharge Rule'
+                'Tạo quy tắc phụ phí'
               ) : (
-                'Save Changes'
+                'Lưu thay đổi'
               )}
             </Button>
           </DialogFooter>

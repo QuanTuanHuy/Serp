@@ -38,57 +38,51 @@ export const BillingCalculationResultCard: React.FC<
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Calculation Result</CardTitle>
+        <CardTitle>Kết quả tính phí</CardTitle>
         <CardDescription>
-          Fee breakdown by route type and configured billing rules.
+          Chi tiết phí theo loại tuyến và các quy tắc tính cước đã cấu hình.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-6'>
-        <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
+        <div className='grid gap-4 md:grid-cols-3'>
           <div className='rounded-lg border p-4'>
-            <p className='text-xs text-muted-foreground'>Total Fee</p>
+            <p className='text-xs text-muted-foreground'>Tổng phí</p>
             <p className='mt-2 text-2xl font-semibold'>
               {formatMoneyVnd(result.totalFee)}
             </p>
           </div>
           <div className='rounded-lg border p-4'>
-            <p className='text-xs text-muted-foreground'>Base Fee</p>
+            <p className='text-xs text-muted-foreground'>Phí cơ bản</p>
             <p className='mt-2 text-lg font-semibold'>
               {formatMoneyVnd(result.baseFee)}
             </p>
           </div>
           <div className='rounded-lg border p-4'>
-            <p className='text-xs text-muted-foreground'>Surcharge Fee</p>
+            <p className='text-xs text-muted-foreground'>Phụ phí</p>
             <p className='mt-2 text-lg font-semibold'>
               {formatMoneyVnd(result.surchargeFee)}
-            </p>
-          </div>
-          <div className='rounded-lg border p-4'>
-            <p className='text-xs text-muted-foreground'>VAS Fee</p>
-            <p className='mt-2 text-lg font-semibold'>
-              {formatMoneyVnd(result.vasFee)}
             </p>
           </div>
         </div>
 
         <div className='flex flex-wrap gap-2 text-sm'>
-          <Badge variant='outline'>Service: {result.serviceCode}</Badge>
+          <Badge variant='outline'>Dịch vụ: {result.serviceCode}</Badge>
           <Badge variant='secondary'>
-            Route: {getRouteTypeLabel(result.routeType)}
+            Tuyến: {getRouteTypeLabel(result.routeType)}
           </Badge>
           <Badge variant='outline'>
-            Chargeable weight: {result.chargeableWeightGram}g
+            Trọng lượng tính phí: {result.chargeableWeightGram}g
           </Badge>
         </div>
 
         <div>
-          <h3 className='text-sm font-medium mb-3'>Fee Line Items</h3>
+          <h3 className='text-sm font-medium mb-3'>Chi tiết dòng phí</h3>
           {result.feeItems.length === 0 ? (
             <Alert>
-              <AlertTitle>No line items returned</AlertTitle>
+              <AlertTitle>Không có dòng phí chi tiết</AlertTitle>
               <AlertDescription>
-                The billing service returned a total fee without detailed line
-                items.
+                Dịch vụ tính cước đã trả về tổng phí nhưng không có chi tiết
+                từng dòng phí.
               </AlertDescription>
             </Alert>
           ) : (
@@ -96,10 +90,10 @@ export const BillingCalculationResultCard: React.FC<
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Fee Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className='text-right'>Amount</TableHead>
+                    <TableHead>Mã</TableHead>
+                    <TableHead>Tên phí</TableHead>
+                    <TableHead>Nhóm</TableHead>
+                    <TableHead className='text-right'>Số tiền</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -56,18 +56,18 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
       <CardHeader>
         <CardTitle className='flex items-center gap-2'>
           <Calculator className='h-5 w-5' />
-          Shipping Fee Calculator
+          Công cụ tính phí vận chuyển
         </CardTitle>
         <CardDescription>
-          Calculate delivery fee with live route and weight logic from billing
-          service.
+          Tính phí giao hàng theo tuyến, trọng lượng và cấu hình hiện tại từ
+          dịch vụ tính cước.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form className='space-y-6' onSubmit={onSubmit}>
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='serviceCode'>Service</Label>
+              <Label htmlFor='serviceCode'>Dịch vụ</Label>
               <TmsCombobox
                 id='serviceCode'
                 value={formValues.serviceCode}
@@ -78,8 +78,8 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                   }))
                 }
                 options={DELIVERY_SERVICE_OPTIONS}
-                placeholder='Select a service'
-                emptyText='No services found'
+                placeholder='Chọn dịch vụ'
+                emptyText='Không tìm thấy dịch vụ'
               />
               <p className='text-xs text-muted-foreground'>
                 {
@@ -91,7 +91,7 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='actualWeightGram'>Actual Weight (grams)</Label>
+              <Label htmlFor='actualWeightGram'>Trọng lượng thực (gram)</Label>
               <Input
                 id='actualWeightGram'
                 inputMode='numeric'
@@ -102,12 +102,12 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                     actualWeightGram: event.target.value,
                   }))
                 }
-                placeholder='Example: 1500'
+                placeholder='Ví dụ: 1500'
               />
             </div>
 
             <BillingLocationFields
-              label='Sender Location'
+              label='Địa chỉ gửi'
               provinceId='senderProvinceCode'
               wardId='senderWardCode'
               provinceCode={formValues.senderProvinceCode}
@@ -132,7 +132,7 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
             />
 
             <BillingLocationFields
-              label='Receiver Location'
+              label='Địa chỉ nhận'
               provinceId='receiverProvinceCode'
               wardId='receiverWardCode'
               provinceCode={formValues.receiverProvinceCode}
@@ -160,10 +160,10 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
           <Separator />
 
           <div className='space-y-3'>
-            <h3 className='text-sm font-medium'>Package Dimensions (cm)</h3>
+            <h3 className='text-sm font-medium'>Kích thước kiện hàng (cm)</h3>
             <div className='grid gap-4 md:grid-cols-3'>
               <div className='space-y-2'>
-                <Label htmlFor='lengthCm'>Length</Label>
+                <Label htmlFor='lengthCm'>Dài</Label>
                 <Input
                   id='lengthCm'
                   inputMode='numeric'
@@ -174,11 +174,11 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                       lengthCm: event.target.value,
                     }))
                   }
-                  placeholder='Length'
+                  placeholder='Dài'
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='widthCm'>Width</Label>
+                <Label htmlFor='widthCm'>Rộng</Label>
                 <Input
                   id='widthCm'
                   inputMode='numeric'
@@ -189,11 +189,11 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                       widthCm: event.target.value,
                     }))
                   }
-                  placeholder='Width'
+                  placeholder='Rộng'
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='heightCm'>Height</Label>
+                <Label htmlFor='heightCm'>Cao</Label>
                 <Input
                   id='heightCm'
                   inputMode='numeric'
@@ -204,29 +204,9 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                       heightCm: event.target.value,
                     }))
                   }
-                  placeholder='Height'
+                  placeholder='Cao'
                 />
               </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className='grid gap-4 md:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label htmlFor='codAmount'>COD (VND)</Label>
-              <Input
-                id='codAmount'
-                inputMode='numeric'
-                value={formValues.codAmount}
-                onChange={(event) =>
-                  onFormChange((prev) => ({
-                    ...prev,
-                    codAmount: event.target.value,
-                  }))
-                }
-                placeholder='Leave empty if not COD'
-              />
             </div>
           </div>
 
@@ -235,10 +215,10 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
               {isLoading ? (
                 <>
                   <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Calculating...
+                  Đang tính...
                 </>
               ) : (
-                'Calculate Fee'
+                'Tính phí'
               )}
             </Button>
             <Button
@@ -247,7 +227,7 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
               onClick={onReset}
               disabled={isLoading}
             >
-              Reset
+              Đặt lại
             </Button>
           </div>
         </form>

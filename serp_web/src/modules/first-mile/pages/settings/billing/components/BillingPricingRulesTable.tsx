@@ -60,7 +60,7 @@ export function BillingPricingRulesTable<T>({
   renderCells,
   onEdit,
   onCreate,
-  createLabel = 'Add rule',
+  createLabel = 'Thêm quy tắc',
   serviceFilter,
 }: BillingPricingRulesTableProps<T>) {
   return (
@@ -85,7 +85,7 @@ export function BillingPricingRulesTable<T>({
                 variant={serviceFilter.value === 'ALL' ? 'default' : 'outline'}
                 onClick={() => serviceFilter.onChange('ALL')}
               >
-                All services
+                Tất cả dịch vụ
               </Button>
               {DELIVERY_SERVICE_OPTIONS.map((option) => (
                 <Button
@@ -108,11 +108,11 @@ export function BillingPricingRulesTable<T>({
         {isLoading ? (
           <div className='flex items-center gap-2 text-sm text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Loading rules...
+            Đang tải quy tắc...
           </div>
         ) : isError ? (
           <p className='text-sm text-destructive'>
-            Unable to load rules. Check that tms-billing-service is running.
+            Không thể tải quy tắc. Hãy kiểm tra tms-billing-service đang chạy.
           </p>
         ) : rows.length === 0 ? (
           <p className='text-sm text-muted-foreground'>{emptyMessage}</p>
@@ -125,7 +125,7 @@ export function BillingPricingRulesTable<T>({
                     <TableHead key={column.key}>{column.label}</TableHead>
                   ))}
                   <TableHead className='w-[100px] text-right'>
-                    Actions
+                    Thao tác
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -141,7 +141,7 @@ export function BillingPricingRulesTable<T>({
                         onClick={() => onEdit(row)}
                       >
                         <Pencil className='mr-1 h-3.5 w-3.5' />
-                        Edit
+                        Sửa
                       </Button>
                     </TableCell>
                   </TableRow>

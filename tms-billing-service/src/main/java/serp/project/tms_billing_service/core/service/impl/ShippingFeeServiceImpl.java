@@ -22,6 +22,11 @@ import java.util.Map;
 public class ShippingFeeServiceImpl implements IShippingFeeService {
     private final Map<DeliveryService, IDeliveryPricingStrategy> strategyByServiceCode;
 
+    /**
+     * Khởi tạo registry strategy theo từng mã dịch vụ để tránh switch/case khi mở rộng dịch vụ mới.
+     *
+     * @param pricingStrategies danh sách strategy được Spring inject
+     */
     public ShippingFeeServiceImpl(List<IDeliveryPricingStrategy> pricingStrategies) {
         this.strategyByServiceCode = new EnumMap<>(DeliveryService.class);
         for (IDeliveryPricingStrategy strategy : pricingStrategies) {
@@ -29,6 +34,12 @@ public class ShippingFeeServiceImpl implements IShippingFeeService {
         }
     }
 
+    /**
+     * Chọn strategy theo serviceCode và ủy quyền tính phí cho strategy tương ứng.
+     *
+     * @param request thông tin kiện hàng và tuyến cần tính phí
+     * @return kết quả tính phí từ strategy của dịch vụ
+     */
     @Override
     public CalculateShippingFeeResponse calculateShippingFee(CalculateShippingFeeRequest request) {
         IDeliveryPricingStrategy strategy = strategyByServiceCode.get(request.getServiceCode());

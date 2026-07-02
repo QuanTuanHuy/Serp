@@ -49,17 +49,20 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
       <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-3xl'>
         <DialogHeader>
           <DialogTitle>
-            {mode === 'create' ? 'Create Tariff Rule' : 'Edit Tariff Rule'}
+            {mode === 'create'
+              ? 'Tạo quy tắc biểu phí'
+              : 'Sửa quy tắc biểu phí'}
           </DialogTitle>
           <DialogDescription>
-            Configure base price and step price by service and route type.
+            Cấu hình giá cơ bản và giá theo bước tăng cho từng dịch vụ, loại
+            tuyến.
           </DialogDescription>
         </DialogHeader>
 
         <form className='space-y-4' onSubmit={onSubmit}>
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='tariffServiceCode'>Service Code</Label>
+              <Label htmlFor='tariffServiceCode'>Mã dịch vụ</Label>
               <TmsCombobox
                 id='tariffServiceCode'
                 value={form.serviceCode}
@@ -70,14 +73,14 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
                   }))
                 }
                 options={DELIVERY_SERVICE_OPTIONS}
-                placeholder='Select service'
-                emptyText='No services found'
+                placeholder='Chọn dịch vụ'
+                emptyText='Không tìm thấy dịch vụ'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='tariffRouteType'>Route Type</Label>
+              <Label htmlFor='tariffRouteType'>Loại tuyến</Label>
               <TmsCombobox
                 id='tariffRouteType'
                 value={form.routeTypeCode}
@@ -88,14 +91,14 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
                   }))
                 }
                 options={ROUTE_TYPE_OPTIONS}
-                placeholder='Select route type'
-                emptyText='No route types found'
+                placeholder='Chọn loại tuyến'
+                emptyText='Không tìm thấy loại tuyến'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='baseWeight'>Base Weight</Label>
+              <Label htmlFor='baseWeight'>Khối lượng cơ bản</Label>
               <Input
                 id='baseWeight'
                 inputMode='decimal'
@@ -106,13 +109,13 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
                     baseWeight: event.target.value,
                   }))
                 }
-                placeholder='Example: 2000'
+                placeholder='Ví dụ: 2000'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='basePrice'>Base Price</Label>
+              <Label htmlFor='basePrice'>Giá cơ bản</Label>
               <Input
                 id='basePrice'
                 inputMode='decimal'
@@ -123,13 +126,13 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
                     basePrice: event.target.value,
                   }))
                 }
-                placeholder='Example: 25000'
+                placeholder='Ví dụ: 25000'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='stepWeight'>Step Weight</Label>
+              <Label htmlFor='stepWeight'>Khối lượng mỗi bước</Label>
               <Input
                 id='stepWeight'
                 inputMode='decimal'
@@ -140,13 +143,13 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
                     stepWeight: event.target.value,
                   }))
                 }
-                placeholder='Example: 500'
+                placeholder='Ví dụ: 500'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='stepPrice'>Step Price</Label>
+              <Label htmlFor='stepPrice'>Giá mỗi bước</Label>
               <Input
                 id='stepPrice'
                 inputMode='decimal'
@@ -157,13 +160,13 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
                     stepPrice: event.target.value,
                   }))
                 }
-                placeholder='Example: 5000'
+                placeholder='Ví dụ: 5000'
                 disabled={isLoading}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='effectiveDate'>Effective Date</Label>
+              <Label htmlFor='effectiveDate'>Ngày hiệu lực</Label>
               <Input
                 id='effectiveDate'
                 type='date'
@@ -179,7 +182,7 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='expirationDate'>Expiration Date</Label>
+              <Label htmlFor='expirationDate'>Ngày hết hạn</Label>
               <Input
                 id='expirationDate'
                 type='date'
@@ -202,18 +205,18 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  Saving...
+                  Đang lưu...
                 </>
               ) : mode === 'create' ? (
-                'Create Tariff Rule'
+                'Tạo quy tắc biểu phí'
               ) : (
-                'Save Changes'
+                'Lưu thay đổi'
               )}
             </Button>
           </DialogFooter>

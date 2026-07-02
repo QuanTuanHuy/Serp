@@ -13,21 +13,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
-import serp.project.tms_billing_service.domain.VasRule;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
-import serp.project.tms_billing_service.dto.request.admin.UpsertVasRuleRequest;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.enums.CalculationType;
 import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
-import serp.project.tms_billing_service.enums.VasRuleCode;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
-import serp.project.tms_billing_service.repository.VasRuleRepository;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -44,8 +40,6 @@ class AdminPricingServiceImplTest {
     private TariffRepository tariffRepository;
     @Mock
     private SurchargeRuleRepository surchargeRuleRepository;
-    @Mock
-    private VasRuleRepository vasRuleRepository;
 
     @InjectMocks
     private AdminPricingServiceImpl adminPricingService;
@@ -118,38 +112,5 @@ class AdminPricingServiceImplTest {
         request.setCalculationType(CalculationType.FIXED_PER_KG);
 
         assertThrows(AppException.class, () -> adminPricingService.upsertSurchargeRule(request));
-    }
-
-    @Test
-    void shouldListOnlyActiveVasRules() {
-        VasRule codRule = VasRule.builder()
-                .id(1L)
-                .code(VasRuleCode.COD)
-                .name("COD fee")
-                .calculationType(CalculationType.FIXED_PER_ORDER)
-                .build();
-        VasRule legacyInsuranceRule = VasRule.builder()
-                .id(2L)
-                .code(VasRuleCode.BAO_HIEM)
-                .name("Insurance fee")
-                .calculationType(CalculationType.PERCENTAGE)
-                .build();
-
-        when(vasRuleRepository.findAll()).thenReturn(List.of(codRule, legacyInsuranceRule));
-
-        var response = adminPricingService.listVasRules();
-
-        assertEquals(1, response.size());
-        assertEquals(VasRuleCode.COD, response.getFirst().getCode());
-    }
-
-    @Test
-    void shouldRejectUnsupportedInsuranceVasRule() {
-        UpsertVasRuleRequest request = new UpsertVasRuleRequest();
-        request.setCode(VasRuleCode.BAO_HIEM);
-        request.setName("Insurance fee");
-        request.setCalculationType(CalculationType.PERCENTAGE);
-
-        assertThrows(AppException.class, () -> adminPricingService.upsertVasRule(request));
     }
 }

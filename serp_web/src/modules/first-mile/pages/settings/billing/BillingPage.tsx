@@ -34,11 +34,11 @@ export const BillingPage: React.FC = () => {
         <TabsList>
           <TabsTrigger value='calculator' className='gap-2'>
             <Calculator className='h-4 w-4' />
-            Fee Calculator
+            Tính phí
           </TabsTrigger>
           <TabsTrigger value='pricing' className='gap-2'>
             <Settings2 className='h-4 w-4' />
-            Pricing Administration
+            Quản trị bảng giá
           </TabsTrigger>
         </TabsList>
 

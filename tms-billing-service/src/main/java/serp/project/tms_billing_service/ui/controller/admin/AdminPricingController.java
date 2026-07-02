@@ -17,10 +17,8 @@ import serp.project.tms_billing_service.core.service.IAdminPricingService;
 import serp.project.tms_billing_service.dto.ApiResponse;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
-import serp.project.tms_billing_service.dto.request.admin.UpsertVasRuleRequest;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
-import serp.project.tms_billing_service.dto.response.admin.VasRuleAdminResponse;
 import serp.project.tms_billing_service.enums.DeliveryService;
 
 import java.util.List;
@@ -31,6 +29,12 @@ import java.util.List;
 public class AdminPricingController {
     private final IAdminPricingService adminPricingService;
 
+    /**
+     * Lấy danh sách biểu phí hiện hành để quản trị bảng giá.
+     *
+     * @param serviceCode mã dịch vụ cần lọc, có thể bỏ trống để lấy tất cả
+     * @return danh sách biểu phí theo dịch vụ và loại tuyến
+     */
     @GetMapping("/tariffs")
     public ApiResponse<List<TariffAdminResponse>> listTariffs(
             @RequestParam(value = "serviceCode", required = false) DeliveryService serviceCode
@@ -41,6 +45,12 @@ public class AdminPricingController {
                 .build();
     }
 
+    /**
+     * Tạo mới hoặc cập nhật biểu phí theo khóa service, route type và ngày hiệu lực.
+     *
+     * @param request dữ liệu biểu phí cần lưu
+     * @return biểu phí sau khi lưu
+     */
     @PutMapping("/tariffs")
     public ApiResponse<TariffAdminResponse> upsertTariff(@RequestBody @Valid UpsertTariffRequest request) {
         return ApiResponse.<TariffAdminResponse>builder()
@@ -49,6 +59,12 @@ public class AdminPricingController {
                 .build();
     }
 
+    /**
+     * Tạo mới hoặc cập nhật quy tắc phụ phí đang được hỗ trợ.
+     *
+     * @param request dữ liệu quy tắc phụ phí
+     * @return quy tắc phụ phí sau khi lưu
+     */
     @PutMapping("/surcharge-rules")
     public ApiResponse<SurchargeRuleAdminResponse> upsertSurchargeRule(
             @RequestBody @Valid UpsertSurchargeRuleRequest request
@@ -59,27 +75,16 @@ public class AdminPricingController {
                 .build();
     }
 
+    /**
+     * Lấy các quy tắc phụ phí còn được dùng trong luồng tính phí.
+     *
+     * @return danh sách quy tắc phụ phí đang hoạt động
+     */
     @GetMapping("/surcharge-rules")
     public ApiResponse<List<SurchargeRuleAdminResponse>> listSurchargeRules() {
         return ApiResponse.<List<SurchargeRuleAdminResponse>>builder()
                 .message("OK")
                 .result(adminPricingService.listSurchargeRules())
-                .build();
-    }
-
-    @PutMapping("/vas-rules")
-    public ApiResponse<VasRuleAdminResponse> upsertVasRule(@RequestBody @Valid UpsertVasRuleRequest request) {
-        return ApiResponse.<VasRuleAdminResponse>builder()
-                .message("OK")
-                .result(adminPricingService.upsertVasRule(request))
-                .build();
-    }
-
-    @GetMapping("/vas-rules")
-    public ApiResponse<List<VasRuleAdminResponse>> listVasRules() {
-        return ApiResponse.<List<VasRuleAdminResponse>>builder()
-                .message("OK")
-                .result(adminPricingService.listVasRules())
                 .build();
     }
 }

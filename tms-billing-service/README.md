@@ -1,7 +1,7 @@
 # TMS Billing Service
 
 Service tính phí vận chuyển và quản lý cấu hình giá của TMS: tariff, surcharge,
-VAS, chiến lược tính giá và API public/admin cho shipping fee.
+chiến lược tính giá và API public/admin cho shipping fee.
 
 ## Tổng quan
 
@@ -20,7 +20,7 @@ Module này xử lý các phần liên quan đến giá:
 
 - Tính shipping fee.
 - Bảng giá/tariff theo tiêu chuẩn nghiệp vụ.
-- Phụ phí và dịch vụ gia tăng.
+- Phụ phí.
 - Admin CRUD cho pricing rules.
 - Chiến lược tính giá trong `core/service/impl`.
 

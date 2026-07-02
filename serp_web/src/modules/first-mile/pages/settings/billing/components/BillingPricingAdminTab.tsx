@@ -20,24 +20,19 @@ import { CircleHelp } from 'lucide-react';
 import {
   useListSurchargeRulesQuery,
   useListTariffsQuery,
-  useListVasRulesQuery,
 } from '../../../../api';
 import type {
   BillingDeliveryService,
   SurchargeRuleAdminResponse,
   TariffAdminResponse,
-  VasRuleAdminResponse,
 } from '../../../../types';
-import {
-  useSurchargeRuleForm,
-  useTariffRuleForm,
-  useVasRuleForm,
-} from '../hooks';
+import { useSurchargeRuleForm, useTariffRuleForm } from '../hooks';
 import {
   BillingPricingRulesTable,
   formatTariffMoney,
   getTariffRouteLabel,
 } from './BillingPricingRulesTable';
+import { getCalculationTypeLabel } from '../billingPageModels';
 import {
   SurchargeRuleFormDialog,
   type SurchargeRuleFormMode,
@@ -46,7 +41,6 @@ import {
   TariffRuleFormDialog,
   type TariffRuleFormMode,
 } from './TariffRuleFormDialog';
-import { VasRuleFormDialog, type VasRuleFormMode } from './VasRuleFormDialog';
 
 export const BillingPricingAdminTab: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState('tariff');
@@ -60,13 +54,9 @@ export const BillingPricingAdminTab: React.FC = () => {
   const [surchargeDialogOpen, setSurchargeDialogOpen] = React.useState(false);
   const [surchargeFormMode, setSurchargeFormMode] =
     React.useState<SurchargeRuleFormMode>('create');
-  const [vasDialogOpen, setVasDialogOpen] = React.useState(false);
-  const [vasFormMode, setVasFormMode] =
-    React.useState<VasRuleFormMode>('create');
 
   const tariff = useTariffRuleForm();
   const surcharge = useSurchargeRuleForm();
-  const vas = useVasRuleForm();
 
   const tariffQuery = useListTariffsQuery(
     tariffServiceFilter === 'ALL'
@@ -74,7 +64,6 @@ export const BillingPricingAdminTab: React.FC = () => {
       : { serviceCode: tariffServiceFilter }
   );
   const surchargeQuery = useListSurchargeRulesQuery();
-  const vasQuery = useListVasRulesQuery();
 
   const filteredTariffs = React.useMemo(() => {
     const items = tariffQuery.data ?? [];
@@ -138,42 +127,15 @@ export const BillingPricingAdminTab: React.FC = () => {
     }
   };
 
-  const openVasCreate = () => {
-    vas.reset();
-    setVasFormMode('create');
-    setVasDialogOpen(true);
-  };
-
-  const openVasEdit = (row: VasRuleAdminResponse) => {
-    vas.loadFromSaved(row);
-    setVasFormMode('edit');
-    setVasDialogOpen(true);
-  };
-
-  const handleVasDialogChange = (open: boolean) => {
-    if (!open && !vas.isLoading) {
-      setVasDialogOpen(false);
-      vas.reset();
-    }
-  };
-
-  const handleVasSubmit = async (event: React.FormEvent) => {
-    const saved = await vas.submit(event);
-    if (saved) {
-      setVasDialogOpen(false);
-      vas.reset();
-    }
-  };
-
   return (
     <div className='space-y-6'>
       <Alert>
         <CircleHelp className='h-4 w-4' />
-        <AlertTitle>How to use pricing administration</AlertTitle>
+        <AlertTitle>Cách dùng quản trị bảng giá</AlertTitle>
         <AlertDescription>
-          View current rules from the billing service. Click Edit on a row or
-          Add to open the form in a dialog, then save changes. Tariffs are keyed
-          by service, route type, and effective date.
+          Xem các quy tắc hiện có từ dịch vụ tính cước. Chọn Sửa trên từng dòng
+          hoặc Thêm để mở biểu mẫu, sau đó lưu thay đổi. Biểu phí được xác định
+          theo dịch vụ, loại tuyến và ngày hiệu lực.
         </AlertDescription>
       </Alert>
 
@@ -183,30 +145,29 @@ export const BillingPricingAdminTab: React.FC = () => {
         className='space-y-4'
       >
         <TabsList>
-          <TabsTrigger value='tariff'>Tariff</TabsTrigger>
-          <TabsTrigger value='surcharge'>Surcharge</TabsTrigger>
-          <TabsTrigger value='vas'>VAS</TabsTrigger>
+          <TabsTrigger value='tariff'>Biểu phí</TabsTrigger>
+          <TabsTrigger value='surcharge'>Phụ phí</TabsTrigger>
         </TabsList>
 
         <TabsContent value='tariff' className='space-y-6'>
           <BillingPricingRulesTable<TariffAdminResponse>
-            title='Configured tariffs'
-            description='Base freight ladder per delivery service and route type.'
+            title='Biểu phí đã cấu hình'
+            description='Thang phí vận chuyển cơ bản theo dịch vụ và loại tuyến.'
             columns={[
-              { key: 'service', label: 'Service' },
-              { key: 'route', label: 'Route' },
-              { key: 'base', label: 'Base (weight / price)' },
-              { key: 'step', label: 'Step (weight / price)' },
-              { key: 'dates', label: 'Effective' },
+              { key: 'service', label: 'Dịch vụ' },
+              { key: 'route', label: 'Tuyến' },
+              { key: 'base', label: 'Cơ bản (khối lượng / giá)' },
+              { key: 'step', label: 'Bước tăng (khối lượng / giá)' },
+              { key: 'dates', label: 'Hiệu lực' },
             ]}
             rows={filteredTariffs}
             isLoading={tariffQuery.isLoading}
             isError={tariffQuery.isError}
-            emptyMessage='No tariffs found. Add a tariff rule or run DB migration seeds.'
+            emptyMessage='Chưa có biểu phí. Hãy thêm quy tắc biểu phí hoặc chạy dữ liệu khởi tạo.'
             getRowKey={(row) => row.id}
             onEdit={openTariffEdit}
             onCreate={openTariffCreate}
-            createLabel='Add tariff'
+            createLabel='Thêm biểu phí'
             serviceFilter={{
               value: tariffServiceFilter,
               onChange: setTariffServiceFilter,
@@ -232,27 +193,29 @@ export const BillingPricingAdminTab: React.FC = () => {
 
         <TabsContent value='surcharge' className='space-y-6'>
           <BillingPricingRulesTable<SurchargeRuleAdminResponse>
-            title='Configured surcharge rules'
-            description='Optional fees such as remote-area handling.'
+            title='Quy tắc phụ phí đã cấu hình'
+            description='Các khoản phí bổ sung như xử lý khu vực xa.'
             columns={[
-              { key: 'code', label: 'Code' },
-              { key: 'name', label: 'Name' },
-              { key: 'type', label: 'Calculation' },
-              { key: 'amount', label: 'Amount config' },
+              { key: 'code', label: 'Mã' },
+              { key: 'name', label: 'Tên' },
+              { key: 'type', label: 'Cách tính' },
+              { key: 'amount', label: 'Cấu hình số tiền' },
             ]}
             rows={surchargeQuery.data ?? []}
             isLoading={surchargeQuery.isLoading}
             isError={surchargeQuery.isError}
-            emptyMessage='No surcharge rules found.'
+            emptyMessage='Chưa có quy tắc phụ phí.'
             getRowKey={(row) => row.id}
             onEdit={openSurchargeEdit}
             onCreate={openSurchargeCreate}
-            createLabel='Add surcharge'
+            createLabel='Thêm phụ phí'
             renderCells={(row) => (
               <>
                 <TableCell className='font-medium'>{row.code}</TableCell>
                 <TableCell>{row.name}</TableCell>
-                <TableCell>{row.calculationType}</TableCell>
+                <TableCell>
+                  {getCalculationTypeLabel(row.calculationType)}
+                </TableCell>
                 <TableCell>
                   {row.calculationType === 'STEP_WEIGHT'
                     ? `${row.baseWeight ?? '-'}g / ${formatTariffMoney(row.basePrice)} + ${row.stepWeight ?? '-'}g / ${formatTariffMoney(row.stepPrice)}`
@@ -260,42 +223,7 @@ export const BillingPricingAdminTab: React.FC = () => {
                       ? formatTariffMoney(row.fixedAmount)
                       : row.ratePercent != null
                         ? `${row.ratePercent}%`
-                        : '—'}
-                </TableCell>
-              </>
-            )}
-          />
-        </TabsContent>
-
-        <TabsContent value='vas' className='space-y-6'>
-          <BillingPricingRulesTable<VasRuleAdminResponse>
-            title='Configured VAS rules'
-            description='Value-added services such as COD.'
-            columns={[
-              { key: 'code', label: 'Code' },
-              { key: 'name', label: 'Name' },
-              { key: 'type', label: 'Calculation' },
-              { key: 'amount', label: 'Rate / amount' },
-            ]}
-            rows={vasQuery.data ?? []}
-            isLoading={vasQuery.isLoading}
-            isError={vasQuery.isError}
-            emptyMessage='No VAS rules found.'
-            getRowKey={(row) => row.id}
-            onEdit={openVasEdit}
-            onCreate={openVasCreate}
-            createLabel='Add VAS rule'
-            renderCells={(row) => (
-              <>
-                <TableCell className='font-medium'>{row.code}</TableCell>
-                <TableCell>{row.name}</TableCell>
-                <TableCell>{row.calculationType}</TableCell>
-                <TableCell>
-                  {row.ratePercent != null
-                    ? `${row.ratePercent}% (min ${formatTariffMoney(row.minAmount)})`
-                    : row.fixedAmount != null
-                      ? formatTariffMoney(row.fixedAmount)
-                      : '—'}
+                        : '-'}
                 </TableCell>
               </>
             )}
@@ -322,17 +250,6 @@ export const BillingPricingAdminTab: React.FC = () => {
         isLoading={surcharge.isLoading}
         onOpenChange={handleSurchargeDialogChange}
         onSubmit={handleSurchargeSubmit}
-      />
-
-      <VasRuleFormDialog
-        open={vasDialogOpen}
-        mode={vasFormMode}
-        form={vas.form}
-        onFormChange={vas.setForm}
-        calculationTypeHelper={vas.calculationTypeHelper}
-        isLoading={vas.isLoading}
-        onOpenChange={handleVasDialogChange}
-        onSubmit={handleVasSubmit}
       />
     </div>
   );

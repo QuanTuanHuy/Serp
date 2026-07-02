@@ -158,7 +158,6 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
                   <p>
                     Surcharge fee: {formatCurrency(shippingFee.surchargeFee)}
                   </p>
-                  <p>VAS fee: {formatCurrency(shippingFee.vasFee)}</p>
                   <p className='font-semibold'>
                     Total fee: {formatCurrency(shippingFee.totalFee)}
                   </p>

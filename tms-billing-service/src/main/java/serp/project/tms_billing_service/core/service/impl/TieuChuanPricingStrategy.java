@@ -18,7 +18,6 @@ import serp.project.tms_billing_service.dto.response.FeeLineItemResponse;
 import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
-import serp.project.tms_billing_service.enums.VasRuleCode;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.exception.ErrorCode;
 
@@ -41,11 +40,20 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         this.pricingRuleService = pricingRuleService;
     }
 
+    /**
+     * Trả về dịch vụ tiêu chuẩn để ShippingFeeService có thể định tuyến đúng strategy.
+     */
     @Override
     public DeliveryService getSupportedService() {
         return DeliveryService.TIEU_CHUAN;
     }
 
+    /**
+     * Tính phí tiêu chuẩn theo tuyến, trọng lượng quy đổi, biểu phí và phụ phí vùng xa.
+     *
+     * @param request thông tin tuyến gửi/nhận và thông số kiện hàng
+     * @return tổng phí và các dòng phí cấu thành
+     */
     @Override
     public CalculateShippingFeeResponse calculate(CalculateShippingFeeRequest request) {
         RouteType routeType = routeClassificationService.classify(
@@ -62,8 +70,7 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         List<FeeLineItemResponse> feeItems = new ArrayList<>();
         long baseFee = calculateBaseFreight(routeType, chargeableWeight, feeItems);
         long surchargeFee = calculateSurcharges(request, chargeableWeight, feeItems);
-        long vasFee = calculateVasFees(request, feeItems);
-        long totalFee = baseFee + surchargeFee + vasFee;
+        long totalFee = baseFee + surchargeFee;
 
         return CalculateShippingFeeResponse.builder()
                 .serviceCode(DeliveryService.TIEU_CHUAN)
@@ -71,12 +78,19 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
                 .chargeableWeightGram(chargeableWeight)
                 .baseFee(baseFee)
                 .surchargeFee(surchargeFee)
-                .vasFee(vasFee)
                 .totalFee(totalFee)
                 .feeItems(feeItems)
                 .build();
     }
 
+    /**
+     * Tính cước chính theo biểu phí hiệu lực của loại tuyến đã chuẩn hóa.
+     *
+     * @param routeType loại tuyến được phân loại từ địa chỉ gửi/nhận
+     * @param chargeableWeight trọng lượng tính phí sau khi quy đổi
+     * @param feeItems danh sách dòng phí để bổ sung dòng cước chính
+     * @return số tiền cước chính
+     */
     private long calculateBaseFreight(RouteType routeType, long chargeableWeight, List<FeeLineItemResponse> feeItems) {
         RouteType normalizedRouteType = normalizeRouteType(routeType);
         Tariff tariff = pricingRuleService.getTariff(DeliveryService.TIEU_CHUAN, normalizedRouteType);
@@ -102,6 +116,14 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         return amount;
     }
 
+    /**
+     * Tính các phụ phí còn được hỗ trợ cho đơn tiêu chuẩn.
+     *
+     * @param request thông tin tuyến nhận để kiểm tra vùng xa
+     * @param chargeableWeight trọng lượng tính phí
+     * @param feeItems danh sách dòng phí để bổ sung phụ phí nếu có
+     * @return tổng phụ phí
+     */
     private long calculateSurcharges(
             CalculateShippingFeeRequest request,
             long chargeableWeight,
@@ -121,26 +143,17 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         return remoteAreaFee;
     }
 
-    private long calculateVasFees(CalculateShippingFeeRequest request, List<FeeLineItemResponse> feeItems) {
-        long totalVas = 0L;
-
-        if (request.getCodAmount() != null && request.getCodAmount() > 0) {
-            feeItems.add(FeeLineItemResponse.builder()
-                    .code(VasRuleCode.COD.name())
-                    .name("Phí COD (miễn phí)")
-                    .category("VAS")
-                    .amount(0L)
-                    .build());
-        }
-
-        return totalVas;
-    }
-
+    /**
+     * Tính phụ phí vùng xa theo cấu hình STEP_WEIGHT hiện hành.
+     */
     private long calculateRemoteAreaFee(long chargeableWeight) {
         SurchargeRule configuredRule = pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.VUNG_XA);
         return calculateStepWeightSurcharge(chargeableWeight, configuredRule);
     }
 
+    /**
+     * Áp dụng công thức phụ phí theo ngưỡng khối lượng và bước tăng.
+     */
     private long calculateStepWeightSurcharge(long chargeableWeight, SurchargeRule rule) {
         long baseWeight = requiredLong(rule.getBaseWeight(), "surcharge.baseWeight");
         long basePrice = requiredLong(rule.getBasePrice(), "surcharge.basePrice");
@@ -156,6 +169,9 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         return basePrice + (extraSteps * stepPrice);
     }
 
+    /**
+     * Quy đổi tuyến đặc biệt về tuyến liên miền vì bảng giá hiện chỉ cấu hình mức liên miền.
+     */
     private RouteType normalizeRouteType(RouteType routeType) {
         if (routeType == RouteType.LIEN_MIEN_DAC_BIET) {
             return RouteType.LIEN_MIEN;
@@ -163,6 +179,9 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         return routeType;
     }
 
+    /**
+     * Chuyển cấu hình số thực trong database sang số tiền/trọng lượng nguyên và báo lỗi nếu thiếu cấu hình.
+     */
     private long requiredLong(Double value, String fieldName) {
         if (value == null) {
             throw new AppException(

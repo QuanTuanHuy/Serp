@@ -64,7 +64,6 @@ class TieuChuanPricingStrategyTest {
 
         assertEquals(33_000L, result.getBaseFee());
         assertEquals(0L, result.getSurchargeFee());
-        assertEquals(0L, result.getVasFee());
         assertEquals(33_000L, result.getTotalFee());
     }
 
@@ -105,7 +104,6 @@ class TieuChuanPricingStrategyTest {
 
         assertEquals(62_000L, result.getBaseFee());
         assertEquals(7_000L, result.getSurchargeFee());
-        assertEquals(0L, result.getVasFee());
         assertEquals(69_000L, result.getTotalFee());
     }
 }

@@ -20,8 +20,6 @@ export type BillingCalculationType =
 
 export type BillingSurchargeRuleCode = 'VUNG_XA';
 
-export type BillingVasRuleCode = 'COD';
-
 export interface CalculateShippingFeeRequest {
   serviceCode: BillingDeliveryService;
   senderWardCode: string;
@@ -30,7 +28,6 @@ export interface CalculateShippingFeeRequest {
   lengthCm: number;
   widthCm: number;
   heightCm: number;
-  codAmount?: number;
 }
 
 export interface FeeLineItemResponse {
@@ -46,7 +43,6 @@ export interface CalculateShippingFeeResponse {
   chargeableWeightGram: number;
   baseFee: number;
   surchargeFee: number;
-  vasFee: number;
   totalFee: number;
   feeItems: FeeLineItemResponse[];
 }
@@ -82,18 +78,5 @@ export interface UpsertSurchargeRuleRequest {
 }
 
 export interface SurchargeRuleAdminResponse extends UpsertSurchargeRuleRequest {
-  id: number;
-}
-
-export interface UpsertVasRuleRequest {
-  code: BillingVasRuleCode;
-  name: string;
-  calculationType: BillingCalculationType;
-  ratePercent?: number;
-  fixedAmount?: number;
-  minAmount?: number;
-}
-
-export interface VasRuleAdminResponse extends UpsertVasRuleRequest {
   id: number;
 }

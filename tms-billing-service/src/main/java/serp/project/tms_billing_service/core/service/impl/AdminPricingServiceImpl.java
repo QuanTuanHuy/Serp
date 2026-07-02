@@ -11,21 +11,16 @@ import org.springframework.stereotype.Service;
 import serp.project.tms_billing_service.core.service.IAdminPricingService;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
-import serp.project.tms_billing_service.domain.VasRule;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
-import serp.project.tms_billing_service.dto.request.admin.UpsertVasRuleRequest;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
-import serp.project.tms_billing_service.dto.response.admin.VasRuleAdminResponse;
 import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
-import serp.project.tms_billing_service.enums.VasRuleCode;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.exception.ErrorCode;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
-import serp.project.tms_billing_service.repository.VasRuleRepository;
 
 import java.util.List;
 import java.util.Objects;
@@ -35,12 +30,16 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AdminPricingServiceImpl implements IAdminPricingService {
     private static final Set<SurchargeRuleEnum> ACTIVE_SURCHARGE_CODES = Set.of(SurchargeRuleEnum.VUNG_XA);
-    private static final Set<VasRuleCode> ACTIVE_VAS_CODES = Set.of(VasRuleCode.COD);
 
     private final TariffRepository tariffRepository;
     private final SurchargeRuleRepository surchargeRuleRepository;
-    private final VasRuleRepository vasRuleRepository;
 
+    /**
+     * Lưu biểu phí theo khóa service, loại tuyến và ngày hiệu lực.
+     *
+     * @param request dữ liệu biểu phí cần tạo hoặc cập nhật
+     * @return biểu phí sau khi lưu
+     */
     @Override
     @Transactional
     public TariffAdminResponse upsertTariff(UpsertTariffRequest request) {
@@ -67,6 +66,12 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         return toTariffResponse(saved);
     }
 
+    /**
+     * Lưu quy tắc phụ phí nếu mã phụ phí còn nằm trong danh sách hỗ trợ.
+     *
+     * @param request dữ liệu quy tắc phụ phí cần tạo hoặc cập nhật
+     * @return quy tắc phụ phí sau khi lưu
+     */
     @Override
     @Transactional
     public SurchargeRuleAdminResponse upsertSurchargeRule(UpsertSurchargeRuleRequest request) {
@@ -91,23 +96,9 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         return toSurchargeResponse(saved);
     }
 
-    @Override
-    @Transactional
-    public VasRuleAdminResponse upsertVasRule(UpsertVasRuleRequest request) {
-        validateActiveVasCode(request.getCode());
-
-        VasRule rule = vasRuleRepository.findByCode(request.getCode()).orElseGet(VasRule::new);
-        rule.setCode(request.getCode());
-        rule.setName(request.getName());
-        rule.setCalculationType(request.getCalculationType());
-        rule.setRatePercent(request.getRatePercent());
-        rule.setFixedAmount(request.getFixedAmount());
-        rule.setMinAmount(request.getMinAmount());
-
-        VasRule saved = vasRuleRepository.save(rule);
-        return toVasResponse(saved);
-    }
-
+    /**
+     * Liệt kê biểu phí phục vụ màn hình quản trị, có thể lọc theo service.
+     */
     @Override
     public List<TariffAdminResponse> listTariffs(DeliveryService serviceCode) {
         List<Tariff> tariffs = serviceCode == null
@@ -118,6 +109,9 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
                 .toList();
     }
 
+    /**
+     * Chỉ trả về các mã phụ phí còn được dùng trong tính phí để ẩn cấu hình cũ.
+     */
     @Override
     public List<SurchargeRuleAdminResponse> listSurchargeRules() {
         return surchargeRuleRepository.findAll().stream()
@@ -126,14 +120,9 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
                 .toList();
     }
 
-    @Override
-    public List<VasRuleAdminResponse> listVasRules() {
-        return vasRuleRepository.findAll().stream()
-                .filter(rule -> rule.getCode() != null && ACTIVE_VAS_CODES.contains(rule.getCode()))
-                .map(this::toVasResponse)
-                .toList();
-    }
-
+    /**
+     * Chặn các mã phụ phí cũ không còn tham gia công thức tính phí.
+     */
     private void validateActiveSurchargeCode(SurchargeRuleEnum code) {
         if (code == null || !ACTIVE_SURCHARGE_CODES.contains(code)) {
             throw new AppException(
@@ -143,15 +132,9 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         }
     }
 
-    private void validateActiveVasCode(VasRuleCode code) {
-        if (code == null || !ACTIVE_VAS_CODES.contains(code)) {
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "VAS rule is no longer supported for shipping fee calculation"
-            );
-        }
-    }
-
+    /**
+     * Đảm bảo khoảng ngày hiệu lực hợp lệ trước khi lưu cấu hình giá.
+     */
     private void validateDateRange(java.time.LocalDate effectiveDate, java.time.LocalDate expirationDate) {
         if (Objects.nonNull(effectiveDate) && Objects.nonNull(expirationDate) && expirationDate.isBefore(effectiveDate)) {
             throw new AppException(
@@ -161,6 +144,9 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         }
     }
 
+    /**
+     * Chuyển entity biểu phí sang DTO trả về cho API quản trị.
+     */
     private TariffAdminResponse toTariffResponse(Tariff tariff) {
         return TariffAdminResponse.builder()
                 .id(tariff.getId())
@@ -175,6 +161,9 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
                 .build();
     }
 
+    /**
+     * Chuyển entity quy tắc phụ phí sang DTO trả về cho API quản trị.
+     */
     private SurchargeRuleAdminResponse toSurchargeResponse(SurchargeRule rule) {
         return SurchargeRuleAdminResponse.builder()
                 .id(rule.getId())
@@ -190,18 +179,6 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
                 .stepPrice(rule.getStepPrice())
                 .effectiveDate(rule.getEffectiveDate())
                 .expirationDate(rule.getExpirationDate())
-                .build();
-    }
-
-    private VasRuleAdminResponse toVasResponse(VasRule rule) {
-        return VasRuleAdminResponse.builder()
-                .id(rule.getId())
-                .code(rule.getCode())
-                .name(rule.getName())
-                .calculationType(rule.getCalculationType())
-                .ratePercent(rule.getRatePercent())
-                .fixedAmount(rule.getFixedAmount())
-                .minAmount(rule.getMinAmount())
                 .build();
     }
 }

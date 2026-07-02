@@ -10,13 +10,13 @@ Backend references:
 
 ## UI Language Policy
 
-**All user-visible copy must be in English.**
+**All user-visible copy created or changed by agents must be in Vietnamese.**
 
 Includes: page titles, labels, placeholders, button text, table headers, empty states, dialog titles, toast/notification messages, validation messages shown in the UI, and `CardDescription` text.
 
-- Do **not** add Vietnamese (or other) strings to React components for TMS pages.
-- Backend `i18n` message files may contain multiple locales for API `message` fields; the web app should still present English UX copy in components.
-- Prefer clear, concise labels (`Province`, `Ward`, `Post office`, `Courier`, `Refresh`) consistent with existing pages.
+- Do **not** add new English UX strings to React components for TMS pages unless the text is an API enum, route, code, acronym, brand name, or other integration contract that must remain unchanged.
+- Backend `i18n` message files may contain multiple locales for API `message` fields; the web app should present Vietnamese UX copy in components.
+- Prefer clear, concise Vietnamese labels (`Tỉnh/Thành phố`, `Phường/Xã`, `Bưu cục`, `Nhân viên giao nhận`, `Làm mới`) consistent with existing pages.
 
 ## Module Snapshot
 
@@ -119,7 +119,7 @@ Reset dependent selections when parent location changes (`useEffect` on `provinc
 
 - Pagination: `page`, `size` (often 20 or 200 for dropdowns).
 - Excel import: validate → preview → confirm; reuse `ValidateImportFileResponse` types.
-- Keep tables and filters in English; format dates with `toLocaleString('en-US')` unless product asks otherwise.
+- Keep tables and filters in Vietnamese; format dates with `toLocaleString('vi-VN')` unless product asks otherwise.
 
 ## Adding a Feature (Checklist)
 
@@ -127,7 +127,7 @@ Reset dependent selections when parent location changes (`useEffect` on `provinc
 2. **Types** in `types/index.ts` (`*Request`, `*Response`, filters).
 3. **RTK endpoint** in `firstMileApi.ts` (or `billingApi.ts`) with correct `extraOptions.service`.
 4. **Page/components** under `pages/{feature}/`; wire route in `src/app/first-mile/.../page.tsx`.
-5. **English copy** for all new labels and messages.
+5. **Vietnamese copy** for all new labels and messages.
 6. Run from `serp_web/`: `npm run type-check`, `npm run lint` on touched files.
 
 ## File headers (required for TMS UI)
@@ -181,7 +181,7 @@ There is no module-level Jest/Vitest suite today; rely on type-check and manual 
 
 ## Before You Finish
 
-- English-only UI strings on all new/changed screens.
+- Vietnamese UI strings on all new/changed screens.
 - Correct `first-mile` vs `second-mile` service on every endpoint.
 - Thin app routes; logic in `pages/` or `api/`.
 - `npm run type-check` for files you touched.

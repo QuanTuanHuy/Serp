@@ -12,8 +12,6 @@ import type {
   TariffAdminResponse,
   UpsertSurchargeRuleRequest,
   UpsertTariffRequest,
-  UpsertVasRuleRequest,
-  VasRuleAdminResponse,
 } from '../types';
 import { unwrapFirstMileResult } from './transforms';
 
@@ -96,35 +94,6 @@ export const billingApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<SurchargeRuleAdminResponse>,
       invalidatesTags: [{ type: 'billing/SurchargeRule', id: 'LIST' }],
     }),
-    listVasRules: builder.query<VasRuleAdminResponse[], void>({
-      query: () => ({
-        url: '/admin/pricing/vas-rules',
-      }),
-      extraOptions: BILLING_SERVICE,
-      transformResponse: unwrapFirstMileResult<VasRuleAdminResponse[]>,
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.map((item) => ({
-                type: 'billing/VasRule' as const,
-                id: item.id,
-              })),
-              { type: 'billing/VasRule', id: 'LIST' },
-            ]
-          : [{ type: 'billing/VasRule', id: 'LIST' }],
-    }),
-    upsertVasRule: builder.mutation<VasRuleAdminResponse, UpsertVasRuleRequest>(
-      {
-        query: (body) => ({
-          url: '/admin/pricing/vas-rules',
-          method: 'PUT',
-          body,
-        }),
-        extraOptions: BILLING_SERVICE,
-        transformResponse: unwrapFirstMileResult<VasRuleAdminResponse>,
-        invalidatesTags: [{ type: 'billing/VasRule', id: 'LIST' }],
-      }
-    ),
   }),
   overrideExisting: false,
 });
@@ -135,6 +104,4 @@ export const {
   useUpsertTariffMutation,
   useListSurchargeRulesQuery,
   useUpsertSurchargeRuleMutation,
-  useListVasRulesQuery,
-  useUpsertVasRuleMutation,
 } = billingApi;

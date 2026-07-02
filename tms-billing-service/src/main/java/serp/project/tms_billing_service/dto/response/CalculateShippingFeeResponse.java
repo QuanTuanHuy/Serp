@@ -20,7 +20,6 @@ public class CalculateShippingFeeResponse {
     Long chargeableWeightGram;
     Long baseFee;
     Long surchargeFee;
-    Long vasFee;
     Long totalFee;
     List<FeeLineItemResponse> feeItems;
 }

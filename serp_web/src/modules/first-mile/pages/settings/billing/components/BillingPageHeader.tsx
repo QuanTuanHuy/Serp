@@ -8,9 +8,9 @@ import React from 'react';
 export const BillingPageHeader: React.FC = () => {
   return (
     <div>
-      <h1 className='text-2xl font-bold tracking-tight'>Billing</h1>
+      <h1 className='text-2xl font-bold tracking-tight'>Tính cước</h1>
       <p className='text-muted-foreground mt-1'>
-        Calculate shipping fees and manage pricing rules from one place.
+        Tính phí vận chuyển và quản lý quy tắc giá tại một nơi.
       </p>
     </div>
   );

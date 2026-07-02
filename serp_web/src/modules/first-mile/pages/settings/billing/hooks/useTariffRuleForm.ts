@@ -31,10 +31,10 @@ export const useTariffRuleForm = () => {
         buildUpsertTariffRequest(form)
       ).unwrap();
       setLastSaved(response);
-      notification.success('Tariff rule saved successfully.');
+      notification.success('Đã lưu quy tắc biểu phí.');
       return true;
     } catch (error) {
-      notification.error('Unable to save tariff rule.', {
+      notification.error('Không thể lưu quy tắc biểu phí.', {
         description: getErrorMessage(error),
       });
       return false;

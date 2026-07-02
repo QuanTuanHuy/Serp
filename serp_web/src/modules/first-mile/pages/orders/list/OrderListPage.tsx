@@ -1113,9 +1113,6 @@ export const OrderListPage: React.FC = () => {
         lengthCm,
         widthCm,
         heightCm,
-        ...(order.codAmount && order.codAmount > 0
-          ? { codAmount: Math.round(order.codAmount) }
-          : {}),
       };
     },
     []
