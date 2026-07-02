@@ -58,9 +58,15 @@ import {
   validateVehicleForm,
   type VehicleFormMode,
   type VehicleFormState,
-} from './vehiclePageModels';
+} from './secondMileVehiclePageModels';
 
-export function SecondMileVehicleListPage() {
+interface SecondMileVehicleListPageProps {
+  showScopeNavigation?: boolean;
+}
+
+export function SecondMileVehicleListPage({
+  showScopeNavigation = true,
+}: SecondMileVehicleListPageProps) {
   const notification = useNotification();
   const isTmsAdmin = useAppSelector((state) =>
     Boolean(state.account.user.profile?.roles?.includes('TMS_ADMIN'))
@@ -288,26 +294,25 @@ export function SecondMileVehicleListPage() {
   return (
     <>
       <div className='space-y-6'>
-        <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-          <div>
-            <div className='mb-2 flex flex-wrap gap-2 text-sm'>
-              <Link
-                href='/first-mile/vehicles/first-mile'
-                className='text-muted-foreground hover:text-foreground'
-              >
-                First-mile vehicles
-              </Link>
-              <span className='text-muted-foreground'>/</span>
-              <span className='font-medium'>Second-mile</span>
+        <div
+          className={`flex flex-col gap-3 sm:flex-row sm:items-center ${
+            showScopeNavigation ? 'sm:justify-between' : 'sm:justify-end'
+          }`}
+        >
+          {showScopeNavigation ? (
+            <div>
+              <div className='mb-2 flex flex-wrap gap-2 text-sm'>
+                <Link
+                  href='/first-mile/settings/vehicles?scope=first-mile'
+                  className='text-muted-foreground hover:text-foreground'
+                >
+                  First-mile vehicles
+                </Link>
+                <span className='text-muted-foreground'>/</span>
+                <span className='font-medium'>Second-mile</span>
+              </div>
             </div>
-            <h1 className='text-2xl font-bold tracking-tight'>
-              Second-mile vehicles
-            </h1>
-            <p className='text-muted-foreground'>
-              Manage hub-linked vehicles, Excel import, and CRUD via second-mile
-              API.
-            </p>
-          </div>
+          ) : null}
           <div className='flex flex-wrap items-center gap-2'>
             <SecondMileVehicleImportCard
               canManage={isTmsAdmin}

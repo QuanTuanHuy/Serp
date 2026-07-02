@@ -30,7 +30,6 @@ import type {
   VehicleImportItem,
 } from '../../../types';
 import {
-  VehicleAccessScopeCard,
   VehicleDetailDialog,
   VehicleFormDialog,
   VehicleImportCard,
@@ -48,9 +47,16 @@ import {
   validateVehicleForm,
   type VehicleFormMode,
   type VehicleFormState,
-} from './vehiclePageModels';
+} from './firstMileVehiclePageModels';
 
-export const VehicleListPage: React.FC = () => {
+interface FirstMileVehicleListPageProps {
+  title?: string;
+  description?: string;
+}
+
+export const FirstMileVehicleListPage: React.FC<
+  FirstMileVehicleListPageProps
+> = ({ title, description }) => {
   const dispatch = useAppDispatch();
   const notification = useNotification();
   const profile = useAppSelector((state) => state.account.user.profile);
@@ -678,6 +684,8 @@ export const VehicleListPage: React.FC = () => {
       <div className='space-y-6'>
         <VehiclePageHeader
           canManageVehicles={canManageVehicles}
+          title={title}
+          description={description}
           onCreateVehicle={handleOpenCreateDialog}
           importAction={
             <VehicleImportCard
@@ -696,11 +704,6 @@ export const VehicleListPage: React.FC = () => {
               onImportFile={handleImportFile}
             />
           }
-        />
-
-        <VehicleAccessScopeCard
-          accessScope={accessScope}
-          canViewVehicles={canViewVehicles}
         />
 
         <VehicleSearchCard

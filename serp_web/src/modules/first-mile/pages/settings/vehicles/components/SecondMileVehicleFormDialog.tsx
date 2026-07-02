@@ -1,6 +1,6 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Vehicle form dialog
+ * Description: Part of Serp Project - Second-mile vehicle form dialog
  */
 
 import React from 'react';
@@ -17,13 +17,16 @@ import {
 } from '@/shared/components/ui';
 import { Loader2 } from 'lucide-react';
 import { TmsCombobox } from '@/modules/first-mile/components';
-import type { VehicleStatus, VehicleType } from '../../../../types';
+import type {
+  SecondMileVehicleStatus,
+  SecondMileVehicleType,
+} from '../../../../types';
 import {
   VEHICLE_STATUS_OPTIONS,
   VEHICLE_TYPE_OPTIONS,
   type VehicleFormMode,
   type VehicleFormState,
-} from '../vehiclePageModels';
+} from '../secondMileVehiclePageModels';
 
 type UpdateVehicleFormField = <K extends keyof VehicleFormState>(
   field: K,
@@ -37,40 +40,38 @@ interface VehicleSelectOption {
 
 const NONE_VALUE = '__NONE__';
 
-interface VehicleFormDialogProps {
+interface SecondMileVehicleFormDialogProps {
   open: boolean;
   formMode: VehicleFormMode;
   formValues: VehicleFormState;
   isSaving: boolean;
-  postOfficeOptions: VehicleSelectOption[];
-  courierOptions: VehicleSelectOption[];
-  isLoadingPostOffices: boolean;
-  isLoadingCouriers: boolean;
+  hubOptions: VehicleSelectOption[];
+  isLoadingHubs: boolean;
+  driverOptions: VehicleSelectOption[];
+  isLoadingDrivers: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (event: React.FormEvent) => void;
   onUpdateField: UpdateVehicleFormField;
 }
 
-export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
+export const SecondMileVehicleFormDialog: React.FC<
+  SecondMileVehicleFormDialogProps
+> = ({
   open,
   formMode,
   formValues,
   isSaving,
-  postOfficeOptions,
-  courierOptions,
-  isLoadingPostOffices,
-  isLoadingCouriers,
+  hubOptions,
+  isLoadingHubs,
+  driverOptions,
+  isLoadingDrivers,
   onOpenChange,
   onSubmit,
   onUpdateField,
 }) => {
-  const postOfficeComboboxOptions = [
+  const driverComboboxOptions = [
     { value: NONE_VALUE, label: 'Not assigned' },
-    ...postOfficeOptions,
-  ];
-  const courierComboboxOptions = [
-    { value: NONE_VALUE, label: 'Not assigned' },
-    ...courierOptions,
+    ...driverOptions,
   ];
 
   return (
@@ -81,32 +82,32 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
             {formMode === 'create' ? 'Create vehicle' : 'Update vehicle'}
           </DialogTitle>
           <DialogDescription>
-            Fill in required fields to{' '}
-            {formMode === 'create' ? 'create a new' : 'update the'} vehicle.
+            Second-mile vehicle linked to a hub and optional driver staff.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className='space-y-4'>
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-license-plate'>License plate *</Label>
+              <Label htmlFor='sm-vehicle-license-plate'>License plate *</Label>
               <Input
-                id='vehicle-license-plate'
+                id='sm-vehicle-license-plate'
                 value={formValues.licensePlate}
                 onChange={(event) =>
                   onUpdateField('licensePlate', event.target.value)
                 }
                 disabled={isSaving}
+                placeholder='17B6-72685'
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-status'>Status *</Label>
+              <Label htmlFor='sm-vehicle-status'>Status *</Label>
               <TmsCombobox
-                id='vehicle-status'
+                id='sm-vehicle-status'
                 value={formValues.status}
                 onValueChange={(value) =>
-                  onUpdateField('status', value as VehicleStatus)
+                  onUpdateField('status', value as SecondMileVehicleStatus)
                 }
                 options={VEHICLE_STATUS_OPTIONS}
                 placeholder='Select status'
@@ -116,12 +117,12 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-type'>Vehicle type *</Label>
+              <Label htmlFor='sm-vehicle-type'>Vehicle type *</Label>
               <TmsCombobox
-                id='vehicle-type'
+                id='sm-vehicle-type'
                 value={formValues.vehicleType}
                 onValueChange={(value) =>
-                  onUpdateField('vehicleType', value as VehicleType)
+                  onUpdateField('vehicleType', value as SecondMileVehicleType)
                 }
                 options={VEHICLE_TYPE_OPTIONS}
                 placeholder='Select type'
@@ -131,9 +132,24 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-max-weight'>Max weight (kg)</Label>
+              <Label htmlFor='sm-vehicle-max-bags'>Max bags *</Label>
               <Input
-                id='vehicle-max-weight'
+                id='sm-vehicle-max-bags'
+                type='number'
+                min={0}
+                step={1}
+                value={formValues.maxBags}
+                onChange={(event) =>
+                  onUpdateField('maxBags', event.target.value)
+                }
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='sm-vehicle-max-weight'>Max weight (kg) *</Label>
+              <Input
+                id='sm-vehicle-max-weight'
                 type='number'
                 min={0}
                 step='any'
@@ -142,14 +158,13 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                   onUpdateField('maxWeight', event.target.value)
                 }
                 disabled={isSaving}
-                placeholder='e.g. 150'
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-max-volume'>Max volume (m3)</Label>
+              <Label htmlFor='sm-vehicle-max-volume'>Max volume (m³) *</Label>
               <Input
-                id='vehicle-max-volume'
+                id='sm-vehicle-max-volume'
                 type='number'
                 min={0}
                 step='any'
@@ -158,82 +173,64 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                   onUpdateField('maxVolume', event.target.value)
                 }
                 disabled={isSaving}
-                placeholder='e.g. 3.2'
               />
             </div>
 
-            <div className='space-y-2'>
-              <Label htmlFor='vehicle-post-office-id'>Post office</Label>
+            <div className='space-y-2 sm:col-span-2'>
+              <Label htmlFor='sm-vehicle-hub'>Hub *</Label>
               <TmsCombobox
-                id='vehicle-post-office-id'
-                value={formValues.postOfficeId.trim() || NONE_VALUE}
+                id='sm-vehicle-hub'
+                value={formValues.hubId.trim()}
                 onValueChange={(value) => {
-                  const nextPostOfficeId = value === NONE_VALUE ? '' : value;
+                  const nextHubId = value === NONE_VALUE ? '' : value;
 
-                  onUpdateField('postOfficeId', nextPostOfficeId);
+                  onUpdateField('hubId', nextHubId);
 
-                  if (nextPostOfficeId !== formValues.postOfficeId) {
-                    onUpdateField('postOfficeStaffId', '');
+                  if (nextHubId !== formValues.hubId) {
+                    onUpdateField('assignedStaffId', '');
                   }
                 }}
-                options={postOfficeComboboxOptions}
-                placeholder={
-                  isLoadingPostOffices
-                    ? 'Loading post offices...'
-                    : 'Select post office'
-                }
-                emptyText={
-                  isLoadingPostOffices
-                    ? 'Loading post offices...'
-                    : 'No post offices available.'
-                }
-                disabled={isSaving || isLoadingPostOffices}
-                loading={isLoadingPostOffices}
+                options={hubOptions}
+                placeholder={isLoadingHubs ? 'Loading hubs...' : 'Select hub'}
+                emptyText={isLoadingHubs ? 'Loading hubs...' : 'No hubs found'}
+                disabled={isSaving || isLoadingHubs}
+                loading={isLoadingHubs}
               />
             </div>
 
-            <div className='space-y-2'>
-              <Label htmlFor='vehicle-post-office-staff-id'>
-                Courier staff
-              </Label>
+            <div className='space-y-2 sm:col-span-2'>
+              <Label htmlFor='sm-vehicle-driver'>Driver</Label>
               <TmsCombobox
-                id='vehicle-post-office-staff-id'
-                value={formValues.postOfficeStaffId.trim() || NONE_VALUE}
+                id='sm-vehicle-driver'
+                value={formValues.assignedStaffId.trim() || NONE_VALUE}
                 onValueChange={(value) =>
                   onUpdateField(
-                    'postOfficeStaffId',
+                    'assignedStaffId',
                     value === NONE_VALUE ? '' : value
                   )
                 }
-                options={courierComboboxOptions}
+                options={driverComboboxOptions}
                 placeholder={
-                  !formValues.postOfficeId.trim()
-                    ? 'Select post office first'
-                    : isLoadingCouriers
-                      ? 'Loading couriers...'
-                      : 'Select courier'
+                  !formValues.hubId.trim()
+                    ? 'Select hub first'
+                    : isLoadingDrivers
+                      ? 'Loading drivers...'
+                      : 'Select driver'
                 }
                 emptyText={
-                  !formValues.postOfficeId.trim()
-                    ? 'Select post office first.'
-                    : isLoadingCouriers
-                      ? 'Loading couriers...'
-                      : 'No couriers available for this post office.'
+                  !formValues.hubId.trim()
+                    ? 'Select hub first.'
+                    : isLoadingDrivers
+                      ? 'Loading drivers...'
+                      : 'No drivers assigned to this hub.'
                 }
                 disabled={
-                  isSaving ||
-                  !formValues.postOfficeId.trim() ||
-                  isLoadingCouriers
+                  isSaving || !formValues.hubId.trim() || isLoadingDrivers
                 }
-                loading={isLoadingCouriers}
+                loading={isLoadingDrivers}
               />
             </div>
           </div>
-
-          <p className='text-xs text-muted-foreground'>
-            For manager role, available post offices and couriers are limited to
-            your managed scope.
-          </p>
 
           <DialogFooter>
             <Button

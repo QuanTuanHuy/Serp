@@ -24,7 +24,7 @@ import {
   formatOptionalNumber,
   formatStatusLabel,
   formatVehicleType,
-} from '../vehiclePageModels';
+} from '../secondMileVehiclePageModels';
 
 interface SecondMileVehicleDetailDialogProps {
   open: boolean;

@@ -22,7 +22,7 @@ import {
   formatOptionalNumber,
   formatStatusLabel,
   formatVehicleType,
-} from '../vehiclePageModels';
+} from '../firstMileVehiclePageModels';
 
 interface VehicleDetailDialogProps {
   open: boolean;

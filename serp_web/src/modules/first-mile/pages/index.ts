@@ -5,8 +5,6 @@
 
 export * from './dashboard';
 export * from './network';
-export * from './product-types';
-export * from './vehicles';
 export * from './bags';
 export * from './bag-distribution';
 export * from './orders';
@@ -15,3 +13,4 @@ export * from './handover-manifests';
 export * from './pickup';
 export * from './billing';
 export * from './last-mile';
+export * from './settings';

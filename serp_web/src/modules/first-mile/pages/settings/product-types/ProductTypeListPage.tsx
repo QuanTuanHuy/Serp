@@ -26,6 +26,14 @@ import {
   Label,
   Switch,
 } from '@/shared/components/ui';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/shared/components/ui/table';
 import { useNotification } from '@/shared/hooks';
 import {
   Loader2,
@@ -41,8 +49,8 @@ import {
   useDeleteProductTypeMutation,
   useGetProductTypesQuery,
   useUpdateProductTypeMutation,
-} from '../../api';
-import type { ProductType } from '../../types';
+} from '../../../api';
+import type { ProductType } from '../../../types';
 
 const PAGE_SIZE = 20;
 
@@ -275,44 +283,70 @@ export const ProductTypeListPage: React.FC = () => {
                 Loading product types...
               </div>
             ) : data && data.items.length > 0 ? (
-              <div className='space-y-3'>
-                {data.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className='flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-start sm:justify-between'
-                  >
-                    <div>
-                      <p className='font-medium'>
-                        {item.code} - {item.name}
-                      </p>
-                      <p className='mt-1 text-xs text-muted-foreground'>
-                        Active: {item.isActive ? 'Yes' : 'No'}
-                      </p>
-                    </div>
-                    {isTmsAdmin ? (
-                      <div className='flex flex-wrap gap-2'>
-                        <Button
-                          type='button'
-                          size='sm'
-                          variant='outline'
-                          onClick={() => openEditDialog(item)}
-                        >
-                          <Pencil className='mr-1.5 h-3.5 w-3.5' />
-                          Edit
-                        </Button>
-                        <Button
-                          type='button'
-                          size='sm'
-                          variant='destructive'
-                          onClick={() => setDeleteTarget(item)}
-                        >
-                          <Trash2 className='mr-1.5 h-3.5 w-3.5' />
-                          Delete
-                        </Button>
-                      </div>
-                    ) : null}
+              <div className='space-y-4'>
+                <div className='overflow-hidden rounded-md border'>
+                  <div className='overflow-x-auto'>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className='min-w-[160px]'>Code</TableHead>
+                          <TableHead className='min-w-[240px]'>Name</TableHead>
+                          <TableHead className='min-w-[120px]'>
+                            Status
+                          </TableHead>
+                          {isTmsAdmin ? (
+                            <TableHead className='sticky right-0 z-20 border-l bg-card text-right'>
+                              Actions
+                            </TableHead>
+                          ) : null}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.items.map((item) => (
+                          <TableRow key={item.id} className='group'>
+                            <TableCell className='font-medium'>
+                              {item.code}
+                            </TableCell>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={item.isActive ? 'default' : 'outline'}
+                              >
+                                {item.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </TableCell>
+                            {isTmsAdmin ? (
+                              <TableCell className='sticky right-0 z-10 border-l bg-background text-right group-hover:bg-muted/50'>
+                                <div className='flex items-center justify-end gap-1'>
+                                  <Button
+                                    type='button'
+                                    size='icon'
+                                    variant='outline'
+                                    onClick={() => openEditDialog(item)}
+                                    title='Edit'
+                                    aria-label={`Edit ${item.code}`}
+                                  >
+                                    <Pencil className='h-4 w-4' />
+                                  </Button>
+                                  <Button
+                                    type='button'
+                                    size='icon'
+                                    variant='destructive'
+                                    onClick={() => setDeleteTarget(item)}
+                                    title='Delete'
+                                    aria-label={`Delete ${item.code}`}
+                                  >
+                                    <Trash2 className='h-4 w-4' />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            ) : null}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                ))}
+                </div>
 
                 <div className='flex items-center justify-between pt-2'>
                   <Button

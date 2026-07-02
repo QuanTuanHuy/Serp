@@ -33,7 +33,7 @@ import {
   formatStatusLabel,
   formatVehicleType,
   getStatusBadgeVariant,
-} from '../vehiclePageModels';
+} from '../secondMileVehiclePageModels';
 
 interface SecondMileVehicleResultsCardProps {
   canManage: boolean;
@@ -159,29 +159,34 @@ export const SecondMileVehicleResultsCard: React.FC<
                             <Button
                               type='button'
                               variant='outline'
-                              size='sm'
+                              size='icon'
                               onClick={() => onView(vehicle.id)}
+                              title='View'
+                              aria-label={`View ${vehicle.licensePlate}`}
                             >
-                              <Eye className='mr-1 h-4 w-4' />
-                              View
+                              <Eye className='h-4 w-4' />
                             </Button>
                             {canManage && (
                               <>
                                 <Button
                                   type='button'
                                   variant='outline'
-                                  size='sm'
+                                  size='icon'
                                   onClick={() => onEdit(vehicle)}
                                   disabled={isSaving || isDeleting}
+                                  title='Edit'
+                                  aria-label={`Edit ${vehicle.licensePlate}`}
                                 >
                                   <Pencil className='h-4 w-4' />
                                 </Button>
                                 <Button
                                   type='button'
                                   variant='destructive'
-                                  size='sm'
+                                  size='icon'
                                   onClick={() => onDelete(vehicle)}
                                   disabled={isSaving || isDeleting}
+                                  title='Delete'
+                                  aria-label={`Delete ${vehicle.licensePlate}`}
                                 >
                                   <Trash2 className='h-4 w-4' />
                                 </Button>

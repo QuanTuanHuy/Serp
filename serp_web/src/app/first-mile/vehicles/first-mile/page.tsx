@@ -1,10 +1,10 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - First-mile vehicles (first-mile scope) route
+ * Description: Part of Serp Project - Legacy first-mile vehicles redirect
  */
 
-import { VehicleListPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
 export default function FirstMileVehiclesFirstMileRoutePage() {
-  return <VehicleListPage />;
+  redirect('/first-mile/settings/vehicles?scope=first-mile');
 }

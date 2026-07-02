@@ -29,7 +29,7 @@ import {
   formatStatusLabel,
   formatVehicleType,
   getStatusBadgeVariant,
-} from '../vehiclePageModels';
+} from '../firstMileVehiclePageModels';
 
 interface VehicleResultsCardProps {
   canViewVehicles: boolean;
@@ -156,33 +156,36 @@ export const VehicleResultsCard: React.FC<VehicleResultsCardProps> = ({
                               <Button
                                 type='button'
                                 variant='outline'
-                                size='sm'
+                                size='icon'
                                 onClick={() => onViewDetails(vehicle.id)}
+                                title='Details'
+                                aria-label={`View details for ${vehicle.licensePlate}`}
                               >
-                                <Eye className='mr-1 h-4 w-4' />
-                                Details
+                                <Eye className='h-4 w-4' />
                               </Button>
                               {canManageVehicles && (
                                 <>
                                   <Button
                                     type='button'
                                     variant='outline'
-                                    size='sm'
+                                    size='icon'
                                     onClick={() => onEdit(vehicle)}
                                     disabled={isSaving || isDeleting}
+                                    title='Edit'
+                                    aria-label={`Edit ${vehicle.licensePlate}`}
                                   >
-                                    <Pencil className='mr-1 h-4 w-4' />
-                                    Edit
+                                    <Pencil className='h-4 w-4' />
                                   </Button>
                                   <Button
                                     type='button'
                                     variant='destructive'
-                                    size='sm'
+                                    size='icon'
                                     onClick={() => onDelete(vehicle)}
                                     disabled={isSaving || isDeleting}
+                                    title='Delete'
+                                    aria-label={`Delete ${vehicle.licensePlate}`}
                                   >
-                                    <Trash2 className='mr-1 h-4 w-4' />
-                                    Delete
+                                    <Trash2 className='h-4 w-4' />
                                   </Button>
                                 </>
                               )}
