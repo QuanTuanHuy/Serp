@@ -35,6 +35,7 @@ import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
 import serp.project.discuss_service.core.service.IUserInfoService;
+import serp.project.discuss_service.core.service.impl.TypingEventDebouncer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +60,7 @@ public class MessageUseCase {
     private final IAttachmentService attachmentService;
     private final IAttachmentUrlService attachmentUrlService;
     private final IUserInfoService userInfoService;
+    private final TypingEventDebouncer typingEventDebouncer;
 
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -347,6 +349,11 @@ public class MessageUseCase {
             cacheService.setUserTyping(channelId, userId);
         } else {
             cacheService.clearUserTyping(channelId, userId);
+        }
+
+        if (!typingEventDebouncer.shouldPublish(channelId, userId, isTyping)) {
+            log.debug("Suppressed duplicate typing event for user {} in channel {}", userId, channelId);
+            return;
         }
 
         eventPublisher.publishTypingIndicator(channelId, userId, isTyping);
