@@ -9,6 +9,7 @@ public class RouteElement {
 	private String departureTime;
 	private int travelTime;
 	private Long requestId;  // null for depot/mooc stops; DB entity ID for operational stops
+	private String containerCode; // container code for PICKUP_CONTAINER stops (OE requests)
 
 	public RouteElement(String locationCode, String action,
 			String arrivalTime, String departureTime, int travelTime){
@@ -24,6 +25,13 @@ public class RouteElement {
 			String arrivalTime, String departureTime, int travelTime, Long requestId){
 		this(locationCode, action, arrivalTime, departureTime, travelTime);
 		this.requestId = requestId;
+	}
+
+	public RouteElement(String locationCode, String action,
+			String arrivalTime, String departureTime, int travelTime,
+			Long requestId, String containerCode){
+		this(locationCode, action, arrivalTime, departureTime, travelTime, requestId);
+		this.containerCode = containerCode;
 	}
 	public RouteElement() {
 		super();
@@ -66,6 +74,12 @@ public class RouteElement {
 	}
 	public void setRequestId(Long requestId) {
 		this.requestId = requestId;
+	}
+	public String getContainerCode() {
+		return containerCode;
+	}
+	public void setContainerCode(String containerCode) {
+		this.containerCode = containerCode;
 	}
 }
 

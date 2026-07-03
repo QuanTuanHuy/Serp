@@ -93,7 +93,9 @@ interface ManualSelection {
   returnDepotTrailer: string;
   requests: TtcrsRequest[];
   replacementTrailerByRequest: Record<number, TrailerItem>;
+  returnDepotByRequest: Record<number, string>;
   containerByRequest: Record<number, ContainerItem>;
+  ieDestByRequest: Record<number, string>;
 }
 
 interface RouteValidationResult {
@@ -243,7 +245,7 @@ function buildStopCards(selection: ManualSelection): {
     logicalAction: 'DROP_TRAILER',
     apiAction: 'DELIVERY_MOOC',
     requestId: null,
-    trailerId: null,
+    trailerId: selection.startTrailer.id,
     earliestAt: null,
     lateAt: null,
   });
@@ -272,6 +274,12 @@ function buildStopCards(selection: ManualSelection): {
         ? `Container ${selectedContainer.code}`
         : request.srcLocationCode ?? '—';
 
+    // IE destination is chosen manually (like OE origin), not from the request
+    const ieDestLocationCode =
+      request.type === 'IE' && selection.ieDestByRequest?.[request.id]
+        ? selection.ieDestByRequest[request.id]
+        : request.destLocationCode;
+
     addCard({
       id: `req-${request.id}-src`,
       title: `Request #${request.id} - Source`,
@@ -288,8 +296,8 @@ function buildStopCards(selection: ManualSelection): {
     addCard({
       id: `req-${request.id}-dest`,
       title: `Request #${request.id} - Destination`,
-      description: request.destLocationCode,
-      locationCode: request.destLocationCode,
+      description: ieDestLocationCode,
+      locationCode: ieDestLocationCode,
       logicalAction: 'DELIVERY_CONTAINER',
       apiAction: 'DELIVERY_EMPTYCONT',
       requestId: request.id,
@@ -300,15 +308,17 @@ function buildStopCards(selection: ManualSelection): {
 
     if (request.dropTrailerRequired) {
       const replacement = selection.replacementTrailerByRequest[request.id];
+      const returnDepot =
+        selection.returnDepotByRequest[request.id] || request.destLocationCode;
       addCard({
         id: `req-${request.id}-drop-trailer`,
         title: `Request #${request.id} - Drop Trailer`,
-        description: request.destLocationCode,
-        locationCode: request.destLocationCode,
+        description: returnDepot,
+        locationCode: returnDepot,
         logicalAction: 'DROP_TRAILER',
         apiAction: 'DELIVERY_MOOC',
         requestId: request.id,
-        trailerId: null,
+        trailerId: replacement.id,
         earliestAt: null,
         lateAt: null,
       });
@@ -379,26 +389,19 @@ function validateRoute(
         currentTrailerId = card.trailerId;
       }
     } else if (card.logicalAction === 'DROP_TRAILER') {
-      if (card.id === 'drop-end-trailer') {
-        if (currentTrailerId == null) {
-          errors.push(`Stop #${index + 1}: Cannot return trailer when no trailer is attached.`);
-        } else {
-          if (droppedTrailers.has(currentTrailerId)) {
-            errors.push(
-              `Stop #${index + 1}: Cannot return a trailer that was already dropped at a destination.`
-            );
-          }
-          currentTrailerId = null;
-        }
+      if (currentTrailerId == null) {
+        errors.push(`Stop #${index + 1}: Cannot drop trailer when no trailer is attached.`);
+      } else if (card.trailerId != null && card.trailerId !== currentTrailerId) {
+        errors.push(
+          `Stop #${index + 1}: Expected to drop trailer #${card.trailerId} but currently attached is trailer #${currentTrailerId}.`
+        );
+      } else if (droppedTrailers.has(currentTrailerId)) {
+        errors.push(
+          `Stop #${index + 1}: Trailer #${currentTrailerId} was already dropped earlier in the route.`
+        );
       } else {
-        if (currentTrailerId == null) {
-          errors.push(`Stop #${index + 1}: Cannot drop trailer when no trailer is attached.`);
-        } else if (card.trailerId != null && card.trailerId !== currentTrailerId) {
-          errors.push(`Stop #${index + 1}: Dropped trailer does not match current trailer.`);
-        } else {
-          droppedTrailers.add(currentTrailerId);
-          currentTrailerId = null;
-        }
+        droppedTrailers.add(currentTrailerId);
+        currentTrailerId = null;
       }
     } else if (card.logicalAction === 'PICKUP_CONTAINER') {
       hasOperationalRequestStop = true;
@@ -440,6 +443,7 @@ function validateRoute(
         }
       }
     }
+    console.log(currentTrailerId, droppedTrailers, loadedRequests);
   });
 
   if (!hasOperationalRequestStop) {
@@ -536,7 +540,11 @@ export function CreateManualRoutePage() {
   const [replacementTrailerByRequest, setReplacementTrailerByRequest] = useState<
     Record<number, number>
   >({});
+  const [returnDepotByRequest, setReturnDepotByRequest] = useState<Record<number, string>>(
+    {}
+  );
   const [containerByRequest, setContainerByRequest] = useState<Record<number, number>>({});
+  const [ieDestByRequest, setIeDestByRequest] = useState<Record<number, string>>({});
 
   const [cardsById, setCardsById] = useState<Record<string, ManualStopCard>>({});
   const [poolIds, setPoolIds] = useState<string[]>([]);
@@ -585,6 +593,10 @@ export function CreateManualRoutePage() {
   );
   const trailerDepotLocations = useMemo(
     () => locations.filter((location) => location.type === 'DEPOT_TRAILER'),
+    [locations]
+  );
+  const containerDepotLocations = useMemo(
+    () => locations.filter((location) => location.type === 'DEPOT_CONTAINER'),
     [locations]
   );
   const selectedRequests = useMemo(
@@ -706,6 +718,18 @@ export function CreateManualRoutePage() {
       return;
     }
 
+    const missingReturnDepot = requiredDropRequests.filter(
+      (request) => !returnDepotByRequest[request.id]
+    );
+    if (missingReturnDepot.length > 0) {
+      toast.error(
+        `Requests requiring trailer drop are missing return depot: ${missingReturnDepot
+          .map((request) => `#${request.id}`)
+          .join(', ')}`
+      );
+      return;
+    }
+
     const missingContainerSelection = selectedRequests.filter(
       (request) =>
         request.type === 'OE' && !containerSelectionMap[request.id]?.currentLocationCode
@@ -713,6 +737,17 @@ export function CreateManualRoutePage() {
     if (missingContainerSelection.length > 0) {
       toast.error(
         `OE requests require a container selection with a valid location: ${missingContainerSelection
+          .map((request) => `#${request.id}`)
+          .join(', ')}`
+      );
+      return;
+    }
+
+    const ieRequests = selectedRequests.filter((request) => request.type === 'IE');
+    const missingIeDest = ieRequests.filter((request) => !ieDestByRequest[request.id]);
+    if (missingIeDest.length > 0) {
+      toast.error(
+        `IE requests require a destination selection: ${missingIeDest
           .map((request) => `#${request.id}`)
           .join(', ')}`
       );
@@ -727,7 +762,9 @@ export function CreateManualRoutePage() {
       returnDepotTrailer,
       requests: selectedRequests,
       replacementTrailerByRequest: replacementTrailerMap,
+      returnDepotByRequest,
       containerByRequest: containerSelectionMap,
+      ieDestByRequest,
     };
 
     const built = buildStopCards(selection);
@@ -827,7 +864,9 @@ export function CreateManualRoutePage() {
       returnDepotTrailer,
       requests: selectedRequests,
       replacementTrailerByRequest: replacementTrailerMap,
+      returnDepotByRequest,
       containerByRequest: containerSelectionMap,
+      ieDestByRequest,
     };
 
     const baseValidation = validateRoute(routeCards, selection);
@@ -948,6 +987,13 @@ export function CreateManualRoutePage() {
                 currentTrailerId = null;
               }
 
+              // Container code for PICKUP_CONTAINER stops on OE requests
+              let containerCode: string | null = null;
+              if (card.logicalAction === 'PICKUP_CONTAINER' && card.requestId != null) {
+                const selectedContainer = containerSelectionMap[card.requestId];
+                containerCode = selectedContainer?.code ?? null;
+              }
+
               return {
                 sequence: idx + 1,
                 locationCode: card.locationCode,
@@ -955,6 +1001,7 @@ export function CreateManualRoutePage() {
                 plannedArrival: etaByCardId[card.id],
                 requestId: card.requestId,
                 trailerId,
+                containerCode,
               };
             });
           })(),
@@ -1125,6 +1172,7 @@ export function CreateManualRoutePage() {
                       <TableHead>Type</TableHead>
                       <TableHead>Drop Trailer</TableHead>
                       <TableHead>Replacement Trailer</TableHead>
+                      <TableHead>Return Depot</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1183,7 +1231,33 @@ export function CreateManualRoutePage() {
                               request.srcLocationCode ?? '—'
                             )}
                           </TableCell>
-                          <TableCell>{request.destLocationCode}</TableCell>
+                          <TableCell>
+                            {request.type === 'IE' ? (
+                              <Select
+                                value={ieDestByRequest[request.id] || ''}
+                                onValueChange={(value) =>
+                                  setIeDestByRequest((prev) => ({
+                                    ...prev,
+                                    [request.id]: value,
+                                  }))
+                                }
+                                disabled={!checked}
+                              >
+                                <SelectTrigger className='h-8'>
+                                  <SelectValue placeholder='Select destination' />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {containerDepotLocations.map((loc) => (
+                                    <SelectItem key={loc.id} value={loc.locationCode}>
+                                      {loc.locationCode}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              request.destLocationCode
+                            )}
+                          </TableCell>
                           <TableCell><TypeBadge type={request.type} /></TableCell>
                           <TableCell>
                             <Badge
@@ -1227,6 +1301,33 @@ export function CreateManualRoutePage() {
                                         {trailer.code} ({trailer.status})
                                       </SelectItem>
                                     ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span className='text-xs text-muted-foreground'>—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {requiresDrop ? (
+                              <Select
+                                value={returnDepotByRequest[request.id] || ''}
+                                onValueChange={(value) =>
+                                  setReturnDepotByRequest((prev) => ({
+                                    ...prev,
+                                    [request.id]: value,
+                                  }))
+                                }
+                                disabled={!checked}
+                              >
+                                <SelectTrigger className='h-8'>
+                                  <SelectValue placeholder='Select depot' />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {trailerDepotLocations.map((location) => (
+                                    <SelectItem key={location.id} value={location.locationCode}>
+                                      {location.locationCode}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             ) : (
@@ -1282,15 +1383,15 @@ export function CreateManualRoutePage() {
 
           <DragDropContext onDragEnd={onDragEnd}>
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-2'>
-              <Card className='min-h-[420px]'>
-                <CardContent className='p-4'>
+              <Card className='h-full min-h-[420px]'>
+                <CardContent className='flex flex-1 flex-col p-4'>
                   <h3 className='mb-3 text-sm font-semibold text-foreground'>Stop Card Pool</h3>
                   <Droppable droppableId='pool'>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`space-y-2 rounded-md border border-dashed p-2 ${
+                        className={`flex-1 space-y-2 rounded-md border border-dashed p-2 ${
                           snapshot.isDraggingOver ? 'bg-muted/40' : 'bg-background'
                         }`}
                       >
@@ -1360,8 +1461,8 @@ export function CreateManualRoutePage() {
                 </CardContent>
               </Card>
 
-              <Card className='min-h-[420px]'>
-                <CardContent className='p-4'>
+              <Card className='h-full min-h-[420px]'>
+                <CardContent className='flex flex-1 flex-col p-4'>
                   <h3 className='mb-3 text-sm font-semibold text-foreground'>
                     Route Sequence (top = first stop)
                   </h3>
@@ -1370,7 +1471,7 @@ export function CreateManualRoutePage() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`space-y-2 rounded-md border border-dashed p-2 ${
+                        className={`flex-1 space-y-2 rounded-md border border-dashed p-2 ${
                           snapshot.isDraggingOver ? 'bg-orange-50 dark:bg-orange-950/10' : 'bg-background'
                         }`}
                       >

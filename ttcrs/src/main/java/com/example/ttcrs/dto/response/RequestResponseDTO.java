@@ -33,6 +33,7 @@ public class RequestResponseDTO {
 
     private Double weight;
     private ContainerSize containerSize;
+    private String containerCode;
     private Boolean dropTrailerRequired;
 
     /** Lý do huỷ hoặc ghi chú bổ sung */
@@ -79,6 +80,7 @@ public class RequestResponseDTO {
                 .lateAtDest(entity.getLateAtDest())
                 .weight(entity.getWeight())
                 .containerSize(entity.getContainerSize())
+                .containerCode(entity.getContainerCode())
                 .dropTrailerRequired(entity.getDropTrailerRequired())
                 .reason(entity.getReason())
                 .evidenceAtSrc(entity.getEvidenceAtSrc())

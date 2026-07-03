@@ -36,6 +36,7 @@ public class CheapestInsertionInit implements InitializationStrategy {
                 double baseCost = solver.objective.getValue();
                 Point st = solver.XR.getStartingPointOfRoute(r);
                 int groupTruck = solver.point2Group.get(st);
+                //đảm bảo mỗi truck chỉ chạy đúng 1 route
                 if (solver.group2marked.get(groupTruck) == 1
                         && solver.XR.index(solver.XR.getTerminatingPointOfRoute(r)) <= 1)
                     continue;

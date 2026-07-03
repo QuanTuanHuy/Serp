@@ -29,6 +29,7 @@ export interface TtcrsRequest {
   lateAtDest: string | null;
   weight: number | null;
   containerSize: ContainerSize | null;
+  containerCode: string | null;
   dropTrailerRequired: boolean | null;
   reason: string | null;
   evidenceAtSrc: string | null;
@@ -81,10 +82,11 @@ export interface CreateRequestPayload {
   customerId: number;
   type: RequestType;
   srcLocationCode?: string | null;
-  destLocationCode: string;
+  destLocationCode: string | null;
   quantity: number;
   weight?: number | null;
   dropTrailerRequired?: boolean;
+  containerCode?: string | null;
   earlyAtSrc?: string | null;
   lateAtSrc?: string | null;
   earlyAtDest?: string | null;
@@ -214,6 +216,7 @@ export interface AlgorithmRouteElement {
   travelTime: number;
   requestId: number | null;
   trailerId?: number | null;
+  containerCode?: string | null;
 }
 
 export interface AlgorithmTruck {
@@ -255,6 +258,7 @@ export interface SaveTransportPlanStopPayload {
   plannedArrival: string;
   requestId: number | null;
   trailerId?: number | null;
+  containerCode?: string | null;
 }
 
 export interface SaveTransportPlanItemPayload {
@@ -311,6 +315,7 @@ export interface TransportPlanStopDetail {
   requestSrcLocationCode: string | null;
   requestDestLocationCode: string | null;
   evidenceUrl: string | null;
+  containerCode: string | null;
 }
 
 export interface TransportPlanDetail {
@@ -395,6 +400,7 @@ export interface UpdateRequestPayload {
   lateAtDest?: string | null;
   weight?: number | null;
   containerSize?: ContainerSize | null;
+  containerCode?: string | null;
   dropTrailerRequired?: boolean;
   reason?: string | null;
 }

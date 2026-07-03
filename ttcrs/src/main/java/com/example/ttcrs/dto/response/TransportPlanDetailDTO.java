@@ -49,5 +49,8 @@ public class TransportPlanDetailDTO {
         private String requestDestLocationCode;
         /** Evidence URL for this stop (derived from request.evidenceAtSrc or evidenceAtDest). */
         private String evidenceUrl;
+
+        /** Container code from the linked request (null if no request or not set). */
+        private String containerCode;
     }
 }

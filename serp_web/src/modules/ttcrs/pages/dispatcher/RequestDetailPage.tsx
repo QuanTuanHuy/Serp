@@ -239,6 +239,7 @@ export function RequestDetailPage({ requestId }: Props) {
   const [lateAtSrc, setLateAtSrc] = useState('');
   const [earlyAtDest, setEarlyAtDest] = useState('');
   const [lateAtDest, setLateAtDest] = useState('');
+  const [containerCode, setContainerCode] = useState('');
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -260,13 +261,15 @@ export function RequestDetailPage({ requestId }: Props) {
     setLateAtSrc(toLocalInput(request.lateAtSrc));
     setEarlyAtDest(toLocalInput(request.earlyAtDest));
     setLateAtDest(toLocalInput(request.lateAtDest));
+    setContainerCode(request.containerCode ?? '');
   }, [request]);
 
   async function handleSave() {
     if (!request) return;
     const payload: UpdateRequestPayload = {};
     if (request.type !== 'OE' && srcLocationCode.trim()) payload.srcLocationCode = srcLocationCode.trim();
-    if (destLocationCode.trim()) payload.destLocationCode = destLocationCode.trim();
+    if (request.type !== 'IE' && destLocationCode.trim()) payload.destLocationCode = destLocationCode.trim();
+    if (request.type !== 'OE' && containerCode.trim()) payload.containerCode = containerCode.trim();
     if (weight !== '') payload.weight = Number(weight);
     if (containerSize) payload.containerSize = containerSize;
     payload.dropTrailerRequired = dropTrailerRequired;
@@ -461,7 +464,11 @@ export function RequestDetailPage({ requestId }: Props) {
               </div>
               <div className="space-y-1.5">
                 <Label>Destination</Label>
-                {isPending ? (
+                {isPending && request.type === 'IE' ? (
+                  <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                    Destination for IE requests is determined by the algorithm when building a route.
+                  </div>
+                ) : isPending ? (
                   <Select value={destLocationCode} onValueChange={setDestLocationCode}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select destination" />
@@ -478,6 +485,26 @@ export function RequestDetailPage({ requestId }: Props) {
                   <div className="flex items-center gap-1.5 rounded-md bg-muted/40 px-3 py-2 text-sm">
                     <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                     {request.destLocationCode}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Container Code */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="rd-container-code">Container Code</Label>
+                {isPending && request.type !== 'OE' ? (
+                  <Input
+                    id="rd-container-code"
+                    type="text"
+                    value={containerCode}
+                    onChange={(e) => setContainerCode(e.target.value)}
+                    placeholder="e.g. MSKU1234567"
+                  />
+                ) : (
+                  <div className="flex items-center gap-1.5 rounded-md bg-muted/40 px-3 py-2 text-sm font-mono">
+                    {request.containerCode || '—'}
                   </div>
                 )}
               </div>

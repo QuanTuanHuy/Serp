@@ -105,6 +105,8 @@ public class TransportPlanService {
             plan = transportPlanRepository.save(plan);
             final Long planId = plan.getId();
             Map<Long, String> oeOriginByRequestId = new java.util.HashMap<>();
+            Map<Long, String> oeContainerCodeByRequestId = new java.util.HashMap<>();
+            Map<Long, String> ieDestByRequestId = new java.util.HashMap<>();
 
             List<TransportPlanStopEntity> stopEntities = new ArrayList<>();
             for (SaveTransportPlanDTO.StopDTO stopDto : stops) {
@@ -115,6 +117,12 @@ public class TransportPlanService {
 
                 if (stopDto.getRequestId() != null && action == StopAction.PICKUP_CONTAINER) {
                     oeOriginByRequestId.putIfAbsent(stopDto.getRequestId(), stopDto.getLocationCode());
+                    if (stopDto.getContainerCode() != null && !stopDto.getContainerCode().isBlank()) {
+                        oeContainerCodeByRequestId.putIfAbsent(stopDto.getRequestId(), stopDto.getContainerCode());
+                    }
+                }
+                if (stopDto.getRequestId() != null && action == StopAction.DELIVERY_CONTAINER) {
+                    ieDestByRequestId.putIfAbsent(stopDto.getRequestId(), stopDto.getLocationCode());
                 }
 
                 stopEntities.add(TransportPlanStopEntity.builder()
@@ -151,6 +159,21 @@ public class TransportPlanService {
                             && originLocationCode != null
                             && !originLocationCode.isBlank()) {
                         req.setSrcLocationCode(originLocationCode);
+                    }
+                });
+                oeContainerCodeByRequestId.forEach((requestId, containerCode) -> {
+                    RequestEntity req = requestById.get(requestId);
+                    if (req != null && req.getType() == RequestType.OE) {
+                        req.setContainerCode(containerCode);
+                    }
+                });
+                ieDestByRequestId.forEach((requestId, destLocationCode) -> {
+                    RequestEntity req = requestById.get(requestId);
+                    if (req != null
+                            && req.getType() == RequestType.IE
+                            && destLocationCode != null
+                            && !destLocationCode.isBlank()) {
+                        req.setDestLocationCode(destLocationCode);
                     }
                 });
                 requestRepository.saveAll(linkedRequests);
@@ -547,6 +570,7 @@ public class TransportPlanService {
                             .requestSrcLocationCode(req != null ? req.getSrcLocationCode() : null)
                             .requestDestLocationCode(req != null ? req.getDestLocationCode() : null)
                             .evidenceUrl(req != null ? resolveEvidenceUrl(s.getLocationCode(), req) : null)
+                            .containerCode(req != null ? req.getContainerCode() : null)
                             .build();
                 })
                 .toList();

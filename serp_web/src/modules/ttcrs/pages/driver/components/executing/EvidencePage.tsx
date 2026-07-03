@@ -75,6 +75,11 @@ export function EvidencePage({
               Request #{stop.requestId}
             </p>
           )}
+          {stop.containerCode && (
+            <p className="mt-1 text-sm font-mono font-medium">
+              Container: {stop.containerCode}
+            </p>
+          )}
         </CardContent>
       </Card>
 
