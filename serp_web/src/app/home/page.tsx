@@ -178,6 +178,26 @@ export default function HomePage() {
     hasModules,
   } = useModules();
 
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const skipOnboarding = localStorage.getItem('serp_skip_pricing_onboarding');
+      if (skipOnboarding === 'true') {
+        setIsDismissed(true);
+      }
+    }
+  }, []);
+
+  const hasBusinessModules = useMemo(() => {
+    return modules.some((m) => !m.isAdmin);
+  }, [modules]);
+
+  const handleDismiss = () => {
+    localStorage.setItem('serp_skip_pricing_onboarding', 'true');
+    setIsDismissed(true);
+  };
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.replace('/auth');
