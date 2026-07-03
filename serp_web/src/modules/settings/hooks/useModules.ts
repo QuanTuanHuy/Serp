@@ -15,7 +15,7 @@ import {
   useGetModuleUsersQuery,
 } from '../services/modules/modulesApi';
 import type { AccessibleModule } from '@/modules/settings/types/module-access.types';
-import { getErrorMessage } from '@/lib/store/api/utils';
+import { getErrorMessage, getResponseMessage } from '@/lib/store/api/utils';
 import { useNotification } from '@/shared/hooks/use-notification';
 
 export function useSettingsModules() {
@@ -38,7 +38,7 @@ export function useSettingsModules() {
 
   useEffect(() => {
     if (error) {
-      showError('Failed to load modules');
+      showError(getErrorMessage(error));
     }
   }, [error, showError]);
 
@@ -85,8 +85,8 @@ export function useSettingsModules() {
         throw new Error(msg);
       }
       try {
-        await assignUser({ organizationId, moduleId, userId, roleId }).unwrap();
-        success('User assigned to module');
+        const result = await assignUser({ organizationId, moduleId, userId, roleId }).unwrap();
+        success(getResponseMessage(result, 'User assigned to module'));
       } catch (e: any) {
         showError(getErrorMessage(e));
         throw e;
@@ -103,8 +103,8 @@ export function useSettingsModules() {
         throw new Error(msg);
       }
       try {
-        await revokeUser({ organizationId, moduleId, userId }).unwrap();
-        success('User access revoked');
+        const result = await revokeUser({ organizationId, moduleId, userId }).unwrap();
+        success(getResponseMessage(result, 'User access revoked'));
       } catch (e: any) {
         showError(getErrorMessage(e));
         throw e;
