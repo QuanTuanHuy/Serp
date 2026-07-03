@@ -152,6 +152,19 @@ export const getErrorMessage = (error: any): string => {
 };
 
 /**
+ * Extract success/response message from API response
+ */
+export const getResponseMessage = (response: any, fallback = 'Success'): string => {
+  if (response?.message) {
+    return response.message;
+  }
+  if (response?.data?.message) {
+    return response.data.message;
+  }
+  return fallback;
+};
+
+/**
  * Create a standardized success response
  */
 export const createSuccessResponse = <T>(
