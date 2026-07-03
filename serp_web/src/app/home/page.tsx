@@ -7,7 +7,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ModuleShowcase } from '@/modules/account/components/ModuleShowcase';
 import { useAuth } from '@/modules/account/hooks/useAuth';
 import { useModules } from '@/modules/account/hooks/useModules';
@@ -31,7 +31,9 @@ import {
   type LucideIcon,
   Settings2,
   Shield,
+  Sparkles,
   UserRound,
+  X,
 } from 'lucide-react';
 
 const WORKSPACE_GUIDANCE = [
