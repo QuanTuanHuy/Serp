@@ -5,9 +5,12 @@
 
 package serp.project.discuss_service.core.service;
 
+import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
+
+import java.util.List;
 
 public interface IDiscussEventPublisher {
 
@@ -19,6 +22,8 @@ public interface IDiscussEventPublisher {
     String TOPIC_REACTION_EVENTS = "discuss.reaction.events";
     String TOPIC_PRESENCE_EVENTS = "discuss.presence.events";
 
+    void publishRealtimeEvent(String key, WsEvent<?> event, String topic);
+
     // ==================== MESSAGE EVENTS ====================
 
     void publishMessageSent(MessageEntity message);
@@ -26,6 +31,8 @@ public interface IDiscussEventPublisher {
     void publishMessageUpdated(MessageEntity message);
 
     void publishMessageDeleted(MessageEntity message);
+
+    void publishMessageRead(Long channelId, Long messageId, Long userId, List<Long> readBy, Integer readCount);
 
     // ==================== CHANNEL EVENTS ====================
 
@@ -52,8 +59,6 @@ public interface IDiscussEventPublisher {
     void publishReactionRemoved(Long messageId, Long channelId, Long userId, String emoji);
 
     // ==================== PRESENCE EVENTS ====================
-
-    void publishTypingIndicator(Long channelId, Long userId, boolean isTyping);
 
     void publishUserOnline(Long userId);
 

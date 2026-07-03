@@ -41,10 +41,17 @@ import { useGetPmProjectPeopleQuery } from '../api/projectApi';
 import { fromLocalDateInputValue, toLocalDateInputValue } from '../utils/date';
 import { PMOptimizationRunItemTable } from '../components/optimization/PMOptimizationRunItemTable';
 import { PMOptimizationRunOverview } from '../components/optimization/PMOptimizationRunOverview';
-import { PMOptimizationRunOverrideDialog } from '../components/optimization/PMOptimizationRunOverrideDialog';
+import { PMOptimizationRunOverrideSheet } from '../components/optimization/PMOptimizationRunOverrideSheet';
+import { PMOptimizationRunReviewTable } from '../components/optimization/PMOptimizationRunReviewTable';
+import { PMOptimizationRunRisks } from '../components/optimization/PMOptimizationRunRisks';
 import { getPmOptimizationAlgorithmLabel } from '../constants/optimization';
+import {
+  buildMeaningfulDecisionItem,
+  getReadyApplyWorkItemIds,
+} from '../utils/optimizationReview';
 import type {
   PMOptimizationDecision,
+  PMOptimizationScheduleAllocationApi,
   PMOptimizationRunDecisionItemRequest,
   PMOptimizationRunApi,
   PMOptimizationRunItemApi,
@@ -78,7 +85,6 @@ export function PMProjectOptimizationRunPage({
   const numericProjectId = Number(projectId);
   const numericRunId = Number(runId);
   const [selectedApplyIds, setSelectedApplyIds] = useState<number[]>([]);
-  const [hasInitializedSelection, setHasInitializedSelection] = useState(false);
   const [reviewItem, setReviewItem] = useState<PMOptimizationRunItemApi | null>(
     null
   );
@@ -89,7 +95,29 @@ export function PMProjectOptimizationRunPage({
   const [overrideAssigneeId, setOverrideAssigneeId] = useState('');
   const [overridePlannedStart, setOverridePlannedStart] = useState('');
   const [overridePlannedEnd, setOverridePlannedEnd] = useState('');
-  const [activeTab, setActiveTab] = useState('summary');
+  const [overrideAllocationChunks, setOverrideAllocationChunks] = useState<
+    PMOptimizationScheduleAllocationApi[]
+  >([]);
+  const [activeTab, setActiveTab] = useState('review');
+  const [highlightedWorkItemId, setHighlightedWorkItemId] = useState<
+    number | null
+  >(null);
+
+  const handleLocateItem = (workItemId: number) => {
+    setActiveTab('review');
+    setHighlightedWorkItemId(workItemId);
+
+    setTimeout(() => {
+      const element = document.getElementById(`review-item-${workItemId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+
+    setTimeout(() => {
+      setHighlightedWorkItemId(null);
+    }, 2000);
+  };
 
   const { data, isLoading, error, refetch } = useGetPmOptimizationRunQuery(
     { projectId: numericProjectId, runId: numericRunId },
@@ -108,16 +136,8 @@ export function PMProjectOptimizationRunPage({
   const [discardRun, discardState] = useDiscardPmOptimizationRunMutation();
 
   useEffect(() => {
-    setHasInitializedSelection(false);
     setSelectedApplyIds([]);
   }, [numericRunId]);
-
-  useEffect(() => {
-    if (data?.items?.length && !hasInitializedSelection) {
-      setSelectedApplyIds(data.items.map((item) => item.workItemId));
-      setHasInitializedSelection(true);
-    }
-  }, [data?.items, hasInitializedSelection]);
 
   const users = useMemo(
     () =>
@@ -136,6 +156,14 @@ export function PMProjectOptimizationRunPage({
   const summary = run?.summary;
   const canEditAssignment = run?.changeScope !== 'SCHEDULE_ONLY';
   const canEditSchedule = run?.changeScope !== 'ASSIGNMENT_ONLY';
+  const reviewScope = useMemo(
+    () => ({ canEditAssignment, canEditSchedule }),
+    [canEditAssignment, canEditSchedule]
+  );
+  const selectedReadyApplyIds = useMemo(
+    () => getReadyApplyWorkItemIds(items, selectedApplyIds, reviewScope),
+    [items, reviewScope, selectedApplyIds]
+  );
 
   const handleToggleApply = (workItemId: number) => {
     setSelectedApplyIds((current) =>
@@ -176,23 +204,49 @@ export function PMProjectOptimizationRunPage({
     body: Omit<PMOptimizationRunDecisionItemRequest, 'workItemId'>
   ) => handleDecisionBatch([{ workItemId: item.workItemId, ...body }]);
 
-  const handleBulkDecision = (decision: 'ACCEPTED' | 'REJECTED') => {
-    if (activeTab !== 'assignment' && activeTab !== 'schedule') {
-      toast.error('Open Assignment or Schedule to review selected items.');
+  const handleMeaningfulDecision = (
+    item: PMOptimizationRunItemApi,
+    decision: 'ACCEPTED' | 'REJECTED'
+  ) => {
+    const decisionItem = buildMeaningfulDecisionItem(
+      item,
+      decision,
+      reviewScope
+    );
+
+    if (!decisionItem) {
+      toast.error('No applicable optimization change for this work item.');
       return;
     }
+
+    void handleDecisionBatch(
+      [decisionItem],
+      decision === 'ACCEPTED' ? 'Suggestion accepted.' : 'Suggestion rejected.'
+    );
+  };
+
+  const handleBulkDecision = (decision: 'ACCEPTED' | 'REJECTED') => {
     const selectedItems = items.filter((item) =>
       selectedApplyIds.includes(item.workItemId)
     );
+
     if (!selectedItems.length) {
       toast.error('Select at least one work item to review.');
       return;
     }
-    const decisionItems = selectedItems.map((item) =>
-      activeTab === 'assignment'
-        ? { workItemId: item.workItemId, assignmentDecision: decision }
-        : { workItemId: item.workItemId, scheduleDecision: decision }
-    );
+
+    const decisionItems = selectedItems
+      .map((item) => buildMeaningfulDecisionItem(item, decision, reviewScope))
+      .filter((item): item is PMOptimizationRunDecisionItemRequest =>
+        Boolean(item)
+      );
+
+    if (!decisionItems.length) {
+      toast.error(
+        'Selected work items have no applicable optimization changes.'
+      );
+      return;
+    }
 
     void handleDecisionBatch(
       decisionItems,
@@ -209,10 +263,55 @@ export function PMProjectOptimizationRunPage({
     setOverrideAssigneeId(item.overrideAssigneeId?.toString() || '');
     setOverridePlannedStart(toLocalDateInputValue(item.overridePlannedStart));
     setOverridePlannedEnd(toLocalDateInputValue(item.overridePlannedEnd));
+    const effectiveChunks =
+      item.scheduleDecision === 'OVERRIDDEN' &&
+      item.overrideAllocationChunks?.length
+        ? item.overrideAllocationChunks
+        : item.allocationChunks || [];
+    setOverrideAllocationChunks(
+      effectiveChunks.length
+        ? effectiveChunks.map((chunk) => ({ ...chunk }))
+        : [
+            {
+              assigneeId:
+                item.overrideAssigneeId ||
+                item.suggestedAssigneeId ||
+                item.currentAssigneeId ||
+                0,
+              start:
+                item.overridePlannedStart ||
+                item.suggestedPlannedStart ||
+                item.currentPlannedStart ||
+                Date.now(),
+              end:
+                item.overridePlannedEnd ||
+                item.suggestedPlannedEnd ||
+                item.currentPlannedEnd ||
+                Date.now() + 60 * 60 * 1000,
+              effortMillis: 60 * 60 * 1000,
+            },
+          ]
+    );
   };
 
   const saveOverride = async () => {
     if (!reviewItem) return;
+
+    const validOverrideAllocationChunks = overrideAllocationChunks.filter(
+      (chunk) =>
+        chunk.assigneeId > 0 &&
+        chunk.start > 0 &&
+        chunk.end > chunk.start &&
+        chunk.effortMillis > 0
+    );
+
+    if (
+      overrideScheduleDecision === 'OVERRIDDEN' &&
+      validOverrideAllocationChunks.length === 0
+    ) {
+      toast.error('Add at least one valid schedule allocation.');
+      return;
+    }
 
     const saved = await handleDecision(reviewItem, {
       assignmentDecision: overrideAssignmentDecision,
@@ -220,8 +319,18 @@ export function PMProjectOptimizationRunPage({
       overrideAssigneeId: overrideAssigneeId
         ? Number(overrideAssigneeId)
         : undefined,
-      overridePlannedStart: fromLocalDateInputValue(overridePlannedStart),
-      overridePlannedEnd: fromLocalDateInputValue(overridePlannedEnd, true),
+      overridePlannedStart:
+        overrideScheduleDecision === 'OVERRIDDEN'
+          ? undefined
+          : fromLocalDateInputValue(overridePlannedStart),
+      overridePlannedEnd:
+        overrideScheduleDecision === 'OVERRIDDEN'
+          ? undefined
+          : fromLocalDateInputValue(overridePlannedEnd, true),
+      overrideAllocationChunks:
+        overrideScheduleDecision === 'OVERRIDDEN'
+          ? validOverrideAllocationChunks
+          : undefined,
     });
     if (saved) {
       setReviewItem(null);
@@ -229,8 +338,8 @@ export function PMProjectOptimizationRunPage({
   };
 
   const handleApply = async () => {
-    if (!run || selectedApplyIds.length === 0) {
-      toast.error('Select at least one work item to apply.');
+    if (!run || selectedReadyApplyIds.length === 0) {
+      toast.error('Select reviewed work items to apply.');
       return;
     }
 
@@ -241,7 +350,7 @@ export function PMProjectOptimizationRunPage({
         body: {
           applyAssignment: canEditAssignment,
           applySchedule: canEditSchedule,
-          workItemIds: selectedApplyIds,
+          workItemIds: selectedReadyApplyIds,
         },
       }).unwrap();
       toast.success('Optimization applied.');
@@ -310,11 +419,9 @@ export function PMProjectOptimizationRunPage({
   const assignmentTabDisabled = !canEditAssignment;
   const scheduleTabDisabled = !canEditSchedule;
   const bulkReviewDisabled =
-    (activeTab !== 'assignment' && activeTab !== 'schedule') ||
-    updateState.isLoading ||
-    selectedApplyIds.length === 0 ||
-    (activeTab === 'assignment' && assignmentTabDisabled) ||
-    (activeTab === 'schedule' && scheduleTabDisabled);
+    updateState.isLoading || selectedApplyIds.length === 0;
+  const applyReadyDisabled =
+    applyState.isLoading || selectedReadyApplyIds.length === 0;
 
   return (
     <div className='space-y-6'>
@@ -386,10 +493,13 @@ export function PMProjectOptimizationRunPage({
           <Button
             type='button'
             onClick={handleApply}
-            disabled={applyState.isLoading || selectedApplyIds.length === 0}
+            disabled={applyReadyDisabled}
           >
             <PlayCircle className='mr-2 h-4 w-4' />
-            Apply selected
+            Apply ready
+            {selectedReadyApplyIds.length
+              ? ` (${selectedReadyApplyIds.length})`
+              : ''}
           </Button>
           <Button
             type='button'
@@ -403,10 +513,9 @@ export function PMProjectOptimizationRunPage({
         </div>
       </div>
 
-      <PMOptimizationRunOverview run={run} summary={summary} />
-
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className='grid w-full grid-cols-5'>
+        <TabsList className='grid w-full grid-cols-6'>
+          <TabsTrigger value='review'>Review</TabsTrigger>
           <TabsTrigger value='summary'>Summary</TabsTrigger>
           <TabsTrigger value='assignment' disabled={assignmentTabDisabled}>
             Assignment
@@ -418,7 +527,28 @@ export function PMProjectOptimizationRunPage({
           <TabsTrigger value='history'>History</TabsTrigger>
         </TabsList>
 
+        <TabsContent value='review' className='space-y-4'>
+          {selectedApplyIds.length === 0 ? (
+            <div className='rounded-md border border-dashed px-4 py-3 text-sm text-muted-foreground'>
+              Select reviewed work items to apply.
+            </div>
+          ) : null}
+          <PMOptimizationRunReviewTable
+            items={items}
+            selectedIds={selectedApplyIds}
+            canEditAssignment={canEditAssignment}
+            canEditSchedule={canEditSchedule}
+            onToggleApply={handleToggleApply}
+            onAccept={(item) => handleMeaningfulDecision(item, 'ACCEPTED')}
+            onReject={(item) => handleMeaningfulDecision(item, 'REJECTED')}
+            onOverride={openOverride}
+            disabled={updateState.isLoading}
+            highlightedWorkItemId={highlightedWorkItemId}
+          />
+        </TabsContent>
+
         <TabsContent value='summary' className='space-y-4'>
+          <PMOptimizationRunOverview run={run} summary={summary} />
           <div className='grid gap-4 xl:grid-cols-2'>
             <Card className='shadow-sm'>
               <CardHeader>
@@ -506,43 +636,7 @@ export function PMProjectOptimizationRunPage({
         </TabsContent>
 
         <TabsContent value='risks' className='space-y-4'>
-          <Card className='shadow-sm'>
-            <CardHeader>
-              <CardTitle className='text-base'>Warnings</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-3'>
-              {warnings.length ? (
-                warnings.map((warning) => (
-                  <div
-                    key={warning.id}
-                    className='rounded-md border px-3 py-2 text-sm'
-                  >
-                    <div className='flex items-center gap-2'>
-                      <ShieldAlert className='h-4 w-4 text-destructive' />
-                      <span className='font-medium'>
-                        {warning.code || 'WARNING'}
-                      </span>
-                      <Badge variant='secondary'>
-                        {warning.severity || 'INFO'}
-                      </Badge>
-                    </div>
-                    <p className='mt-1 text-muted-foreground'>
-                      {warning.message || '-'}
-                    </p>
-                    {warning.detailsJson ? (
-                      <pre className='mt-2 overflow-x-auto rounded bg-muted p-2 text-xs'>
-                        {warning.detailsJson}
-                      </pre>
-                    ) : null}
-                  </div>
-                ))
-              ) : (
-                <div className='rounded-md border border-dashed p-6 text-sm text-muted-foreground'>
-                  No warnings.
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PMOptimizationRunRisks run={run} onLocateItem={handleLocateItem} />
         </TabsContent>
 
         <TabsContent value='history' className='space-y-4'>
@@ -562,7 +656,7 @@ export function PMProjectOptimizationRunPage({
         </TabsContent>
       </Tabs>
 
-      <PMOptimizationRunOverrideDialog
+      <PMOptimizationRunOverrideSheet
         open={Boolean(reviewItem)}
         item={reviewItem}
         users={users}
@@ -571,11 +665,14 @@ export function PMProjectOptimizationRunPage({
         overrideAssigneeId={overrideAssigneeId}
         overridePlannedStart={overridePlannedStart}
         overridePlannedEnd={overridePlannedEnd}
+        overrideAllocationChunks={overrideAllocationChunks}
+        projectPeople={projectPeople}
         onAssignmentDecisionChange={setOverrideAssignmentDecision}
         onScheduleDecisionChange={setOverrideScheduleDecision}
         onOverrideAssigneeIdChange={setOverrideAssigneeId}
         onOverridePlannedStartChange={setOverridePlannedStart}
         onOverridePlannedEndChange={setOverridePlannedEnd}
+        onOverrideAllocationChunksChange={setOverrideAllocationChunks}
         onSave={saveOverride}
         onClose={() => setReviewItem(null)}
         isSaving={updateState.isLoading}

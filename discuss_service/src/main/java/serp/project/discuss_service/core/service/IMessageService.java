@@ -38,7 +38,7 @@ public interface IMessageService {
 
     MessageEntity removeReaction(Long messageId, Long userId, String emoji);
 
-    void markAsRead(Long messageId, Long userId);
+    MessageEntity markAsRead(Long messageId, Long userId);
 
     long countUnreadMessages(Long channelId, Long afterMessageId);
 }

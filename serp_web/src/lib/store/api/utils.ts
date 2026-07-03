@@ -119,6 +119,14 @@ export const createPaginatedTransform = <T>() => {
     return response;
   };
 };
+export const createPaginatedItemsTransform = <T>() => {
+  return (response: any): T[] => {
+    if (response?.code === 200 && response?.status === 'success') {
+      return transformTimestampFields(response.data?.items || []);
+    }
+    return [];
+  };
+};
 
 /**
  * Extract error message from API response (includes `detail` when present).
@@ -154,6 +162,22 @@ export const getErrorMessage = (error: any): string => {
   }
 
   return 'An unexpected error occurred';
+};
+
+/**
+ * Extract success/response message from API response
+ */
+export const getResponseMessage = (
+  response: any,
+  fallback = 'Success'
+): string => {
+  // if (response?.message) {
+  //   return response.message;
+  // }
+  if (response?.data?.message) {
+    return response.data.message;
+  }
+  return fallback;
 };
 
 /**

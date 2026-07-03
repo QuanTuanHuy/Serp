@@ -169,6 +169,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		menuDisplayV1.Use(middleware.AuthMiddleware()).GET("", menuDisplayController.GetAllMenuDisplays)
 		menuDisplayV1.Use(middleware.AuthMiddleware()).POST("", menuDisplayController.CreateMenuDisplay)
 		menuDisplayV1.Use(middleware.AuthMiddleware()).PUT("/:id", menuDisplayController.UpdateMenuDisplay)
+		menuDisplayV1.Use(middleware.AuthMiddleware()).PUT("/:id/roles", genericProxyController.ProxyHandler("account"))
 		menuDisplayV1.Use(middleware.AuthMiddleware()).DELETE("/:id", menuDisplayController.DeleteMenuDisplay)
 		menuDisplayV1.Use(middleware.AuthMiddleware()).GET("/get-by-module/:moduleId", menuDisplayController.GetMenuDisplaysByModuleId)
 		menuDisplayV1.Use(middleware.AuthMiddleware()).POST("/assign-to-role", menuDisplayController.AssignMenuDisplaysToRole)

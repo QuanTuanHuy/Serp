@@ -45,6 +45,7 @@ import {
   useDeleteMessageMutation,
   useAddReactionMutation,
   useRemoveReactionMutation,
+  useMarkAsReadMutation,
   useGetChannelPresenceQuery,
   useGetChannelQuery,
 } from '../api/discussApi';
@@ -78,6 +79,18 @@ const getUserInitials = (name: string) => {
     .join('')
     .toUpperCase()
     .slice(0, 2);
+};
+
+const getLatestMessage = (messages: Message[]) => {
+  if (messages.length === 0) {
+    return undefined;
+  }
+
+  return messages.reduce((latest, message) =>
+    new Date(message.createdAt).getTime() > new Date(latest.createdAt).getTime()
+      ? message
+      : latest
+  );
 };
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -115,6 +128,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const isInitialLoadRef = useRef(true);
   const prevChannelIdRef = useRef(initialChannel.id);
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const lastMarkedReadRef = useRef<Record<string, string>>({});
+  const markReadInFlightRef = useRef<Record<string, string>>({});
 
   // Live channel details sync
   const { data: liveChannelResponse } = useGetChannelQuery(initialChannel.id);
@@ -163,6 +178,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [deleteMessage] = useDeleteMessageMutation();
   const [addReaction] = useAddReactionMutation();
   const [removeReaction] = useRemoveReactionMutation();
+  const [markAsRead] = useMarkAsReadMutation();
 
   // Get WebSocket API from context (single connection managed by page.tsx)
   const wsApi = useWebSocket();
@@ -291,6 +307,40 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     return () => wsApi.setOnMessage(undefined);
   }, [wsApi]);
 
+  useEffect(() => {
+    wsApi.setOnMessageRead((payload) => {
+      setAllMessages((prev) =>
+        prev.map((message) => {
+          if (message.id !== String(payload.messageId)) {
+            return message;
+          }
+
+          const existingReadBy = new Set(message.readBy || []);
+          const payloadReadBy = payload.readBy?.map(String) || [
+            String(payload.userId),
+          ];
+          for (const readerId of payloadReadBy) {
+            existingReadBy.add(readerId);
+          }
+
+          return {
+            ...message,
+            readBy: Array.from(existingReadBy),
+            readCount: payload.readCount ?? existingReadBy.size,
+            isReadByMe: existingReadBy.has(currentUserId),
+          };
+        })
+      );
+
+      if (String(payload.userId) === currentUserId) {
+        setUnreadCount(0);
+        setLastReadMessageId(null);
+      }
+    });
+
+    return () => wsApi.setOnMessageRead(undefined);
+  }, [currentUserId, wsApi]);
+
   // Register onTypingUpdate callback for typing indicators
   useEffect(() => {
     wsApi.setOnTypingUpdate((userId, userName, isTyping) => {
@@ -342,6 +392,54 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const messages = allMessages;
   const hasMore = hasMoreMessages;
+
+  const markLatestMessageAsRead = useCallback(
+    async (messageId?: string) => {
+      if (!messageId) {
+        return;
+      }
+
+      const channelId = channel.id;
+      if (lastMarkedReadRef.current[channelId] === messageId) {
+        return;
+      }
+      if (markReadInFlightRef.current[channelId] === messageId) {
+        return;
+      }
+
+      markReadInFlightRef.current[channelId] = messageId;
+
+      try {
+        if (wsApi?.isConnected) {
+          wsApi.markAsRead(messageId);
+        } else {
+          await markAsRead({ channelId, messageId }).unwrap();
+        }
+
+        lastMarkedReadRef.current[channelId] = messageId;
+        setUnreadCount(0);
+        setLastReadMessageId(null);
+      } catch (error) {
+        console.error(
+          '[ChatWindow] Failed to mark latest message as read:',
+          error
+        );
+      } finally {
+        if (markReadInFlightRef.current[channelId] === messageId) {
+          delete markReadInFlightRef.current[channelId];
+        }
+      }
+    },
+    [channel.id, markAsRead, wsApi]
+  );
+
+  useEffect(() => {
+    if (!isNearBottom || allMessages.length === 0) {
+      return;
+    }
+
+    void markLatestMessageAsRead(getLatestMessage(allMessages)?.id);
+  }, [allMessages, isNearBottom, markLatestMessageAsRead]);
 
   const handleSendMessage = useCallback(
     async (
@@ -398,6 +496,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               isEdited: false,
               isDeleted: false,
               readCount: 0,
+              readBy: [],
               isSentByMe: true,
               sender: {
                 id: currentUserId,
@@ -536,7 +635,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     // Clear unread tracking
     setUnreadCount(0);
     setLastReadMessageId(null);
-  }, []);
+    void markLatestMessageAsRead(getLatestMessage(allMessages)?.id);
+  }, [allMessages, markLatestMessageAsRead]);
 
   // Jump-to-message handler (called from SearchDialog)
   const handleJumpToMessage = useCallback(
@@ -724,20 +824,32 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         : otherUser?.lastSeenText || 'Offline';
 
                       return (
-                        <span className='flex items-center gap-1.5'>
-                          <OnlineStatusIndicator status={status} size='sm' />
+                        <span className='flex items-center gap-1.5 min-w-0'>
+                          <OnlineStatusIndicator
+                            status={status}
+                            size='sm'
+                            showPulse={status === 'online'}
+                          />
                           <span
                             className={cn(
-                              'font-medium',
+                              'font-medium truncate',
                               status === 'online'
                                 ? 'text-emerald-600 dark:text-emerald-400'
                                 : status === 'busy'
-                                  ? 'text-amber-600 dark:text-amber-400'
+                                  ? 'text-rose-600 dark:text-rose-400'
                                   : 'text-slate-500 dark:text-slate-400'
                             )}
                           >
                             {statusText}
                           </span>
+                          {otherUser?.statusMessage && (
+                            <span
+                              className='text-xs text-slate-400 dark:text-slate-500 italic truncate max-w-[250px]'
+                              title={otherUser.statusMessage}
+                            >
+                              - &ldquo;{otherUser.statusMessage}&rdquo;
+                            </span>
+                          )}
                         </span>
                       );
                     })()

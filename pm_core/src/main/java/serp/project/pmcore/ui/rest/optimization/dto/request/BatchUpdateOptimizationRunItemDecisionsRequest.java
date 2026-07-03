@@ -11,6 +11,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import serp.project.pmcore.application.optimization.command.update.BatchUpdateOptimizationRunItemDecisionsCommand;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
 
 import java.util.List;
@@ -34,5 +35,30 @@ public class BatchUpdateOptimizationRunItemDecisionsRequest {
         private Long overrideAssigneeId;
         private Long overridePlannedStart;
         private Long overridePlannedEnd;
+        @Valid
+        private List<AllocationRequest> overrideAllocationChunks = List.of();
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class AllocationRequest {
+        @NotNull
+        private Long assigneeId;
+        @NotNull
+        private Long start;
+        @NotNull
+        private Long end;
+        @NotNull
+        private Long effortMillis;
+
+        public BatchUpdateOptimizationRunItemDecisionsCommand.AllocationOverride toCommand() {
+            return new BatchUpdateOptimizationRunItemDecisionsCommand.AllocationOverride(
+                    assigneeId,
+                    start,
+                    end,
+                    effortMillis
+            );
+        }
     }
 }

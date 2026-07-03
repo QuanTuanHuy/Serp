@@ -20,6 +20,7 @@ import { cn } from '@/shared/utils';
 import type {
   PMOptimizationDecision,
   PMOptimizationRunItemApi,
+  PMOptimizationScheduleAllocationApi,
   PMOptimizationUserSummaryApi,
 } from '../../types/api';
 
@@ -96,6 +97,11 @@ export function PMOptimizationRunItemTable({
                   mode === 'assignment'
                     ? item.assignmentReasons || []
                     : item.scheduleReasons || [];
+                const allocationChunks =
+                  item.scheduleDecision === 'OVERRIDDEN' &&
+                  item.overrideAllocationChunks?.length
+                    ? item.overrideAllocationChunks
+                    : item.allocationChunks || [];
 
                 return (
                   <div
@@ -198,6 +204,9 @@ export function PMOptimizationRunItemTable({
                           title='Violations'
                           items={item.violations || []}
                         />
+                        {mode === 'schedule' ? (
+                          <AllocationList chunks={allocationChunks} />
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -239,10 +248,57 @@ function DetailList({ title, items }: { title: string; items: string[] }) {
   );
 }
 
+function AllocationList({
+  chunks,
+}: {
+  chunks: PMOptimizationScheduleAllocationApi[];
+}) {
+  return (
+    <div className='rounded-md border bg-muted/20 p-3 md:col-span-2'>
+      <div className='mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground'>
+        Allocations
+        <Badge variant='secondary' className='h-5 px-1.5'>
+          {chunks.length}
+        </Badge>
+      </div>
+      <div className='space-y-1 text-sm'>
+        {chunks.length ? (
+          chunks.slice(0, 4).map((chunk, index) => (
+            <div
+              key={`${chunk.assigneeId}-${chunk.start}-${chunk.end}-${index}`}
+              className='text-muted-foreground'
+            >
+              User #{chunk.assigneeId}: {formatDateTime(chunk.start)} -{' '}
+              {formatDateTime(chunk.end)} ({formatEffort(chunk.effortMillis)})
+            </div>
+          ))
+        ) : (
+          <div className='text-muted-foreground'>-</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function formatDate(value?: number | null) {
   if (!value) return '-';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
+}
+
+function formatDateTime(value?: number | null) {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
+}
+
+function formatEffort(value?: number | null) {
+  if (!value) return '0m';
+  const minutes = Math.round(value / 60000);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
 }
 
 function formatValue(value?: string | number | null) {

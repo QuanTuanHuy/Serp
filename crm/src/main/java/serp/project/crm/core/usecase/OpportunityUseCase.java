@@ -25,10 +25,16 @@ import serp.project.crm.core.domain.dto.response.PipelineResponse;
 import serp.project.crm.core.domain.dto.response.PipelineStageResponse;
 import serp.project.crm.core.domain.dto.response.PipelineSummaryResponse;
 import serp.project.crm.core.domain.entity.AccountEntity;
+import serp.project.crm.core.domain.entity.ActivityEntity;
+import serp.project.crm.core.domain.entity.LeadEntity;
 import serp.project.crm.core.domain.entity.OpportunityEntity;
+import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.OpportunityStage;
 import serp.project.crm.core.exception.AppException;
 import serp.project.crm.core.mapper.OpportunityDtoMapper;
+import serp.project.crm.core.port.client.IUserProfileClient;
+import serp.project.crm.core.port.store.IActivityPort;
+import serp.project.crm.core.port.store.ILeadPort;
 import serp.project.crm.core.service.IAccountService;
 import serp.project.crm.core.service.IOpportunityService;
 import serp.project.crm.core.service.ITeamMemberService;
@@ -37,9 +43,14 @@ import serp.project.crm.kernel.utils.ResponseUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +60,9 @@ public class OpportunityUseCase {
     private final IOpportunityService opportunityService;
     private final IAccountService accountService;
     private final ITeamMemberService teamMemberService;
+    private final IActivityPort activityPort;
+    private final ILeadPort leadPort;
+    private final IUserProfileClient userProfileClient;
 
     private final OpportunityDtoMapper opportunityDtoMapper;
     private final ResponseUtils responseUtils;
@@ -189,6 +203,7 @@ public class OpportunityUseCase {
             }
 
             OpportunityResponse response = opportunityDtoMapper.toResponse(opportunity);
+            enrichOpportunityResponses(List.of(response), tenantId);
             return responseUtils.success(response);
         } catch (AppException e) {
             log.error("Error fetching opportunity: {}", e.getMessage());
@@ -207,6 +222,7 @@ public class OpportunityUseCase {
             List<OpportunityResponse> opportunityResponses = result.getFirst().stream()
                     .map(opportunityDtoMapper::toResponse)
                     .toList();
+            enrichOpportunityResponses(opportunityResponses, tenantId);
 
             PageResponse<OpportunityResponse> pageResponse = PageResponse.of(
                     opportunityResponses, pageRequest, result.getSecond());
@@ -245,6 +261,7 @@ public class OpportunityUseCase {
             List<OpportunityResponse> opportunityResponses = result.getFirst().stream()
                     .map(opportunityDtoMapper::toResponse)
                     .toList();
+            enrichOpportunityResponses(opportunityResponses, tenantId);
 
             PageResponse<OpportunityResponse> pageResponse = PageResponse.of(
                     opportunityResponses, filter.toPageRequest(), result.getSecond());
@@ -276,6 +293,12 @@ public class OpportunityUseCase {
         BigDecimal totalPipelineValue = BigDecimal.ZERO;
         BigDecimal weightedPipelineValue = BigDecimal.ZERO;
         int totalOpportunities = 0;
+        List<OpportunityResponse> pipelineOpportunityResponses = opportunities.stream()
+                .map(opportunityDtoMapper::toResponse)
+                .toList();
+        enrichOpportunityResponses(pipelineOpportunityResponses, tenantId);
+        Map<Long, OpportunityResponse> enrichedById = new HashMap<>();
+        pipelineOpportunityResponses.forEach(response -> enrichedById.put(response.getId(), response));
 
         for (OpportunityStage stage : OpportunityStage.values()) {
             List<OpportunityEntity> stageOpportunities = opportunities.stream()
@@ -297,7 +320,10 @@ public class OpportunityUseCase {
                     .count(stageOpportunities.size())
                     .totalValue(totalValue)
                     .weightedValue(weightedValue)
-                    .opportunities(stageOpportunities.stream().map(opportunityDtoMapper::toResponse).toList())
+                    .opportunities(stageOpportunities.stream()
+                            .map(opportunity -> enrichedById.get(opportunity.getId()))
+                            .filter(Objects::nonNull)
+                            .toList())
                     .build());
         }
 
@@ -314,6 +340,174 @@ public class OpportunityUseCase {
                 .summary(summary)
                 .build();
         return responseUtils.success(response);
+    }
+
+    private void enrichOpportunityResponses(List<OpportunityResponse> responses, Long tenantId) {
+        if (responses == null || responses.isEmpty() || tenantId == null) {
+            return;
+        }
+
+        List<Long> accountIds = responses.stream()
+                .map(OpportunityResponse::getAccountId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, String> accountNames = loadAccountNames(accountIds, tenantId);
+
+        List<Long> leadIds = responses.stream()
+                .map(OpportunityResponse::getLeadId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, String> leadNames = loadLeadNames(leadIds, tenantId);
+
+        List<Long> userIds = responses.stream()
+                .map(OpportunityResponse::getAssignedTo)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, String> userNames = loadUserNames(userIds);
+
+        List<Long> opportunityIds = responses.stream()
+                .map(OpportunityResponse::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, List<ActivityEntity>> activitiesByOpportunityId = loadActivitiesByOpportunityId(
+                opportunityIds, tenantId);
+
+        for (OpportunityResponse response : responses) {
+            response.setAccountName(accountNames.get(response.getAccountId()));
+            response.setLeadName(leadNames.get(response.getLeadId()));
+            response.setAssignedToName(userNames.get(response.getAssignedTo()));
+            applyActivitySummary(response, activitiesByOpportunityId.getOrDefault(response.getId(), List.of()));
+        }
+    }
+
+    private Map<Long, String> loadAccountNames(List<Long> accountIds, Long tenantId) {
+        if (accountIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            Map<Long, String> accountNames = new HashMap<>();
+            accountService.getAccountsByIds(accountIds, tenantId)
+                    .forEach(account -> putName(accountNames, account.getId(), account.getName()));
+            return accountNames;
+        } catch (Exception e) {
+            log.warn("Unable to enrich opportunity account names: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private Map<Long, String> loadLeadNames(List<Long> leadIds, Long tenantId) {
+        if (leadIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            Map<Long, String> leadNames = new HashMap<>();
+            leadPort.findByIds(leadIds, tenantId)
+                    .forEach(lead -> putName(leadNames, lead.getId(), lead.getName()));
+            return leadNames;
+        } catch (Exception e) {
+            log.warn("Unable to enrich opportunity lead names: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private Map<Long, String> loadUserNames(List<Long> userIds) {
+        if (userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            Map<Long, String> userNames = new HashMap<>();
+            userProfileClient.getUserProfilesByIds(userIds)
+                    .forEach(profile -> putName(userNames, profile.getId(), profile.getFullName()));
+            return userNames;
+        } catch (Exception e) {
+            log.warn("Unable to enrich opportunity owner names: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private Map<Long, List<ActivityEntity>> loadActivitiesByOpportunityId(List<Long> opportunityIds, Long tenantId) {
+        if (opportunityIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        try {
+            return activityPort.findByOpportunityIds(opportunityIds, tenantId).stream()
+                    .filter(activity -> activity.getOpportunityId() != null)
+                    .collect(Collectors.groupingBy(ActivityEntity::getOpportunityId));
+        } catch (Exception e) {
+            log.warn("Unable to enrich opportunity activity summaries: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private static void putName(Map<Long, String> names, Long id, String name) {
+        if (id == null || name == null || name.trim().isEmpty()) {
+            return;
+        }
+        names.put(id, name.trim());
+    }
+
+    private void applyActivitySummary(OpportunityResponse response, List<ActivityEntity> activities) {
+        long now = System.currentTimeMillis();
+        int openCount = 0;
+        int overdueCount = 0;
+        Long lastActivityAt = null;
+        Long nextActivityAt = null;
+
+        for (ActivityEntity activity : activities) {
+            Long activityTimestamp = preferredActivityTimestamp(activity);
+            if (activityTimestamp != null) {
+                lastActivityAt = maxTimestamp(lastActivityAt, activityTimestamp);
+            }
+
+            boolean open = !ActivityStatus.COMPLETED.equals(activity.getStatus())
+                    && !ActivityStatus.CANCELLED.equals(activity.getStatus());
+            if (!open) {
+                continue;
+            }
+
+            openCount++;
+            Long dueOrActivityAt = preferredDueTimestamp(activity);
+            if (dueOrActivityAt != null && dueOrActivityAt < now) {
+                overdueCount++;
+            }
+            if (dueOrActivityAt != null && dueOrActivityAt >= now) {
+                nextActivityAt = minTimestamp(nextActivityAt, dueOrActivityAt);
+            }
+        }
+
+        response.setLastActivityAt(lastActivityAt);
+        response.setNextActivityAt(nextActivityAt);
+        response.setOpenActivityCount(openCount);
+        response.setOverdueActivityCount(overdueCount);
+    }
+
+    private static Long preferredActivityTimestamp(ActivityEntity activity) {
+        if (activity.getActivityDate() != null) {
+            return activity.getActivityDate();
+        }
+        if (activity.getDueDate() != null) {
+            return activity.getDueDate();
+        }
+        return activity.getUpdatedAt();
+    }
+
+    private static Long preferredDueTimestamp(ActivityEntity activity) {
+        if (activity.getActivityDate() != null) {
+            return activity.getActivityDate();
+        }
+        return activity.getDueDate();
+    }
+
+    private static Long maxTimestamp(Long current, Long candidate) {
+        return current == null || candidate > current ? candidate : current;
+    }
+
+    private static Long minTimestamp(Long current, Long candidate) {
+        return current == null || candidate < current ? candidate : current;
     }
 
     private static BigDecimal estimatedValueOrZero(OpportunityEntity opportunity) {

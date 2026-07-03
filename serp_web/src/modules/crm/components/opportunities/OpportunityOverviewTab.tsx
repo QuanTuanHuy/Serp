@@ -65,7 +65,8 @@ export const OpportunityOverviewTab: React.FC<OpportunityOverviewTabProps> = ({
                 </label>
                 <p className='flex items-center gap-2 font-medium'>
                   <Building2 className='h-4 w-4 text-muted-foreground' />
-                  {opportunity.customerName ||
+                  {opportunity.accountName ||
+                    opportunity.customerName ||
                     `Account #${opportunity.accountId || ''}`}
                 </p>
               </div>
@@ -107,6 +108,17 @@ export const OpportunityOverviewTab: React.FC<OpportunityOverviewTabProps> = ({
                 </label>
                 <p className='font-medium'>
                   {opportunity.leadId || 'No linked lead'}
+                </p>
+              </div>
+              <div>
+                <label className='text-sm font-medium text-muted-foreground'>
+                  Linked Lead
+                </label>
+                <p className='font-medium'>
+                  {opportunity.leadName ||
+                    (opportunity.leadId
+                      ? `Lead #${opportunity.leadId}`
+                      : 'No linked lead')}
                 </p>
               </div>
               <div>
@@ -202,6 +214,52 @@ export const OpportunityOverviewTab: React.FC<OpportunityOverviewTabProps> = ({
                 </p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h3 className='font-semibold'>Activity Health</h3>
+          </CardHeader>
+          <CardContent className='space-y-3'>
+            <div>
+              <span className='text-sm text-muted-foreground'>
+                Last Activity
+              </span>
+              <p className='text-sm font-medium'>
+                {formatDateTime(opportunity.lastActivityAt)}
+              </p>
+            </div>
+            <div>
+              <span className='text-sm text-muted-foreground'>
+                Next Activity
+              </span>
+              <p className='text-sm font-medium'>
+                {formatDateTime(opportunity.nextActivityAt)}
+              </p>
+            </div>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm text-muted-foreground'>
+                Open Activities
+              </span>
+              <span className='font-medium'>
+                {opportunity.openActivityCount ?? 0}
+              </span>
+            </div>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm text-muted-foreground'>
+                Overdue Activities
+              </span>
+              <span
+                className={cn(
+                  'font-medium',
+                  (opportunity.overdueActivityCount ?? 0) > 0 &&
+                    'text-destructive'
+                )}
+              >
+                {opportunity.overdueActivityCount ?? 0}
+              </span>
+            </div>
           </CardContent>
         </Card>
 

@@ -74,6 +74,7 @@ import {
   useUpdateLeadStatusMutation,
 } from '../../api/crmApi';
 import { RequestMeetingDialog } from '../../components/meeting-requests';
+import { CRMNotesTab } from '../../components/shared/CRMNotesTab';
 import type { LeadSource, LeadStatus } from '../../types';
 
 interface LeadDetailPageProps {
@@ -666,15 +667,8 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
               )}
             </TabsContent>
 
-            <TabsContent value='notes' className='mt-4 space-y-4'>
-              <Card className='border-none shadow-sm'>
-                <CardContent className='flex flex-col items-center justify-center py-12'>
-                  <MessageSquare className='mb-4 h-12 w-12 text-muted-foreground/50' />
-                  <p className='text-muted-foreground'>
-                    Dedicated lead notes API is not integrated yet.
-                  </p>
-                </CardContent>
-              </Card>
+            <TabsContent value='notes' className='mt-4'>
+              <CRMNotesTab entityType='LEAD' entityId={leadId} />
             </TabsContent>
           </Tabs>
         </div>

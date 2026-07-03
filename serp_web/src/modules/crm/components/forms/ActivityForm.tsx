@@ -3,7 +3,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -22,6 +22,8 @@ import {
   Textarea,
 } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
+import { CRMDatePicker, CRMUserSelect } from '../shared';
+import { toLocalDateInputValue } from '../../utils';
 import type {
   Activity,
   BackendActivityStatus,
@@ -145,6 +147,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
   const {
     register,
     handleSubmit,
+    control,
     watch,
     setValue,
     formState: { errors, isSubmitting },
@@ -261,11 +264,19 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
             <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
               <div className='space-y-2'>
                 <Label htmlFor='scheduledDate'>Date</Label>
-                <Input
-                  id='scheduledDate'
-                  type='date'
-                  {...register('scheduledDate')}
-                  disabled={isLoading}
+                <Controller
+                  name='scheduledDate'
+                  control={control}
+                  render={({ field }) => (
+                    <CRMDatePicker
+                      id='scheduledDate'
+                      value={field.value}
+                      onChange={(date) =>
+                        field.onChange(date ? toLocalDateInputValue(date) : '')
+                      }
+                      disabled={isLoading}
+                    />
+                  )}
                 />
               </div>
 
@@ -321,21 +332,23 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
 
               <div className='space-y-2'>
                 <Label htmlFor='assignedTo'>Assigned To</Label>
-                <Input
-                  id='assignedTo'
-                  type='number'
-                  {...register('assignedTo')}
-                  placeholder='Enter user ID'
-                  className={errors.assignedTo ? 'border-destructive' : ''}
-                  disabled={isLoading}
+                <Controller
+                  name='assignedTo'
+                  control={control}
+                  render={({ field }) => (
+                    <CRMUserSelect
+                      id='assignedTo'
+                      value={field.value}
+                      onChange={field.onChange}
+                      fallbackUserName={activity.assignedToName}
+                      disabled={isLoading}
+                      className={errors.assignedTo ? 'border-destructive' : ''}
+                    />
+                  )}
                 />
-                {errors.assignedTo ? (
+                {errors.assignedTo && (
                   <p className='text-sm text-destructive'>
                     {errors.assignedTo.message}
-                  </p>
-                ) : (
-                  <p className='text-xs text-muted-foreground'>
-                    Current assignee: {activity.assignedToName || 'Unassigned'}
                   </p>
                 )}
               </div>

@@ -4,12 +4,18 @@
  */
 
 import { api } from '@/lib/store/api/apiSlice';
-import { createDataTransform } from '@/lib/store/api/utils';
+import {
+  createDataTransform,
+  createPaginatedItemsTransform,
+  createPaginatedTransform,
+  createApiResponseTransform,
+} from '@/lib/store/api/utils';
 import type {
   AccessibleModule,
   ModuleRole,
 } from '@/modules/settings/types/module-access.types';
 import type { UserProfile } from '@/modules/admin/types';
+import type { PaginatedResponse, ApiResponse } from '@/lib/store/api/types';
 
 export const settingsModulesApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -45,7 +51,7 @@ export const settingsModulesApi = api.injectEndpoints({
     }),
 
     assignUserToModule: build.mutation<
-      unknown,
+      ApiResponse<any>,
       {
         organizationId: number;
         moduleId: number;
@@ -58,6 +64,7 @@ export const settingsModulesApi = api.injectEndpoints({
         method: 'POST',
         body: { userId, moduleId, roleId },
       }),
+      transformResponse: createApiResponseTransform<any>(),
       invalidatesTags: (_result, _error, { moduleId }) => [
         { type: 'settings/Module', id: moduleId },
         { type: 'settings/ModuleUsers', id: moduleId },
@@ -66,13 +73,14 @@ export const settingsModulesApi = api.injectEndpoints({
     }),
 
     revokeUserAccessToModule: build.mutation<
-      unknown,
+      ApiResponse<any>,
       { organizationId: number; moduleId: number; userId: number }
     >({
       query: ({ organizationId, moduleId, userId }) => ({
         url: `/organizations/${organizationId}/modules/${moduleId}/users/${userId}`,
         method: 'DELETE',
       }),
+      transformResponse: createApiResponseTransform<any>(),
       invalidatesTags: (_result, _error, { moduleId }) => [
         { type: 'settings/Module', id: moduleId },
         { type: 'settings/ModuleUsers', id: moduleId },
@@ -80,14 +88,26 @@ export const settingsModulesApi = api.injectEndpoints({
     }),
 
     getModuleUsers: build.query<
-      UserProfile[],
-      { organizationId: number; moduleId: number }
+      PaginatedResponse<UserProfile>,
+      {
+        organizationId: number;
+        moduleId: number;
+        page?: number;
+        pageSize?: number;
+        search?: string;
+      }
     >({
-      query: ({ organizationId, moduleId }) => ({
-        url: `/organizations/${organizationId}/modules/${moduleId}/users`,
-        method: 'GET',
-      }),
-      transformResponse: createDataTransform<UserProfile[]>(),
+      query: ({ organizationId, moduleId, page, pageSize, search }) => {
+        const params = new URLSearchParams();
+        if (page !== undefined) params.append('page', String(page));
+        if (pageSize !== undefined) params.append('pageSize', String(pageSize));
+        if (search) params.append('search', search);
+        return {
+          url: `/organizations/${organizationId}/modules/${moduleId}/users?${params.toString()}`,
+          method: 'GET',
+        };
+      },
+      transformResponse: createPaginatedTransform<UserProfile>(),
       providesTags: (_result, _err, { moduleId }) => [
         { type: 'settings/ModuleUsers', id: moduleId },
       ],

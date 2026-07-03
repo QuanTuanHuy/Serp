@@ -35,6 +35,8 @@ const buildUserQueryParams = (filters: UserFilters): string => {
     params.append('departmentId', String(filters.departmentId));
   if (filters.organizationId !== undefined)
     params.append('organizationId', String(filters.organizationId));
+  if (filters.moduleId !== undefined)
+    params.append('moduleId', String(filters.moduleId));
   if (filters.page !== undefined) params.append('page', String(filters.page));
   if (filters.pageSize !== undefined)
     params.append('pageSize', String(filters.pageSize));

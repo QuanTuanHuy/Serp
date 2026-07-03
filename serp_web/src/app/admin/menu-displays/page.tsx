@@ -7,7 +7,12 @@
 
 import React, { useState } from 'react';
 import { useMenuDisplays } from '@/modules/admin/hooks/useMenuDisplays';
-import { AdminFilterChips, AdminFilterDialog } from '@/modules/admin';
+import {
+  AdminFilterChips,
+  AdminFilterDialog,
+  FilterPane,
+  FilterOption,
+} from '@/modules/admin';
 import { MenuDisplayTree } from '@/modules/admin/components/menu-displays/MenuDisplayTree';
 import { MenuDisplayFormDialog } from '@/modules/admin/components/menu-displays/MenuDisplayFormDialog';
 import { RoleAssignmentDialog } from '@/modules/admin/components/menu-displays/RoleAssignmentDialog';
@@ -69,10 +74,8 @@ export default function MenuDisplaysPage() {
     pagination,
     handlePageChange,
     handlePageSizeChange,
-    handleAssignRole,
-    handleUnassignRole,
-    isAssigningRole,
-    isUnassigningRole,
+    handleUpdateMenuDisplayRoles,
+    isUpdatingRoles,
     roleDialogOpen,
     selectedMenuForRole,
     openRoleDialog,
@@ -363,9 +366,8 @@ export default function MenuDisplaysPage() {
         open={roleDialogOpen}
         onOpenChange={closeRoleDialog}
         menuDisplay={selectedMenuForRole}
-        onAssign={handleAssignRole}
-        onUnassign={handleUnassignRole}
-        isLoading={isAssigningRole || isUnassigningRole}
+        onUpdateRoles={handleUpdateMenuDisplayRoles}
+        isLoading={isUpdatingRoles}
       />
 
       {/* Details Dialog */}
@@ -389,6 +391,7 @@ export default function MenuDisplaysPage() {
           <FilterPane title='Module'>
             <Combobox
               value={filters.moduleId}
+              modal={true}
               onChange={(value) =>
                 handleModuleFilter(
                   value !== undefined ? Number(value) : undefined
@@ -403,24 +406,6 @@ export default function MenuDisplaysPage() {
           </FilterPane>
         ) : null}
       </AdminFilterDialog>
-    </div>
-  );
-}
-
-function FilterPane({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className='flex min-h-0 flex-1 flex-col p-4'>
-      <div className='mb-3'>
-        <h3 className='text-sm font-semibold'>{title}</h3>
-        <p className='text-sm text-muted-foreground'>Select one value.</p>
-      </div>
-      <div className='space-y-1'>{children}</div>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
 import { selectOrganizationId } from '@/modules/account/store';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import { useAppSelector } from '@/shared/hooks';
 import { Button } from '@/shared/components/ui';
 import {
@@ -43,6 +44,11 @@ export function PMProjectCreatePage() {
     isLoading: isCategoryLoading,
     error: categoryError,
   } = useGetProjectCategoriesQuery({ page: 0, pageSize: 100 });
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const pmModuleId = myModules?.find((m) => m.moduleCode === 'PM')?.moduleId;
+
   const {
     data: usersResponse,
     isLoading: isUserLoading,
@@ -53,6 +59,7 @@ export function PMProjectCreatePage() {
       page: 0,
       pageSize: 100,
       status: 'ACTIVE',
+      moduleId: pmModuleId,
     },
     { skip: !organizationId }
   );

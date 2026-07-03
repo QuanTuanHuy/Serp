@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
 import { selectOrganizationId } from '@/modules/account/store';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -99,6 +100,11 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
   const deferredUserSearch = useDeferredValue(userSearch.trim());
   const canSearchUsers = deferredUserSearch.length > 0;
 
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const pmModuleId = myModules?.find((m) => m.moduleCode === 'PM')?.moduleId;
+
   const peopleQuery = useGetPmProjectPeopleQuery(numericProjectId, {
     skip: !Number.isFinite(numericProjectId),
   });
@@ -112,6 +118,7 @@ export function PMProjectPeoplePage({ projectId }: PMProjectPeoplePageProps) {
       status: 'ACTIVE',
       sortBy: 'firstName',
       sortDir: 'ASC',
+      moduleId: pmModuleId,
     },
     {
       skip:

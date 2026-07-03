@@ -38,6 +38,12 @@ export const transformMessage = (backendMsg: any): Message => {
     reactions: transformReactionsFromBackend(backendMsg.reactions),
     attachments: backendMsg.attachments?.map(transformAttachment) || [],
     mentions: backendMsg.mentions?.map(String) || [],
+    readBy: Array.isArray(backendMsg.readBy)
+      ? backendMsg.readBy.map(String)
+      : [],
+    readByUsers: Array.isArray(backendMsg.readByUsers)
+      ? backendMsg.readByUsers.map(transformSenderInfo)
+      : [],
     deletedBy: backendMsg.deletedBy ? String(backendMsg.deletedBy) : undefined,
     sender: backendMsg.sender
       ? transformSenderInfo(backendMsg.sender)

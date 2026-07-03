@@ -87,6 +87,7 @@ public class Constants {
         public static final String ASSIGN_MENU_DISPLAY_FAILED = "Assign menu display failed";
         public static final String UNASSIGN_MENU_DISPLAY_FAILED = "Unassign menu display failed";
         public static final String ROLE_CANNOT_ASSIGN_MENU_DISPLAYS = "This role cannot be assigned menu displays";
+        public static final String ROLE_MODULE_MISMATCH = "Role module does not match menu display module";
         public static final String NO_VALID_MENU_DISPLAYS_TO_ASSIGN = "No valid menu displays to assign to the role";
 
         // Organization errors

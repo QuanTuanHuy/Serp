@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.service.IDeliveryService;
+import serp.project.discuss_service.core.service.IRealtimeDeliveryService;
 import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
@@ -21,6 +22,7 @@ import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 public class MessageNewHandler implements IMessageEventHandler {
 
     private final IDeliveryService deliveryService;
+    private final IRealtimeDeliveryService realtimeDeliveryService;
 
     @Override
     public WsEventType getType() {
@@ -30,9 +32,15 @@ public class MessageNewHandler implements IMessageEventHandler {
     @Override
     public void handle(WsEvent<Map<String, Object>> event) {
         Long channelId = event.getChannelId();
-        Long messageId = KafkaPayloadUtils.getLong(event.getPayload(), "messageId");
+        Map<String, Object> payload = event.getPayload();
+        Long messageId = KafkaPayloadUtils.getLong(payload, "messageId");
         if (channelId == null || messageId == null) {
             log.warn("Missing required fields for MESSAGE_NEW event");
+            return;
+        }
+
+        if (payload.get("message") instanceof Map<?, ?>) {
+            realtimeDeliveryService.deliverToChannel(channelId, event);
             return;
         }
 

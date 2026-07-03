@@ -17,6 +17,7 @@ import { Hash, Users, Lock } from 'lucide-react';
 import { useAuth } from '@/modules/account';
 import type { Channel, ChannelType } from '../types';
 import { useGetChannelPresenceQuery } from '../api/discussApi';
+import { OnlineStatusIndicator } from './OnlineStatusIndicator';
 
 interface ChannelItemProps {
   channel: Channel;
@@ -88,12 +89,29 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
         (presence) => String(presence.userId) !== currentUserId
       )
     : undefined;
-  const isDmOnline =
-    channel.type === 'DIRECT' && Boolean(otherDirectUser?.isOnline);
+  const mapUserStatus = (status?: string): 'online' | 'busy' | 'offline' => {
+    switch (status) {
+      case 'ONLINE':
+        return 'online';
+      case 'BUSY':
+        return 'busy';
+      default:
+        return 'offline';
+    }
+  };
+
+  const dmStatus = otherDirectUser
+    ? mapUserStatus(otherDirectUser.status)
+    : 'offline';
 
   return (
     <button
       onClick={() => onClick(channel)}
+      title={
+        channel.type === 'DIRECT' && otherDirectUser
+          ? `${channel.name} - ${otherDirectUser.status === 'BUSY' ? 'Busy' : otherDirectUser.isOnline ? 'Online' : 'Offline'}${otherDirectUser.statusMessage ? `: "${otherDirectUser.statusMessage}"` : ''}`
+          : undefined
+      }
       className={cn(
         'group relative w-full flex items-start gap-3 px-3 py-3',
         'rounded-lg transition-all duration-200',
@@ -132,9 +150,13 @@ export const ChannelItem: React.FC<ChannelItemProps> = ({
         )}
 
         {/* Online indicator for DIRECT channels */}
-        {isDmOnline && channel.unreadCount === 0 && (
-          <div className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center'>
-            <div className='h-2.5 w-2.5 bg-emerald-500 rounded-full' />
+        {channel.type === 'DIRECT' && (
+          <div className='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border border-slate-100 dark:border-slate-800'>
+            <OnlineStatusIndicator
+              status={dmStatus}
+              size='sm'
+              showPulse={dmStatus === 'online'}
+            />
           </div>
         )}
       </div>

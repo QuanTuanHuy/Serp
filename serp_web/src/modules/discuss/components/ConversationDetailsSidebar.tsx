@@ -125,10 +125,13 @@ export const ConversationDetailsSidebar: React.FC<
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(channel.name);
-  const [editDescription, setEditDescription] = useState(channel.description || '');
+  const [editDescription, setEditDescription] = useState(
+    channel.description || ''
+  );
 
   const [updateChannel, { isLoading: isUpdating }] = useUpdateChannelMutation();
-  const [archiveChannel, { isLoading: isArchiving }] = useArchiveChannelMutation();
+  const [archiveChannel, { isLoading: isArchiving }] =
+    useArchiveChannelMutation();
   const [deleteChannel, { isLoading: isDeleting }] = useDeleteChannelMutation();
   const [leaveChannel, { isLoading: isLeaving }] = useLeaveChannelMutation();
 
@@ -181,7 +184,11 @@ export const ConversationDetailsSidebar: React.FC<
   };
 
   const handleArchive = async () => {
-    if (!confirm('Are you sure you want to archive this channel? Archived channels will become read-only.')) {
+    if (
+      !confirm(
+        'Are you sure you want to archive this channel? Archived channels will become read-only.'
+      )
+    ) {
       return;
     }
     try {
@@ -194,7 +201,11 @@ export const ConversationDetailsSidebar: React.FC<
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this channel? This action is permanent and cannot be undone.')) {
+    if (
+      !confirm(
+        'Are you sure you want to delete this channel? This action is permanent and cannot be undone.'
+      )
+    ) {
       return;
     }
     try {
@@ -207,7 +218,11 @@ export const ConversationDetailsSidebar: React.FC<
   };
 
   const handleLeave = async () => {
-    if (!confirm('Are you sure you want to leave this channel? You will no longer receive messages from it.')) {
+    if (
+      !confirm(
+        'Are you sure you want to leave this channel? You will no longer receive messages from it.'
+      )
+    ) {
       return;
     }
     try {
@@ -301,7 +316,9 @@ export const ConversationDetailsSidebar: React.FC<
                       disabled={isUpdating || !editName.trim()}
                       className='bg-violet-600 hover:bg-violet-700 text-white'
                     >
-                      {isUpdating && <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' />}
+                      {isUpdating && (
+                        <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' />
+                      )}
                       Save
                     </Button>
                   </div>
@@ -378,7 +395,7 @@ export const ConversationDetailsSidebar: React.FC<
                   <h4 className='text-xs font-semibold uppercase tracking-wider text-rose-500'>
                     Danger Zone
                   </h4>
-                  
+
                   {canLeave && (
                     <Button
                       variant='outline'
@@ -404,7 +421,7 @@ export const ConversationDetailsSidebar: React.FC<
                         <Archive className='mr-2 h-4 w-4' />
                         Archive Channel
                       </Button>
-                      
+
                       <Button
                         variant='outline'
                         size='sm'

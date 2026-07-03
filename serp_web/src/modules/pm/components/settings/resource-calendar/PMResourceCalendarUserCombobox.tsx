@@ -9,6 +9,7 @@ import { useDeferredValue, useMemo, useState } from 'react';
 
 import { selectOrganizationId } from '@/modules/account/store';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import { Combobox, type ComboboxItem } from '@/shared/components/ui/combobox';
 import { useAppSelector } from '@/shared/hooks';
 
@@ -28,6 +29,11 @@ export function PMResourceCalendarUserCombobox({
   className?: string;
 }) {
   const organizationId = useAppSelector(selectOrganizationId);
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const pmModuleId = myModules?.find((m) => m.moduleCode === 'PM')?.moduleId;
+
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search.trim());
   const canSearch = deferredSearch.length > 0;
@@ -41,6 +47,7 @@ export function PMResourceCalendarUserCombobox({
       status: 'ACTIVE',
       sortBy: 'firstName',
       sortDir: 'ASC',
+      moduleId: pmModuleId,
     },
     {
       skip: !organizationId || !canSearch,

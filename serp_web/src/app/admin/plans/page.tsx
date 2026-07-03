@@ -14,6 +14,8 @@ import {
   AdminStatusBadge,
   AdminActionMenu,
   AdminStatsCard,
+  FilterPane,
+  FilterOption,
 } from '@/modules/admin';
 import type { SubscriptionPlan, Organization } from '@/modules/admin';
 import {
@@ -646,6 +648,7 @@ export default function PlansPage() {
           <FilterPane title='Organization'>
             <Combobox
               value={filters.organizationId}
+              modal={true}
               onChange={(value) =>
                 handleFilterChange(
                   'organizationId',
@@ -704,47 +707,5 @@ export default function PlansPage() {
         ) : null}
       </AdminFilterDialog>
     </div>
-  );
-}
-
-function FilterPane({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className='flex min-h-0 flex-1 flex-col p-4'>
-      <div className='mb-3'>
-        <h3 className='text-sm font-semibold'>{title}</h3>
-        <p className='text-sm text-muted-foreground'>Select one value.</p>
-      </div>
-      <div className='space-y-1'>{children}</div>
-    </div>
-  );
-}
-
-function FilterOption({
-  label,
-  selected,
-  onSelect,
-}: {
-  label: string;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type='button'
-      onClick={onSelect}
-      title={label}
-      className={`flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-muted ${
-        selected ? 'bg-muted font-medium' : ''
-      }`}
-    >
-      <span className='min-w-0 flex-1 truncate'>{label}</span>
-      {selected ? <Check className='h-4 w-4 shrink-0 text-primary' /> : null}
-    </button>
   );
 }

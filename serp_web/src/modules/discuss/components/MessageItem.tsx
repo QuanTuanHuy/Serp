@@ -21,7 +21,10 @@ import ReactMarkdown from 'react-markdown';
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 
-const AutolinkText: React.FC<{ text: string; isOwn: boolean }> = ({ text, isOwn }) => {
+const AutolinkText: React.FC<{ text: string; isOwn: boolean }> = ({
+  text,
+  isOwn,
+}) => {
   if (!text) return null;
   const parts = text.split(URL_REGEX);
 
@@ -33,11 +36,11 @@ const AutolinkText: React.FC<{ text: string; isOwn: boolean }> = ({ text, isOwn 
             <a
               key={index}
               href={part}
-              target="_blank"
-              rel="noopener noreferrer"
+              target='_blank'
+              rel='noopener noreferrer'
               className={cn(
-                "underline font-medium hover:opacity-90 transition-opacity break-all",
-                isOwn ? "text-white" : "text-violet-600 dark:text-violet-400"
+                'underline font-medium hover:opacity-90 transition-opacity break-all',
+                isOwn ? 'text-white' : 'text-violet-600 dark:text-violet-400'
               )}
             >
               {part}
@@ -50,7 +53,10 @@ const AutolinkText: React.FC<{ text: string; isOwn: boolean }> = ({ text, isOwn 
   );
 };
 
-const linkifyChildren = (children: React.ReactNode, isOwn: boolean): React.ReactNode => {
+const linkifyChildren = (
+  children: React.ReactNode,
+  isOwn: boolean
+): React.ReactNode => {
   return React.Children.map(children, (child) => {
     if (typeof child === 'string') {
       return <AutolinkText text={child} isOwn={isOwn} />;
@@ -90,6 +96,44 @@ const getUserInitials = (name: string) => {
     .slice(0, 2);
 };
 
+const getReadReceiptLabel = (message: Message, currentUserId: string) => {
+  const readUsers = (message.readByUsers || []).filter(
+    (user) => user.id !== currentUserId
+  );
+
+  if (readUsers.length === 0) {
+    const readerIds = (message.readBy || []).filter(
+      (id) => id !== currentUserId
+    );
+    if (readerIds.length === 0) {
+      return null;
+    }
+    if (readerIds.length === 1) {
+      return {
+        label: 'Seen by 1 person',
+        title: 'Seen by 1 person',
+      };
+    }
+    return {
+      label: `Seen by ${readerIds.length} people`,
+      title: `Seen by ${readerIds.length} people`,
+    };
+  }
+
+  if (readUsers.length === 1) {
+    return {
+      label: `Seen by ${readUsers[0].name}`,
+      title: `Seen by ${readUsers[0].name}`,
+    };
+  }
+
+  const [firstUser, ...otherUsers] = readUsers;
+  return {
+    label: `Seen by ${firstUser.name} +${otherUsers.length}`,
+    title: `Seen by ${readUsers.map((user) => user.name).join(', ')}`,
+  };
+};
+
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isOwn,
@@ -118,6 +162,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   // Get sender info from message.sender (new structure)
   const senderName = message.sender?.name || 'Unknown User';
   const senderAvatar = message.sender?.avatarUrl;
+  const readReceipt = isOwn
+    ? getReadReceiptLabel(message, currentUserId)
+    : null;
 
   return (
     <div
@@ -209,25 +256,29 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <ReactMarkdown
               components={{
                 p: ({ children }) => (
-                  <span className="block text-sm leading-relaxed break-words whitespace-pre-wrap">
+                  <span className='block text-sm leading-relaxed break-words whitespace-pre-wrap'>
                     {linkifyChildren(children, isOwn)}
                   </span>
                 ),
-                strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                em: ({ children }) => <em className="italic">{children}</em>,
+                strong: ({ children }) => (
+                  <strong className='font-semibold'>{children}</strong>
+                ),
+                em: ({ children }) => <em className='italic'>{children}</em>,
                 code: ({ node, className, children, ...props }) => {
-                  const isBlock = className || (typeof children === 'string' && children.includes('\n'));
+                  const isBlock =
+                    className ||
+                    (typeof children === 'string' && children.includes('\n'));
                   return isBlock ? (
-                    <pre className="bg-slate-950 text-slate-50 p-3 rounded-xl border border-slate-800 dark:border-slate-700/50 font-mono text-xs overflow-x-auto my-2">
+                    <pre className='bg-slate-950 text-slate-50 p-3 rounded-xl border border-slate-800 dark:border-slate-700/50 font-mono text-xs overflow-x-auto my-2'>
                       <code>{children}</code>
                     </pre>
                   ) : (
                     <code
                       className={cn(
-                        "px-1.5 py-0.5 rounded text-[13px] font-mono",
+                        'px-1.5 py-0.5 rounded text-[13px] font-mono',
                         isOwn
-                          ? "bg-white/20 text-white border border-white/10"
-                          : "bg-slate-100 dark:bg-slate-900 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-800"
+                          ? 'bg-white/20 text-white border border-white/10'
+                          : 'bg-slate-100 dark:bg-slate-900 text-rose-600 dark:text-rose-400 border border-slate-200 dark:border-slate-800'
                       )}
                     >
                       {children}
@@ -237,34 +288,40 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 a: ({ href, children }) => (
                   <a
                     href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    target='_blank'
+                    rel='noopener noreferrer'
                     className={cn(
-                      "underline font-medium hover:opacity-90 transition-opacity break-all",
-                      isOwn ? "text-white" : "text-violet-600 dark:text-violet-400"
+                      'underline font-medium hover:opacity-90 transition-opacity break-all',
+                      isOwn
+                        ? 'text-white'
+                        : 'text-violet-600 dark:text-violet-400'
                     )}
                   >
                     {children}
                   </a>
                 ),
                 ul: ({ children }) => (
-                  <ul className={cn(
-                    "list-disc pl-5 space-y-1 my-1.5",
-                    isOwn ? "marker:text-white" : "marker:text-slate-500"
-                  )}>
+                  <ul
+                    className={cn(
+                      'list-disc pl-5 space-y-1 my-1.5',
+                      isOwn ? 'marker:text-white' : 'marker:text-slate-500'
+                    )}
+                  >
                     {children}
                   </ul>
                 ),
                 ol: ({ children }) => (
-                  <ol className={cn(
-                    "list-decimal pl-5 space-y-1 my-1.5",
-                    isOwn ? "marker:text-white" : "marker:text-slate-500"
-                  )}>
+                  <ol
+                    className={cn(
+                      'list-decimal pl-5 space-y-1 my-1.5',
+                      isOwn ? 'marker:text-white' : 'marker:text-slate-500'
+                    )}
+                  >
                     {children}
                   </ol>
                 ),
                 li: ({ children }) => (
-                  <li className="text-sm">
+                  <li className='text-sm'>
                     {linkifyChildren(children, isOwn)}
                   </li>
                 ),
@@ -313,7 +370,19 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               )}
 
               {/* Read receipts (only for own messages) */}
-              {isOwn && <Check className='h-3.5 w-3.5 text-white/70' />}
+              {isOwn && (
+                <span
+                  title={readReceipt?.title || 'Sent'}
+                  className='inline-flex items-center gap-1 text-xs text-white/75'
+                >
+                  <Check className='h-3.5 w-3.5 text-white/70' />
+                  {readReceipt ? (
+                    <span className='max-w-[12rem] truncate'>
+                      {readReceipt.label}
+                    </span>
+                  ) : null}
+                </span>
+              )}
             </div>
           </div>
 

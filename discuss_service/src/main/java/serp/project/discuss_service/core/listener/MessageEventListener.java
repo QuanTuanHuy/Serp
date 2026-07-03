@@ -11,12 +11,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import serp.project.discuss_service.core.domain.event.MessageDeletedInternalEvent;
+import serp.project.discuss_service.core.domain.event.MessageReadInternalEvent;
 import serp.project.discuss_service.core.domain.event.MessageSentInternalEvent;
 import serp.project.discuss_service.core.domain.event.MessageUpdatedInternalEvent;
 import serp.project.discuss_service.core.domain.event.ReactionAddedInternalEvent;
 import serp.project.discuss_service.core.domain.event.ReactionRemovedInternalEvent;
 import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
+import serp.project.discuss_service.core.service.impl.RealtimePayloadBuilder;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -29,14 +31,17 @@ public class MessageEventListener {
 
     private final IDiscussEventPublisher eventPublisher;
     private final IDiscussCacheService cacheService;
+    private final RealtimePayloadBuilder realtimePayloadBuilder;
     private final ExecutorService messageAsyncExecutor;
 
     public MessageEventListener(
             IDiscussEventPublisher eventPublisher,
             IDiscussCacheService cacheService,
+            RealtimePayloadBuilder realtimePayloadBuilder,
             @Qualifier("messageAsyncExecutor") ExecutorService messageAsyncExecutor) {
         this.eventPublisher = eventPublisher;
         this.cacheService = cacheService;
+        this.realtimePayloadBuilder = realtimePayloadBuilder;
         this.messageAsyncExecutor = messageAsyncExecutor;
     }
 
@@ -47,7 +52,11 @@ public class MessageEventListener {
                 log.debug("Processing post-commit for message sent: messageId={}, channelId={}", 
                         event.getMessage().getId(), event.getChannelId());
 
-                eventPublisher.publishMessageSent(event.getMessage());
+                eventPublisher.publishRealtimeEvent(
+                        String.valueOf(event.getChannelId()),
+                        realtimePayloadBuilder.buildMessageNew(event.getMessage()),
+                        IDiscussEventPublisher.TOPIC_MESSAGE_EVENTS
+                );
 
                 cacheService.cacheMessage(event.getMessage());
                 if (event.getMessage().getParentId() != null) {
@@ -78,7 +87,11 @@ public class MessageEventListener {
                 log.debug("Processing post-commit for message updated: messageId={}", 
                         event.getMessage().getId());
 
-                eventPublisher.publishMessageUpdated(event.getMessage());
+                eventPublisher.publishRealtimeEvent(
+                        String.valueOf(event.getChannelId()),
+                        realtimePayloadBuilder.buildMessageUpdated(event.getMessage()),
+                        IDiscussEventPublisher.TOPIC_MESSAGE_EVENTS
+                );
 
                 cacheService.cacheMessage(event.getMessage());
                 cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
@@ -98,7 +111,11 @@ public class MessageEventListener {
                 log.debug("Processing post-commit for message deleted: messageId={}", 
                         event.getMessage().getId());
 
-                eventPublisher.publishMessageDeleted(event.getMessage());
+                eventPublisher.publishRealtimeEvent(
+                        String.valueOf(event.getChannelId()),
+                        realtimePayloadBuilder.buildMessageDeleted(event.getMessage()),
+                        IDiscussEventPublisher.TOPIC_MESSAGE_EVENTS
+                );
                 
                 cacheService.invalidateMessage(event.getMessage().getId());
                 
@@ -117,17 +134,51 @@ public class MessageEventListener {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleMessageRead(MessageReadInternalEvent event) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                log.debug("Processing post-commit for message read: messageId={}, userId={}",
+                        event.getMessageId(), event.getUserId());
+
+                eventPublisher.publishRealtimeEvent(
+                        String.valueOf(event.getChannelId()),
+                        realtimePayloadBuilder.buildMessageRead(
+                                event.getChannelId(),
+                                event.getMessageId(),
+                                event.getUserId(),
+                                event.getReadBy(),
+                                event.getReadCount()
+                        ),
+                        IDiscussEventPublisher.TOPIC_MESSAGE_EVENTS
+                );
+
+                cacheService.invalidateMessage(event.getMessageId());
+                cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
+            } catch (Exception e) {
+                log.error("Failed to process post-commit for message read {}: {}",
+                        event.getMessageId(), e.getMessage(), e);
+            }
+        }, messageAsyncExecutor);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleReactionAdded(ReactionAddedInternalEvent event) {
         CompletableFuture.runAsync(() -> {
             try {
                 log.debug("Processing post-commit for reaction added: messageId={}, emoji={}", 
                         event.getMessageId(), event.getEmoji());
 
-                eventPublisher.publishReactionAdded(
-                        event.getMessageId(), 
-                        event.getChannelId(), 
-                        event.getUserId(), 
-                        event.getEmoji());
+                eventPublisher.publishRealtimeEvent(
+                        String.valueOf(event.getChannelId()),
+                        realtimePayloadBuilder.buildReaction(
+                                event.getChannelId(),
+                                event.getMessageId(),
+                                event.getUserId(),
+                                event.getEmoji(),
+                                true
+                        ),
+                        IDiscussEventPublisher.TOPIC_REACTION_EVENTS
+                );
 
                 cacheService.invalidateMessage(event.getMessageId());
                 cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());
@@ -147,11 +198,17 @@ public class MessageEventListener {
                 log.debug("Processing post-commit for reaction removed: messageId={}, emoji={}", 
                         event.getMessageId(), event.getEmoji());
 
-                eventPublisher.publishReactionRemoved(
-                        event.getMessageId(), 
-                        event.getChannelId(), 
-                        event.getUserId(), 
-                        event.getEmoji());
+                eventPublisher.publishRealtimeEvent(
+                        String.valueOf(event.getChannelId()),
+                        realtimePayloadBuilder.buildReaction(
+                                event.getChannelId(),
+                                event.getMessageId(),
+                                event.getUserId(),
+                                event.getEmoji(),
+                                false
+                        ),
+                        IDiscussEventPublisher.TOPIC_REACTION_EVENTS
+                );
 
                 cacheService.invalidateMessage(event.getMessageId());
                 cacheService.invalidateChannelMessagesPageAsync(event.getChannelId());

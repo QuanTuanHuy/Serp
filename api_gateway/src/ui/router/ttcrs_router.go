@@ -15,7 +15,7 @@ func RegisterTtcrsRoutes(
 	ttcrsGroup := group.Group("/ttcrs/api/v1")
 	{
 		ttcrsGroup.Use(
-				rateLimitMiddleware.IPRateLimit(),
-			).Any("/*proxyPath", genericProxyController.ProxyHandler("ttcrs"))
+			rateLimitMiddleware.IPRateLimit(),
+		).Any("/*proxyPath", genericProxyController.ProxyHandler("ttcrs"))
 	}
 }

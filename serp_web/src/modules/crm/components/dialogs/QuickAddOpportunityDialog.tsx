@@ -35,6 +35,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useGetAccountsQuery } from '../../api/crmApi';
+import { formatCurrency, toLocalDateInputValue } from '../../utils';
+import { CRMDatePicker, CRMUserSelect } from '../shared';
 import type { CreateOpportunityRequest, OpportunityStage } from '../../types';
 
 export interface QuickOpportunityFormData {
@@ -275,11 +277,10 @@ export const QuickAddOpportunityDialog: React.FC<
                 <User className='h-4 w-4 text-muted-foreground' />
                 Assigned To
               </Label>
-              <Input
+              <CRMUserSelect
                 id='assignedTo'
                 value={formData.assignedTo || ''}
-                onChange={(e) => handleChange('assignedTo', e.target.value)}
-                placeholder='Optional assignee user ID'
+                onChange={(v) => handleChange('assignedTo', v)}
                 disabled={isLoading}
               />
             </div>
@@ -319,7 +320,7 @@ export const QuickAddOpportunityDialog: React.FC<
                 {STAGE_PROBABILITY[formData.stage]}%
               </div>
               <p className='text-xs text-muted-foreground'>
-                Weighted value: ${weightedValue.toLocaleString()}
+                Weighted value: {formatCurrency(weightedValue)}
               </p>
             </div>
           </div>
@@ -332,12 +333,14 @@ export const QuickAddOpportunityDialog: React.FC<
               <Calendar className='h-4 w-4 text-muted-foreground' />
               Expected Close Date <span className='text-red-500'>*</span>
             </Label>
-            <Input
+            <CRMDatePicker
               id='expectedCloseDate'
-              type='date'
               value={formData.expectedCloseDate}
-              onChange={(e) =>
-                handleChange('expectedCloseDate', e.target.value)
+              onChange={(date) =>
+                handleChange(
+                  'expectedCloseDate',
+                  date ? toLocalDateInputValue(date) : ''
+                )
               }
               className={cn(errors.expectedCloseDate && 'border-red-500')}
               disabled={isLoading}

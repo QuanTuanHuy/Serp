@@ -30,6 +30,8 @@ import {
   Target,
   CheckCircle2,
   XCircle,
+  AlertCircle,
+  Clock3,
 } from 'lucide-react';
 import type {
   Opportunity,
@@ -100,6 +102,7 @@ const typeStyles: Record<OpportunityType, { label: string; color: string }> = {
 
 const getDisplayAccountName = (opportunity: Opportunity): string => {
   return (
+    opportunity.accountName?.trim() ||
     opportunity.customerName?.trim() ||
     (opportunity.accountId
       ? `Account #${opportunity.accountId}`
@@ -133,6 +136,27 @@ const getDaysUntil = (
   const diffTime = date.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return { days: Math.abs(diffDays), isOverdue: diffDays < 0 };
+};
+
+const isClosedOpportunity = (opportunity: Opportunity): boolean =>
+  opportunity.stage === 'CLOSED_WON' || opportunity.stage === 'CLOSED_LOST';
+
+const hasNoNextAction = (opportunity: Opportunity): boolean =>
+  !isClosedOpportunity(opportunity) && !opportunity.nextActivityAt;
+
+const isClosingSoon = (opportunity: Opportunity): boolean => {
+  if (isClosedOpportunity(opportunity)) return false;
+  const { days, isOverdue } = getDaysUntil(opportunity.expectedCloseDate);
+  return !isOverdue && days <= 7;
+};
+
+const formatShortDateTime = (dateString?: string): string => {
+  if (!dateString) return 'Not scheduled';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
 // Probability Bar Component
@@ -255,6 +279,24 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
         {/* Probability */}
         <ProbabilityBar probability={probability} />
 
+        <div className='mt-3 flex flex-wrap gap-1'>
+          {(opportunity.overdueActivityCount ?? 0) > 0 && (
+            <Badge variant='destructive' className='px-1.5 py-0 text-[10px]'>
+              {opportunity.overdueActivityCount} overdue
+            </Badge>
+          )}
+          {hasNoNextAction(opportunity) && (
+            <Badge variant='secondary' className='px-1.5 py-0 text-[10px]'>
+              No next action
+            </Badge>
+          )}
+          {!hasNoNextAction(opportunity) && opportunity.nextActivityAt && (
+            <Badge variant='outline' className='px-1.5 py-0 text-[10px]'>
+              Next {formatShortDateTime(opportunity.nextActivityAt)}
+            </Badge>
+          )}
+        </div>
+
         {/* Footer */}
         <div className='flex items-center justify-between mt-3 pt-2 border-t'>
           <div className='flex items-center gap-1 text-xs text-muted-foreground'>
@@ -305,6 +347,20 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
             {formatCurrency(displayValue, true)}
           </p>
           <p className='text-xs text-muted-foreground'>{probability}%</p>
+        </div>
+
+        <div className='hidden min-w-[120px] text-right text-xs text-muted-foreground sm:block'>
+          {(opportunity.overdueActivityCount ?? 0) > 0 ? (
+            <span className='font-medium text-destructive'>
+              {opportunity.overdueActivityCount} overdue
+            </span>
+          ) : opportunity.nextActivityAt ? (
+            <span>Next {formatShortDateTime(opportunity.nextActivityAt)}</span>
+          ) : hasNoNextAction(opportunity) ? (
+            <span className='font-medium text-amber-600'>No next action</span>
+          ) : (
+            <span>{opportunity.openActivityCount ?? 0} open</span>
+          )}
         </div>
       </Card>
     );
@@ -404,6 +460,33 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
           <Badge variant='outline' className={type.color}>
             {type.label}
           </Badge>
+        </div>
+
+        <div className='mb-4 flex flex-wrap gap-2'>
+          {(opportunity.overdueActivityCount ?? 0) > 0 && (
+            <Badge variant='destructive' className='gap-1'>
+              <AlertCircle className='h-3 w-3' />
+              {opportunity.overdueActivityCount} overdue activities
+            </Badge>
+          )}
+          {hasNoNextAction(opportunity) && (
+            <Badge variant='secondary' className='gap-1 text-amber-700'>
+              <Clock3 className='h-3 w-3' />
+              No next action
+            </Badge>
+          )}
+          {!hasNoNextAction(opportunity) && opportunity.nextActivityAt && (
+            <Badge variant='outline' className='gap-1'>
+              <Clock3 className='h-3 w-3' />
+              Next {formatShortDateTime(opportunity.nextActivityAt)}
+            </Badge>
+          )}
+          {closeDateInfo.isOverdue && !isClosedOpportunity(opportunity) && (
+            <Badge variant='destructive'>Close overdue</Badge>
+          )}
+          {isClosingSoon(opportunity) && (
+            <Badge variant='outline'>Closing soon</Badge>
+          )}
         </div>
 
         {/* Stage Progress */}

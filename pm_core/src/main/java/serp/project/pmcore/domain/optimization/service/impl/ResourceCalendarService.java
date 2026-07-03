@@ -28,6 +28,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of {@link IResourceCalendarService} that fetches working calendars from database
+ * storage ports and constructs capacity slots.
+ * <p>
+ * If some or all users lack pre-configured calendar entries, the service generates a fallback weekday
+ * calendar (8-hour workday starting at 8:00 AM local time, UTC+7) and emits warnings indicating
+ * missing calendar data.
+ */
 @Service
 @RequiredArgsConstructor
 public class ResourceCalendarService implements IResourceCalendarService {
@@ -45,12 +53,16 @@ public class ResourceCalendarService implements IResourceCalendarService {
         }
 
         List<Long> uniqueUserIds = new ArrayList<>(new LinkedHashSet<>(userIds));
+        
+        // Query configured calendar slots from database that overlap with the planning window
         List<ResourceCapacitySlot> realSlots = resourceCalendarSlotReadPort.findOverlappingSlots(
                 tenantId,
                 uniqueUserIds,
                 planningStart,
                 planningEnd
         );
+        
+        // Identify users who lack configured calendars
         Set<Long> usersWithRealSlots = realSlots.stream()
                 .map(ResourceCapacitySlot::assigneeId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
@@ -62,6 +74,8 @@ public class ResourceCalendarService implements IResourceCalendarService {
                 .filter(slot -> slot.capacityMillis() > 0)
                 .toList());
         List<OptimizationConstraintViolation> warnings = new ArrayList<>();
+        
+        // Supplement missing users with default fallback calendars
         if (!missingUserIds.isEmpty()) {
             CalendarCapacityResult fallback = fallbackWorkingCapacity(missingUserIds, planningStart, planningEnd);
             slots.addAll(fallback.slots());
@@ -90,6 +104,8 @@ public class ResourceCalendarService implements IResourceCalendarService {
         }
         List<Long> uniqueUserIds = new ArrayList<>(new LinkedHashSet<>(userIds));
         List<ResourceCapacitySlot> slots = new ArrayList<>();
+        
+        // Generate daily capacity slots (8 hours per weekday, excluding weekends) in the local UTC+7 time zone
         LocalDate start = Instant.ofEpochMilli(planningStart).atZone(VIETNAM_ZONE).toLocalDate();
         LocalDate end = Instant.ofEpochMilli(planningEnd).atZone(VIETNAM_ZONE).toLocalDate();
         for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
@@ -98,8 +114,8 @@ public class ResourceCalendarService implements IResourceCalendarService {
                 continue;
             }
             long slotStart = day.atTime(LocalTime.of(OptimizationConstants.FALLBACK_WORKDAY_START_HOUR_UTC_PLUS_7, 0))
-                    .toInstant(VIETNAM_ZONE)
-                    .toEpochMilli();
+                     .toInstant(VIETNAM_ZONE)
+                     .toEpochMilli();
             long slotEnd = slotStart + OptimizationConstants.DAILY_CAPACITY_MILLIS;
             for (Long userId : uniqueUserIds) {
                 slots.add(new ResourceCapacitySlot(userId, slotStart, slotEnd, OptimizationConstants.DAILY_CAPACITY_MILLIS));

@@ -24,6 +24,8 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import type { LeadSource } from '../../types';
+import { CRMDatePicker } from '../shared';
+import { toLocalDateInputValue } from '../../utils';
 
 export interface QuickLeadFormData {
   name: string;
@@ -176,16 +178,16 @@ export const QuickAddLeadDialog: React.FC<QuickAddLeadDialogProps> = ({
             </div>
             <div className='space-y-2 md:col-span-2'>
               <Label htmlFor='quick-followUpDate'>Follow-up Date</Label>
-              <Input
+              <CRMDatePicker
                 id='quick-followUpDate'
-                type='date'
                 value={formData.followUpDate}
-                onChange={(e) =>
+                onChange={(date) =>
                   setFormData((prev) => ({
                     ...prev,
-                    followUpDate: e.target.value,
+                    followUpDate: date ? toLocalDateInputValue(date) : '',
                   }))
                 }
+                disabled={isLoading}
               />
             </div>
             <div className='space-y-2 md:col-span-2'>

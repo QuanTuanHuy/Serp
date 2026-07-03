@@ -142,7 +142,34 @@ func (m *ModuleAccessController) GetUsersWithAccessToModule(c *gin.Context) {
 		return
 	}
 
-	res, err := m.moduleAccessService.GetUsersWithAccessToModule(c.Request.Context(), organizationId, moduleId)
+	page, pageSize, valid := utils.ValidatePaginationParams(c)
+	if !valid {
+		return
+	}
+
+	sortBy := utils.ParseStringQuery(c, "sortBy")
+	sortDir := utils.ParseStringQuery(c, "sortDir")
+	search := utils.ParseStringQuery(c, "search")
+	status := utils.ParseStringQuery(c, "status")
+	userType := utils.ParseStringQuery(c, "userType")
+	roleId := utils.ParseInt64Query(c, "roleId")
+	departmentId := utils.ParseInt64Query(c, "departmentId")
+
+	params := &request.GetUserParams{
+		Page:           &page,
+		PageSize:       &pageSize,
+		SortBy:         sortBy,
+		SortDir:        sortDir,
+		Search:         search,
+		Status:         status,
+		UserType:       userType,
+		RoleId:         roleId,
+		DepartmentId:   departmentId,
+		OrganizationID: &organizationId,
+		ModuleID:       &moduleId,
+	}
+
+	res, err := m.moduleAccessService.GetUsersWithAccessToModule(c.Request.Context(), params)
 	if err != nil {
 		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
 		return

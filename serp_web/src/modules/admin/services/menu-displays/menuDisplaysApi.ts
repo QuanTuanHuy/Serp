@@ -123,34 +123,18 @@ export const menuDisplaysApi = api.injectEndpoints({
       ],
     }),
 
-    assignMenuDisplaysToRole: builder.mutation<
+    updateMenuDisplayRoles: builder.mutation<
       string,
-      AssignMenuDisplayToRoleRequest
+      { id: number; roleIds: number[] }
     >({
-      query: (data) => ({
-        url: '/menu-displays/assign-to-role',
-        method: 'POST',
-        body: data,
+      query: ({ id, roleIds }) => ({
+        url: `/menu-displays/${id}/roles`,
+        method: 'PUT',
+        body: { roleIds },
       }),
       transformResponse: createDataTransform<string>(),
-      invalidatesTags: [
-        { type: 'admin/MenuDisplay', id: 'LIST' },
-        { type: 'admin/MenuDisplay', id: 'ROLE_LIST' },
-        { type: 'admin/Role', id: 'LIST' },
-      ],
-    }),
-
-    unassignMenuDisplaysFromRole: builder.mutation<
-      string,
-      AssignMenuDisplayToRoleRequest
-    >({
-      query: (data) => ({
-        url: '/menu-displays/unassign-from-role',
-        method: 'POST',
-        body: data,
-      }),
-      transformResponse: createDataTransform<string>(),
-      invalidatesTags: [
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'admin/MenuDisplay', id },
         { type: 'admin/MenuDisplay', id: 'LIST' },
         { type: 'admin/MenuDisplay', id: 'ROLE_LIST' },
         { type: 'admin/Role', id: 'LIST' },
@@ -169,6 +153,5 @@ export const {
   useCreateMenuDisplayMutation,
   useUpdateMenuDisplayMutation,
   useDeleteMenuDisplayMutation,
-  useAssignMenuDisplaysToRoleMutation,
-  useUnassignMenuDisplaysFromRoleMutation,
+  useUpdateMenuDisplayRolesMutation,
 } = menuDisplaysApi;

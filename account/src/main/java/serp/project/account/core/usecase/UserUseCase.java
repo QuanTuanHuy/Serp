@@ -32,6 +32,9 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class UserUseCase {
+    private static final String ORGANIZATION_REQUIRED_FOR_MODULE_FILTER =
+            "organizationId is required when moduleId is provided";
+
     private final IOrganizationService organizationService;
     private final UserProvisioningCoordinator userProvisioningCoordinator;
     private final UserRoleCoordinator userRoleCoordinator;
@@ -90,6 +93,9 @@ public class UserUseCase {
 
     public GeneralResponse<?> getUsers(GetUserParams params) {
         try {
+            if (params.getModuleId() != null && params.getOrganizationId() == null) {
+                return responseUtils.badRequest(ORGANIZATION_REQUIRED_FOR_MODULE_FILTER);
+            }
             return responseUtils.success(userQueryService.getUsers(params));
         } catch (AppException e) {
             log.error("Get users failed: {}", e.getMessage());

@@ -139,10 +139,9 @@ export const SalesChart: React.FC<SalesChartProps> = ({
           <div className='text-right'>
             <p className='text-sm text-muted-foreground'>Total Revenue</p>
             <p className='text-xl font-bold text-emerald-600 dark:text-emerald-400'>
-              $
-              {data
-                .reduce((sum, item) => sum + item.revenue, 0)
-                .toLocaleString()}
+              {formatCurrency(
+                data.reduce((sum, item) => sum + item.revenue, 0)
+              )}
             </p>
           </div>
         </div>
@@ -228,14 +227,13 @@ export const SalesChart: React.FC<SalesChartProps> = ({
           <div className='text-center p-3 bg-muted/50 rounded-lg'>
             <p className='text-sm text-muted-foreground'>Avg Deal Size</p>
             <p className='text-xl font-bold text-violet-600 dark:text-violet-400'>
-              $
-              {(
+              {formatCurrency(
                 data.reduce((sum, item) => sum + item.revenue, 0) /
-                Math.max(
-                  data.reduce((sum, item) => sum + item.deals, 0),
-                  1
-                )
-              ).toLocaleString()}
+                  Math.max(
+                    data.reduce((sum, item) => sum + item.deals, 0),
+                    1
+                  )
+              )}
             </p>
           </div>
           <div className='text-center p-3 bg-muted/50 rounded-lg'>

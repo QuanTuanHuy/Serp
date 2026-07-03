@@ -20,5 +20,7 @@ public interface IMenuDisplayRolePort {
 
     void deleteByRoleIdAndMenuDisplayIds(Long roleId, List<Long> menuDisplayIds);
 
+    void deleteByMenuDisplayIdAndRoleIds(Long menuDisplayId, List<Long> roleIds);
+
     void deleteByIds(List<Long> ids);
 }

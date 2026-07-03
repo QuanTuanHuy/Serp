@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewAssembler;
 import serp.project.pmcore.application.optimization.query.get.OptimizationRunReviewView;
 import serp.project.pmcore.application.shared.cqrs.command.ICommandHandler;
-import serp.project.pmcore.domain.optimization.constant.OptimizationAlgorithmKeys;
 import serp.project.pmcore.domain.optimization.constant.OptimizationConstants;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunEntity;
 import serp.project.pmcore.domain.optimization.entity.OptimizationRunItemEntity;
@@ -21,6 +20,7 @@ import serp.project.pmcore.domain.optimization.entity.WorkItemPlanEntity;
 import serp.project.pmcore.domain.optimization.enums.OptimizationCapability;
 import serp.project.pmcore.domain.optimization.enums.OptimizationApplyStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationDecision;
+import serp.project.pmcore.domain.optimization.enums.OptimizationObjective;
 import serp.project.pmcore.domain.optimization.enums.OptimizationRunStatus;
 import serp.project.pmcore.domain.optimization.enums.OptimizationSolverStatus;
 import serp.project.pmcore.domain.optimization.model.OptimizationAlgorithmDescriptor;
@@ -39,6 +39,7 @@ import serp.project.pmcore.domain.optimization.port.IOptimizationRunWarningPort;
 import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithm;
 import serp.project.pmcore.domain.optimization.service.IOptimizationAlgorithmRegistry;
 import serp.project.pmcore.domain.optimization.service.IOptimizationProjectModelBuilder;
+import serp.project.pmcore.domain.optimization.service.OptimizationObjectiveAlgorithmMapper;
 import serp.project.pmcore.domain.optimization.service.OptimizationSolutionValidator;
 import serp.project.pmcore.domain.workitem.entity.WorkItemEntity;
 import serp.project.pmcore.kernel.utils.JsonUtils;
@@ -68,7 +69,7 @@ public class GenerateOptimizationRunCommandHandler
     @Transactional(rollbackFor = Exception.class)
     public OptimizationRunReviewView handle(GenerateOptimizationRunCommand command) {
         validate(command);
-        String algorithmKey = normalizeAlgorithmKey(command.algorithmKey());
+        String algorithmKey = normalizeAlgorithmKey(command.objective());
         OptimizationRunIntent intent = new OptimizationRunIntent(
                 algorithmKey,
                 command.objective(),
@@ -215,10 +216,8 @@ public class GenerateOptimizationRunCommandHandler
         return scope == null || scope.isBlank() ? OptimizationConstants.DEFAULT_SCOPE : scope;
     }
 
-    private String normalizeAlgorithmKey(String algorithmKey) {
-        return algorithmKey == null || algorithmKey.isBlank()
-                ? OptimizationAlgorithmKeys.GREEDY_BALANCED
-                : algorithmKey;
+    private String normalizeAlgorithmKey(OptimizationObjective objective) {
+        return OptimizationObjectiveAlgorithmMapper.algorithmKeyFor(objective);
     }
 
     private void validateCapabilities(OptimizationRunIntent intent, OptimizationAlgorithmDescriptor descriptor) {

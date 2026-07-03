@@ -28,8 +28,7 @@ interface RoleAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   menuDisplay: MenuDisplayDetail | null;
-  onAssign: (roleId: number, menuDisplayIds: number[]) => Promise<void>;
-  onUnassign: (roleId: number, menuDisplayIds: number[]) => Promise<void>;
+  onUpdateRoles: (menuDisplayId: number, roleIds: number[]) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -37,8 +36,7 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
   open,
   onOpenChange,
   menuDisplay,
-  onAssign,
-  onUnassign,
+  onUpdateRoles,
   isLoading = false,
 }) => {
   const [searchInput, setSearchInput] = useState('');
@@ -55,6 +53,14 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
     return new Set(menuDisplay.assignedRoles.map((r) => r.roleId));
   }, [menuDisplay]);
 
+  const hasChanged = useMemo(() => {
+    if (assignedRoleIds.size !== selectedRoleIds.size) return true;
+    for (const id of selectedRoleIds) {
+      if (!assignedRoleIds.has(id)) return true;
+    }
+    return false;
+  }, [assignedRoleIds, selectedRoleIds]);
+
   const filteredRoles = useMemo(() => {
     if (!debouncedSearch) return roles;
     const searchLower = debouncedSearch.toLowerCase();
@@ -68,10 +74,16 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
   // Reset state when dialog opens/closes
   React.useEffect(() => {
     if (open) {
-      setSelectedRoleIds(new Set());
+      if (menuDisplay?.assignedRoles) {
+        setSelectedRoleIds(
+          new Set(menuDisplay.assignedRoles.map((r) => r.roleId))
+        );
+      } else {
+        setSelectedRoleIds(new Set());
+      }
       setSearchInput('');
     }
-  }, [open]);
+  }, [open, menuDisplay]);
 
   const handleToggleRole = (roleId: number) => {
     setSelectedRoleIds((prev) => {
@@ -86,32 +98,11 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
   };
 
   const handleApply = async () => {
-    if (!menuDisplay?.id || selectedRoleIds.size === 0) return;
+    if (!menuDisplay?.id) return;
 
     setProcessing(true);
     try {
-      const menuDisplayIds = [menuDisplay.id];
-
-      // Separate roles to assign vs unassign
-      const rolesToAssign: number[] = [];
-      const rolesToUnassign: number[] = [];
-
-      selectedRoleIds.forEach((roleId) => {
-        if (assignedRoleIds.has(roleId)) {
-          rolesToUnassign.push(roleId);
-        } else {
-          rolesToAssign.push(roleId);
-        }
-      });
-
-      for (const roleId of rolesToAssign) {
-        await onAssign(roleId, menuDisplayIds);
-      }
-
-      for (const roleId of rolesToUnassign) {
-        await onUnassign(roleId, menuDisplayIds);
-      }
-
+      await onUpdateRoles(menuDisplay.id, Array.from(selectedRoleIds));
       onOpenChange(false);
     } catch (error) {
       console.error('Role assignment error:', error);
@@ -120,14 +111,16 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
     }
   };
 
-  const getRoleStatus = (roleId: number): 'assigned' | 'unassigned' | 'new' => {
-    const isAssigned = assignedRoleIds.has(roleId);
+  const getRoleStatus = (
+    roleId: number
+  ): 'assigned' | 'unassigned' | 'new' | 'removed' => {
+    const wasAssigned = assignedRoleIds.has(roleId);
     const isSelected = selectedRoleIds.has(roleId);
 
-    if (isAssigned && isSelected) return 'unassigned'; // Will be unassigned
-    if (!isAssigned && isSelected) return 'new'; // Will be assigned
-    if (isAssigned) return 'assigned'; // Currently assigned
-    return 'unassigned'; // Not assigned
+    if (wasAssigned && isSelected) return 'assigned';
+    if (!wasAssigned && isSelected) return 'new';
+    if (wasAssigned && !isSelected) return 'removed';
+    return 'unassigned';
   };
 
   return (
@@ -213,17 +206,20 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
                           <span className='font-medium text-sm'>
                             {role.name}
                           </span>
-                          {status === 'assigned' && !isSelected && (
+                          {status === 'assigned' && (
                             <Badge variant='secondary' className='text-xs'>
                               Assigned
                             </Badge>
                           )}
                           {status === 'new' && (
-                            <Badge variant='default' className='text-xs'>
+                            <Badge
+                              variant='default'
+                              className='text-xs bg-green-600 hover:bg-green-600 text-white'
+                            >
                               Will Assign
                             </Badge>
                           )}
-                          {status === 'unassigned' && isSelected && (
+                          {status === 'removed' && (
                             <Badge variant='destructive' className='text-xs'>
                               Will Remove
                             </Badge>
@@ -257,12 +253,7 @@ export const RoleAssignmentDialog: React.FC<RoleAssignmentDialogProps> = ({
           </Button>
           <Button
             onClick={handleApply}
-            disabled={
-              selectedRoleIds.size === 0 ||
-              processing ||
-              isLoading ||
-              !menuDisplay
-            }
+            disabled={!hasChanged || processing || isLoading || !menuDisplay}
           >
             {processing || isLoading ? (
               <>

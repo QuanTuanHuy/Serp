@@ -43,6 +43,7 @@ public class UserQueryBuilder {
         var sqlParams = new MapSqlParameterSource();
 
         appendOrganizationFilter(whereClause, sqlParams, params);
+        appendModuleAccessFilter(whereClause, sqlParams, params);
         appendStatusFilter(whereClause, sqlParams, params);
         appendSearchFilter(whereClause, sqlParams, params);
         appendUserTypeFilter(whereClause, sqlParams, params);
@@ -114,6 +115,15 @@ public class UserQueryBuilder {
             whereClause.append(
                     " AND EXISTS (SELECT 1 FROM user_departments ud WHERE ud.user_id = u.id AND ud.department_id = :departmentId AND ud.is_active = TRUE)");
             sqlParams.addValue("departmentId", params.getDepartmentId());
+        }
+    }
+
+    private void appendModuleAccessFilter(StringBuilder whereClause, MapSqlParameterSource sqlParams,
+            GetUserParams params) {
+        if (params.getModuleId() != null && params.getOrganizationId() != null) {
+            whereClause.append(
+                    " AND EXISTS (SELECT 1 FROM user_module_access uma WHERE uma.user_id = u.id AND uma.organization_id = :organizationId AND uma.module_id = :moduleId AND uma.is_active = TRUE)");
+            sqlParams.addValue("moduleId", params.getModuleId());
         }
     }
 }

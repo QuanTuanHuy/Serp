@@ -34,7 +34,6 @@ type PMOptimizationRunIntentPanelProps = {
   planningEnd: string;
   onObjectiveChange: (value: PMOptimizationObjective) => void;
   onChangeScopeChange: (value: PMOptimizationChangeScope) => void;
-  onAlgorithmKeyChange: (value: string) => void;
   onPlanningStartChange: (value: string) => void;
   onPlanningEndChange: (value: string) => void;
 };
@@ -47,7 +46,6 @@ export function PMOptimizationRunIntentPanel({
   planningEnd,
   onObjectiveChange,
   onChangeScopeChange,
-  onAlgorithmKeyChange,
   onPlanningStartChange,
   onPlanningEndChange,
 }: PMOptimizationRunIntentPanelProps) {
@@ -129,22 +127,15 @@ export function PMOptimizationRunIntentPanel({
         <Separator />
 
         <div className='space-y-2'>
-          <p className='text-sm font-medium'>Algorithm</p>
-          <select
-            value={algorithmKey}
-            onChange={(event) => onAlgorithmKeyChange(event.target.value)}
-            className='h-10 w-full rounded-md border bg-background px-3 text-sm'
-          >
-            {PM_OPTIMIZATION_ALGORITHM_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <p className='text-xs text-muted-foreground'>
+          <p className='text-sm font-medium'>Algorithm preset</p>
+          <div className='rounded-md border bg-muted/30 px-3 py-2 text-sm'>
             {PM_OPTIMIZATION_ALGORITHM_OPTIONS.find(
               (option) => option.value === algorithmKey
-            )?.description || 'Choose the solver preset used for generation.'}
+            )?.label || algorithmKey}
+          </div>
+          <p className='text-xs text-muted-foreground'>
+            Derived from the selected objective so the solver intent stays
+            consistent.
           </p>
         </div>
 

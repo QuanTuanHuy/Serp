@@ -179,6 +179,46 @@ public class MenuDisplayService implements IMenuDisplayService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateMenuDisplayRoles(Long menuDisplayId, List<Long> roleIds) {
+        try {
+            var assignedRoles = menuDisplayRolePort.getByMenuDisplayIds(List.of(menuDisplayId));
+            var assignedRoleIds = assignedRoles.stream()
+                    .map(MenuDisplayRoleEntity::getRoleId)
+                    .toList();
+
+            var roleIdsToUnassign = assignedRoleIds.stream()
+                    .filter(id -> !roleIds.contains(id))
+                    .toList();
+
+            var roleIdsToAssign = roleIds.stream()
+                    .filter(id -> !assignedRoleIds.contains(id))
+                    .toList();
+
+            if (!roleIdsToUnassign.isEmpty()) {
+                menuDisplayRolePort.deleteByMenuDisplayIdAndRoleIds(menuDisplayId, roleIdsToUnassign);
+                log.info("Unassigned roles successfully from menu: {}, roles: {}", menuDisplayId, roleIdsToUnassign);
+            }
+
+            if (!roleIdsToAssign.isEmpty()) {
+                List<MenuDisplayRoleEntity> newRelations = roleIdsToAssign.stream()
+                        .map(roleId -> MenuDisplayRoleEntity.builder()
+                                .roleId(roleId)
+                                .menuDisplayId(menuDisplayId)
+                                .createdAt(Instant.now().toEpochMilli())
+                                .updatedAt(Instant.now().toEpochMilli())
+                                .build())
+                        .collect(Collectors.toList());
+                menuDisplayRolePort.save(newRelations);
+                log.info("Assigned roles successfully to menu: {}, roles: {}", menuDisplayId, roleIdsToAssign);
+            }
+        } catch (Exception e) {
+            log.error("Error updating menu display roles: {}", e.getMessage());
+            throw new AppException(Constants.ErrorMessage.UPDATE_MENU_DISPLAY_FAILED);
+        }
+    }
+
+    @Override
     public Map<Long, List<MenuDisplayEntity>> getMenuDisplaysByRoleIds(List<Long> roleIds) {
         var menuDisplayRoles = menuDisplayRolePort.getByRoleIds(roleIds);
         var menuDisplayIds = menuDisplayRoles.stream()

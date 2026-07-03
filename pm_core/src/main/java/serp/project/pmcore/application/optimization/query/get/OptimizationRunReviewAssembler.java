@@ -117,6 +117,7 @@ public class OptimizationRunReviewAssembler {
                 .scheduleReasons(parseStringList(item.getScheduleReasonsJson()))
                 .violations(parseStringList(item.getViolationsJson()))
                 .allocationChunks(parseAllocationChunks(item.getAllocationChunksJson()))
+                .overrideAllocationChunks(parseAllocationChunks(item.getOverrideAllocationChunksJson()))
                 .appliedAt(item.getAppliedAt())
                 .assignmentSkippedReason(item.getAssignmentSkippedReason())
                 .scheduleSkippedReason(item.getScheduleSkippedReason())

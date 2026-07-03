@@ -22,6 +22,7 @@ import {
 import { ChannelItem } from './ChannelItem';
 import { ChannelGroupHeader } from './ChannelGroupHeader';
 import { CreateChannelDialog } from './CreateChannelDialog';
+import { UserProfileCard } from './UserProfileCard';
 import { useGetChannelsQuery } from '../api/discussApi';
 import type { Channel, ChannelType } from '../types';
 
@@ -314,8 +315,9 @@ export const ChannelList: React.FC<ChannelListProps> = ({
         </div>
       </ScrollArea>
 
-      {/* Footer - New Channel Button */}
-      <div className='flex-shrink-0 p-3 border-t border-slate-200 dark:border-slate-700'>
+      {/* Footer - Profile & New Channel */}
+      <div className='flex-shrink-0 p-3 border-t border-slate-200 dark:border-slate-700 space-y-2 bg-slate-50/50 dark:bg-slate-900/10'>
+        <UserProfileCard />
         <Button
           variant='outline'
           size='sm'

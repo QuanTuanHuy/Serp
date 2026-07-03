@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { getErrorMessage } from '@/lib/store/api';
 import { selectOrganizationId } from '@/modules/account/store';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
 import {
   Alert,
   AlertDescription,
@@ -95,6 +96,11 @@ export function PMProjectComponentsPage({
     { skip: !Number.isFinite(numericProjectId) }
   );
 
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const pmModuleId = myModules?.find((m) => m.moduleCode === 'PM')?.moduleId;
+
   const { data: usersResponse, isLoading: isUsersLoading } =
     useGetOrganizationUsersQuery(
       {
@@ -104,6 +110,7 @@ export function PMProjectComponentsPage({
         status: 'ACTIVE',
         sortBy: 'firstName',
         sortDir: 'ASC',
+        moduleId: pmModuleId,
       },
       { skip: !organizationId }
     );

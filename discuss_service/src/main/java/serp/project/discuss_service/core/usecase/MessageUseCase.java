@@ -14,12 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.domain.event.MessageDeletedInternalEvent;
+import serp.project.discuss_service.core.domain.event.MessageReadInternalEvent;
 import serp.project.discuss_service.core.domain.event.MessageSentInternalEvent;
 import serp.project.discuss_service.core.domain.event.MessageUpdatedInternalEvent;
 import serp.project.discuss_service.core.domain.event.ReactionAddedInternalEvent;
@@ -34,6 +36,8 @@ import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
 import serp.project.discuss_service.core.service.IUserInfoService;
+import serp.project.discuss_service.core.service.impl.RealtimePayloadBuilder;
+import serp.project.discuss_service.core.service.impl.TypingEventDebouncer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +62,8 @@ public class MessageUseCase {
     private final IAttachmentService attachmentService;
     private final IAttachmentUrlService attachmentUrlService;
     private final IUserInfoService userInfoService;
+    private final TypingEventDebouncer typingEventDebouncer;
+    private final RealtimePayloadBuilder realtimePayloadBuilder;
 
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -317,8 +323,22 @@ public class MessageUseCase {
             throw new AppException(ErrorCode.NOT_CHANNEL_MEMBER);
         }
 
+        MessageEntity target = messageService.getMessageByIdOrThrow(messageId);
+        if (!target.getChannelId().equals(channelId)) {
+            throw new AppException(ErrorCode.MESSAGE_NOT_FOUND);
+        }
+
         memberService.markAsRead(channelId, userId, messageId);
-        messageService.markAsRead(messageId, userId);
+        MessageEntity updated = messageService.markAsRead(messageId, userId);
+
+        applicationEventPublisher.publishEvent(new MessageReadInternalEvent(
+                this,
+                channelId,
+                messageId,
+                userId,
+                updated.getReadBy(),
+                updated.getReadCount()
+        ));
 
         log.debug("User {} marked messages as read in channel {} up to {}", userId, channelId, messageId);
     }
@@ -334,7 +354,20 @@ public class MessageUseCase {
             cacheService.clearUserTyping(channelId, userId);
         }
 
-        eventPublisher.publishTypingIndicator(channelId, userId, isTyping);
+        if (!typingEventDebouncer.shouldPublish(channelId, userId, isTyping)) {
+            log.debug("Suppressed duplicate typing event for user {} in channel {}", userId, channelId);
+            return;
+        }
+
+        String userName = isTyping
+                ? userInfoService.getUserById(userId).map(ChannelMemberResponse.UserInfo::getName).orElse("")
+                : "";
+
+        eventPublisher.publishRealtimeEvent(
+                String.valueOf(channelId),
+                realtimePayloadBuilder.buildTyping(channelId, userId, userName, isTyping),
+                IDiscussEventPublisher.TOPIC_PRESENCE_EVENTS
+        );
     }
 
     public Set<Long> getTypingUsers(Long channelId, Long userId) {
@@ -360,11 +393,19 @@ public class MessageUseCase {
             return List.of();
         }
 
-        List<Long> senderIds = messages.stream()
-                .map(MessageEntity::getSenderId)
+        List<Long> userIdsToLoad = messages.stream()
+                .flatMap(message -> {
+                    List<Long> ids = new ArrayList<>();
+                    ids.add(message.getSenderId());
+                    if (message.getReadBy() != null) {
+                        ids.addAll(message.getReadBy());
+                    }
+                    return ids.stream();
+                })
+                .filter(id -> id != null)
                 .distinct()
                 .toList();
-        Map<Long, UserInfo> userInfoMap = userInfoService.getUsersByIds(senderIds).stream()
+        Map<Long, UserInfo> userInfoMap = userInfoService.getUsersByIds(userIdsToLoad).stream()
                 .collect(Collectors.toMap(UserInfo::getId, Function.identity()));
         
         List<Long> messageIds = messages.stream()
@@ -384,6 +425,14 @@ public class MessageUseCase {
                     
                     response.setSender(userInfoMap.get(msg.getSenderId()));
                     response.setIsSentByMe(msg.getSenderId().equals(currentUserId));
+                    response.setIsReadByMe(msg.isReadBy(currentUserId));
+                    List<UserInfo> readByUsers = msg.getReadBy() == null
+                            ? List.of()
+                            : msg.getReadBy().stream()
+                                    .map(userInfoMap::get)
+                                    .filter(userInfo -> userInfo != null)
+                                    .toList();
+                    response.setReadByUsers(readByUsers);
                     
                     List<AttachmentEntity> attachments = attachmentMap.getOrDefault(msg.getId(), List.of());
                     List<AttachmentResponse> enrichedAttachments = attachments.stream()

@@ -6,6 +6,7 @@
 
 package serp.project.discuss_service.core.service;
 
+import java.util.List;
 import java.util.Set;
 
 public interface IDeliveryService {
@@ -25,6 +26,8 @@ public interface IDeliveryService {
     void notifyMessageUpdated(Long channelId, Long messageId);
 
     void notifyMessageDeleted(Long channelId, Long messageId);
+
+    void notifyMessageRead(Long channelId, Long messageId, Long userId, List<Long> readBy, Integer readCount);
 
     void notifyReaction(Long channelId, Long messageId, Long userId, String emoji, boolean added);
 
