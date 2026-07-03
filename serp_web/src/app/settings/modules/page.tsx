@@ -64,6 +64,14 @@ export default function SettingsModulesPage() {
     setSearch,
   } = useSettingsModules();
 
+  const mostUsedModule = useMemo(() => {
+    const active = modules.filter((m) => m.isActive && (m.activeUserCount || 0) > 0);
+    if (active.length === 0) return null;
+    return active.reduce((max, m) =>
+      (m.activeUserCount || 0) > (max.activeUserCount || 0) ? m : max
+    , active[0]);
+  }, [modules]);
+
   const [requestMoreModules, { isLoading: isRequesting }] =
     useRequestMoreModulesMutation();
 
@@ -152,8 +160,14 @@ export default function SettingsModulesPage() {
 
         <SettingsStatsCard
           title='Most Used'
-          value='PTM'
-          description='25 users active'
+          value={mostUsedModule ? mostUsedModule.moduleCode.toUpperCase() : '-'}
+          description={
+            mostUsedModule
+              ? `${mostUsedModule.activeUserCount} user${
+                  mostUsedModule.activeUserCount !== 1 ? 's' : ''
+                } active`
+              : 'No active users'
+          }
           icon={<TrendingUp className='h-4 w-4' />}
         />
 
