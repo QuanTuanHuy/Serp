@@ -31,6 +31,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of {@link IResourceCapacityService} that resolves resource capacities by querying
+ * working time from calendar services and subtracting pre-existing workload allocations.
+ * <p>
+ * Pre-existing workload consists of:
+ * <ul>
+ *     <li>Planned workload from active execution plans (including daily effort allocations).</li>
+ *     <li>Unplanned workload from active work items without plan dates (allocated to the user's capacity slots).</li>
+ * </ul>
+ */
 @Service
 @RequiredArgsConstructor
 public class ResourceCapacityService implements IResourceCapacityService {
@@ -119,6 +129,8 @@ public class ResourceCapacityService implements IResourceCapacityService {
         for (ResourceCapacitySlot slot : calendarSlots) {
             long sameProject = 0L;
             long crossProject = 0L;
+            
+            // Calculate overlapping times of planned workload plans within the current capacity slot
             for (ResourceWorkloadPlan plan : plans) {
                 ResourceWorkloadItem item = workItemsById.get(plan.workItemId());
                 if (item == null || !Objects.equals(item.assigneeId(), slot.assigneeId())) {
@@ -134,12 +146,16 @@ public class ResourceCapacityService implements IResourceCapacityService {
                     crossProject += overlap;
                 }
             }
+            
+            // Consume remaining slot capacity with unplanned same-project and cross-project workloads
             long remainingCapacity = Math.max(0L, slot.capacityMillis() - sameProject - crossProject);
             long unplannedSameProject = consumeWorkload(sameProjectUnplannedByAssignee, slot.assigneeId(), remainingCapacity);
             sameProject += unplannedSameProject;
             remainingCapacity = Math.max(0L, remainingCapacity - unplannedSameProject);
             crossProject += consumeWorkload(crossProjectUnplannedByAssignee, slot.assigneeId(), remainingCapacity);
             long reserved = sameProject + crossProject;
+            
+            // Validation: Warn if the total reserved workload exceeds available capacity or causes cross-project conflicts
             if (reserved > slot.capacityMillis()) {
                 warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.CAPACITY_RESERVATION_EXCEEDS_AVAILABILITY,
                         null, "Reserved workload exceeds fallback capacity", slot.assigneeId() + ":" + slot.slotStart()));
@@ -148,6 +164,8 @@ public class ResourceCapacityService implements IResourceCapacityService {
                             null, "Cross-project workload consumes available capacity", slot.assigneeId() + ":" + slot.slotStart()));
                 }
             }
+            
+            // Record the slot's net capacity after deducting total workload reservations
             long deducted = Math.min(slot.capacityMillis(), reserved);
             netSlots.add(new ResourceCapacitySlot(slot.assigneeId(), slot.slotStart(), slot.slotEnd(), slot.capacityMillis() - deducted));
             if (reserved > 0) {
