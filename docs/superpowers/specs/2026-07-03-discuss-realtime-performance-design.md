@@ -303,3 +303,37 @@ from personal queue fan-out to channel-topic fan-out or broker relay delivery.
 That later phase would require frontend subscription changes and subscription
 authorization, so it is not part of the current implementation.
 
+## Implemented Design Summary
+
+The design has been fully implemented and verified. The key components created or modified are:
+
+### Core Code Changes
+1. **Properties and Configuration**:
+   - [RealtimeProperties.java](file:///d:/User2/open_source/serp/discuss_service/src/main/java/serp/project/discuss_service/kernel/property/RealtimeProperties.java): Holds configuration for `maxConcurrency`, caching, and typing indicator debounce windows.
+2. **User Info Cache Integration**:
+   - [UserInfoService.java](file:///d:/User2/open_source/serp/discuss_service/src/main/java/serp/project/discuss_service/core/service/impl/UserInfoService.java): Integrates Redis caching for user profile retrieval and batch lookups to avoid downstream HTTP calls during fan-out preparation.
+3. **Payload Builder**:
+   - [RealtimePayloadBuilder.java](file:///d:/User2/open_source/serp/discuss_service/src/main/java/serp/project/discuss_service/core/service/impl/RealtimePayloadBuilder.java): Generates full, render-ready `WsEvent` messages at publishing time rather than consumer time.
+4. **Realtime Bounded Delivery Service**:
+   - [RealtimeDeliveryService.java](file:///d:/User2/open_source/serp/discuss_service/src/main/java/serp/project/discuss_service/core/service/impl/RealtimeDeliveryService.java): Resolves target online members with a single Redis presence call, dedupes recipients, and fan-out delivers events concurrently with Semaphore boundaries using the virtual thread-backed `messageAsyncExecutor`.
+5. **Realtime Event Dispatching**:
+   - [MessageEventListener.java](file:///d:/User2/open_source/serp/discuss_service/src/main/java/serp/project/discuss_service/core/listener/MessageEventListener.java): Intercepts database transaction completion (`AFTER_COMMIT`) to pre-enrich and publish the full ready-to-deliver payloads.
+6. **Consumer Routing**:
+   - Updated consumer handlers ([MessageNewHandler.java](file:///d:/User2/open_source/serp/discuss_service/src/main/java/serp/project/discuss_service/ui/messaging/handler/MessageNewHandler.java), etc.) to directly deliver pre-enriched events, while retaining legacy logic fallback.
+7. **Typing and Presence**:
+   - [TypingEventDebouncer.java](file:///d:/User2/open_source/serp/discuss_service/src/main/java/serp/project/discuss_service/core/service/impl/TypingEventDebouncer.java): Implemented Redis-based debounce key suppression to reduce event traffic.
+   - Updated typing and presence handlers to deliver events directly using `RealtimeDeliveryService`.
+
+### Testing Verification
+Extensive test coverage was added:
+- [RealtimePropertiesTest.java](file:///d:/User2/open_source/serp/discuss_service/src/test/java/serp/project/discuss_service/kernel/property/RealtimePropertiesTest.java)
+- [UserInfoServiceTest.java](file:///d:/User2/open_source/serp/discuss_service/src/test/java/serp/project/discuss_service/core/service/impl/UserInfoServiceTest.java)
+- [RealtimePayloadBuilderTest.java](file:///d:/User2/open_source/serp/discuss_service/src/test/java/serp/project/discuss_service/core/service/impl/RealtimePayloadBuilderTest.java)
+- [RealtimeDeliveryServiceTest.java](file:///d:/User2/open_source/serp/discuss_service/src/test/java/serp/project/discuss_service/core/service/impl/RealtimeDeliveryServiceTest.java)
+- [MessageEventListenerTest.java](file:///d:/User2/open_source/serp/discuss_service/src/test/java/serp/project/discuss_service/core/listener/MessageEventListenerTest.java)
+- [MessageNewHandlerTest.java](file:///d:/User2/open_source/serp/discuss_service/src/test/java/serp/project/discuss_service/ui/messaging/handler/MessageNewHandlerTest.java)
+- [TypingEventDebouncerTest.java](file:///d:/User2/open_source/serp/discuss_service/src/test/java/serp/project/discuss_service/core/service/impl/TypingEventDebouncerTest.java)
+- [TypingStartHandlerTest.java](file:///d:/User2/open_source/serp/discuss_service/src/test/java/serp/project/discuss_service/ui/messaging/handler/TypingStartHandlerTest.java)
+- [UserOnlineHandlerTest.java](file:///d:/User2/open_source/serp/discuss_service/src/test/java/serp/project/discuss_service/ui/messaging/handler/UserOnlineHandlerTest.java)
+
+
