@@ -18,8 +18,8 @@ import {
 import { TmsCombobox } from '@/modules/first-mile/components';
 import { Calculator, Loader2 } from 'lucide-react';
 import {
-  DELIVERY_SERVICE_OPTIONS,
   type BillingFormState,
+  type BillingDeliveryServiceOption,
   type BillingSelectOption,
 } from '../billingPageModels';
 import { BillingLocationFields } from './BillingLocationFields';
@@ -30,6 +30,7 @@ interface BillingCalculatorFormProps {
   provinceOptions: BillingSelectOption[];
   senderWardOptions: BillingSelectOption[];
   receiverWardOptions: BillingSelectOption[];
+  deliveryServiceOptions: BillingDeliveryServiceOption[];
   isFetchingProvinces: boolean;
   isFetchingSenderWards: boolean;
   isFetchingReceiverWards: boolean;
@@ -44,6 +45,7 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
   provinceOptions,
   senderWardOptions,
   receiverWardOptions,
+  deliveryServiceOptions,
   isFetchingProvinces,
   isFetchingSenderWards,
   isFetchingReceiverWards,
@@ -77,13 +79,13 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                     serviceCode: value as BillingFormState['serviceCode'],
                   }))
                 }
-                options={DELIVERY_SERVICE_OPTIONS}
+                options={deliveryServiceOptions}
                 placeholder='Chọn dịch vụ'
                 emptyText='Không tìm thấy dịch vụ'
               />
               <p className='text-xs text-muted-foreground'>
                 {
-                  DELIVERY_SERVICE_OPTIONS.find(
+                  deliveryServiceOptions.find(
                     (option) => option.value === formValues.serviceCode
                   )?.description
                 }

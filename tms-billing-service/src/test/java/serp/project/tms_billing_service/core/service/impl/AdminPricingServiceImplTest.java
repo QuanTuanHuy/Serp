@@ -21,11 +21,11 @@ import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfi
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.enums.CalculationType;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.repository.ChargeableWeightConfigRepository;
+import serp.project.tms_billing_service.repository.DeliveryServiceConfigRepository;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
 
@@ -40,12 +40,16 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AdminPricingServiceImplTest {
+    private static final String TIEU_CHUAN = "TIEU_CHUAN";
+
     @Mock
     private TariffRepository tariffRepository;
     @Mock
     private SurchargeRuleRepository surchargeRuleRepository;
     @Mock
     private ChargeableWeightConfigRepository chargeableWeightConfigRepository;
+    @Mock
+    private DeliveryServiceConfigRepository deliveryServiceConfigRepository;
 
     @InjectMocks
     private AdminPricingServiceImpl adminPricingService;
@@ -53,7 +57,7 @@ class AdminPricingServiceImplTest {
     @Test
     void shouldUpsertTariffByServiceRouteAndEffectiveDate() {
         UpsertTariffRequest request = new UpsertTariffRequest();
-        request.setServiceCode(DeliveryService.TIEU_CHUAN);
+        request.setServiceCode(TIEU_CHUAN);
         request.setRouteTypeCode(RouteType.NOI_MIEN);
         request.setBaseWeight(2000d);
         request.setBasePrice(20000d);
@@ -63,7 +67,7 @@ class AdminPricingServiceImplTest {
         request.setExpirationDate(null);
 
         when(tariffRepository.findByServiceCodeAndRouteTypeCodeAndEffectiveDate(
-                DeliveryService.TIEU_CHUAN,
+                TIEU_CHUAN,
                 RouteType.NOI_MIEN,
                 LocalDate.of(2026, 5, 20)
         )).thenReturn(Optional.empty());
@@ -123,7 +127,7 @@ class AdminPricingServiceImplTest {
     @Test
     void shouldUpsertChargeableWeightConfigByServiceCode() {
         UpsertChargeableWeightConfigRequest request = new UpsertChargeableWeightConfigRequest();
-        request.setServiceCode(DeliveryService.TIEU_CHUAN);
+        request.setServiceCode(TIEU_CHUAN);
         request.setMinDimensionCm(10L);
         request.setSmallBulkyThresholdCm(100L);
         request.setBaseWeightGram(2000L);
@@ -131,7 +135,7 @@ class AdminPricingServiceImplTest {
         request.setMaxWeightGram(15000L);
         request.setVolumetricDivisor(5000d);
 
-        when(chargeableWeightConfigRepository.findByServiceCode(DeliveryService.TIEU_CHUAN))
+        when(chargeableWeightConfigRepository.findByServiceCode(TIEU_CHUAN))
                 .thenReturn(Optional.empty());
         when(chargeableWeightConfigRepository.save(org.mockito.ArgumentMatchers.any(ChargeableWeightConfig.class)))
                 .thenAnswer(invocation -> {
@@ -148,6 +152,6 @@ class AdminPricingServiceImplTest {
 
         assertEquals(500L, savedConfig.getStepWeightGram());
         assertEquals(1L, response.getId());
-        assertEquals(DeliveryService.TIEU_CHUAN, response.getServiceCode());
+        assertEquals(TIEU_CHUAN, response.getServiceCode());
     }
 }

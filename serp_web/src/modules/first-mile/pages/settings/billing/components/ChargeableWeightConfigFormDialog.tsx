@@ -18,7 +18,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import { TmsCombobox } from '@/modules/first-mile/components';
 import {
-  DELIVERY_SERVICE_OPTIONS,
+  type BillingDeliveryServiceOption,
   type ChargeableWeightConfigFormState,
 } from '../billingPageModels';
 
@@ -28,6 +28,7 @@ interface ChargeableWeightConfigFormDialogProps {
   open: boolean;
   mode: ChargeableWeightConfigFormMode;
   form: ChargeableWeightConfigFormState;
+  deliveryServiceOptions: BillingDeliveryServiceOption[];
   onFormChange: React.Dispatch<
     React.SetStateAction<ChargeableWeightConfigFormState>
   >;
@@ -42,6 +43,7 @@ export const ChargeableWeightConfigFormDialog: React.FC<
   open,
   mode,
   form,
+  deliveryServiceOptions,
   onFormChange,
   isLoading,
   onOpenChange,
@@ -76,7 +78,7 @@ export const ChargeableWeightConfigFormDialog: React.FC<
                       value as ChargeableWeightConfigFormState['serviceCode'],
                   }))
                 }
-                options={DELIVERY_SERVICE_OPTIONS}
+                options={deliveryServiceOptions}
                 placeholder='Chọn dịch vụ'
                 emptyText='Không tìm thấy dịch vụ'
                 disabled={isLoading}

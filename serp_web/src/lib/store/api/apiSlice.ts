@@ -312,6 +312,7 @@ export const api = createApi({
     'billing/Tariff',
     'billing/SurchargeRule',
     'billing/ChargeableWeightConfig',
+    'billing/DeliveryService',
     'billing/VasRule',
   ],
 

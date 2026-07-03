@@ -18,8 +18,8 @@ import {
 import { Loader2 } from 'lucide-react';
 import { TmsCombobox } from '@/modules/first-mile/components';
 import {
-  DELIVERY_SERVICE_OPTIONS,
   ROUTE_TYPE_OPTIONS,
+  type BillingDeliveryServiceOption,
   type TariffFormState,
 } from '../billingPageModels';
 
@@ -29,6 +29,7 @@ interface TariffRuleFormDialogProps {
   open: boolean;
   mode: TariffRuleFormMode;
   form: TariffFormState;
+  deliveryServiceOptions: BillingDeliveryServiceOption[];
   onFormChange: React.Dispatch<React.SetStateAction<TariffFormState>>;
   isLoading: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,6 +40,7 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
   open,
   mode,
   form,
+  deliveryServiceOptions,
   onFormChange,
   isLoading,
   onOpenChange,
@@ -72,7 +74,7 @@ export const TariffRuleFormDialog: React.FC<TariffRuleFormDialogProps> = ({
                     serviceCode: value as TariffFormState['serviceCode'],
                   }))
                 }
-                options={DELIVERY_SERVICE_OPTIONS}
+                options={deliveryServiceOptions}
                 placeholder='Chọn dịch vụ'
                 emptyText='Không tìm thấy dịch vụ'
                 disabled={isLoading}

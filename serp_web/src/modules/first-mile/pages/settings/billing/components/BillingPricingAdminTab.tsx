@@ -10,6 +10,7 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
+  Badge,
   TableCell,
   Tabs,
   TabsContent,
@@ -19,17 +20,20 @@ import {
 import { CircleHelp } from 'lucide-react';
 import {
   useListChargeableWeightConfigsQuery,
+  useListDeliveryServiceConfigsQuery,
   useListSurchargeRulesQuery,
   useListTariffsQuery,
 } from '../../../../api';
 import type {
   BillingDeliveryService,
   ChargeableWeightConfigAdminResponse,
+  DeliveryServiceConfigAdminResponse,
   SurchargeRuleAdminResponse,
   TariffAdminResponse,
 } from '../../../../types';
 import {
   useChargeableWeightConfigForm,
+  useDeliveryServiceConfigForm,
   useSurchargeRuleForm,
   useTariffRuleForm,
 } from '../hooks';
@@ -51,6 +55,11 @@ import {
   ChargeableWeightConfigFormDialog,
   type ChargeableWeightConfigFormMode,
 } from './ChargeableWeightConfigFormDialog';
+import {
+  DeliveryServiceConfigFormDialog,
+  type DeliveryServiceConfigFormMode,
+} from './DeliveryServiceConfigFormDialog';
+import { deliveryServiceConfigsToOptions } from '../billingPageModels';
 
 export const BillingPricingAdminTab: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState('tariff');
@@ -68,10 +77,15 @@ export const BillingPricingAdminTab: React.FC = () => {
     React.useState(false);
   const [chargeableWeightFormMode, setChargeableWeightFormMode] =
     React.useState<ChargeableWeightConfigFormMode>('create');
+  const [deliveryServiceDialogOpen, setDeliveryServiceDialogOpen] =
+    React.useState(false);
+  const [deliveryServiceFormMode, setDeliveryServiceFormMode] =
+    React.useState<DeliveryServiceConfigFormMode>('create');
 
   const tariff = useTariffRuleForm();
   const surcharge = useSurchargeRuleForm();
   const chargeableWeight = useChargeableWeightConfigForm();
+  const deliveryService = useDeliveryServiceConfigForm();
 
   const tariffQuery = useListTariffsQuery(
     tariffServiceFilter === 'ALL'
@@ -80,6 +94,11 @@ export const BillingPricingAdminTab: React.FC = () => {
   );
   const surchargeQuery = useListSurchargeRulesQuery();
   const chargeableWeightQuery = useListChargeableWeightConfigsQuery();
+  const deliveryServiceQuery = useListDeliveryServiceConfigsQuery();
+  const deliveryServiceOptions = React.useMemo(
+    () => deliveryServiceConfigsToOptions(deliveryServiceQuery.data, false),
+    [deliveryServiceQuery.data]
+  );
 
   const filteredTariffs = React.useMemo(() => {
     const items = tariffQuery.data ?? [];
@@ -172,6 +191,33 @@ export const BillingPricingAdminTab: React.FC = () => {
     }
   };
 
+  const openDeliveryServiceCreate = () => {
+    deliveryService.reset();
+    setDeliveryServiceFormMode('create');
+    setDeliveryServiceDialogOpen(true);
+  };
+
+  const openDeliveryServiceEdit = (row: DeliveryServiceConfigAdminResponse) => {
+    deliveryService.loadFromSaved(row);
+    setDeliveryServiceFormMode('edit');
+    setDeliveryServiceDialogOpen(true);
+  };
+
+  const handleDeliveryServiceDialogChange = (open: boolean) => {
+    if (!open && !deliveryService.isLoading) {
+      setDeliveryServiceDialogOpen(false);
+      deliveryService.reset();
+    }
+  };
+
+  const handleDeliveryServiceSubmit = async (event: React.FormEvent) => {
+    const saved = await deliveryService.submit(event);
+    if (saved) {
+      setDeliveryServiceDialogOpen(false);
+      deliveryService.reset();
+    }
+  };
+
   return (
     <div className='space-y-6'>
       <Alert>
@@ -190,10 +236,53 @@ export const BillingPricingAdminTab: React.FC = () => {
         className='space-y-4'
       >
         <TabsList>
+          <TabsTrigger value='deliveryService'>Dịch vụ</TabsTrigger>
           <TabsTrigger value='tariff'>Biểu phí</TabsTrigger>
           <TabsTrigger value='surcharge'>Phụ phí</TabsTrigger>
           <TabsTrigger value='chargeableWeight'>Khối lượng</TabsTrigger>
         </TabsList>
+
+        <TabsContent value='deliveryService' className='space-y-6'>
+          <BillingPricingRulesTable<DeliveryServiceConfigAdminResponse>
+            title='Hình thức vận chuyển'
+            description='Danh mục dịch vụ dùng trong công thức tính phí và các cấu hình theo dịch vụ.'
+            columns={[
+              { key: 'code', label: 'Mã dịch vụ' },
+              { key: 'name', label: 'Tên hiển thị' },
+              { key: 'status', label: 'Trạng thái' },
+              { key: 'sortOrder', label: 'Thứ tự' },
+            ]}
+            rows={deliveryServiceQuery.data ?? []}
+            isLoading={deliveryServiceQuery.isLoading}
+            isError={deliveryServiceQuery.isError}
+            emptyMessage='Chưa có hình thức vận chuyển.'
+            getRowKey={(row) => row.id}
+            onEdit={openDeliveryServiceEdit}
+            onCreate={openDeliveryServiceCreate}
+            createLabel='Thêm dịch vụ'
+            renderCells={(row) => (
+              <>
+                <TableCell className='font-medium'>{row.serviceCode}</TableCell>
+                <TableCell>
+                  <div className='space-y-1'>
+                    <p>{row.name}</p>
+                    {row.description ? (
+                      <p className='text-xs text-muted-foreground'>
+                        {row.description}
+                      </p>
+                    ) : null}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={row.active ? 'default' : 'secondary'}>
+                    {row.active ? 'Đang hoạt động' : 'Tạm tắt'}
+                  </Badge>
+                </TableCell>
+                <TableCell>{row.sortOrder}</TableCell>
+              </>
+            )}
+          />
+        </TabsContent>
 
         <TabsContent value='tariff' className='space-y-6'>
           <BillingPricingRulesTable<TariffAdminResponse>
@@ -218,6 +307,7 @@ export const BillingPricingAdminTab: React.FC = () => {
               value: tariffServiceFilter,
               onChange: setTariffServiceFilter,
             }}
+            serviceOptions={deliveryServiceOptions}
             renderCells={(row) => (
               <>
                 <TableCell className='font-medium'>{row.serviceCode}</TableCell>
@@ -318,6 +408,7 @@ export const BillingPricingAdminTab: React.FC = () => {
         open={tariffDialogOpen}
         mode={tariffFormMode}
         form={tariff.form}
+        deliveryServiceOptions={deliveryServiceOptions}
         onFormChange={tariff.setForm}
         isLoading={tariff.isLoading}
         onOpenChange={handleTariffDialogChange}
@@ -339,10 +430,21 @@ export const BillingPricingAdminTab: React.FC = () => {
         open={chargeableWeightDialogOpen}
         mode={chargeableWeightFormMode}
         form={chargeableWeight.form}
+        deliveryServiceOptions={deliveryServiceOptions}
         onFormChange={chargeableWeight.setForm}
         isLoading={chargeableWeight.isLoading}
         onOpenChange={handleChargeableWeightDialogChange}
         onSubmit={handleChargeableWeightSubmit}
+      />
+
+      <DeliveryServiceConfigFormDialog
+        open={deliveryServiceDialogOpen}
+        mode={deliveryServiceFormMode}
+        form={deliveryService.form}
+        onFormChange={deliveryService.setForm}
+        isLoading={deliveryService.isLoading}
+        onOpenChange={handleDeliveryServiceDialogChange}
+        onSubmit={handleDeliveryServiceSubmit}
       />
     </div>
   );

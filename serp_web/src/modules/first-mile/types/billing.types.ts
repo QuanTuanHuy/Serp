@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - Billing types for TMS shipping fee
  */
 
-export type BillingDeliveryService = 'TIEU_CHUAN';
+export type BillingDeliveryService = string;
 
 export type BillingRouteType =
   | 'NOI_TINH_NOI_CUM'
@@ -93,5 +93,18 @@ export interface UpsertChargeableWeightConfigRequest {
 
 export interface ChargeableWeightConfigAdminResponse
   extends UpsertChargeableWeightConfigRequest {
+  id: number;
+}
+
+export interface UpsertDeliveryServiceConfigRequest {
+  serviceCode: BillingDeliveryService;
+  name: string;
+  description?: string;
+  active: boolean;
+  sortOrder: number;
+}
+
+export interface DeliveryServiceConfigAdminResponse
+  extends UpsertDeliveryServiceConfigRequest {
   id: number;
 }

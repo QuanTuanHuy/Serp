@@ -8,8 +8,6 @@ package serp.project.tms_billing_service.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -25,11 +23,11 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Getter
 @SuperBuilder
 @Entity
-@Table(name = "chargeable_weight_configs")
+@Table(name = "delivery_service_configs")
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChargeableWeightConfig extends AbstractAudit {
+public class DeliveryServiceConfig extends AbstractAudit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -37,21 +35,15 @@ public class ChargeableWeightConfig extends AbstractAudit {
     @Column(name = "service_code", nullable = false, unique = true)
     private String serviceCode;
 
-    @Column(name = "min_dimension_cm", nullable = false)
-    private Long minDimensionCm;
+    @Column(name = "name", nullable = false)
+    private String name;
 
-    @Column(name = "small_bulky_threshold_cm", nullable = false)
-    private Long smallBulkyThresholdCm;
+    @Column(name = "description")
+    private String description;
 
-    @Column(name = "base_weight_gram", nullable = false)
-    private Long baseWeightGram;
+    @Column(name = "active", nullable = false)
+    private Boolean active;
 
-    @Column(name = "step_weight_gram", nullable = false)
-    private Long stepWeightGram;
-
-    @Column(name = "max_weight_gram", nullable = false)
-    private Long maxWeightGram;
-
-    @Column(name = "volumetric_divisor", nullable = false)
-    private Double volumetricDivisor;
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder;
 }

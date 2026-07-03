@@ -10,20 +10,23 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.tms_billing_service.core.service.IAdminPricingService;
 import serp.project.tms_billing_service.domain.ChargeableWeightConfig;
+import serp.project.tms_billing_service.domain.DeliveryServiceConfig;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
 import serp.project.tms_billing_service.dto.request.admin.UpsertChargeableWeightConfigRequest;
+import serp.project.tms_billing_service.dto.request.admin.UpsertDeliveryServiceConfigRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
 import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfigAdminResponse;
+import serp.project.tms_billing_service.dto.response.admin.DeliveryServiceConfigAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.exception.ErrorCode;
 import serp.project.tms_billing_service.mapper.AdminPricingMapper;
 import serp.project.tms_billing_service.repository.ChargeableWeightConfigRepository;
+import serp.project.tms_billing_service.repository.DeliveryServiceConfigRepository;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
 
@@ -39,6 +42,7 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     private final TariffRepository tariffRepository;
     private final SurchargeRuleRepository surchargeRuleRepository;
     private final ChargeableWeightConfigRepository chargeableWeightConfigRepository;
+    private final DeliveryServiceConfigRepository deliveryServiceConfigRepository;
 
     /**
      * Lưu biểu phí theo khóa service, loại tuyến và ngày hiệu lực.
@@ -50,16 +54,17 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     @Transactional
     public TariffAdminResponse upsertTariff(UpsertTariffRequest request) {
         validateDateRange(request.getEffectiveDate(), request.getExpirationDate());
+        String serviceCode = normalizeServiceCode(request.getServiceCode());
 
         Tariff tariff = tariffRepository
                 .findByServiceCodeAndRouteTypeCodeAndEffectiveDate(
-                        request.getServiceCode(),
+                        serviceCode,
                         request.getRouteTypeCode(),
                         request.getEffectiveDate()
                 )
                 .orElseGet(Tariff::new);
 
-        tariff.setServiceCode(request.getServiceCode());
+        tariff.setServiceCode(serviceCode);
         tariff.setRouteTypeCode(request.getRouteTypeCode());
         tariff.setBaseWeight(request.getBaseWeight());
         tariff.setBasePrice(request.getBasePrice());
@@ -111,11 +116,12 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
             UpsertChargeableWeightConfigRequest request
     ) {
         validateChargeableWeightConfig(request);
+        String serviceCode = normalizeServiceCode(request.getServiceCode());
 
         ChargeableWeightConfig config = chargeableWeightConfigRepository
-                .findByServiceCode(request.getServiceCode())
+                .findByServiceCode(serviceCode)
                 .orElseGet(ChargeableWeightConfig::new);
-        config.setServiceCode(request.getServiceCode());
+        config.setServiceCode(serviceCode);
         config.setMinDimensionCm(request.getMinDimensionCm());
         config.setSmallBulkyThresholdCm(request.getSmallBulkyThresholdCm());
         config.setBaseWeightGram(request.getBaseWeightGram());
@@ -128,13 +134,37 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     }
 
     /**
+     * Lưu hình thức vận chuyển để admin có thể bật/tắt và đặt tên hiển thị trên UI.
+     */
+    @Override
+    @Transactional
+    public DeliveryServiceConfigAdminResponse upsertDeliveryServiceConfig(
+            UpsertDeliveryServiceConfigRequest request
+    ) {
+        String serviceCode = normalizeServiceCode(request.getServiceCode());
+        DeliveryServiceConfig config = deliveryServiceConfigRepository
+                .findByServiceCode(serviceCode)
+                .orElseGet(DeliveryServiceConfig::new);
+        config.setServiceCode(serviceCode);
+        config.setName(request.getName().trim());
+        config.setDescription(normalizeNullableText(request.getDescription()));
+        config.setActive(request.getActive());
+        config.setSortOrder(request.getSortOrder());
+
+        DeliveryServiceConfig saved = deliveryServiceConfigRepository.save(config);
+        return AdminPricingMapper.toDeliveryServiceConfigResponse(saved);
+    }
+
+    /**
      * Liệt kê biểu phí phục vụ màn hình quản trị, có thể lọc theo service.
      */
     @Override
-    public List<TariffAdminResponse> listTariffs(DeliveryService serviceCode) {
+    public List<TariffAdminResponse> listTariffs(String serviceCode) {
         List<Tariff> tariffs = serviceCode == null
                 ? tariffRepository.findAllByOrderByServiceCodeAscRouteTypeCodeAscEffectiveDateDesc()
-                : tariffRepository.findAllByServiceCodeOrderByRouteTypeCodeAscEffectiveDateDesc(serviceCode);
+                : tariffRepository.findAllByServiceCodeOrderByRouteTypeCodeAscEffectiveDateDesc(
+                        normalizeServiceCode(serviceCode)
+                );
         return tariffs.stream()
                 .map(AdminPricingMapper::toTariffResponse)
                 .toList();
@@ -158,6 +188,19 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     public List<ChargeableWeightConfigAdminResponse> listChargeableWeightConfigs() {
         return chargeableWeightConfigRepository.findAllByOrderByServiceCodeAsc().stream()
                 .map(AdminPricingMapper::toChargeableWeightConfigResponse)
+                .toList();
+    }
+
+    /**
+     * Liệt kê danh mục dịch vụ vận chuyển cho màn hình quản trị và dropdown tính phí.
+     */
+    @Override
+    public List<DeliveryServiceConfigAdminResponse> listDeliveryServiceConfigs(boolean activeOnly) {
+        List<DeliveryServiceConfig> configs = activeOnly
+                ? deliveryServiceConfigRepository.findAllByActiveTrueOrderBySortOrderAscServiceCodeAsc()
+                : deliveryServiceConfigRepository.findAllByOrderBySortOrderAscServiceCodeAsc();
+        return configs.stream()
+                .map(AdminPricingMapper::toDeliveryServiceConfigResponse)
                 .toList();
     }
 
@@ -197,4 +240,14 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         }
     }
 
+    private String normalizeServiceCode(String serviceCode) {
+        return serviceCode.trim().toUpperCase();
+    }
+
+    private String normalizeNullableText(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim();
+    }
 }

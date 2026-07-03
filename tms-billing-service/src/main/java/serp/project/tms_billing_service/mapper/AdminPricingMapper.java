@@ -6,9 +6,11 @@ Description: Part of Serp Project
 package serp.project.tms_billing_service.mapper;
 
 import serp.project.tms_billing_service.domain.ChargeableWeightConfig;
+import serp.project.tms_billing_service.domain.DeliveryServiceConfig;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
 import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfigAdminResponse;
+import serp.project.tms_billing_service.dto.response.admin.DeliveryServiceConfigAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 
@@ -60,6 +62,19 @@ public final class AdminPricingMapper {
                 .stepWeightGram(config.getStepWeightGram())
                 .maxWeightGram(config.getMaxWeightGram())
                 .volumetricDivisor(config.getVolumetricDivisor())
+                .build();
+    }
+
+    public static DeliveryServiceConfigAdminResponse toDeliveryServiceConfigResponse(
+            DeliveryServiceConfig config
+    ) {
+        return DeliveryServiceConfigAdminResponse.builder()
+                .id(config.getId())
+                .serviceCode(config.getServiceCode())
+                .name(config.getName())
+                .description(config.getDescription())
+                .active(config.getActive())
+                .sortOrder(config.getSortOrder())
                 .build();
     }
 }

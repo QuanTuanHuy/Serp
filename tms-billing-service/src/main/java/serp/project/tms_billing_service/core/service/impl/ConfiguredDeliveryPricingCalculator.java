@@ -5,8 +5,8 @@ Description: Part of Serp Project
 
 package serp.project.tms_billing_service.core.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import serp.project.tms_billing_service.core.service.IDeliveryPricingStrategy;
 import serp.project.tms_billing_service.core.service.support.ChargeableWeightService;
 import serp.project.tms_billing_service.core.service.support.PricingRuleService;
 import serp.project.tms_billing_service.core.service.support.RouteClassificationService;
@@ -15,54 +15,42 @@ import serp.project.tms_billing_service.domain.Tariff;
 import serp.project.tms_billing_service.dto.request.CalculateShippingFeeRequest;
 import serp.project.tms_billing_service.dto.response.CalculateShippingFeeResponse;
 import serp.project.tms_billing_service.dto.response.FeeLineItemResponse;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.exception.ErrorCode;
+import serp.project.tms_billing_service.repository.DeliveryServiceConfigRepository;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
+@RequiredArgsConstructor
+public class ConfiguredDeliveryPricingCalculator {
     private final RouteClassificationService routeClassificationService;
     private final ChargeableWeightService chargeableWeightService;
     private final PricingRuleService pricingRuleService;
-
-    public TieuChuanPricingStrategy(
-            RouteClassificationService routeClassificationService,
-            ChargeableWeightService chargeableWeightService,
-            PricingRuleService pricingRuleService
-    ) {
-        this.routeClassificationService = routeClassificationService;
-        this.chargeableWeightService = chargeableWeightService;
-        this.pricingRuleService = pricingRuleService;
-    }
+    private final DeliveryServiceConfigRepository deliveryServiceConfigRepository;
 
     /**
-     * Trả về dịch vụ tiêu chuẩn để ShippingFeeService có thể định tuyến đúng strategy.
+     * Tính phí bằng công thức chung, còn dữ liệu tariff và cấu hình cân nặng được chọn theo serviceCode.
      */
-    @Override
-    public DeliveryService getSupportedService() {
-        return DeliveryService.TIEU_CHUAN;
-    }
-
-    /**
-     * Tính phí tiêu chuẩn theo tuyến, trọng lượng quy đổi, biểu phí và phụ phí vùng xa.
-     *
-     * @param request thông tin tuyến gửi/nhận và thông số kiện hàng
-     * @return tổng phí và các dòng phí cấu thành
-     */
-    @Override
     public CalculateShippingFeeResponse calculate(CalculateShippingFeeRequest request) {
+        String serviceCode = request.getServiceCode().trim().toUpperCase();
+        deliveryServiceConfigRepository.findByServiceCode(serviceCode)
+                .filter(config -> Boolean.TRUE.equals(config.getActive()))
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.BILLING_RULE_NOT_FOUND,
+                        "Dịch vụ vận chuyển chưa được kích hoạt: " + serviceCode
+                ));
+
         // Loại tuyến quyết định bảng tariff, còn khối lượng tính cước quyết định bậc giá trong tariff.
         RouteType routeType = routeClassificationService.classify(
                 request.getSenderWardCode(),
                 request.getReceiverWardCode()
         );
         long chargeableWeight = chargeableWeightService.calculate(
-                DeliveryService.TIEU_CHUAN,
+                serviceCode,
                 request.getActualWeightGram(),
                 request.getLengthCm(),
                 request.getWidthCm(),
@@ -71,12 +59,12 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
 
         List<FeeLineItemResponse> feeItems = new ArrayList<>();
         // Tổng phí được tách thành cước chính và phụ phí để UI/API có thể giải thích từng dòng phí.
-        long baseFee = calculateBaseFreight(routeType, chargeableWeight, feeItems);
+        long baseFee = calculateBaseFreight(serviceCode, routeType, chargeableWeight, feeItems);
         long surchargeFee = calculateSurcharges(request, chargeableWeight, feeItems);
         long totalFee = baseFee + surchargeFee;
 
         return CalculateShippingFeeResponse.builder()
-                .serviceCode(DeliveryService.TIEU_CHUAN)
+                .serviceCode(serviceCode)
                 .routeType(routeType)
                 .chargeableWeightGram(chargeableWeight)
                 .baseFee(baseFee)
@@ -86,17 +74,14 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
                 .build();
     }
 
-    /**
-     * Tính cước chính theo biểu phí hiệu lực của loại tuyến đã chuẩn hóa.
-     *
-     * @param routeType loại tuyến được phân loại từ địa chỉ gửi/nhận
-     * @param chargeableWeight trọng lượng tính phí sau khi quy đổi
-     * @param feeItems danh sách dòng phí để bổ sung dòng cước chính
-     * @return số tiền cước chính
-     */
-    private long calculateBaseFreight(RouteType routeType, long chargeableWeight, List<FeeLineItemResponse> feeItems) {
+    private long calculateBaseFreight(
+            String serviceCode,
+            RouteType routeType,
+            long chargeableWeight,
+            List<FeeLineItemResponse> feeItems
+    ) {
         RouteType normalizedRouteType = normalizeRouteType(routeType);
-        Tariff tariff = pricingRuleService.getTariff(DeliveryService.TIEU_CHUAN, normalizedRouteType);
+        Tariff tariff = pricingRuleService.getTariff(serviceCode, normalizedRouteType);
 
         long baseWeight = requiredLong(tariff.getBaseWeight(), "tariff.baseWeight");
         long basePrice = requiredLong(tariff.getBasePrice(), "tariff.basePrice");
@@ -114,21 +99,13 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
 
         feeItems.add(FeeLineItemResponse.builder()
                 .code("BASE_FREIGHT")
-                .name("Cước chính tiêu chuẩn")
+                .name("Cước chính " + serviceCode)
                 .category("BASE")
                 .amount(amount)
                 .build());
         return amount;
     }
 
-    /**
-     * Tính các phụ phí còn được hỗ trợ cho đơn tiêu chuẩn.
-     *
-     * @param request thông tin tuyến nhận để kiểm tra vùng xa
-     * @param chargeableWeight trọng lượng tính phí
-     * @param feeItems danh sách dòng phí để bổ sung phụ phí nếu có
-     * @return tổng phụ phí
-     */
     private long calculateSurcharges(
             CalculateShippingFeeRequest request,
             long chargeableWeight,
@@ -149,17 +126,11 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         return remoteAreaFee;
     }
 
-    /**
-     * Tính phụ phí vùng xa theo cấu hình STEP_WEIGHT hiện hành.
-     */
     private long calculateRemoteAreaFee(long chargeableWeight) {
         SurchargeRule configuredRule = pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.VUNG_XA);
         return calculateStepWeightSurcharge(chargeableWeight, configuredRule);
     }
 
-    /**
-     * Áp dụng công thức phụ phí theo ngưỡng khối lượng và bước tăng.
-     */
     private long calculateStepWeightSurcharge(long chargeableWeight, SurchargeRule rule) {
         long baseWeight = requiredLong(rule.getBaseWeight(), "surcharge.baseWeight");
         long basePrice = requiredLong(rule.getBasePrice(), "surcharge.basePrice");
@@ -176,9 +147,6 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         return basePrice + (extraSteps * stepPrice);
     }
 
-    /**
-     * Quy đổi tuyến đặc biệt về tuyến liên miền vì bảng giá hiện chỉ cấu hình mức liên miền.
-     */
     private RouteType normalizeRouteType(RouteType routeType) {
         if (routeType == RouteType.LIEN_MIEN_DAC_BIET) {
             return RouteType.LIEN_MIEN;
@@ -186,9 +154,6 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         return routeType;
     }
 
-    /**
-     * Chuyển cấu hình số thực trong database sang số tiền/trọng lượng nguyên và báo lỗi nếu thiếu cấu hình.
-     */
     private long requiredLong(Double value, String fieldName) {
         if (value == null) {
             throw new AppException(

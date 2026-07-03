@@ -10,13 +10,11 @@ import lombok.Value;
 
 @Value
 @Builder
-public class ChargeableWeightConfigAdminResponse {
+public class DeliveryServiceConfigAdminResponse {
     Long id;
     String serviceCode;
-    Long minDimensionCm;
-    Long smallBulkyThresholdCm;
-    Long baseWeightGram;
-    Long stepWeightGram;
-    Long maxWeightGram;
-    Double volumetricDivisor;
+    String name;
+    String description;
+    Boolean active;
+    Integer sortOrder;
 }

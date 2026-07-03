@@ -8,7 +8,6 @@ package serp.project.tms_billing_service.core.service.support;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import serp.project.tms_billing_service.domain.ChargeableWeightConfig;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.exception.ErrorCode;
 import serp.project.tms_billing_service.repository.ChargeableWeightConfigRepository;
@@ -19,7 +18,7 @@ public class ChargeableWeightService {
     private final ChargeableWeightConfigRepository chargeableWeightConfigRepository;
 
     public long calculate(
-            DeliveryService serviceCode,
+            String serviceCode,
             long actualWeightGram,
             int lengthCm,
             int widthCm,

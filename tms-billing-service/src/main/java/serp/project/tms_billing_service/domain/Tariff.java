@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 
 import java.time.LocalDate;
@@ -31,8 +30,7 @@ public class Tariff extends AbstractAudit{
     private Long id;
 
     @Column(name = "service_code", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private DeliveryService serviceCode;
+    private String serviceCode;
 
     @Column(name = "route_type_code", nullable = false)
     @Enumerated(EnumType.STRING)

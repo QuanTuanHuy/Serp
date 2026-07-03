@@ -7,7 +7,6 @@ package serp.project.tms_billing_service.core.service.support;
 
 import org.junit.jupiter.api.Test;
 import serp.project.tms_billing_service.domain.ChargeableWeightConfig;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.repository.ChargeableWeightConfigRepository;
 
@@ -19,6 +18,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ChargeableWeightServiceTest {
+    private static final String TIEU_CHUAN = "TIEU_CHUAN";
+
     private final ChargeableWeightConfigRepository chargeableWeightConfigRepository =
             mock(ChargeableWeightConfigRepository.class);
     private final ChargeableWeightService chargeableWeightService =
@@ -28,7 +29,7 @@ class ChargeableWeightServiceTest {
     void shouldUseActualWeightWhenSmallBulkyPackage() {
         givenDefaultConfig();
 
-        long result = chargeableWeightService.calculate(DeliveryService.TIEU_CHUAN, 1200L, 20, 20, 20);
+        long result = chargeableWeightService.calculate(TIEU_CHUAN, 1200L, 20, 20, 20);
 
         assertEquals(1200L, result);
     }
@@ -37,7 +38,7 @@ class ChargeableWeightServiceTest {
     void shouldUseVolumetricWeightAndRoundBy500gStep() {
         givenDefaultConfig();
 
-        long result = chargeableWeightService.calculate(DeliveryService.TIEU_CHUAN, 2100L, 40, 30, 40);
+        long result = chargeableWeightService.calculate(TIEU_CHUAN, 2100L, 40, 30, 40);
 
         assertEquals(10000L, result);
     }
@@ -48,24 +49,24 @@ class ChargeableWeightServiceTest {
 
         assertThrows(
                 AppException.class,
-                () -> chargeableWeightService.calculate(DeliveryService.TIEU_CHUAN, 15000L, 40, 40, 40)
+                () -> chargeableWeightService.calculate(TIEU_CHUAN, 15000L, 40, 40, 40)
         );
     }
 
     @Test
     void shouldThrowExceptionWhenServiceConfigMissing() {
-        when(chargeableWeightConfigRepository.findByServiceCode(DeliveryService.TIEU_CHUAN))
+        when(chargeableWeightConfigRepository.findByServiceCode(TIEU_CHUAN))
                 .thenReturn(Optional.empty());
 
         assertThrows(
                 AppException.class,
-                () -> chargeableWeightService.calculate(DeliveryService.TIEU_CHUAN, 1200L, 20, 20, 20)
+                () -> chargeableWeightService.calculate(TIEU_CHUAN, 1200L, 20, 20, 20)
         );
     }
 
     private void givenDefaultConfig() {
         ChargeableWeightConfig config = ChargeableWeightConfig.builder()
-                .serviceCode(DeliveryService.TIEU_CHUAN)
+                .serviceCode(TIEU_CHUAN)
                 .minDimensionCm(10L)
                 .smallBulkyThresholdCm(100L)
                 .baseWeightGram(2_000L)
@@ -73,7 +74,7 @@ class ChargeableWeightServiceTest {
                 .maxWeightGram(15_000L)
                 .volumetricDivisor(5000d)
                 .build();
-        when(chargeableWeightConfigRepository.findByServiceCode(DeliveryService.TIEU_CHUAN))
+        when(chargeableWeightConfigRepository.findByServiceCode(TIEU_CHUAN))
                 .thenReturn(Optional.of(config));
     }
 }

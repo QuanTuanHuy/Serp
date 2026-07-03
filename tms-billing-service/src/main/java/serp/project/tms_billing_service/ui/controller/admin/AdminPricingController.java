@@ -16,12 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 import serp.project.tms_billing_service.core.service.IAdminPricingService;
 import serp.project.tms_billing_service.dto.ApiResponse;
 import serp.project.tms_billing_service.dto.request.admin.UpsertChargeableWeightConfigRequest;
+import serp.project.tms_billing_service.dto.request.admin.UpsertDeliveryServiceConfigRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
 import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfigAdminResponse;
+import serp.project.tms_billing_service.dto.response.admin.DeliveryServiceConfigAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
-import serp.project.tms_billing_service.enums.DeliveryService;
 
 import java.util.List;
 
@@ -39,7 +40,7 @@ public class AdminPricingController {
      */
     @GetMapping("/tariffs")
     public ApiResponse<List<TariffAdminResponse>> listTariffs(
-            @RequestParam(value = "serviceCode", required = false) DeliveryService serviceCode
+            @RequestParam(value = "serviceCode", required = false) String serviceCode
     ) {
         return ApiResponse.<List<TariffAdminResponse>>builder()
                 .message("OK")
@@ -105,6 +106,26 @@ public class AdminPricingController {
         return ApiResponse.<ChargeableWeightConfigAdminResponse>builder()
                 .message("OK")
                 .result(adminPricingService.upsertChargeableWeightConfig(request))
+                .build();
+    }
+
+    @GetMapping("/delivery-services")
+    public ApiResponse<List<DeliveryServiceConfigAdminResponse>> listDeliveryServiceConfigs(
+            @RequestParam(value = "activeOnly", defaultValue = "false") boolean activeOnly
+    ) {
+        return ApiResponse.<List<DeliveryServiceConfigAdminResponse>>builder()
+                .message("OK")
+                .result(adminPricingService.listDeliveryServiceConfigs(activeOnly))
+                .build();
+    }
+
+    @PutMapping("/delivery-services")
+    public ApiResponse<DeliveryServiceConfigAdminResponse> upsertDeliveryServiceConfig(
+            @RequestBody @Valid UpsertDeliveryServiceConfigRequest request
+    ) {
+        return ApiResponse.<DeliveryServiceConfigAdminResponse>builder()
+                .message("OK")
+                .result(adminPricingService.upsertDeliveryServiceConfig(request))
                 .build();
     }
 }

@@ -24,6 +24,7 @@ import { Loader2, Pencil, Plus } from 'lucide-react';
 import type { BillingDeliveryService } from '../../../../types';
 import {
   DELIVERY_SERVICE_OPTIONS,
+  type BillingDeliveryServiceOption,
   formatMoneyVnd,
   getRouteTypeLabel,
   ROUTE_TYPE_OPTIONS,
@@ -46,6 +47,7 @@ interface BillingPricingRulesTableProps<T> {
     value: BillingDeliveryService | 'ALL';
     onChange: (value: BillingDeliveryService | 'ALL') => void;
   };
+  serviceOptions?: BillingDeliveryServiceOption[];
 }
 
 export function BillingPricingRulesTable<T>({
@@ -62,6 +64,7 @@ export function BillingPricingRulesTable<T>({
   onCreate,
   createLabel = 'Thêm quy tắc',
   serviceFilter,
+  serviceOptions = DELIVERY_SERVICE_OPTIONS,
 }: BillingPricingRulesTableProps<T>) {
   return (
     <Card>
@@ -87,7 +90,7 @@ export function BillingPricingRulesTable<T>({
               >
                 Tất cả dịch vụ
               </Button>
-              {DELIVERY_SERVICE_OPTIONS.map((option) => (
+              {serviceOptions.map((option) => (
                 <Button
                   key={option.value}
                   type='button'

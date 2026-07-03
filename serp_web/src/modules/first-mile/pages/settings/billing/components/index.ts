@@ -11,5 +11,6 @@ export * from './BillingCalculatorTab';
 export * from './TariffRuleFormDialog';
 export * from './SurchargeRuleFormDialog';
 export * from './ChargeableWeightConfigFormDialog';
+export * from './DeliveryServiceConfigFormDialog';
 export * from './BillingPricingAdminTab';
 export * from './BillingPricingRulesTable';

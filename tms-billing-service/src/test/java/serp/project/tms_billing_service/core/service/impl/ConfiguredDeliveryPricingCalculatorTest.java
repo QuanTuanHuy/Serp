@@ -13,34 +13,42 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.tms_billing_service.core.service.support.ChargeableWeightService;
 import serp.project.tms_billing_service.core.service.support.PricingRuleService;
 import serp.project.tms_billing_service.core.service.support.RouteClassificationService;
+import serp.project.tms_billing_service.domain.DeliveryServiceConfig;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
 import serp.project.tms_billing_service.dto.request.CalculateShippingFeeRequest;
 import serp.project.tms_billing_service.dto.response.CalculateShippingFeeResponse;
 import serp.project.tms_billing_service.enums.CalculationType;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
+import serp.project.tms_billing_service.repository.DeliveryServiceConfigRepository;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class TieuChuanPricingStrategyTest {
+class ConfiguredDeliveryPricingCalculatorTest {
+    private static final String TIEU_CHUAN = "TIEU_CHUAN";
+    private static final String HOA_TOC = "HOA_TOC";
+
     @Mock
     private RouteClassificationService routeClassificationService;
     @Mock
     private ChargeableWeightService chargeableWeightService;
     @Mock
     private PricingRuleService pricingRuleService;
+    @Mock
+    private DeliveryServiceConfigRepository deliveryServiceConfigRepository;
 
     @InjectMocks
-    private TieuChuanPricingStrategy tieuChuanPricingStrategy;
+    private ConfiguredDeliveryPricingCalculator pricingCalculator;
 
     @Test
     void shouldCalculateTieredBasePriceByWeightAndRoute() {
         CalculateShippingFeeRequest request = new CalculateShippingFeeRequest();
-        request.setServiceCode(DeliveryService.TIEU_CHUAN);
+        request.setServiceCode(TIEU_CHUAN);
         request.setSenderWardCode("010001");
         request.setReceiverWardCode("010002");
         request.setActualWeightGram(750L);
@@ -55,22 +63,55 @@ class TieuChuanPricingStrategyTest {
                 .stepPrice(3_000d)
                 .build();
 
+        givenActiveService(TIEU_CHUAN);
         when(routeClassificationService.classify("010001", "010002")).thenReturn(RouteType.NOI_TINH_LIEN_CUM);
         when(routeClassificationService.isRemoteArea("010002")).thenReturn(false);
-        when(chargeableWeightService.calculate(DeliveryService.TIEU_CHUAN, 750L, 20, 20, 20)).thenReturn(750L);
-        when(pricingRuleService.getTariff(DeliveryService.TIEU_CHUAN, RouteType.NOI_TINH_LIEN_CUM)).thenReturn(tariff);
+        when(chargeableWeightService.calculate(TIEU_CHUAN, 750L, 20, 20, 20)).thenReturn(750L);
+        when(pricingRuleService.getTariff(TIEU_CHUAN, RouteType.NOI_TINH_LIEN_CUM)).thenReturn(tariff);
 
-        CalculateShippingFeeResponse result = tieuChuanPricingStrategy.calculate(request);
+        CalculateShippingFeeResponse result = pricingCalculator.calculate(request);
 
+        assertEquals(TIEU_CHUAN, result.getServiceCode());
         assertEquals(33_000L, result.getBaseFee());
         assertEquals(0L, result.getSurchargeFee());
         assertEquals(33_000L, result.getTotalFee());
     }
 
     @Test
+    void shouldUseRequestServiceCodeWhenLoadingPricingConfig() {
+        CalculateShippingFeeRequest request = new CalculateShippingFeeRequest();
+        request.setServiceCode(HOA_TOC);
+        request.setSenderWardCode("010001");
+        request.setReceiverWardCode("010002");
+        request.setActualWeightGram(1_200L);
+        request.setLengthCm(20);
+        request.setWidthCm(20);
+        request.setHeightCm(20);
+
+        Tariff expressTariff = Tariff.builder()
+                .baseWeight(1000d)
+                .basePrice(45_000d)
+                .stepWeight(500d)
+                .stepPrice(8_000d)
+                .build();
+
+        givenActiveService(HOA_TOC);
+        when(routeClassificationService.classify("010001", "010002")).thenReturn(RouteType.NOI_TINH_LIEN_CUM);
+        when(routeClassificationService.isRemoteArea("010002")).thenReturn(false);
+        when(chargeableWeightService.calculate(HOA_TOC, 1_200L, 20, 20, 20)).thenReturn(1_200L);
+        when(pricingRuleService.getTariff(HOA_TOC, RouteType.NOI_TINH_LIEN_CUM)).thenReturn(expressTariff);
+
+        CalculateShippingFeeResponse result = pricingCalculator.calculate(request);
+
+        assertEquals(HOA_TOC, result.getServiceCode());
+        assertEquals(53_000L, result.getBaseFee());
+        assertEquals(53_000L, result.getTotalFee());
+    }
+
+    @Test
     void shouldCalculateRemoteFeeWithoutSpecialGoodsFee() {
         CalculateShippingFeeRequest request = new CalculateShippingFeeRequest();
-        request.setServiceCode(DeliveryService.TIEU_CHUAN);
+        request.setServiceCode(TIEU_CHUAN);
         request.setSenderWardCode("010001");
         request.setReceiverWardCode("790002");
         request.setActualWeightGram(3_100L);
@@ -94,16 +135,27 @@ class TieuChuanPricingStrategyTest {
                 .stepPrice(500d)
                 .build();
 
+        givenActiveService(TIEU_CHUAN);
         when(routeClassificationService.classify("010001", "790002")).thenReturn(RouteType.LIEN_MIEN_DAC_BIET);
         when(routeClassificationService.isRemoteArea("790002")).thenReturn(true);
-        when(chargeableWeightService.calculate(DeliveryService.TIEU_CHUAN, 3_100L, 30, 30, 30)).thenReturn(3_100L);
-        when(pricingRuleService.getTariff(DeliveryService.TIEU_CHUAN, RouteType.LIEN_MIEN)).thenReturn(tariff);
+        when(chargeableWeightService.calculate(TIEU_CHUAN, 3_100L, 30, 30, 30)).thenReturn(3_100L);
+        when(pricingRuleService.getTariff(TIEU_CHUAN, RouteType.LIEN_MIEN)).thenReturn(tariff);
         when(pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.VUNG_XA)).thenReturn(remoteRule);
 
-        CalculateShippingFeeResponse result = tieuChuanPricingStrategy.calculate(request);
+        CalculateShippingFeeResponse result = pricingCalculator.calculate(request);
 
         assertEquals(62_000L, result.getBaseFee());
         assertEquals(7_000L, result.getSurchargeFee());
         assertEquals(69_000L, result.getTotalFee());
+    }
+
+    private void givenActiveService(String serviceCode) {
+        DeliveryServiceConfig config = DeliveryServiceConfig.builder()
+                .serviceCode(serviceCode)
+                .name(serviceCode)
+                .active(true)
+                .sortOrder(10)
+                .build();
+        when(deliveryServiceConfigRepository.findByServiceCode(serviceCode)).thenReturn(Optional.of(config));
     }
 }

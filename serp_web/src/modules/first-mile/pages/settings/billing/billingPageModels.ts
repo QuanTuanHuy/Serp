@@ -10,9 +10,11 @@ import type {
   BillingSurchargeRuleCode,
   CalculateShippingFeeRequest,
   ChargeableWeightConfigAdminResponse,
+  DeliveryServiceConfigAdminResponse,
   SurchargeRuleAdminResponse,
   TariffAdminResponse,
   UpsertChargeableWeightConfigRequest,
+  UpsertDeliveryServiceConfigRequest,
   UpsertSurchargeRuleRequest,
   UpsertTariffRequest,
 } from '../../../types';
@@ -34,6 +36,10 @@ export interface BillingSelectOption {
   label: string;
 }
 
+export interface BillingDeliveryServiceOption extends BillingSelectOption {
+  description?: string;
+}
+
 export const DEFAULT_BILLING_FORM: BillingFormState = {
   serviceCode: 'TIEU_CHUAN',
   senderProvinceCode: '',
@@ -46,17 +52,40 @@ export const DEFAULT_BILLING_FORM: BillingFormState = {
   heightCm: '',
 };
 
-export const DELIVERY_SERVICE_OPTIONS: Array<{
-  value: BillingDeliveryService;
-  label: string;
-  description: string;
-}> = [
+export const DELIVERY_SERVICE_OPTIONS: BillingDeliveryServiceOption[] = [
   {
     value: 'TIEU_CHUAN',
     label: 'Tiêu chuẩn',
     description: 'Phù hợp với đơn hàng thông thường, tối ưu chi phí.',
   },
+  {
+    value: 'HOA_TOC',
+    label: 'Hỏa tốc',
+    description: 'Dành cho đơn cần giao nhanh, dùng cấu hình giá riêng.',
+  },
 ];
+
+export const deliveryServiceConfigsToOptions = (
+  configs?: DeliveryServiceConfigAdminResponse[],
+  activeOnly = true
+): BillingDeliveryServiceOption[] => {
+  if (!configs) {
+    return DELIVERY_SERVICE_OPTIONS;
+  }
+
+  const selectedConfigs = activeOnly
+    ? configs.filter((item) => item.active)
+    : configs;
+  if (selectedConfigs.length === 0) {
+    return [];
+  }
+
+  return selectedConfigs.map((item) => ({
+    value: item.serviceCode,
+    label: item.name,
+    description: item.description,
+  }));
+};
 
 const ROUTE_TYPE_LABELS: Record<BillingRouteType, string> = {
   NOI_TINH_NOI_CUM: 'Nội tỉnh cùng cụm',
@@ -212,6 +241,23 @@ export const DEFAULT_CHARGEABLE_WEIGHT_CONFIG_FORM: ChargeableWeightConfigFormSt
     volumetricDivisor: '5000',
   };
 
+export interface DeliveryServiceConfigFormState {
+  serviceCode: string;
+  name: string;
+  description: string;
+  active: boolean;
+  sortOrder: string;
+}
+
+export const DEFAULT_DELIVERY_SERVICE_CONFIG_FORM: DeliveryServiceConfigFormState =
+  {
+    serviceCode: '',
+    name: '',
+    description: '',
+    active: true,
+    sortOrder: '10',
+  };
+
 const toFormNumber = (value?: number): string => {
   if (value === undefined || value === null) {
     return '';
@@ -259,6 +305,16 @@ export const chargeableWeightConfigResponseToForm = (
   stepWeightGram: toFormNumber(config.stepWeightGram),
   maxWeightGram: toFormNumber(config.maxWeightGram),
   volumetricDivisor: toFormNumber(config.volumetricDivisor),
+});
+
+export const deliveryServiceConfigResponseToForm = (
+  config: DeliveryServiceConfigAdminResponse
+): DeliveryServiceConfigFormState => ({
+  serviceCode: config.serviceCode,
+  name: config.name,
+  description: config.description ?? '',
+  active: config.active,
+  sortOrder: toFormNumber(config.sortOrder),
 });
 
 export const ROUTE_TYPE_OPTIONS: Array<{
@@ -421,5 +477,27 @@ export const buildUpsertChargeableWeightConfigRequest = (
       form.volumetricDivisor,
       'Hệ số quy đổi thể tích'
     ),
+  };
+};
+
+export const buildUpsertDeliveryServiceConfigRequest = (
+  form: DeliveryServiceConfigFormState
+): UpsertDeliveryServiceConfigRequest => {
+  const serviceCode = form.serviceCode.trim().toUpperCase();
+  const name = form.name.trim();
+
+  if (!serviceCode) {
+    throw new Error('Mã dịch vụ là bắt buộc.');
+  }
+  if (!name) {
+    throw new Error('Tên dịch vụ là bắt buộc.');
+  }
+
+  return {
+    serviceCode,
+    name,
+    description: form.description.trim() || undefined,
+    active: form.active,
+    sortOrder: parseRequiredPositiveNumber(form.sortOrder, 'Thứ tự hiển thị'),
   };
 };

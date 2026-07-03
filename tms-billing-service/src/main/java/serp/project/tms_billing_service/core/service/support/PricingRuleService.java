@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
 import serp.project.tms_billing_service.exception.AppException;
@@ -33,7 +32,7 @@ public class PricingRuleService {
      * @param routeType loại tuyến đã được phân loại
      * @return biểu phí phù hợp với ngày hiện tại
      */
-    public Tariff getTariff(DeliveryService serviceCode, RouteType routeType) {
+    public Tariff getTariff(String serviceCode, RouteType routeType) {
         LocalDate today = LocalDate.now();
         return tariffRepository
                 .findFirstByServiceCodeAndRouteTypeCodeAndEffectiveDateLessThanEqualAndExpirationDateGreaterThanEqualOrderByEffectiveDateDesc(
