@@ -128,6 +128,12 @@ server:
     context-path: /discuss
 
 discuss:
+  realtime:
+    delivery:
+      max-concurrency: ${REALTIME_DELIVERY_MAX_CONCURRENCY:64}
+    typing:
+      debounce-ms: ${REALTIME_TYPING_DEBOUNCE_MS:2000}
+    payload-cache-ttl-seconds: ${REALTIME_PAYLOAD_CACHE_TTL_SECONDS:300}
   storage:
     provider: S3
     s3:
