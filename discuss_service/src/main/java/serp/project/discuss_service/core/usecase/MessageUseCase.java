@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.dto.response.AttachmentResponse;
+import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse;
 import serp.project.discuss_service.core.domain.dto.response.ChannelMemberResponse.UserInfo;
 import serp.project.discuss_service.core.domain.entity.AttachmentEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
@@ -35,6 +36,7 @@ import serp.project.discuss_service.core.service.IDiscussCacheService;
 import serp.project.discuss_service.core.service.IDiscussEventPublisher;
 import serp.project.discuss_service.core.service.IMessageService;
 import serp.project.discuss_service.core.service.IUserInfoService;
+import serp.project.discuss_service.core.service.impl.RealtimePayloadBuilder;
 import serp.project.discuss_service.core.service.impl.TypingEventDebouncer;
 
 import java.util.ArrayList;
@@ -61,6 +63,7 @@ public class MessageUseCase {
     private final IAttachmentUrlService attachmentUrlService;
     private final IUserInfoService userInfoService;
     private final TypingEventDebouncer typingEventDebouncer;
+    private final RealtimePayloadBuilder realtimePayloadBuilder;
 
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -356,7 +359,15 @@ public class MessageUseCase {
             return;
         }
 
-        eventPublisher.publishTypingIndicator(channelId, userId, isTyping);
+        String userName = isTyping
+                ? userInfoService.getUserById(userId).map(ChannelMemberResponse.UserInfo::getName).orElse("")
+                : "";
+
+        eventPublisher.publishRealtimeEvent(
+                String.valueOf(channelId),
+                realtimePayloadBuilder.buildTyping(channelId, userId, userName, isTyping),
+                IDiscussEventPublisher.TOPIC_PRESENCE_EVENTS
+        );
     }
 
     public Set<Long> getTypingUsers(Long channelId, Long userId) {

@@ -60,8 +60,6 @@ public interface IDiscussEventPublisher {
 
     // ==================== PRESENCE EVENTS ====================
 
-    void publishTypingIndicator(Long channelId, Long userId, boolean isTyping);
-
     void publishUserOnline(Long userId);
 
     void publishUserOffline(Long userId);

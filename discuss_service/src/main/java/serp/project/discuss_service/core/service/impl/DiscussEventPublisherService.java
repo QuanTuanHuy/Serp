@@ -226,24 +226,6 @@ public class DiscussEventPublisherService implements IDiscussEventPublisher {
     // ==================== PRESENCE EVENTS ====================
 
     @Override
-    public void publishTypingIndicator(Long channelId, Long userId, boolean isTyping) {
-        if (channelId == null || userId == null) {
-            log.warn("Cannot publish typing indicator event: missing required fields");
-            return;
-        }
-        WsEventType eventType = isTyping ? WsEventType.TYPING_START : WsEventType.TYPING_STOP;
-        Map<String, Object> event = new HashMap<>();
-        event.put("eventType", eventType.name());
-        event.put("channelId", channelId);
-        event.put("userId", userId);
-        event.put("timestamp", System.currentTimeMillis());
-
-        String key = String.valueOf(channelId);
-        kafkaProducer.sendMessageAsync(key, event, TOPIC_PRESENCE_EVENTS);
-        log.debug("Published {} event for user {} in channel {}", eventType, userId, channelId);
-    }
-
-    @Override
     public void publishUserOnline(Long userId) {
         if (userId == null) {
             log.warn("Cannot publish USER_ONLINE event: userId is null");
