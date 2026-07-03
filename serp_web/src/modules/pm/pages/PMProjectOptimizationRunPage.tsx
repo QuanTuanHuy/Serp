@@ -43,6 +43,7 @@ import { PMOptimizationRunItemTable } from '../components/optimization/PMOptimiz
 import { PMOptimizationRunOverview } from '../components/optimization/PMOptimizationRunOverview';
 import { PMOptimizationRunOverrideSheet } from '../components/optimization/PMOptimizationRunOverrideSheet';
 import { PMOptimizationRunReviewTable } from '../components/optimization/PMOptimizationRunReviewTable';
+import { PMOptimizationRunRisks } from '../components/optimization/PMOptimizationRunRisks';
 import { getPmOptimizationAlgorithmLabel } from '../constants/optimization';
 import {
   buildMeaningfulDecisionItem,
@@ -98,6 +99,23 @@ export function PMProjectOptimizationRunPage({
     PMOptimizationScheduleAllocationApi[]
   >([]);
   const [activeTab, setActiveTab] = useState('review');
+  const [highlightedWorkItemId, setHighlightedWorkItemId] = useState<number | null>(null);
+
+  const handleLocateItem = (workItemId: number) => {
+    setActiveTab('review');
+    setHighlightedWorkItemId(workItemId);
+    
+    setTimeout(() => {
+      const element = document.getElementById(`review-item-${workItemId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+
+    setTimeout(() => {
+      setHighlightedWorkItemId(null);
+    }, 2000);
+  };
 
   const { data, isLoading, error, refetch } = useGetPmOptimizationRunQuery(
     { projectId: numericProjectId, runId: numericRunId },
@@ -523,6 +541,7 @@ export function PMProjectOptimizationRunPage({
             onReject={(item) => handleMeaningfulDecision(item, 'REJECTED')}
             onOverride={openOverride}
             disabled={updateState.isLoading}
+            highlightedWorkItemId={highlightedWorkItemId}
           />
         </TabsContent>
 
@@ -615,43 +634,10 @@ export function PMProjectOptimizationRunPage({
         </TabsContent>
 
         <TabsContent value='risks' className='space-y-4'>
-          <Card className='shadow-sm'>
-            <CardHeader>
-              <CardTitle className='text-base'>Warnings</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-3'>
-              {warnings.length ? (
-                warnings.map((warning) => (
-                  <div
-                    key={warning.id}
-                    className='rounded-md border px-3 py-2 text-sm'
-                  >
-                    <div className='flex items-center gap-2'>
-                      <ShieldAlert className='h-4 w-4 text-destructive' />
-                      <span className='font-medium'>
-                        {warning.code || 'WARNING'}
-                      </span>
-                      <Badge variant='secondary'>
-                        {warning.severity || 'INFO'}
-                      </Badge>
-                    </div>
-                    <p className='mt-1 text-muted-foreground'>
-                      {warning.message || '-'}
-                    </p>
-                    {warning.detailsJson ? (
-                      <pre className='mt-2 overflow-x-auto rounded bg-muted p-2 text-xs'>
-                        {warning.detailsJson}
-                      </pre>
-                    ) : null}
-                  </div>
-                ))
-              ) : (
-                <div className='rounded-md border border-dashed p-6 text-sm text-muted-foreground'>
-                  No warnings.
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PMOptimizationRunRisks
+            run={run}
+            onLocateItem={handleLocateItem}
+          />
         </TabsContent>
 
         <TabsContent value='history' className='space-y-4'>

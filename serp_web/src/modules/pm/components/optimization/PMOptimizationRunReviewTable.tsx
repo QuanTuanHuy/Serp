@@ -41,6 +41,7 @@ type PMOptimizationRunReviewTableProps = {
   onReject: (item: PMOptimizationRunItemApi) => void;
   onOverride: (item: PMOptimizationRunItemApi) => void;
   disabled?: boolean;
+  highlightedWorkItemId?: number | null;
 };
 
 const DECISION_LABELS: Record<PMOptimizationDecision, string> = {
@@ -60,6 +61,7 @@ export function PMOptimizationRunReviewTable({
   onReject,
   onOverride,
   disabled = false,
+  highlightedWorkItemId,
 }: PMOptimizationRunReviewTableProps) {
   return (
     <Card className='shadow-sm'>
@@ -92,9 +94,12 @@ export function PMOptimizationRunReviewTable({
                 return (
                   <div
                     key={item.id}
+                    id={`review-item-${item.workItemId}`}
                     className={cn(
-                      'grid gap-3 px-4 py-3 xl:grid-cols-[28px_minmax(0,1.2fr)_minmax(220px,0.8fr)_minmax(260px,1fr)_170px]',
-                      disabled && 'opacity-60'
+                      'grid gap-3 px-4 py-3 xl:grid-cols-[28px_minmax(0,1.2fr)_minmax(220px,0.8fr)_minmax(260px,1fr)_170px] transition-all duration-300',
+                      disabled && 'opacity-60',
+                      highlightedWorkItemId === item.workItemId &&
+                        'bg-yellow-50 dark:bg-yellow-950/20 border-2 border-yellow-200 dark:border-yellow-900 rounded-md animate-pulse'
                     )}
                   >
                     <div className='pt-1'>
