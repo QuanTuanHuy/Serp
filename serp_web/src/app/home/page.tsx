@@ -190,7 +190,7 @@ export default function HomePage() {
   }, []);
 
   const hasBusinessModules = useMemo(() => {
-    return modules.some((m) => !m.isAdmin);
+    return modules.some((m) => !m.isAdmin && m.code !== 'DISCUSSION');
   }, [modules]);
 
   const handleDismiss = () => {
