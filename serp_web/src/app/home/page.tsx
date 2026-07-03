@@ -312,32 +312,72 @@ export default function HomePage() {
 
         <div className='container mx-auto px-4 py-8 md:py-10'>
           <section>
-            <Card className='overflow-hidden border-border/60 bg-background/90 shadow-lg'>
-              <CardContent className='p-6 md:p-8'>
-                <div className='max-w-3xl'>
-                  <p className='text-sm font-medium text-primary'>
-                    Welcome back
-                  </p>
-                  <h1 className='mt-2 text-3xl font-semibold tracking-tight sm:text-4xl'>
-                    Hi {overview.greetingName}, your modules are now the center
-                    of the workspace.
-                  </h1>
-                </div>
+            <Card className='relative overflow-hidden border-border/60 bg-background/90 shadow-lg'>
+              {roleFlags.isOrgAdmin && !hasBusinessModules && !isDismissed ? (
+                <>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='absolute top-5 right-5 h-8 w-8 rounded-full hover:bg-muted/50'
+                    onClick={handleDismiss}
+                  >
+                    <X className='h-4 w-4 text-muted-foreground' />
+                    <span className='sr-only'>Dismiss guide</span>
+                  </Button>
+                  <CardContent className='p-6 md:p-8'>
+                    <div className='max-w-3xl'>
+                      <div className='inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary mb-3'>
+                        <Sparkles className='h-3 w-3 animate-pulse' />
+                        Get Started
+                      </div>
+                      <h1 className='text-3xl font-semibold tracking-tight sm:text-4xl'>
+                        Hi {overview.greetingName}, let&apos;s activate your workspace.
+                      </h1>
+                      <p className='mt-3 text-base leading-6 text-muted-foreground max-w-2xl'>
+                        Your organization doesn&apos;t have an active subscription plan yet. Choose a plan now to enable modules like CRM, Sales, Logistics, and Project Management for your team.
+                      </p>
+                    </div>
 
-                <div className='mt-8 flex flex-col gap-3 sm:flex-row'>
-                  <Button asChild size='lg' className='gap-2'>
-                    <Link href={overview.firstAvailableModule?.href ?? '/apps'}>
-                      {overview.firstAvailableModule
-                        ? `Open ${overview.firstAvailableModule.name}`
-                        : 'Explore applications'}
-                      <ArrowRight className='h-4 w-4' />
-                    </Link>
-                  </Button>
-                  <Button asChild variant='outline' size='lg'>
-                    <Link href='/apps'>Browse all apps</Link>
-                  </Button>
-                </div>
-              </CardContent>
+                    <div className='mt-8 flex flex-col gap-3 sm:flex-row'>
+                      <Button asChild size='lg' className='gap-2 bg-slate-950 text-white hover:bg-slate-800 dark:bg-slate-50 dark:text-slate-950 dark:hover:bg-slate-200'>
+                        <Link href='/subscription'>
+                          View Pricing Plans
+                          <ArrowRight className='h-4 w-4' />
+                        </Link>
+                      </Button>
+                      <Button asChild variant='outline' size='lg'>
+                        <Link href='/apps'>Explore App Catalog</Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </>
+              ) : (
+                <CardContent className='p-6 md:p-8'>
+                  <div className='max-w-3xl'>
+                    <p className='text-sm font-medium text-primary'>
+                      Welcome back
+                    </p>
+                    <h1 className='mt-2 text-3xl font-semibold tracking-tight sm:text-4xl'>
+                      Hi {overview.greetingName}, your modules are now the center
+                      of the workspace.
+                    </h1>
+                  </div>
+
+                  <div className='mt-8 flex flex-col gap-3 sm:flex-row'>
+                    <Button asChild size='lg' className='gap-2'>
+                      <Link href={overview.firstAvailableModule?.href ?? '/apps'}>
+                        {overview.firstAvailableModule
+                          ? `Open ${overview.firstAvailableModule.name}`
+                          : 'Explore applications'}
+                        <ArrowRight className='h-4 w-4' />
+                      </Link>
+                    </Button>
+                    <Button asChild variant='outline' size='lg'>
+                      <Link href='/apps'>Browse all apps</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
             </Card>
           </section>
 
