@@ -320,7 +320,8 @@ public class TruckContainerSolver {
 						DateTimeUtils.unixTimeStamp2DateTime((long)(eat.getEarliestArrivalTime(p))),
 						DateTimeUtils.unixTimeStamp2DateTime((long)(eat.getEarliestArrivalTime(p) + serviceDuration.get(p))),
 						(int)awm.getWeight(p, XR.next(p)),
-						resolveAlgoRequestId(p));
+						resolveAlgoRequestId(p),
+						resolveContainerCodeForPoint(p));
 				g++;
 			}
 
@@ -329,7 +330,8 @@ public class TruckContainerSolver {
 					DateTimeUtils.unixTimeStamp2DateTime((long)eat.getEarliestArrivalTime(en)),
 					DateTimeUtils.unixTimeStamp2DateTime((long)(eat.getEarliestArrivalTime(en) + serviceDuration.get(en))),
 					0,
-					resolveAlgoRequestId(en));
+					resolveAlgoRequestId(en),
+					resolveContainerCodeForPoint(en));
 			
 			TruckRoute br = new TruckRoute(truck, nb, (int)objective.getValue(), nodes);
 			brArr.add(br);
@@ -407,6 +409,24 @@ public class TruckContainerSolver {
 		if (group2EL.containsKey(groupId)) return (long) group2EL.get(groupId).getId();
 		if (group2IE.containsKey(groupId)) return (long) group2IE.get(groupId).getId();
 		if (group2IL.containsKey(groupId)) return (long) group2IL.get(groupId).getId();
+		return null;
+	}
+
+	/**
+	 * Returns the container code for a given PICKUP_EMPTYCONT point.
+	 * The solver selects the optimal container depot; we look up the
+	 * actual container located at that depot from mCode2Container.
+	 * Returns null for non-container-pickup points.
+	 */
+	private String resolveContainerCodeForPoint(Point p) {
+		if (!START_CONT.equals(point2Type.get(p))) return null;
+		String depotCode = p.getLocationCode();
+		if (depotCode == null) return null;
+		for (Container c : mCode2Container.values()) {
+			if (depotCode.equals(c.getDepotContainerCode())) {
+				return c.getCode();
+			}
+		}
 		return null;
 	}
 

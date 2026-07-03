@@ -229,11 +229,11 @@ export function CustomerRequestDetailPage({ requestId }: Props) {
     { label: 'Late at Dest', value: request.lateAtDest },
   ].filter((tw) => tw.value != null);
 
-  const containerSizeLabel: Record<string, string> = {
-    TWENTY_FEET: '20 ft',
-    FORTY_FEET: '40 ft',
-    FORTY_FIVE_FEET: '45 ft',
-  };
+  // const containerSizeLabel: Record<string, string> = {
+  //   TWENTY_FEET: '20 ft',
+  //   FORTY_FEET: '40 ft',
+  //   FORTY_FIVE_FEET: '45 ft',
+  // };
 
   return (
     <div className="space-y-6 px-4 py-6">
@@ -317,7 +317,7 @@ export function CustomerRequestDetailPage({ requestId }: Props) {
           </div>
 
           {/* Cargo info */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             {/* <Field
               label="Weight"
               value={request.weight != null ? `${request.weight} kg` : null}
@@ -330,6 +330,10 @@ export function CustomerRequestDetailPage({ requestId }: Props) {
                   : null
               }
             /> */}
+            <Field
+              label="Container Code"
+              value={request.containerCode}
+            />
             <Field
               label="Drop Trailer"
               value={request.dropTrailerRequired ? 'Required' : 'Not required'}

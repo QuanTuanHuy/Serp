@@ -443,6 +443,7 @@ export function TransportRouteDetailPage({ planId }: Props) {
                 <TableHead>Action</TableHead>
                 <TableHead>Planned Arrival</TableHead>
                 <TableHead>Actual Arrival</TableHead>
+                <TableHead>Container Code</TableHead>
                 <TableHead className="text-right">Request ID</TableHead>
               </TableRow>
             </TableHeader>
@@ -470,6 +471,9 @@ export function TransportRouteDetailPage({ planId }: Props) {
                     </TableCell>
                     <TableCell className="text-sm tabular-nums">
                       {fmt(stop.actualArrivalTime)}
+                    </TableCell>
+                    <TableCell className="text-sm font-mono">
+                      {stop.containerCode ?? '—'}
                     </TableCell>
                     <TableCell className="text-right text-sm tabular-nums text-muted-foreground">
                       {stop.requestId != null ? (

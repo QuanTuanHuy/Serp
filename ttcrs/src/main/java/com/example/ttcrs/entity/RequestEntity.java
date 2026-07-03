@@ -60,6 +60,10 @@ public class RequestEntity {
     @Enumerated(EnumType.STRING)
     private ContainerSize containerSize;
 
+    /** Mã container (số container) phục vụ request này */
+    @Column(name = "container_code", length = 50)
+    private String containerCode;
+
     @Column(name = "drop_trailer_required")
     private Boolean dropTrailerRequired;
 

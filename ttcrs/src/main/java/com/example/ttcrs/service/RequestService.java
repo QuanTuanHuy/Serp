@@ -113,6 +113,14 @@ public class RequestService {
                         if (dto.getSrcLocationCode() == null || dto.getSrcLocationCode().isBlank()) {
                                 throw new IllegalArgumentException("srcLocationCode không được để trống");
                         }
+                        if (dto.getContainerCode() == null || dto.getContainerCode().isBlank()) {
+                                throw new IllegalArgumentException("containerCode không được để trống với loại request " + dto.getType());
+                        }
+                }
+                if (dto.getType() != RequestType.IE) {
+                        if (dto.getDestLocationCode() == null || dto.getDestLocationCode().isBlank()) {
+                                throw new IllegalArgumentException("destLocationCode không được để trống");
+                        }
                 }
 
         List<RequestEntity> entities = new ArrayList<>(dto.getQuantity());
@@ -124,6 +132,7 @@ public class RequestService {
                     .srcLocationCode(dto.getSrcLocationCode())
                     .destLocationCode(dto.getDestLocationCode())
                     .weight(dto.getWeight())
+                    .containerCode(dto.getContainerCode())
                     .dropTrailerRequired(dto.getDropTrailerRequired())
                     .earlyAtSrc(dto.getEarlyAtSrc())
                     .lateAtSrc(dto.getLateAtSrc())
@@ -368,6 +377,7 @@ public class RequestService {
         if (dto.getWeight()           != null) entity.setWeight(dto.getWeight());
         if (dto.getContainerSize()    != null) entity.setContainerSize(dto.getContainerSize());
         if (dto.getDropTrailerRequired() != null) entity.setDropTrailerRequired(dto.getDropTrailerRequired());
+        if (dto.getContainerCode()      != null) entity.setContainerCode(dto.getContainerCode());
         if (dto.getReason()           != null) entity.setReason(dto.getReason());
 
         return RequestResponseDTO.fromEntity(requestRepository.save(entity));

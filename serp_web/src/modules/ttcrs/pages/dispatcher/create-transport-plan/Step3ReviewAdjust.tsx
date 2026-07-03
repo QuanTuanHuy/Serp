@@ -222,6 +222,7 @@ export function Step3ReviewAdjust({ planResult, onBack }: Step3Props) {
           plannedArrival: stop.arrivalTime,
           requestId: stop.requestId,
           trailerId: stop.trailerId ?? null,
+          containerCode: stop.containerCode ?? null,
         })),
       })),
     };

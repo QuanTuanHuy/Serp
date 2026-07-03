@@ -80,6 +80,9 @@ export function StopsList({ stops }: StopsListProps) {
                     {stop.requestId != null && (
                       <span>Request #{stop.requestId}</span>
                     )}
+                    {stop.containerCode && (
+                      <span className="font-mono">Container: {stop.containerCode}</span>
+                    )}
                   </div>
                 </div>
               </div>

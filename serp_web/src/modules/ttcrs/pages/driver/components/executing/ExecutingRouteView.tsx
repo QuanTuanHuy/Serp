@@ -177,6 +177,9 @@ export function ExecutingRouteView({
                 <p className="text-xs text-muted-foreground">Next Stop</p>
                 <p className="text-lg font-bold font-mono">{toStop.locationCode}</p>
                 <p className="text-xs text-muted-foreground">{toStop.action.replace(/_/g, ' ')}</p>
+                {toStop.containerCode && (
+                  <p className="text-xs font-mono font-medium">Container: {toStop.containerCode}</p>
+                )}
               </div>
             </div>
 
