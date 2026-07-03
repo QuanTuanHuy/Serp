@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - Billing types for TMS shipping fee
  */
 
-export type BillingDeliveryService = 'TIEU_CHUAN';
+export type BillingDeliveryService = string;
 
 export type BillingRouteType =
   | 'NOI_TINH_NOI_CUM'
@@ -20,8 +20,6 @@ export type BillingCalculationType =
 
 export type BillingSurchargeRuleCode = 'VUNG_XA';
 
-export type BillingVasRuleCode = 'COD';
-
 export interface CalculateShippingFeeRequest {
   serviceCode: BillingDeliveryService;
   senderWardCode: string;
@@ -30,7 +28,6 @@ export interface CalculateShippingFeeRequest {
   lengthCm: number;
   widthCm: number;
   heightCm: number;
-  codAmount?: number;
 }
 
 export interface FeeLineItemResponse {
@@ -46,7 +43,6 @@ export interface CalculateShippingFeeResponse {
   chargeableWeightGram: number;
   baseFee: number;
   surchargeFee: number;
-  vasFee: number;
   totalFee: number;
   feeItems: FeeLineItemResponse[];
 }
@@ -85,15 +81,30 @@ export interface SurchargeRuleAdminResponse extends UpsertSurchargeRuleRequest {
   id: number;
 }
 
-export interface UpsertVasRuleRequest {
-  code: BillingVasRuleCode;
-  name: string;
-  calculationType: BillingCalculationType;
-  ratePercent?: number;
-  fixedAmount?: number;
-  minAmount?: number;
+export interface UpsertChargeableWeightConfigRequest {
+  serviceCode: BillingDeliveryService;
+  minDimensionCm: number;
+  smallBulkyThresholdCm: number;
+  baseWeightGram: number;
+  stepWeightGram: number;
+  maxWeightGram: number;
+  volumetricDivisor: number;
 }
 
-export interface VasRuleAdminResponse extends UpsertVasRuleRequest {
+export interface ChargeableWeightConfigAdminResponse
+  extends UpsertChargeableWeightConfigRequest {
+  id: number;
+}
+
+export interface UpsertDeliveryServiceConfigRequest {
+  serviceCode: BillingDeliveryService;
+  name: string;
+  description?: string;
+  active: boolean;
+  sortOrder: number;
+}
+
+export interface DeliveryServiceConfigAdminResponse
+  extends UpsertDeliveryServiceConfigRequest {
   id: number;
 }

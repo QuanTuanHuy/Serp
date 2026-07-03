@@ -432,7 +432,7 @@ function buildKpis(
       icon: Activity,
       tone: 'blue',
       trend: overview?.orderVolume.growthRatePercent,
-      href: `/first-mile/orders?fromDate=${filter.fromDate}&toDate=${filter.toDate}`,
+      href: `/first-mile/orders/list?fromDate=${filter.fromDate}&toDate=${filter.toDate}`,
     },
     {
       key: 'status',
@@ -441,7 +441,7 @@ function buildKpis(
       detail: `${formatNumber(overview?.orderVolume.completedOrders)} completed`,
       icon: Clock3,
       tone: 'amber',
-      href: '/first-mile/orders?status=IN_PROGRESS',
+      href: '/first-mile/orders/list?status=IN_PROGRESS',
     },
     {
       key: 'success',
@@ -452,7 +452,7 @@ function buildKpis(
       )} delivered`,
       icon: CheckCircle2,
       tone: 'green',
-      href: '/first-mile/orders?status=DELIVERED',
+      href: '/first-mile/orders/list?status=DELIVERED',
     },
     {
       key: 'finance',
@@ -467,7 +467,7 @@ function buildKpis(
       )} COD pending`,
       icon: CircleDollarSign,
       tone: 'rose',
-      href: '/first-mile/billing',
+      href: '/first-mile/settings/billing',
     },
   ];
 }

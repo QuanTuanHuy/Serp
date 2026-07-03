@@ -1,10 +1,10 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - First-mile billing route page
+ * Description: Part of Serp Project - First-mile billing redirect route
  */
 
-import { BillingPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
 export default function FirstMileBillingRoutePage() {
-  return <BillingPage />;
+  redirect('/first-mile/settings/billing');
 }

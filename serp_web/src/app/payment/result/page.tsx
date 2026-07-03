@@ -130,7 +130,7 @@ export default function PaymentResultPage() {
               window.location.assign(
                 query.source === 'first-mile'
                   ? '/first-mile/dispatchers/last-mile'
-                  : '/first-mile/orders'
+                  : '/first-mile/orders/list'
               )
             }
           >
