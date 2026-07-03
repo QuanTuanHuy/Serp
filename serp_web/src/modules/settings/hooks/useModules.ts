@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useGetMyOrganizationQuery } from '../services/organizations/organizationsApi';
 import {
   useGetAccessibleModulesForOrganizationQuery,
@@ -18,7 +18,7 @@ import type { AccessibleModule } from '@/modules/settings/types/module-access.ty
 import { getErrorMessage, getResponseMessage } from '@/lib/store/api/utils';
 import { useNotification } from '@/shared/hooks/use-notification';
 
-export function useSettingsModules() {
+export function useSettingsModules(options?: { skipQuery?: boolean }) {
   const { success, error: showError } = useNotification();
 
   const { data: org, isFetching: isFetchingOrg } = useGetMyOrganizationQuery();
@@ -33,12 +33,17 @@ export function useSettingsModules() {
     error,
     refetch,
   } = useGetAccessibleModulesForOrganizationQuery(organizationId as number, {
-    skip: !organizationId,
+    skip: !organizationId || options?.skipQuery,
   });
 
+  const lastErrorRef = useRef<any>(null);
+
   useEffect(() => {
-    if (error) {
+    if (error && error !== lastErrorRef.current) {
       showError(getErrorMessage(error));
+      lastErrorRef.current = error;
+    } else if (!error) {
+      lastErrorRef.current = null;
     }
   }, [error, showError]);
 
