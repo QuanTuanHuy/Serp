@@ -57,7 +57,7 @@ export function ModuleUsersDialog({
     revokeStatus,
     useModuleRoles,
     useModuleUsers,
-  } = useSettingsModules();
+  } = useSettingsModules({ skipQuery: true });
   const moduleId = module?.moduleId as number | undefined;
   const { data: rolesData, isLoading: isLoadingRoles } =
     useModuleRoles(moduleId);
