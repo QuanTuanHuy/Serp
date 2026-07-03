@@ -57,7 +57,7 @@ class TieuChuanPricingStrategyTest {
 
         when(routeClassificationService.classify("010001", "010002")).thenReturn(RouteType.NOI_TINH_LIEN_CUM);
         when(routeClassificationService.isRemoteArea("010002")).thenReturn(false);
-        when(chargeableWeightService.calculate(750L, 20, 20, 20)).thenReturn(750L);
+        when(chargeableWeightService.calculate(DeliveryService.TIEU_CHUAN, 750L, 20, 20, 20)).thenReturn(750L);
         when(pricingRuleService.getTariff(DeliveryService.TIEU_CHUAN, RouteType.NOI_TINH_LIEN_CUM)).thenReturn(tariff);
 
         CalculateShippingFeeResponse result = tieuChuanPricingStrategy.calculate(request);
@@ -96,7 +96,7 @@ class TieuChuanPricingStrategyTest {
 
         when(routeClassificationService.classify("010001", "790002")).thenReturn(RouteType.LIEN_MIEN_DAC_BIET);
         when(routeClassificationService.isRemoteArea("790002")).thenReturn(true);
-        when(chargeableWeightService.calculate(3_100L, 30, 30, 30)).thenReturn(3_100L);
+        when(chargeableWeightService.calculate(DeliveryService.TIEU_CHUAN, 3_100L, 30, 30, 30)).thenReturn(3_100L);
         when(pricingRuleService.getTariff(DeliveryService.TIEU_CHUAN, RouteType.LIEN_MIEN)).thenReturn(tariff);
         when(pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.VUNG_XA)).thenReturn(remoteRule);
 

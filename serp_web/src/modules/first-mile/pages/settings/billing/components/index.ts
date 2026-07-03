@@ -10,5 +10,6 @@ export * from './BillingCalculationResultCard';
 export * from './BillingCalculatorTab';
 export * from './TariffRuleFormDialog';
 export * from './SurchargeRuleFormDialog';
+export * from './ChargeableWeightConfigFormDialog';
 export * from './BillingPricingAdminTab';
 export * from './BillingPricingRulesTable';

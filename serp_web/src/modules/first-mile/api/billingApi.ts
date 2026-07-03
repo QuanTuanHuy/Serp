@@ -8,8 +8,10 @@ import type {
   BillingDeliveryService,
   CalculateShippingFeeRequest,
   CalculateShippingFeeResponse,
+  ChargeableWeightConfigAdminResponse,
   SurchargeRuleAdminResponse,
   TariffAdminResponse,
+  UpsertChargeableWeightConfigRequest,
   UpsertSurchargeRuleRequest,
   UpsertTariffRequest,
 } from '../types';
@@ -94,6 +96,44 @@ export const billingApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<SurchargeRuleAdminResponse>,
       invalidatesTags: [{ type: 'billing/SurchargeRule', id: 'LIST' }],
     }),
+    listChargeableWeightConfigs: builder.query<
+      ChargeableWeightConfigAdminResponse[],
+      void
+    >({
+      query: () => ({
+        url: '/admin/pricing/chargeable-weight-configs',
+      }),
+      extraOptions: BILLING_SERVICE,
+      transformResponse: unwrapFirstMileResult<
+        ChargeableWeightConfigAdminResponse[]
+      >,
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map((item) => ({
+                type: 'billing/ChargeableWeightConfig' as const,
+                id: item.id,
+              })),
+              { type: 'billing/ChargeableWeightConfig', id: 'LIST' },
+            ]
+          : [{ type: 'billing/ChargeableWeightConfig', id: 'LIST' }],
+    }),
+    upsertChargeableWeightConfig: builder.mutation<
+      ChargeableWeightConfigAdminResponse,
+      UpsertChargeableWeightConfigRequest
+    >({
+      query: (body) => ({
+        url: '/admin/pricing/chargeable-weight-configs',
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: BILLING_SERVICE,
+      transformResponse:
+        unwrapFirstMileResult<ChargeableWeightConfigAdminResponse>,
+      invalidatesTags: [
+        { type: 'billing/ChargeableWeightConfig', id: 'LIST' },
+      ],
+    }),
   }),
   overrideExisting: false,
 });
@@ -104,4 +144,6 @@ export const {
   useUpsertTariffMutation,
   useListSurchargeRulesQuery,
   useUpsertSurchargeRuleMutation,
+  useListChargeableWeightConfigsQuery,
+  useUpsertChargeableWeightConfigMutation,
 } = billingApi;

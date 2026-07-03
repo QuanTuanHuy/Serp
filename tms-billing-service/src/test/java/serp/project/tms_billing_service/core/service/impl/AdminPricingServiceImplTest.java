@@ -11,10 +11,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.tms_billing_service.domain.ChargeableWeightConfig;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
+import serp.project.tms_billing_service.dto.request.admin.UpsertChargeableWeightConfigRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
+import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfigAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.enums.CalculationType;
@@ -22,6 +25,7 @@ import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
 import serp.project.tms_billing_service.exception.AppException;
+import serp.project.tms_billing_service.repository.ChargeableWeightConfigRepository;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
 
@@ -40,6 +44,8 @@ class AdminPricingServiceImplTest {
     private TariffRepository tariffRepository;
     @Mock
     private SurchargeRuleRepository surchargeRuleRepository;
+    @Mock
+    private ChargeableWeightConfigRepository chargeableWeightConfigRepository;
 
     @InjectMocks
     private AdminPricingServiceImpl adminPricingService;
@@ -112,5 +118,36 @@ class AdminPricingServiceImplTest {
         request.setCalculationType(CalculationType.FIXED_PER_KG);
 
         assertThrows(AppException.class, () -> adminPricingService.upsertSurchargeRule(request));
+    }
+
+    @Test
+    void shouldUpsertChargeableWeightConfigByServiceCode() {
+        UpsertChargeableWeightConfigRequest request = new UpsertChargeableWeightConfigRequest();
+        request.setServiceCode(DeliveryService.TIEU_CHUAN);
+        request.setMinDimensionCm(10L);
+        request.setSmallBulkyThresholdCm(100L);
+        request.setBaseWeightGram(2000L);
+        request.setStepWeightGram(500L);
+        request.setMaxWeightGram(15000L);
+        request.setVolumetricDivisor(5000d);
+
+        when(chargeableWeightConfigRepository.findByServiceCode(DeliveryService.TIEU_CHUAN))
+                .thenReturn(Optional.empty());
+        when(chargeableWeightConfigRepository.save(org.mockito.ArgumentMatchers.any(ChargeableWeightConfig.class)))
+                .thenAnswer(invocation -> {
+                    ChargeableWeightConfig config = invocation.getArgument(0);
+                    config.setId(1L);
+                    return config;
+                });
+
+        ChargeableWeightConfigAdminResponse response = adminPricingService.upsertChargeableWeightConfig(request);
+
+        ArgumentCaptor<ChargeableWeightConfig> captor = ArgumentCaptor.forClass(ChargeableWeightConfig.class);
+        verify(chargeableWeightConfigRepository).save(captor.capture());
+        ChargeableWeightConfig savedConfig = captor.getValue();
+
+        assertEquals(500L, savedConfig.getStepWeightGram());
+        assertEquals(1L, response.getId());
+        assertEquals(DeliveryService.TIEU_CHUAN, response.getServiceCode());
     }
 }

@@ -80,3 +80,18 @@ export interface UpsertSurchargeRuleRequest {
 export interface SurchargeRuleAdminResponse extends UpsertSurchargeRuleRequest {
   id: number;
 }
+
+export interface UpsertChargeableWeightConfigRequest {
+  serviceCode: BillingDeliveryService;
+  minDimensionCm: number;
+  smallBulkyThresholdCm: number;
+  baseWeightGram: number;
+  stepWeightGram: number;
+  maxWeightGram: number;
+  volumetricDivisor: number;
+}
+
+export interface ChargeableWeightConfigAdminResponse
+  extends UpsertChargeableWeightConfigRequest {
+  id: number;
+}

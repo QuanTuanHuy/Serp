@@ -9,16 +9,21 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.tms_billing_service.core.service.IAdminPricingService;
+import serp.project.tms_billing_service.domain.ChargeableWeightConfig;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
+import serp.project.tms_billing_service.dto.request.admin.UpsertChargeableWeightConfigRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
+import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfigAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.exception.ErrorCode;
+import serp.project.tms_billing_service.mapper.AdminPricingMapper;
+import serp.project.tms_billing_service.repository.ChargeableWeightConfigRepository;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
 
@@ -33,6 +38,7 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
 
     private final TariffRepository tariffRepository;
     private final SurchargeRuleRepository surchargeRuleRepository;
+    private final ChargeableWeightConfigRepository chargeableWeightConfigRepository;
 
     /**
      * Lưu biểu phí theo khóa service, loại tuyến và ngày hiệu lực.
@@ -63,7 +69,7 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         tariff.setExpirationDate(request.getExpirationDate());
 
         Tariff saved = tariffRepository.save(tariff);
-        return toTariffResponse(saved);
+        return AdminPricingMapper.toTariffResponse(saved);
     }
 
     /**
@@ -93,7 +99,32 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         rule.setExpirationDate(request.getExpirationDate());
 
         SurchargeRule saved = surchargeRuleRepository.save(rule);
-        return toSurchargeResponse(saved);
+        return AdminPricingMapper.toSurchargeResponse(saved);
+    }
+
+    /**
+     * Lưu tham số quy đổi khối lượng tính cước theo từng dịch vụ vận chuyển.
+     */
+    @Override
+    @Transactional
+    public ChargeableWeightConfigAdminResponse upsertChargeableWeightConfig(
+            UpsertChargeableWeightConfigRequest request
+    ) {
+        validateChargeableWeightConfig(request);
+
+        ChargeableWeightConfig config = chargeableWeightConfigRepository
+                .findByServiceCode(request.getServiceCode())
+                .orElseGet(ChargeableWeightConfig::new);
+        config.setServiceCode(request.getServiceCode());
+        config.setMinDimensionCm(request.getMinDimensionCm());
+        config.setSmallBulkyThresholdCm(request.getSmallBulkyThresholdCm());
+        config.setBaseWeightGram(request.getBaseWeightGram());
+        config.setStepWeightGram(request.getStepWeightGram());
+        config.setMaxWeightGram(request.getMaxWeightGram());
+        config.setVolumetricDivisor(request.getVolumetricDivisor());
+
+        ChargeableWeightConfig saved = chargeableWeightConfigRepository.save(config);
+        return AdminPricingMapper.toChargeableWeightConfigResponse(saved);
     }
 
     /**
@@ -105,7 +136,7 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
                 ? tariffRepository.findAllByOrderByServiceCodeAscRouteTypeCodeAscEffectiveDateDesc()
                 : tariffRepository.findAllByServiceCodeOrderByRouteTypeCodeAscEffectiveDateDesc(serviceCode);
         return tariffs.stream()
-                .map(this::toTariffResponse)
+                .map(AdminPricingMapper::toTariffResponse)
                 .toList();
     }
 
@@ -116,7 +147,17 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     public List<SurchargeRuleAdminResponse> listSurchargeRules() {
         return surchargeRuleRepository.findAll().stream()
                 .filter(rule -> rule.getCode() != null && ACTIVE_SURCHARGE_CODES.contains(rule.getCode()))
-                .map(this::toSurchargeResponse)
+                .map(AdminPricingMapper::toSurchargeResponse)
+                .toList();
+    }
+
+    /**
+     * Liệt kê tham số quy đổi khối lượng tính cước theo dịch vụ.
+     */
+    @Override
+    public List<ChargeableWeightConfigAdminResponse> listChargeableWeightConfigs() {
+        return chargeableWeightConfigRepository.findAllByOrderByServiceCodeAsc().stream()
+                .map(AdminPricingMapper::toChargeableWeightConfigResponse)
                 .toList();
     }
 
@@ -145,40 +186,15 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     }
 
     /**
-     * Chuyển entity biểu phí sang DTO trả về cho API quản trị.
+     * Kiểm tra các ngưỡng khối lượng có thứ tự hợp lệ trước khi lưu.
      */
-    private TariffAdminResponse toTariffResponse(Tariff tariff) {
-        return TariffAdminResponse.builder()
-                .id(tariff.getId())
-                .serviceCode(tariff.getServiceCode())
-                .routeTypeCode(tariff.getRouteTypeCode())
-                .baseWeight(tariff.getBaseWeight())
-                .basePrice(tariff.getBasePrice())
-                .stepWeight(tariff.getStepWeight())
-                .stepPrice(tariff.getStepPrice())
-                .effectiveDate(tariff.getEffectiveDate())
-                .expirationDate(tariff.getExpirationDate())
-                .build();
+    private void validateChargeableWeightConfig(UpsertChargeableWeightConfigRequest request) {
+        if (request.getBaseWeightGram() >= request.getMaxWeightGram()) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "baseWeightGram phải nhỏ hơn maxWeightGram"
+            );
+        }
     }
 
-    /**
-     * Chuyển entity quy tắc phụ phí sang DTO trả về cho API quản trị.
-     */
-    private SurchargeRuleAdminResponse toSurchargeResponse(SurchargeRule rule) {
-        return SurchargeRuleAdminResponse.builder()
-                .id(rule.getId())
-                .code(rule.getCode())
-                .name(rule.getName())
-                .calculationType(rule.getCalculationType())
-                .ratePercent(rule.getRatePercent())
-                .fixedAmount(rule.getFixedAmount())
-                .minAmount(rule.getMinAmount())
-                .baseWeight(rule.getBaseWeight())
-                .basePrice(rule.getBasePrice())
-                .stepWeight(rule.getStepWeight())
-                .stepPrice(rule.getStepPrice())
-                .effectiveDate(rule.getEffectiveDate())
-                .expirationDate(rule.getExpirationDate())
-                .build();
-    }
 }

@@ -9,8 +9,10 @@ import type {
   BillingRouteType,
   BillingSurchargeRuleCode,
   CalculateShippingFeeRequest,
+  ChargeableWeightConfigAdminResponse,
   SurchargeRuleAdminResponse,
   TariffAdminResponse,
+  UpsertChargeableWeightConfigRequest,
   UpsertSurchargeRuleRequest,
   UpsertTariffRequest,
 } from '../../../types';
@@ -189,6 +191,27 @@ export const DEFAULT_SURCHARGE_FORM: SurchargeRuleFormState = {
   expirationDate: '',
 };
 
+export interface ChargeableWeightConfigFormState {
+  serviceCode: BillingDeliveryService;
+  minDimensionCm: string;
+  smallBulkyThresholdCm: string;
+  baseWeightGram: string;
+  stepWeightGram: string;
+  maxWeightGram: string;
+  volumetricDivisor: string;
+}
+
+export const DEFAULT_CHARGEABLE_WEIGHT_CONFIG_FORM: ChargeableWeightConfigFormState =
+  {
+    serviceCode: 'TIEU_CHUAN',
+    minDimensionCm: '10',
+    smallBulkyThresholdCm: '100',
+    baseWeightGram: '2000',
+    stepWeightGram: '500',
+    maxWeightGram: '15000',
+    volumetricDivisor: '5000',
+  };
+
 const toFormNumber = (value?: number): string => {
   if (value === undefined || value === null) {
     return '';
@@ -224,6 +247,18 @@ export const surchargeResponseToForm = (
   stepPrice: toFormNumber(rule.stepPrice),
   effectiveDate: rule.effectiveDate ?? '',
   expirationDate: rule.expirationDate ?? '',
+});
+
+export const chargeableWeightConfigResponseToForm = (
+  config: ChargeableWeightConfigAdminResponse
+): ChargeableWeightConfigFormState => ({
+  serviceCode: config.serviceCode,
+  minDimensionCm: toFormNumber(config.minDimensionCm),
+  smallBulkyThresholdCm: toFormNumber(config.smallBulkyThresholdCm),
+  baseWeightGram: toFormNumber(config.baseWeightGram),
+  stepWeightGram: toFormNumber(config.stepWeightGram),
+  maxWeightGram: toFormNumber(config.maxWeightGram),
+  volumetricDivisor: toFormNumber(config.volumetricDivisor),
 });
 
 export const ROUTE_TYPE_OPTIONS: Array<{
@@ -347,5 +382,44 @@ export const buildUpsertSurchargeRuleRequest = (
     stepPrice: parseOptionalNumber(form.stepPrice),
     effectiveDate: parseOptionalDate(form.effectiveDate),
     expirationDate: parseOptionalDate(form.expirationDate),
+  };
+};
+
+export const buildUpsertChargeableWeightConfigRequest = (
+  form: ChargeableWeightConfigFormState
+): UpsertChargeableWeightConfigRequest => {
+  const baseWeightGram = parseRequiredPositiveNumber(
+    form.baseWeightGram,
+    'Khối lượng gốc'
+  );
+  const maxWeightGram = parseRequiredPositiveNumber(
+    form.maxWeightGram,
+    'Khối lượng tối đa'
+  );
+
+  if (baseWeightGram >= maxWeightGram) {
+    throw new Error('Khối lượng gốc phải nhỏ hơn khối lượng tối đa.');
+  }
+
+  return {
+    serviceCode: form.serviceCode,
+    minDimensionCm: parseRequiredPositiveNumber(
+      form.minDimensionCm,
+      'Kích thước tối thiểu'
+    ),
+    smallBulkyThresholdCm: parseRequiredPositiveNumber(
+      form.smallBulkyThresholdCm,
+      'Ngưỡng hàng cồng kềnh'
+    ),
+    baseWeightGram,
+    stepWeightGram: parseRequiredPositiveNumber(
+      form.stepWeightGram,
+      'Nấc làm tròn'
+    ),
+    maxWeightGram,
+    volumetricDivisor: parseRequiredPositiveNumber(
+      form.volumetricDivisor,
+      'Hệ số quy đổi thể tích'
+    ),
   };
 };

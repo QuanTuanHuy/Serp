@@ -56,11 +56,13 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
      */
     @Override
     public CalculateShippingFeeResponse calculate(CalculateShippingFeeRequest request) {
+        // Loại tuyến quyết định bảng tariff, còn khối lượng tính cước quyết định bậc giá trong tariff.
         RouteType routeType = routeClassificationService.classify(
                 request.getSenderWardCode(),
                 request.getReceiverWardCode()
         );
         long chargeableWeight = chargeableWeightService.calculate(
+                DeliveryService.TIEU_CHUAN,
                 request.getActualWeightGram(),
                 request.getLengthCm(),
                 request.getWidthCm(),
@@ -68,6 +70,7 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         );
 
         List<FeeLineItemResponse> feeItems = new ArrayList<>();
+        // Tổng phí được tách thành cước chính và phụ phí để UI/API có thể giải thích từng dòng phí.
         long baseFee = calculateBaseFreight(routeType, chargeableWeight, feeItems);
         long surchargeFee = calculateSurcharges(request, chargeableWeight, feeItems);
         long totalFee = baseFee + surchargeFee;
@@ -100,9 +103,11 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         long stepWeight = requiredLong(tariff.getStepWeight(), "tariff.stepWeight");
         long stepPrice = requiredLong(tariff.getStepPrice(), "tariff.stepPrice");
 
+        // Tariff luôn có giá cơ bản cho khối lượng đầu tiên; phần vượt mới tính thêm theo nấc.
         long amount = basePrice;
         if (chargeableWeight > baseWeight) {
             long extraWeight = chargeableWeight - baseWeight;
+            // Làm tròn lên số nấc để mọi phần lẻ vượt ngưỡng đều được tính một nấc đầy đủ.
             long extraSteps = (long) Math.ceil((double) extraWeight / stepWeight);
             amount += extraSteps * stepPrice;
         }
@@ -129,6 +134,7 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
             long chargeableWeight,
             List<FeeLineItemResponse> feeItems
     ) {
+        // Hiện chỉ phụ thu vùng xa, nên đơn không thuộc vùng xa sẽ không phát sinh surcharge.
         if (!routeClassificationService.isRemoteArea(request.getReceiverWardCode())) {
             return 0L;
         }
@@ -165,6 +171,7 @@ public class TieuChuanPricingStrategy implements IDeliveryPricingStrategy {
         }
 
         long extraWeight = chargeableWeight - baseWeight;
+        // Quy tắc STEP_WEIGHT của phụ phí dùng cùng nguyên tắc làm tròn lên như cước chính.
         long extraSteps = (long) Math.ceil((double) extraWeight / stepWeight);
         return basePrice + (extraSteps * stepPrice);
     }

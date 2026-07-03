@@ -38,6 +38,7 @@ public class RouteClassificationService {
                         "Không tìm thấy phường/xã nhận: " + receiverWardCode
                 ));
 
+        // Cùng tỉnh: phân biệt nội cụm hay liên cụm theo phân loại cụm của phường/xã.
         if (senderWard.getProvinceCode().equals(receiverWard.getProvinceCode())) {
             if (senderWard.getPhanLoai() == receiverWard.getPhanLoai()) {
                 return RouteType.NOI_TINH_NOI_CUM;
@@ -45,6 +46,7 @@ public class RouteClassificationService {
             return RouteType.NOI_TINH_LIEN_CUM;
         }
 
+        // Một số trục tỉnh/thành trọng điểm có tariff riêng trước khi xét cùng miền hay liên miền.
         if (isSpecialAxisRoute(senderWard.getProvinceCode(), receiverWard.getProvinceCode())) {
             return RouteType.LIEN_MIEN_DAC_BIET;
         }
@@ -60,6 +62,7 @@ public class RouteClassificationService {
                         "Không tìm thấy tỉnh/thành nhận: " + receiverWard.getProvinceCode()
                 ));
 
+        // Khác tỉnh nhưng cùng miền dùng mức nội miền; khác miền dùng mức liên miền.
         if (senderProvince.getMien().equals(receiverProvince.getMien())) {
             return RouteType.NOI_MIEN;
         }

@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.tms_billing_service.core.service.IAdminPricingService;
 import serp.project.tms_billing_service.dto.ApiResponse;
+import serp.project.tms_billing_service.dto.request.admin.UpsertChargeableWeightConfigRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
+import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfigAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.enums.DeliveryService;
@@ -85,6 +87,24 @@ public class AdminPricingController {
         return ApiResponse.<List<SurchargeRuleAdminResponse>>builder()
                 .message("OK")
                 .result(adminPricingService.listSurchargeRules())
+                .build();
+    }
+
+    @GetMapping("/chargeable-weight-configs")
+    public ApiResponse<List<ChargeableWeightConfigAdminResponse>> listChargeableWeightConfigs() {
+        return ApiResponse.<List<ChargeableWeightConfigAdminResponse>>builder()
+                .message("OK")
+                .result(adminPricingService.listChargeableWeightConfigs())
+                .build();
+    }
+
+    @PutMapping("/chargeable-weight-configs")
+    public ApiResponse<ChargeableWeightConfigAdminResponse> upsertChargeableWeightConfig(
+            @RequestBody @Valid UpsertChargeableWeightConfigRequest request
+    ) {
+        return ApiResponse.<ChargeableWeightConfigAdminResponse>builder()
+                .message("OK")
+                .result(adminPricingService.upsertChargeableWeightConfig(request))
                 .build();
     }
 }
