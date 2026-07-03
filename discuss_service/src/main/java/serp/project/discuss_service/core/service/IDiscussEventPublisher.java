@@ -5,6 +5,7 @@
 
 package serp.project.discuss_service.core.service;
 
+import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
@@ -20,6 +21,8 @@ public interface IDiscussEventPublisher {
     String TOPIC_MEMBER_EVENTS = "discuss.member.events";
     String TOPIC_REACTION_EVENTS = "discuss.reaction.events";
     String TOPIC_PRESENCE_EVENTS = "discuss.presence.events";
+
+    void publishRealtimeEvent(String key, WsEvent<?> event, String topic);
 
     // ==================== MESSAGE EVENTS ====================
 
