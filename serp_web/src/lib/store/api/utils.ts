@@ -154,10 +154,13 @@ export const getErrorMessage = (error: any): string => {
 /**
  * Extract success/response message from API response
  */
-export const getResponseMessage = (response: any, fallback = 'Success'): string => {
-  if (response?.message) {
-    return response.message;
-  }
+export const getResponseMessage = (
+  response: any,
+  fallback = 'Success'
+): string => {
+  // if (response?.message) {
+  //   return response.message;
+  // }
   if (response?.data?.message) {
     return response.data.message;
   }

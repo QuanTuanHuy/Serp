@@ -91,7 +91,9 @@ export const AuthLayout = ({
       </div>
 
       <div className='relative flex flex-1 items-center justify-center px-4 py-10 lg:py-14'>
-        <div className={`w-full transition-all duration-300 ease-in-out ${mode === 'login' ? 'max-w-md' : 'max-w-2xl'}`}>
+        <div
+          className={`w-full transition-all duration-300 ease-in-out ${mode === 'login' ? 'max-w-md' : 'max-w-2xl'}`}
+        >
           <Card className='overflow-hidden rounded-[2rem] border-white/70 bg-white/88 py-0 shadow-[0_40px_120px_-48px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/78 transition-all duration-300 ease-in-out'>
             <div className='border-b border-border/60 px-6 py-5 sm:px-8'>
               <div className='space-y-2'>

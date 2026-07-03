@@ -284,14 +284,18 @@ export function PMResourceCalendarSettingsSection({
         />
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
-        <TabsList className="grid w-full grid-cols-3 max-w-[400px]">
-          <TabsTrigger value="profiles">Profiles</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          <TabsTrigger value="exceptions">Exceptions</TabsTrigger>
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className='w-full space-y-4'
+      >
+        <TabsList className='grid w-full grid-cols-3 max-w-[400px]'>
+          <TabsTrigger value='profiles'>Profiles</TabsTrigger>
+          <TabsTrigger value='assignments'>Assignments</TabsTrigger>
+          <TabsTrigger value='exceptions'>Exceptions</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profiles">
+        <TabsContent value='profiles'>
           <Card className='border-border/60 bg-background/90 shadow-sm'>
             <CardHeader className='flex flex-row items-center justify-between border-b py-4'>
               <CardTitle className='flex items-center gap-2 text-sm'>
@@ -313,7 +317,7 @@ export function PMResourceCalendarSettingsSection({
           </Card>
         </TabsContent>
 
-        <TabsContent value="assignments">
+        <TabsContent value='assignments'>
           <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.4fr)]'>
             <PMResourceCalendarAssignmentPanel
               profiles={profiles}
@@ -333,7 +337,9 @@ export function PMResourceCalendarSettingsSection({
                 </CardTitle>
               </CardHeader>
               <CardContent className='space-y-2 p-4 text-sm text-muted-foreground'>
-                <p>{assignedUserCount} assigned user(s) use calendar profiles.</p>
+                <p>
+                  {assignedUserCount} assigned user(s) use calendar profiles.
+                </p>
                 <p>
                   Materialized window:{' '}
                   {overview?.materializedWindowStart
@@ -349,7 +355,7 @@ export function PMResourceCalendarSettingsSection({
           </div>
         </TabsContent>
 
-        <TabsContent value="exceptions">
+        <TabsContent value='exceptions'>
           <PMResourceCalendarExceptionPanel
             exceptions={exceptions}
             isSubmitting={isExceptionSaving}

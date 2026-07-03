@@ -99,12 +99,14 @@ export function PMProjectOptimizationRunPage({
     PMOptimizationScheduleAllocationApi[]
   >([]);
   const [activeTab, setActiveTab] = useState('review');
-  const [highlightedWorkItemId, setHighlightedWorkItemId] = useState<number | null>(null);
+  const [highlightedWorkItemId, setHighlightedWorkItemId] = useState<
+    number | null
+  >(null);
 
   const handleLocateItem = (workItemId: number) => {
     setActiveTab('review');
     setHighlightedWorkItemId(workItemId);
-    
+
     setTimeout(() => {
       const element = document.getElementById(`review-item-${workItemId}`);
       if (element) {
@@ -634,10 +636,7 @@ export function PMProjectOptimizationRunPage({
         </TabsContent>
 
         <TabsContent value='risks' className='space-y-4'>
-          <PMOptimizationRunRisks
-            run={run}
-            onLocateItem={handleLocateItem}
-          />
+          <PMOptimizationRunRisks run={run} onLocateItem={handleLocateItem} />
         </TabsContent>
 
         <TabsContent value='history' className='space-y-4'>

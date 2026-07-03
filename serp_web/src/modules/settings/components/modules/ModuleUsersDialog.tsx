@@ -77,12 +77,18 @@ export function ModuleUsersDialog({
     search: debouncedManageSearch,
   });
 
-  const moduleUsers = useMemo(() => moduleUsersResponse?.data?.items || [], [moduleUsersResponse]);
-  const pagination = useMemo(() => ({
-    currentPage: moduleUsersResponse?.data?.currentPage || 0,
-    totalPages: moduleUsersResponse?.data?.totalPages || 0,
-    totalItems: moduleUsersResponse?.data?.totalItems || 0,
-  }), [moduleUsersResponse]);
+  const moduleUsers = useMemo(
+    () => moduleUsersResponse?.data?.items || [],
+    [moduleUsersResponse]
+  );
+  const pagination = useMemo(
+    () => ({
+      currentPage: moduleUsersResponse?.data?.currentPage || 0,
+      totalPages: moduleUsersResponse?.data?.totalPages || 0,
+      totalItems: moduleUsersResponse?.data?.totalItems || 0,
+    }),
+    [moduleUsersResponse]
+  );
   const { users, setSearch, organizationId } = useSettingsUsers();
   const [activeTab, setActiveTab] = useState<'assign' | 'manage'>('assign');
 

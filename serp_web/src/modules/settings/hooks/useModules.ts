@@ -90,7 +90,12 @@ export function useSettingsModules(options?: { skipQuery?: boolean }) {
         throw new Error(msg);
       }
       try {
-        const result = await assignUser({ organizationId, moduleId, userId, roleId }).unwrap();
+        const result = await assignUser({
+          organizationId,
+          moduleId,
+          userId,
+          roleId,
+        }).unwrap();
         success(getResponseMessage(result, 'User assigned to module'));
       } catch (e: any) {
         showError(getErrorMessage(e));
@@ -108,7 +113,11 @@ export function useSettingsModules(options?: { skipQuery?: boolean }) {
         throw new Error(msg);
       }
       try {
-        const result = await revokeUser({ organizationId, moduleId, userId }).unwrap();
+        const result = await revokeUser({
+          organizationId,
+          moduleId,
+          userId,
+        }).unwrap();
         success(getResponseMessage(result, 'User access revoked'));
       } catch (e: any) {
         showError(getErrorMessage(e));

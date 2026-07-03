@@ -104,12 +104,12 @@ export function PMResourceCalendarProfileDialog({
         ? [...state.item.blocks]
             .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
             .map((block) => ({
-                key: String(block.id),
-                dayOfWeek: block.dayOfWeek,
-                startTime: block.startTime,
-                endTime: block.endTime,
-                capacityFactor: String(block.capacityFactor),
-              }))
+              key: String(block.id),
+              dayOfWeek: block.dayOfWeek,
+              startTime: block.startTime,
+              endTime: block.endTime,
+              capacityFactor: String(block.capacityFactor),
+            }))
         : defaultBlocks()
     );
   }, [state]);
@@ -236,182 +236,206 @@ export function PMResourceCalendarProfileDialog({
 
           <div className='max-h-[60vh] overflow-y-auto pr-2.5 space-y-4 scrollbar-thin'>
             <div className='grid gap-4'>
-            <div className='grid gap-4 md:grid-cols-2'>
+              <div className='grid gap-4 md:grid-cols-2'>
+                <div className='space-y-2'>
+                  <Label htmlFor='resource-calendar-name'>Name</Label>
+                  <Input
+                    id='resource-calendar-name'
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder='VN Full-time'
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label>Timezone</Label>
+                  <Select value={timezone} onValueChange={setTimezone}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIMEZONE_OPTIONS.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className='space-y-2'>
-                <Label htmlFor='resource-calendar-name'>Name</Label>
-                <Input
-                  id='resource-calendar-name'
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder='VN Full-time'
+                <Label htmlFor='resource-calendar-description'>
+                  Description
+                </Label>
+                <Textarea
+                  id='resource-calendar-description'
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={3}
                 />
               </div>
-              <div className='space-y-2'>
-                <Label>Timezone</Label>
-                <Select value={timezone} onValueChange={setTimezone}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIMEZONE_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='resource-calendar-description'>Description</Label>
-              <Textarea
-                id='resource-calendar-description'
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                rows={3}
-              />
-            </div>
-            <label className='flex items-center gap-2 rounded-md border px-3 py-2 text-sm'>
-              <Checkbox
-                checked={isDefault}
-                onCheckedChange={(value) => setIsDefault(value === true)}
-              />
-              Use as the default resource calendar
-            </label>
-          </div>
-
-          <div className='space-y-3 border-t pt-4'>
-            <div className='flex items-center justify-between gap-3'>
-              <div className='space-y-0.5'>
-                <Label className='text-base font-semibold'>Weekly blocks</Label>
-                <p className='text-xs text-muted-foreground'>Configure working blocks per day of the week.</p>
-              </div>
-              <div className='flex gap-2'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='sm'
-                  onClick={handleCopyMondayToWeekdays}
-                >
-                  Copy Monday to Weekdays (Tue-Fri)
-                </Button>
-                <Button type='button' variant='outline' size='sm' onClick={addBlock}>
-                  <Plus className='mr-2 h-4 w-4' />
-                  Add block
-                </Button>
-              </div>
+              <label className='flex items-center gap-2 rounded-md border px-3 py-2 text-sm'>
+                <Checkbox
+                  checked={isDefault}
+                  onCheckedChange={(value) => setIsDefault(value === true)}
+                />
+                Use as the default resource calendar
+              </label>
             </div>
 
-            {/* Visual 7-day grid */}
-            <div className='overflow-x-auto pb-1 scrollbar-none'>
-              <div className='grid grid-cols-7 gap-1.5 border rounded-md p-3 bg-muted/40 min-w-[500px]'>
-                {[1, 2, 3, 4, 5, 6, 7].map((day) => {
-                  const dayBlocks = blocks.filter(b => b.dayOfWeek === day);
-                  const dayName = DAY_OPTIONS.find(d => d.value === day)?.label.substring(0, 3) ?? '';
-                  return (
-                    <div
-                      key={day}
-                      className={cn(
-                        'flex flex-col items-center justify-center p-1.5 rounded-md border text-center text-xs transition-colors',
-                        dayBlocks.length > 0
-                          ? 'bg-primary/5 border-primary/20 text-primary font-medium'
-                          : 'bg-muted border-border text-muted-foreground'
-                      )}
-                    >
-                      <span className='font-semibold'>{dayName}</span>
-                      {dayBlocks.length > 0 ? (
-                        dayBlocks.map((b, i) => (
-                          <span key={i} className='text-[10px] mt-1 block opacity-90'>
-                            {b.startTime}-{b.endTime}
-                          </span>
-                        ))
-                      ) : (
-                        <span className='text-[10px] mt-1 opacity-70'>Off</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className='space-y-2'>
-              {blocks.map((block) => (
-                <div
-                  key={block.key}
-                  className='grid gap-2 rounded-md border p-3 md:grid-cols-[minmax(150px,1fr)_120px_120px_130px_40px] md:items-end'
-                >
-                  <div className='space-y-2'>
-                    <Label>Day</Label>
-                    <Select
-                      value={String(block.dayOfWeek)}
-                      onValueChange={(value) =>
-                        updateBlock(block.key, 'dayOfWeek', Number(value))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DAY_OPTIONS.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={String(option.value)}
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className='space-y-2'>
-                    <Label>Start</Label>
-                    <Input
-                      type='time'
-                      value={block.startTime}
-                      onChange={(event) =>
-                        updateBlock(block.key, 'startTime', event.target.value)
-                      }
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label>End</Label>
-                    <Input
-                      type='time'
-                      value={block.endTime}
-                      onChange={(event) =>
-                        updateBlock(block.key, 'endTime', event.target.value)
-                      }
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label>Factor</Label>
-                    <Input
-                      type='number'
-                      min='0.01'
-                      max='1'
-                      step='0.01'
-                      value={block.capacityFactor}
-                      onChange={(event) =>
-                        updateBlock(
-                          block.key,
-                          'capacityFactor',
-                          event.target.value
-                        )
-                      }
-                    />
-                  </div>
+            <div className='space-y-3 border-t pt-4'>
+              <div className='flex items-center justify-between gap-3'>
+                <div className='space-y-0.5'>
+                  <Label className='text-base font-semibold'>
+                    Weekly blocks
+                  </Label>
+                  <p className='text-xs text-muted-foreground'>
+                    Configure working blocks per day of the week.
+                  </p>
+                </div>
+                <div className='flex gap-2'>
                   <Button
                     type='button'
-                    variant='ghost'
-                    size='icon'
-                    aria-label='Remove block'
-                    onClick={() => removeBlock(block.key)}
+                    variant='outline'
+                    size='sm'
+                    onClick={handleCopyMondayToWeekdays}
                   >
-                    <Trash2 className='h-4 w-4 text-destructive' />
+                    Copy Monday to Weekdays (Tue-Fri)
+                  </Button>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    onClick={addBlock}
+                  >
+                    <Plus className='mr-2 h-4 w-4' />
+                    Add block
                   </Button>
                 </div>
-              ))}
+              </div>
+
+              {/* Visual 7-day grid */}
+              <div className='overflow-x-auto pb-1 scrollbar-none'>
+                <div className='grid grid-cols-7 gap-1.5 border rounded-md p-3 bg-muted/40 min-w-[500px]'>
+                  {[1, 2, 3, 4, 5, 6, 7].map((day) => {
+                    const dayBlocks = blocks.filter((b) => b.dayOfWeek === day);
+                    const dayName =
+                      DAY_OPTIONS.find((d) => d.value === day)?.label.substring(
+                        0,
+                        3
+                      ) ?? '';
+                    return (
+                      <div
+                        key={day}
+                        className={cn(
+                          'flex flex-col items-center justify-center p-1.5 rounded-md border text-center text-xs transition-colors',
+                          dayBlocks.length > 0
+                            ? 'bg-primary/5 border-primary/20 text-primary font-medium'
+                            : 'bg-muted border-border text-muted-foreground'
+                        )}
+                      >
+                        <span className='font-semibold'>{dayName}</span>
+                        {dayBlocks.length > 0 ? (
+                          dayBlocks.map((b, i) => (
+                            <span
+                              key={i}
+                              className='text-[10px] mt-1 block opacity-90'
+                            >
+                              {b.startTime}-{b.endTime}
+                            </span>
+                          ))
+                        ) : (
+                          <span className='text-[10px] mt-1 opacity-70'>
+                            Off
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className='space-y-2'>
+                {blocks.map((block) => (
+                  <div
+                    key={block.key}
+                    className='grid gap-2 rounded-md border p-3 md:grid-cols-[minmax(150px,1fr)_120px_120px_130px_40px] md:items-end'
+                  >
+                    <div className='space-y-2'>
+                      <Label>Day</Label>
+                      <Select
+                        value={String(block.dayOfWeek)}
+                        onValueChange={(value) =>
+                          updateBlock(block.key, 'dayOfWeek', Number(value))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DAY_OPTIONS.map((option) => (
+                            <SelectItem
+                              key={option.value}
+                              value={String(option.value)}
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Start</Label>
+                      <Input
+                        type='time'
+                        value={block.startTime}
+                        onChange={(event) =>
+                          updateBlock(
+                            block.key,
+                            'startTime',
+                            event.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>End</Label>
+                      <Input
+                        type='time'
+                        value={block.endTime}
+                        onChange={(event) =>
+                          updateBlock(block.key, 'endTime', event.target.value)
+                        }
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Factor</Label>
+                      <Input
+                        type='number'
+                        min='0.01'
+                        max='1'
+                        step='0.01'
+                        value={block.capacityFactor}
+                        onChange={(event) =>
+                          updateBlock(
+                            block.key,
+                            'capacityFactor',
+                            event.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon'
+                      aria-label='Remove block'
+                      onClick={() => removeBlock(block.key)}
+                    >
+                      <Trash2 className='h-4 w-4 text-destructive' />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
           </div>
 
           <DialogFooter className='border-t pt-3'>

@@ -65,11 +65,15 @@ export default function SettingsModulesPage() {
   } = useSettingsModules();
 
   const mostUsedModule = useMemo(() => {
-    const active = modules.filter((m) => m.isActive && (m.activeUserCount || 0) > 0);
+    const active = modules.filter(
+      (m) => m.isActive && (m.activeUserCount || 0) > 0
+    );
     if (active.length === 0) return null;
-    return active.reduce((max, m) =>
-      (m.activeUserCount || 0) > (max.activeUserCount || 0) ? m : max
-    , active[0]);
+    return active.reduce(
+      (max, m) =>
+        (m.activeUserCount || 0) > (max.activeUserCount || 0) ? m : max,
+      active[0]
+    );
   }, [modules]);
 
   const [requestMoreModules, { isLoading: isRequesting }] =

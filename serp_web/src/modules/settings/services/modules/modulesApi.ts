@@ -4,7 +4,12 @@
  */
 
 import { api } from '@/lib/store/api/apiSlice';
-import { createDataTransform, createPaginatedItemsTransform, createPaginatedTransform, createApiResponseTransform } from '@/lib/store/api/utils';
+import {
+  createDataTransform,
+  createPaginatedItemsTransform,
+  createPaginatedTransform,
+  createApiResponseTransform,
+} from '@/lib/store/api/utils';
 import type {
   AccessibleModule,
   ModuleRole,
