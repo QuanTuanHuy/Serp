@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.domain.Pageable;
 import serp.project.account.core.domain.enums.UserStatus;
 import serp.project.account.infrastructure.store.model.UserModel;
 
@@ -57,4 +58,40 @@ public interface IUserRepository extends IBaseRepository<UserModel> {
     List<Object[]> countUsersByStatusForOrganization(@Param("orgId") Long organizationId);
 
     List<UserModel> findByPrimaryOrganizationIdAndIdIn(Long organizationId, List<Long> ids);
+
+    @Query("""
+            SELECT COUNT(u) FROM UserModel u
+            WHERE u.primaryOrganizationId = :organizationId
+            AND u.status = :status
+            AND NOT EXISTS (
+                SELECT 1 FROM UserModuleAccessModel uma
+                WHERE uma.userId = u.id
+                AND uma.organizationId = :organizationId
+                AND uma.moduleId = :moduleId
+                AND uma.isActive = true
+            )
+            """)
+    Long countActiveUsersWithoutModuleAccess(
+            @Param("organizationId") Long organizationId,
+            @Param("moduleId") Long moduleId,
+            @Param("status") UserStatus status);
+
+    @Query("""
+            SELECT u FROM UserModel u
+            WHERE u.primaryOrganizationId = :organizationId
+            AND u.status = :status
+            AND NOT EXISTS (
+                SELECT 1 FROM UserModuleAccessModel uma
+                WHERE uma.userId = u.id
+                AND uma.organizationId = :organizationId
+                AND uma.moduleId = :moduleId
+                AND uma.isActive = true
+            )
+            ORDER BY u.id ASC
+            """)
+    List<UserModel> findActiveUsersWithoutModuleAccess(
+            @Param("organizationId") Long organizationId,
+            @Param("moduleId") Long moduleId,
+            @Param("status") UserStatus status,
+            Pageable pageable);
 }

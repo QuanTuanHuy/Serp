@@ -71,4 +71,8 @@ public interface IUserService {
             Long expiresAt);
 
     PasswordResetRequestEntity updatePasswordResetRequest(PasswordResetRequestEntity entity);
+
+    Long countActiveUsersWithoutModuleAccess(Long organizationId, Long moduleId);
+
+    List<UserEntity> getActiveUsersWithoutModuleAccess(Long organizationId, Long moduleId, int limit);
 }

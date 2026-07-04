@@ -14,4 +14,6 @@ public interface ICombineRoleService {
     void assignRolesToUser(UserEntity user, List<RoleEntity> roles);
 
     void removeRolesFromUser(UserEntity user, List<RoleEntity> roles);
+
+    void assignRolesToUsers(List<UserEntity> users, List<RoleEntity> roles);
 }

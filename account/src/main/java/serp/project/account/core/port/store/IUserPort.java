@@ -44,4 +44,8 @@ public interface IUserPort {
     Integer countAdminUsersByOrganizationId(Long organizationId);
 
     Map<String, Integer> countUsersByStatusForOrganization(Long organizationId);
+
+    Long countActiveUsersWithoutModuleAccess(Long organizationId, Long moduleId);
+
+    List<UserEntity> getActiveUsersWithoutModuleAccess(Long organizationId, Long moduleId, int limit);
 }

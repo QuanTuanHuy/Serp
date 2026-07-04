@@ -28,4 +28,11 @@ public interface IUserModuleAccessPort {
     Map<Long, Integer> countActiveModulesByUserIds(List<Long> userIds);
 
     void deleteUserModuleAccess(Long id);
+
+    List<UserModuleAccessEntity> saveAll(List<UserModuleAccessEntity> userModuleAccesses);
+
+    List<UserModuleAccessEntity> getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(
+            List<Long> userIds,
+            Long moduleId,
+            Long organizationId);
 }

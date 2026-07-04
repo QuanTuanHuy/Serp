@@ -54,4 +54,11 @@ public interface IUserModuleAccessService {
     int countActiveUsers(Long moduleId, Long organizationId);
 
     Map<Long, Integer> countActiveModulesByUserIds(List<Long> userIds);
+
+    List<UserModuleAccessEntity> bulkRegisterUsersToModuleWithExpiration(
+            List<Long> userIds,
+            Long moduleId,
+            Long organizationId,
+            Long grantedBy,
+            Long expiresAt);
 }

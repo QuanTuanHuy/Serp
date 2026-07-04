@@ -37,6 +37,15 @@ import serp.project.account.core.usecase.support.UserSyncPublisher;
 import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import serp.project.account.core.domain.dto.request.UpdateModuleAccessSettingsRequest;
+import serp.project.account.core.domain.dto.response.ModuleAccessSettingsResponse;
+import serp.project.account.core.domain.dto.response.AutoGrantBackfillResponse;
+import serp.project.account.core.service.IOrganizationModuleAccessSettingService;
+import serp.project.account.core.usecase.support.ModuleAutoGrantService;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -55,6 +64,9 @@ public class ModuleAccessUseCase {
     private final UserSyncPublisher userSyncPublisher;
 
     private final ResponseUtils responseUtils;
+
+    private final IOrganizationModuleAccessSettingService moduleAccessSettingService;
+    private final ModuleAutoGrantService moduleAutoGrantService;
 
     public GeneralResponse<?> canOrganizationAccessModule(Long organizationId, Long moduleId) {
         try {
@@ -96,6 +108,12 @@ public class ModuleAccessUseCase {
 
             int totalUsers = userService.countUsersByOrganizationId(organizationId);
 
+            var autoGrantByModuleId = moduleAccessSettingService.getByOrganizationId(organizationId).stream()
+                    .collect(Collectors.toMap(
+                            setting -> setting.getModuleId(),
+                            setting -> Boolean.TRUE.equals(setting.getAutoGrantToNewUsers()),
+                            (left, right) -> right));
+
             List<OrgModuleAccessResponse> result = new ArrayList<>();
             result.addAll(allModules.stream()
                     .filter(m -> moduleIds.contains(m.getId()))
@@ -109,6 +127,7 @@ public class ModuleAccessUseCase {
                             .grantedAt(subscription.getActivatedAt())
                             .activeUserCount(userModuleAccessService.countActiveUsers(m.getId(), organizationId))
                             .totalUsersCount(totalUsers)
+                            .isAutoGrantToNewUsers(autoGrantByModuleId.getOrDefault(m.getId(), false))
                             .requiredRoles(allRoles.stream()
                                     .filter(r -> r.getModuleId() != null && r.getModuleId().equals(m.getId()))
                                     .map(RoleEntity::getName)
@@ -124,6 +143,7 @@ public class ModuleAccessUseCase {
                             .moduleCode(m.getCode())
                             .moduleDescription(m.getDescription())
                             .isActive(false)
+                            .isAutoGrantToNewUsers(false)
                             .build())
                     .toList());
 
@@ -392,4 +412,57 @@ public class ModuleAccessUseCase {
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> updateModuleAccessSettings(
+            Long organizationId,
+            Long moduleId,
+            UpdateModuleAccessSettingsRequest request,
+            Long updatedBy) {
+        try {
+            validateModuleInSubscription(organizationId, moduleId);
+            var setting = moduleAccessSettingService.upsertAutoGrantToNewUsers(
+                    organizationId,
+                    moduleId,
+                    request.getAutoGrantToNewUsers(),
+                    updatedBy);
+            return responseUtils.success(ModuleAccessSettingsResponse.builder()
+                    .organizationId(setting.getOrganizationId())
+                    .moduleId(setting.getModuleId())
+                    .autoGrantToNewUsers(setting.getAutoGrantToNewUsers())
+                    .updatedBy(setting.getUpdatedBy())
+                    .updatedAt(setting.getUpdatedAt())
+                    .build());
+        } catch (AppException e) {
+            log.error("Error updating module access settings: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error updating module access settings: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> backfillAutoGrant(Long organizationId, Long moduleId, Long grantedBy) {
+        try {
+            return responseUtils.success(moduleAutoGrantService.backfillExistingUsers(
+                    organizationId,
+                    moduleId,
+                    grantedBy));
+        } catch (AppException e) {
+            log.error("Error backfilling module auto-grant: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error backfilling module auto-grant: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private SubscriptionPlanModuleEntity validateModuleInSubscription(Long organizationId, Long moduleId) {
+        var subscription = subscriptionService.getActiveOrPendingUpgrade(organizationId);
+        return subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId()).stream()
+                .filter(SubscriptionPlanModuleEntity::isAccessible)
+                .filter(planModule -> planModule.getModuleId().equals(moduleId))
+                .findFirst()
+                .orElseThrow(() -> new AppException(Constants.ErrorMessage.MODULE_NOT_IN_SUBSCRIPTION_PLAN));
+    }
 }
