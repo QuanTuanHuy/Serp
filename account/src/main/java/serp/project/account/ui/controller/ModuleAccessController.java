@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
+import serp.project.account.core.domain.dto.request.BulkModuleAccessUsersRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
 import serp.project.account.core.domain.dto.request.UpdateModuleAccessSettingsRequest;
 import serp.project.account.core.usecase.ModuleAccessUseCase;
@@ -104,6 +105,28 @@ public class ModuleAccessController {
         log.info("POST /api/v1/organizations/{}/modules/{}/users/bulk - Bulk assigning {} users",
                 organizationId, moduleId, request.getUserIds().size());
         var response = moduleAccessUseCase.bulkAssignUsersToModule(request, assignedBy);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/modules/{moduleId}/users/bulk-revoke")
+    public ResponseEntity<?> bulkRevokeUsersFromModule(
+            @PathVariable Long organizationId,
+            @PathVariable Long moduleId,
+            @Valid @RequestBody BulkModuleAccessUsersRequest request) {
+        Long revokedBy = authUtils.getCurrentUserId().orElse(null);
+        if (revokedBy == null) {
+            var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var response = responseUtils.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+
+        log.info("POST /api/v1/organizations/{}/modules/{}/users/bulk-revoke - Bulk revoking {} users",
+                organizationId, moduleId, request.getUserIds().size());
+        var response = moduleAccessUseCase.bulkRevokeUsersFromModule(organizationId, moduleId, request, revokedBy);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
