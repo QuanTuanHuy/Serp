@@ -385,7 +385,7 @@ public class ModuleAccessUseCase {
                 }
 
                 UserModuleAccessEntity access = accessByUserId.get(userId);
-                if (access == null || !access.isActiveAccess()) {
+                if (access == null) {
                     outcomesByUserId.put(userId,
                             new BulkModuleAccessOutcome(BulkModuleAccessStatus.SKIPPED,
                                     Constants.BulkAccessSkipReason.USER_MODULE_ACCESS_NOT_FOUND));
