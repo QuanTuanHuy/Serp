@@ -14,6 +14,7 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
 import serp.project.account.core.domain.dto.request.GetUserParams;
+import serp.project.account.core.domain.dto.request.UpdateModuleAccessSettingsRequest;
 import serp.project.account.core.usecase.ModuleAccessUseCase;
 import serp.project.account.core.usecase.UserUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
@@ -172,6 +173,46 @@ public class ModuleAccessController {
         log.info("GET /api/v1/organizations/{}/users/me/modules - Fetching user's accessible modules",
                 organizationId);
         var response = moduleAccessUseCase.getModulesAccessibleByUser(organizationId, userId);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PutMapping("/modules/{moduleId}/access-settings")
+    public ResponseEntity<?> updateModuleAccessSettings(
+            @PathVariable Long organizationId,
+            @PathVariable Long moduleId,
+            @Valid @RequestBody UpdateModuleAccessSettingsRequest request) {
+        Long updatedBy = authUtils.getCurrentUserId().orElse(null);
+        if (updatedBy == null) {
+            var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var response = responseUtils.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+
+        var response = moduleAccessUseCase.updateModuleAccessSettings(
+                organizationId, moduleId, request, updatedBy);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
+
+    @PostMapping("/modules/{moduleId}/auto-grant/backfill")
+    public ResponseEntity<?> backfillAutoGrant(
+            @PathVariable Long organizationId,
+            @PathVariable Long moduleId) {
+        Long grantedBy = authUtils.getCurrentUserId().orElse(null);
+        if (grantedBy == null) {
+            var response = responseUtils.unauthorized(Constants.ErrorMessage.UNAUTHORIZED);
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+
+        if (!authUtils.canAccessOrganization(organizationId)) {
+            var response = responseUtils.forbidden(Constants.ErrorMessage.NO_PERMISSION_TO_ACCESS_ORGANIZATION);
+            return ResponseEntity.status(response.getCode()).body(response);
+        }
+
+        var response = moduleAccessUseCase.backfillAutoGrant(organizationId, moduleId, grantedBy);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 }
