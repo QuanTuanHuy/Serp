@@ -127,62 +127,67 @@ func (m *RateLimitMiddleware) IPRateLimit() gin.HandlerFunc {
 // This should be applied per-group after JWT middleware that sets "userID" in context.
 func (m *RateLimitMiddleware) UserRateLimit() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !m.props.Enabled {
-			c.Next()
-			return
-		}
-
-		userID, exists := c.Get("userID")
-		if !exists {
-			c.Next()
-			return
-		}
-
-		rule := m.props.DefaultUser
-		override, routeKey := m.resolveRouteOverride(c)
-		isRouteOverride := false
-		if override != nil && override.User != nil {
-			rule = *override.User
-			isRouteOverride = true
-		}
-
-		if !isValidRateLimitRule(rule) {
-			log.Warn(c,
-				"Invalid user rate limit rule, allowing request. limit=",
-				rule.Limit,
-				", windowSecs=",
-				rule.WindowSecs,
-			)
-			c.Next()
-			return
-		}
-
-		key := fmt.Sprintf("user:%v", userID)
-		if isRouteOverride {
-			key = fmt.Sprintf("user:%v:%s", userID, routeKey)
-		}
-
-		result, err := m.rateLimiter.CheckRateLimit(c.Request.Context(), key, rule.Limit, rule.WindowSecs)
-		if err != nil {
-			log.Warn(c, "Rate limiter unavailable for user, allowing request: ", err)
-			c.Next()
-			return
-		}
-
-		setRateLimitHeaders(c, result)
-
-		if !result.Allowed {
-			c.Header("Retry-After", strconv.Itoa(result.RetryAfter))
-			utils.AbortErrorHandleCustomMessage(c,
-				constant.GeneralTooManyRequests,
-				"User rate limit exceeded. Try again later.",
-			)
-			c.Abort()
+		if !m.ApplyUserRateLimit(c) {
 			return
 		}
 
 		c.Next()
 	}
+}
+
+// ApplyUserRateLimit applies user-based rate limiting without advancing Gin's handler chain.
+func (m *RateLimitMiddleware) ApplyUserRateLimit(c *gin.Context) bool {
+	if !m.props.Enabled {
+		return true
+	}
+
+	userID, exists := c.Get("userID")
+	if !exists {
+		return true
+	}
+
+	rule := m.props.DefaultUser
+	override, routeKey := m.resolveRouteOverride(c)
+	isRouteOverride := false
+	if override != nil && override.User != nil {
+		rule = *override.User
+		isRouteOverride = true
+	}
+
+	if !isValidRateLimitRule(rule) {
+		log.Warn(c,
+			"Invalid user rate limit rule, allowing request. limit=",
+			rule.Limit,
+			", windowSecs=",
+			rule.WindowSecs,
+		)
+		return true
+	}
+
+	key := fmt.Sprintf("user:%v", userID)
+	if isRouteOverride {
+		key = fmt.Sprintf("user:%v:%s", userID, routeKey)
+	}
+
+	result, err := m.rateLimiter.CheckRateLimit(c.Request.Context(), key, rule.Limit, rule.WindowSecs)
+	if err != nil {
+		log.Warn(c, "Rate limiter unavailable for user, allowing request: ", err)
+		return true
+	}
+
+	setRateLimitHeaders(c, result)
+
+	if !result.Allowed {
+		c.Header("Retry-After", strconv.Itoa(result.RetryAfter))
+		utils.AbortErrorHandleCustomMessage(c,
+			constant.GeneralTooManyRequests,
+			"User rate limit exceeded. Try again later.",
+		)
+		c.Abort()
+		return false
+	}
+
+	return true
 }
 
 func setRateLimitHeaders(c *gin.Context, result *port.RateLimitResult) {
