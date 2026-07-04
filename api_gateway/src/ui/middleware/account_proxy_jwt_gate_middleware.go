@@ -46,7 +46,6 @@ var accountProxyPublicRoutes = []accountProxyRoutePattern{
 	{method: http.MethodGet, pattern: "/api/v1/roles/**"},
 	{method: http.MethodGet, pattern: "/api/v1/modules/**"},
 	{method: http.MethodGet, pattern: "/api/v1/menu-displays/**"},
-	{method: http.MethodGet, pattern: "/api/v1/keycloak/**"},
 	{method: http.MethodGet, pattern: "/api/v1/subscription-plans/**"},
 	{method: http.MethodGet, pattern: "/api/v1/organizations/*/departments"},
 	{method: http.MethodGet, pattern: "/api/v1/organizations/*/departments/*"},
