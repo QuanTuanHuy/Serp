@@ -73,6 +73,21 @@ shared grant behavior used by both backfill and new-user provisioning. It should
   organization roles and auto-granted module roles are both applied.
 - Return structured results for batch operations.
 
+The backfill path must be batch-oriented because it can touch many users:
+
+- Query active users without active access to the module directly from the
+  database, limited to the number of available module slots.
+- Count the remaining matching users separately so skipped users can be reported
+  without loading every user into memory.
+- Register module access and insert user-role links in bulk where the existing
+  store layer supports it.
+- Publish user sync only for users that were actually changed.
+
+The new-user path should stay synchronous but lightweight. It should read enabled
+policies once, reuse subscription/role data across modules, collect all default
+module roles that apply, assign those roles once, and let the caller publish the
+single final user sync.
+
 ## API Design
 
 Add two endpoints to `ModuleAccessController`.
@@ -137,6 +152,10 @@ no remaining quota or no default module role, skip that module and log a warning
 New-user creation should not fail because optional module auto-grant could not be
 applied.
 
+The new-user path should not publish per-module sync events. The final sync after
+organization roles and module roles have both been assigned is the only sync
+event required for the created user.
+
 Invitation acceptance already calls `UserUseCase.createUserForOrganization(...)`,
 so this hook covers accepted invitations without adding invitation-specific
 logic.
@@ -185,8 +204,12 @@ Backend focused tests should cover:
   subscription.
 - Backfill grants users without access, assigns default module roles, respects
   quota, and returns skipped counts.
+- Backfill uses bounded candidate queries instead of loading every organization
+  user and filtering in memory.
 - Backfill fails when the module has no default module role.
 - New-user provisioning auto-grants configured modules for every user type.
+- New-user provisioning assigns collected module roles once and relies on the
+  caller's final sync.
 - New-user provisioning skips quota-full modules without failing user creation.
 - Disabling auto-grant does not revoke existing access.
 
@@ -206,4 +229,5 @@ This design does not add:
 - Per-module role selection for auto-grant.
 - Automatic revoke when policy is disabled.
 - Background jobs for backfill. Backfill runs as an explicit request and returns
-  a summary.
+  a summary. This can be revisited later if organizations regularly backfill
+  thousands of users or if Keycloak/user-sync latency becomes the dominant cost.
