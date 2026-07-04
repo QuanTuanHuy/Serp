@@ -145,6 +145,7 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules", moduleAccessController.GetAccessibleModulesForOrganization)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users", moduleAccessController.AssignUserToModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users/bulk", moduleAccessController.BulkAssignUsersToModule)
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/users/bulk-revoke", moduleAccessController.BulkRevokeUsersFromModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).DELETE("/:organizationId/modules/:moduleId/users/:userId", moduleAccessController.RevokeUserAccessToModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/users", moduleAccessController.GetUsersWithAccessToModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/users/me/modules", moduleAccessController.GetModulesAccessibleByUser)

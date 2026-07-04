@@ -57,4 +57,12 @@ public class UserRoleAdapter implements IUserRolePort {
     public void deleteUserRolesByUserIdAndRoleIds(Long userId, List<Long> roleIds) {
         userRoleRepository.deleteByUserIdAndRoleIdIn(userId, roleIds);
     }
+
+    @Override
+    public void deleteUserRolesByUserIdsAndRoleIds(List<Long> userIds, List<Long> roleIds) {
+        if (userIds == null || userIds.isEmpty() || roleIds == null || roleIds.isEmpty()) {
+            return;
+        }
+        userRoleRepository.deleteByUserIdInAndRoleIdIn(userIds, roleIds);
+    }
 }

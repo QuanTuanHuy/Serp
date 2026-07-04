@@ -107,6 +107,34 @@ func (m *ModuleAccessController) BulkAssignUsersToModule(c *gin.Context) {
 	c.JSON(res.Code, res)
 }
 
+func (m *ModuleAccessController) BulkRevokeUsersFromModule(c *gin.Context) {
+	organizationId, ok := utils.ValidateAndParseID(c, "organizationId")
+	if !ok {
+		return
+	}
+
+	moduleId, ok := utils.ValidateAndParseID(c, "moduleId")
+	if !ok {
+		return
+	}
+
+	var req request.BulkRevokeUsersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralBadRequest)
+		return
+	}
+
+	req.OrganizationId = organizationId
+	req.ModuleId = moduleId
+
+	res, err := m.moduleAccessService.BulkRevokeUsersFromModule(c.Request.Context(), &req)
+	if err != nil {
+		utils.AbortErrorHandle(c, constant.GeneralInternalServerError)
+		return
+	}
+	c.JSON(res.Code, res)
+}
+
 func (m *ModuleAccessController) RevokeUserAccessToModule(c *gin.Context) {
 	organizationId, ok := utils.ValidateAndParseID(c, "organizationId")
 	if !ok {

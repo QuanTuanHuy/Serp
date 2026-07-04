@@ -130,18 +130,28 @@ public class CombineRoleService implements ICombineRoleService {
 	@Transactional(rollbackFor = Exception.class)
 	public void removeRolesFromUser(UserEntity user, List<RoleEntity> roles) {
 		validateInput(user, roles);
+		removeRolesFromUsers(List.of(user), roles);
+	}
 
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public void removeRolesFromUsers(List<UserEntity> users, List<RoleEntity> roles) {
+		if (CollectionUtils.isEmpty(users) || CollectionUtils.isEmpty(roles)) {
+			return;
+		}
+
+		List<Long> userIds = users.stream()
+				.map(UserEntity::getId)
+				.toList();
 		List<Long> roleIdsToRemove = roles.stream()
 				.map(RoleEntity::getId)
 				.toList();
-		userRolePort.deleteUserRolesByUserIdAndRoleIds(user.getId(), roleIdsToRemove);
-		List<String> realmRolesToRemove = roles.stream()
-				.filter(role -> role.getKeycloakClientId() == null)
-				.map(RoleEntity::getName)
-				.toList();
-		if (!CollectionUtils.isEmpty(realmRolesToRemove)) {
-			// Note: consider later
-		}
+
+		userRolePort.deleteUserRolesByUserIdsAndRoleIds(userIds, roleIdsToRemove);
+		users.forEach(user -> revokeKeycloakClientRoles(user, roles));
+	}
+
+	private void revokeKeycloakClientRoles(UserEntity user, List<RoleEntity> roles) {
 		List<RoleEntity> clientRolesToRemove = roles.stream()
 				.filter(role -> role.getKeycloakClientId() != null)
 				.toList();

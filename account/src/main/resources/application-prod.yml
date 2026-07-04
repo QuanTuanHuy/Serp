@@ -299,6 +299,27 @@ app:
             - ORG_OWNER
             - ORG_ADMIN
           permissions:
+        - url-pattern: /api/v1/organizations/*/modules/*/users/bulk-revoke
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/modules/*/access-settings
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
+        - url-pattern: /api/v1/organizations/*/modules/*/auto-grant/backfill
+          roles:
+            - SUPER_ADMIN
+            - SYSTEM_MODERATOR
+            - ORG_OWNER
+            - ORG_ADMIN
+          permissions:
         - url-pattern: /api/v1/organizations/*/users/me/modules
           roles:
             - SUPER_ADMIN

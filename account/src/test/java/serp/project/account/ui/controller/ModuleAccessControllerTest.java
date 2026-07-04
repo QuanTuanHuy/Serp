@@ -24,6 +24,8 @@ import org.springframework.http.ResponseEntity;
 
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.GetUserParams;
+import serp.project.account.core.domain.dto.request.BulkModuleAccessUsersRequest;
+import serp.project.account.core.domain.dto.response.BulkModuleAccessResponse;
 import serp.project.account.core.usecase.ModuleAccessUseCase;
 import serp.project.account.core.usecase.UserUseCase;
 import serp.project.account.kernel.utils.AuthUtils;
@@ -131,5 +133,40 @@ class ModuleAccessControllerTest {
 
         assertEquals(200, response.getStatusCodeValue());
         verify(moduleAccessUseCase).backfillAutoGrant(10L, 20L, 99L);
+    }
+
+    @Test
+    void bulkRevokeUsersFromModuleShouldPassAuthenticatedUserToUseCase() {
+        when(authUtils.canAccessOrganization(10L)).thenReturn(true);
+        when(authUtils.getCurrentUserId()).thenReturn(java.util.Optional.of(99L));
+
+        BulkModuleAccessResponse summary = BulkModuleAccessResponse.empty(20L, 2);
+        summary.markRevoked(1L);
+        summary.markSkipped(2L, "USER_MODULE_ACCESS_NOT_FOUND");
+
+        GeneralResponse<?> responseBody = GeneralResponse.builder()
+                .code(200)
+                .status("SUCCESS")
+                .message("OK")
+                .data(summary)
+                .build();
+        doReturn(responseBody).when(moduleAccessUseCase).bulkRevokeUsersFromModule(any(), any(), any(), any());
+
+        var response = controller.bulkRevokeUsersFromModule(
+                10L,
+                20L,
+                BulkModuleAccessUsersRequest.builder()
+                        .userIds(List.of(1L, 2L))
+                        .build());
+
+        assertEquals(200, response.getStatusCodeValue());
+        ArgumentCaptor<BulkModuleAccessUsersRequest> captor =
+                ArgumentCaptor.forClass(BulkModuleAccessUsersRequest.class);
+        verify(moduleAccessUseCase).bulkRevokeUsersFromModule(
+                org.mockito.Mockito.eq(10L),
+                org.mockito.Mockito.eq(20L),
+                captor.capture(),
+                org.mockito.Mockito.eq(99L));
+        assertEquals(List.of(1L, 2L), captor.getValue().getUserIds());
     }
 }

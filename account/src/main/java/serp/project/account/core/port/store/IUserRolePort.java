@@ -14,4 +14,5 @@ public interface IUserRolePort {
     List<UserRoleEntity> getUserRolesByUserId(Long userId);
     List<UserRoleEntity> getUserRolesByUserIds(List<Long> userIds);
     void deleteUserRolesByUserIdAndRoleIds(Long userId, List<Long> roleIds);
+    void deleteUserRolesByUserIdsAndRoleIds(List<Long> userIds, List<Long> roleIds);
 }

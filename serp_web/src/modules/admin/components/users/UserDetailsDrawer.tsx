@@ -69,13 +69,14 @@ export function UserDetailsDrawer({
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredModules = user?.moduleAccesses?.filter((module) => {
-    const search = searchTerm.toLowerCase();
-    return (
-      module.moduleName?.toLowerCase().includes(search) ||
-      module.moduleCode?.toLowerCase().includes(search)
-    );
-  }) ?? [];
+  const filteredModules =
+    user?.moduleAccesses?.filter((module) => {
+      const search = searchTerm.toLowerCase();
+      return (
+        module.moduleName?.toLowerCase().includes(search) ||
+        module.moduleCode?.toLowerCase().includes(search)
+      );
+    }) ?? [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -130,13 +131,20 @@ export function UserDetailsDrawer({
                 </div>
               </section>
 
-              <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className='w-full'
+              >
                 <TabsList className='grid w-full grid-cols-2 mb-4'>
                   <TabsTrigger value='overview'>Overview</TabsTrigger>
                   <TabsTrigger value='access'>Module access</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value='overview' className='space-y-6 focus-visible:ring-0 focus-visible:ring-offset-0 mt-0'>
+                <TabsContent
+                  value='overview'
+                  className='space-y-6 focus-visible:ring-0 focus-visible:ring-offset-0 mt-0'
+                >
                   <section className='grid gap-4 sm:grid-cols-2 border rounded-xl p-4 bg-muted/20'>
                     <InfoTile
                       icon={<Mail className='h-4 w-4' />}
@@ -208,7 +216,10 @@ export function UserDetailsDrawer({
                   </section>
                 </TabsContent>
 
-                <TabsContent value='access' className='space-y-4 focus-visible:ring-0 focus-visible:ring-offset-0 mt-0'>
+                <TabsContent
+                  value='access'
+                  className='space-y-4 focus-visible:ring-0 focus-visible:ring-offset-0 mt-0'
+                >
                   <div className='space-y-4'>
                     <div className='flex items-center gap-2'>
                       <Input
@@ -309,8 +320,12 @@ function InfoTile({
         {icon}
       </div>
       <div className='min-w-0'>
-        <span className='text-xs text-muted-foreground block font-medium'>{label}</span>
-        <span className='mt-0.5 text-sm font-medium text-foreground block truncate'>{value || '—'}</span>
+        <span className='text-xs text-muted-foreground block font-medium'>
+          {label}
+        </span>
+        <span className='mt-0.5 text-sm font-medium text-foreground block truncate'>
+          {value || '—'}
+        </span>
       </div>
     </div>
   );
