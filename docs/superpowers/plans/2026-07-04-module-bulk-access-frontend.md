@@ -1,3 +1,234 @@
+# Module Bulk Access Frontend Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Implement bulk assignment and bulk revocation interface for module access management in `serp_web` using a unified user table layout with floating bulk action controls.
+
+**Architecture:** Inject bulk mutations in `settingsModulesApi`, expose them through `useSettingsModules`, and replace the tabbed interface in `ModuleUsersDialog.tsx` with a single paginated user table that handles selection, filters, and floating actions.
+
+**Tech Stack:** Next.js 15, React 19, Redux Toolkit Query, TailwindCSS, Shadcn UI / Radix UI components (Button, Dialog, Checkbox, Table, Select, Popover).
+
+---
+
+## File Structure
+
+Create: None.
+
+Modify:
+- [modulesApi.ts](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/services/modules/modulesApi.ts)
+  - Add `bulkAssignUsersToModule` and `bulkRevokeUsersFromModule` mutations.
+- [useModules.ts](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/hooks/useModules.ts)
+  - Expose bulk API wrappers and status states.
+- [ModuleUsersDialog.tsx](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/components/modules/ModuleUsersDialog.tsx)
+  - Rewrite to implement the unified table layout, checkbox selections, floating bulk action bar, pagination, and filters.
+
+Delete:
+- [AssignUserForm.tsx](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/components/modules/AssignUserForm.tsx)
+- [ModuleUsersList.tsx](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/components/modules/ModuleUsersList.tsx)
+
+---
+
+### Task 1: Add Bulk RTK Query Mutations
+
+**Files:**
+- Modify: [modulesApi.ts](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/services/modules/modulesApi.ts)
+
+- [ ] **Step 1: Add the mutations to settingsModulesApi**
+
+In [modulesApi.ts](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/services/modules/modulesApi.ts), inject `bulkAssignUsersToModule` and `bulkRevokeUsersFromModule` mutations:
+
+```typescript
+    bulkAssignUsersToModule: build.mutation<
+      ApiResponse<any>,
+      {
+        organizationId: number;
+        moduleId: number;
+        userIds: number[];
+        roleId?: number;
+      }
+    >({
+      query: ({ organizationId, moduleId, userIds, roleId }) => ({
+        url: `/organizations/${organizationId}/modules/${moduleId}/users/bulk`,
+        method: 'POST',
+        body: { userIds, roleId },
+      }),
+      transformResponse: createApiResponseTransform<any>(),
+      invalidatesTags: (_result, _error, { moduleId }) => [
+        { type: 'settings/Module', id: moduleId },
+        { type: 'settings/ModuleUsers', id: moduleId },
+        { type: 'settings/Module', id: 'LIST' },
+      ],
+    }),
+
+    bulkRevokeUsersFromModule: build.mutation<
+      ApiResponse<any>,
+      {
+        organizationId: number;
+        moduleId: number;
+        userIds: number[];
+      }
+    >({
+      query: ({ organizationId, moduleId, userIds }) => ({
+        url: `/organizations/${organizationId}/modules/${moduleId}/users/bulk-revoke`,
+        method: 'POST',
+        body: { userIds },
+      }),
+      transformResponse: createApiResponseTransform<any>(),
+      invalidatesTags: (_result, _error, { moduleId }) => [
+        { type: 'settings/Module', id: moduleId },
+        { type: 'settings/ModuleUsers', id: moduleId },
+        { type: 'settings/Module', id: 'LIST' },
+      ],
+    }),
+```
+
+- [ ] **Step 2: Export the query mutations hooks**
+
+In the bottom export block of [modulesApi.ts](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/services/modules/modulesApi.ts), add:
+
+```typescript
+  useBulkAssignUsersToModuleMutation,
+  useBulkRevokeUsersFromModuleMutation,
+```
+
+- [ ] **Step 3: Verify TypeScript builds**
+
+Run from `serp_web/`:
+```bash
+npm run type-check
+```
+Expected: PASS (with no type errors).
+
+- [ ] **Step 4: Commit Task 1**
+
+```bash
+git add serp_web/src/modules/settings/services/modules/modulesApi.ts
+git commit -m "feat(settings): add bulk module access RTK query endpoints"
+```
+
+---
+
+### Task 2: Expose Bulk Methods in useSettingsModules Hook
+
+**Files:**
+- Modify: [useModules.ts](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/hooks/useModules.ts)
+
+- [ ] **Step 1: Add imports and hook destructors**
+
+In [useModules.ts](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/hooks/useModules.ts):
+- Add `useBulkAssignUsersToModuleMutation` and `useBulkRevokeUsersFromModuleMutation` to imports:
+```typescript
+import {
+  useGetAccessibleModulesForOrganizationQuery,
+  useAssignUserToModuleMutation,
+  useRevokeUserAccessToModuleMutation,
+  useGetModuleRolesQuery,
+  useGetModuleUsersQuery,
+  useUpdateModuleAccessSettingsMutation,
+  useBackfillModuleAutoGrantMutation,
+  useBulkAssignUsersToModuleMutation,
+  useBulkRevokeUsersFromModuleMutation,
+} from '../services/modules/modulesApi';
+```
+
+- Inside the `useSettingsModules` hook, add:
+```typescript
+  const [bulkAssignUser, bulkAssignStatus] = useBulkAssignUsersToModuleMutation();
+  const [bulkRevokeUser, bulkRevokeStatus] = useBulkRevokeUsersFromModuleMutation();
+```
+
+- [ ] **Step 2: Add callbacks for bulk operations**
+
+Add `bulkAssign` and `bulkRevoke` callbacks inside the hook:
+
+```typescript
+  const bulkAssign = useCallback(
+    async (moduleId: number, userIds: number[], roleId?: number) => {
+      if (!organizationId) {
+        const msg = 'Organization is not ready';
+        showError(msg);
+        throw new Error(msg);
+      }
+      try {
+        const result = await bulkAssignUser({
+          organizationId,
+          moduleId,
+          userIds,
+          roleId,
+        }).unwrap();
+        success(getResponseMessage(result, 'Users assigned to module'));
+        return result.data;
+      } catch (e: any) {
+        showError(getErrorMessage(e));
+        throw e;
+      }
+    },
+    [bulkAssignUser, organizationId, showError, success]
+  );
+
+  const bulkRevoke = useCallback(
+    async (moduleId: number, userIds: number[]) => {
+      if (!organizationId) {
+        const msg = 'Organization is not ready';
+        showError(msg);
+        throw new Error(msg);
+      }
+      try {
+        const result = await bulkRevokeUser({
+          organizationId,
+          moduleId,
+          userIds,
+        }).unwrap();
+        success(getResponseMessage(result, 'Users access revoked'));
+        return result.data;
+      } catch (e: any) {
+        showError(getErrorMessage(e));
+        throw e;
+      }
+    },
+    [bulkRevokeUser, organizationId, showError, success]
+  );
+```
+
+- [ ] **Step 3: Expose callbacks and status in hook return**
+
+Modify the hook's return statement to include:
+```typescript
+    bulkAssign,
+    bulkRevoke,
+    bulkAssignStatus,
+    bulkRevokeStatus,
+```
+
+- [ ] **Step 4: Verify TypeScript builds**
+
+Run from `serp_web/`:
+```bash
+npm run type-check
+```
+Expected: PASS.
+
+- [ ] **Step 5: Commit Task 2**
+
+```bash
+git add serp_web/src/modules/settings/hooks/useModules.ts
+git commit -m "feat(settings): expose bulk assign and revoke functions in useSettingsModules"
+```
+
+---
+
+### Task 3: Redesign ModuleUsersDialog
+
+**Files:**
+- Modify: [ModuleUsersDialog.tsx](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/components/modules/ModuleUsersDialog.tsx)
+- Delete: [AssignUserForm.tsx](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/components/modules/AssignUserForm.tsx)
+- Delete: [ModuleUsersList.tsx](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/components/modules/ModuleUsersList.tsx)
+
+- [ ] **Step 1: Replace implementation in `ModuleUsersDialog.tsx`**
+
+Completely replace the contents of [ModuleUsersDialog.tsx](file:///d:/User2/open_source/serp/serp_web/src/modules/settings/components/modules/ModuleUsersDialog.tsx) with the redesigned code below:
+
+```tsx
 /**
  * Author: QuanTuanHuy
  * Description: Part of Serp Project - Redesigned Module Access Management Dialog
@@ -17,7 +248,6 @@ import {
   DialogTitle,
   Badge,
   Checkbox,
-  Input,
   Table,
   TableHeader,
   TableBody,
@@ -27,11 +257,6 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
 } from '@/shared/components/ui';
 import { Separator } from '@/shared/components/ui/separator';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
@@ -52,6 +277,7 @@ import {
   Info,
   Search,
   Loader2,
+  Shield,
   Trash2,
   CheckCircle2,
   X,
@@ -76,6 +302,7 @@ export function ModuleUsersDialog({
   module,
   onOpenChange,
 }: ModuleUsersDialogProps) {
+  const { error: showError } = useNotification();
   const {
     assign,
     revoke,
@@ -131,7 +358,7 @@ export function ModuleUsersDialog({
     refetch: refetchActiveUsers,
   } = useModuleUsers(moduleId, {
     page: 0,
-    pageSize: 100,
+    pageSize: 1000,
   });
 
   const activeModuleUsers = useMemo(
@@ -156,6 +383,14 @@ export function ModuleUsersDialog({
       setOrgPage(0);
     }
   }, [debouncedSearch, open, organizationId, setOrgSearch, setOrgPage]);
+
+  // Set filter for module ID inside useSettingsUsers by passing or omitting moduleId
+  // Wait: useSettingsUsers handles filters from its parameter. We let's toggle filterTab.
+  // When filterTab is 'GRANTED', we only display users loaded from activeModuleUsers on the current pagination if possible.
+  // Wait, let's keep it simple:
+  // If filterTab is 'GRANTED', we filter the orgUsers client-side, or we use the paginated activeModuleUsers response.
+  // Since we want to support both, we can render orgUsers when 'ALL' and activeModuleUsers when 'GRANTED'.
+  // Let's implement this clearly.
 
   const displayedUsers = useMemo(() => {
     if (filterTab === 'GRANTED') {
@@ -506,19 +741,18 @@ export function ModuleUsersDialog({
                                   <PopoverContent className='w-64 p-3 z-50' align='end'>
                                     <h4 className='text-xs font-semibold mb-2 text-foreground'>Select Role (Optional)</h4>
                                     <div className='space-y-2'>
-                                      <Select value={singleRoleId || 'default'} onValueChange={(val) => setSingleRoleId(val === 'default' ? '' : val)}>
-                                        <SelectTrigger className='w-full h-8 text-xs bg-background border border-input'>
-                                          <SelectValue placeholder='Select role' />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value='default'>Default Permissions</SelectItem>
-                                          {roles.map((r) => (
-                                            <SelectItem key={r.id} value={String(r.id)}>
-                                              {r.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
+                                      <select
+                                        className='w-full text-xs rounded-md border border-input bg-transparent px-3 py-1.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
+                                        value={singleRoleId}
+                                        onChange={(e) => setSingleRoleId(e.target.value)}
+                                      >
+                                        <option value=''>Default Permissions</option>
+                                        {roles.map((r) => (
+                                          <option key={r.id} value={String(r.id)}>
+                                            {r.name}
+                                          </option>
+                                        ))}
+                                      </select>
                                       <Button
                                         size='sm'
                                         className='w-full text-xs bg-purple-600 hover:bg-purple-700 text-white'
@@ -569,19 +803,18 @@ export function ModuleUsersDialog({
                     <PopoverContent className='w-64 p-3 z-50' align='end'>
                       <h4 className='text-xs font-semibold mb-2 text-foreground'>Select Role for Group</h4>
                       <div className='space-y-2'>
-                        <Select value={bulkRoleId || 'default'} onValueChange={(val) => setBulkRoleId(val === 'default' ? '' : val)}>
-                          <SelectTrigger className='w-full h-8 text-xs bg-background border border-input'>
-                            <SelectValue placeholder='Select role' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value='default'>Default Permissions</SelectItem>
-                            {roles.map((r) => (
-                              <SelectItem key={r.id} value={String(r.id)}>
-                                {r.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <select
+                          className='w-full text-xs rounded-md border border-input bg-transparent px-3 py-1.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
+                          value={bulkRoleId}
+                          onChange={(e) => setBulkRoleId(e.target.value)}
+                        >
+                          <option value=''>Default Permissions</option>
+                          {roles.map((r) => (
+                            <option key={r.id} value={String(r.id)}>
+                              {r.name}
+                            </option>
+                          ))}
+                        </select>
                         <Button
                           size='sm'
                           className='w-full text-xs bg-purple-600 hover:bg-purple-700 text-white'
@@ -735,3 +968,34 @@ export function ModuleUsersDialog({
     </>
   );
 }
+```
+
+- [ ] **Step 2: Delete sub-component files**
+
+Delete the now-unused sub-component files from `serp_web/src/modules/settings/components/modules/`:
+- `AssignUserForm.tsx`
+- `ModuleUsersList.tsx`
+
+- [ ] **Step 3: Run TypeScript checks**
+
+Run from `serp_web/`:
+```bash
+npm run type-check
+```
+Expected: PASS.
+
+- [ ] **Step 4: Run ESlint checks**
+
+Run from `serp_web/`:
+```bash
+npm run lint
+```
+Expected: PASS (no lint violations).
+
+- [ ] **Step 5: Commit Task 3**
+
+```bash
+git rm serp_web/src/modules/settings/components/modules/AssignUserForm.tsx serp_web/src/modules/settings/components/modules/ModuleUsersList.tsx
+git add serp_web/src/modules/settings/components/modules/ModuleUsersDialog.tsx
+git commit -m "feat(settings): redesign ModuleUsersDialog to support unified bulk access grid"
+```

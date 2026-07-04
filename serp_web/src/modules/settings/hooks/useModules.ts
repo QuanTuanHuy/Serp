@@ -15,6 +15,8 @@ import {
   useGetModuleUsersQuery,
   useUpdateModuleAccessSettingsMutation,
   useBackfillModuleAutoGrantMutation,
+  useBulkAssignUsersToModuleMutation,
+  useBulkRevokeUsersFromModuleMutation,
 } from '../services/modules/modulesApi';
 import type { AccessibleModule } from '@/modules/settings/types/module-access.types';
 import { getErrorMessage, getResponseMessage } from '@/lib/store/api/utils';
@@ -87,6 +89,10 @@ export function useSettingsModules(options?: { skipQuery?: boolean }) {
     useUpdateModuleAccessSettingsMutation();
   const [backfillModuleAutoGrant, backfillModuleAutoGrantStatus] =
     useBackfillModuleAutoGrantMutation();
+  const [bulkAssignUser, bulkAssignStatus] =
+    useBulkAssignUsersToModuleMutation();
+  const [bulkRevokeUser, bulkRevokeStatus] =
+    useBulkRevokeUsersFromModuleMutation();
 
   const assign = useCallback(
     async (moduleId: number, userId: number, roleId?: number) => {
@@ -187,6 +193,53 @@ export function useSettingsModules(options?: { skipQuery?: boolean }) {
     [backfillModuleAutoGrant, organizationId, showError, success]
   );
 
+  const bulkAssign = useCallback(
+    async (moduleId: number, userIds: number[], roleId?: number) => {
+      if (!organizationId) {
+        const msg = 'Organization is not ready';
+        showError(msg);
+        throw new Error(msg);
+      }
+      try {
+        const result = await bulkAssignUser({
+          organizationId,
+          moduleId,
+          userIds,
+          roleId,
+        }).unwrap();
+        success(getResponseMessage(result, 'Users assigned to module'));
+        return result.data;
+      } catch (e: any) {
+        showError(getErrorMessage(e));
+        throw e;
+      }
+    },
+    [bulkAssignUser, organizationId, showError, success]
+  );
+
+  const bulkRevoke = useCallback(
+    async (moduleId: number, userIds: number[]) => {
+      if (!organizationId) {
+        const msg = 'Organization is not ready';
+        showError(msg);
+        throw new Error(msg);
+      }
+      try {
+        const result = await bulkRevokeUser({
+          organizationId,
+          moduleId,
+          userIds,
+        }).unwrap();
+        success(getResponseMessage(result, 'Users access revoked'));
+        return result.data;
+      } catch (e: any) {
+        showError(getErrorMessage(e));
+        throw e;
+      }
+    },
+    [bulkRevokeUser, organizationId, showError, success]
+  );
+
   // Expose helpers to load roles/users per module (for dialogs)
   const useModuleRoles = (moduleId?: number) =>
     useGetModuleRolesQuery(moduleId as number, { skip: !moduleId });
@@ -221,8 +274,12 @@ export function useSettingsModules(options?: { skipQuery?: boolean }) {
     setSearch,
     assign,
     revoke,
+    bulkAssign,
+    bulkRevoke,
     assignStatus,
     revokeStatus,
+    bulkAssignStatus,
+    bulkRevokeStatus,
     updateAutoGrant,
     backfillAutoGrant,
     updateModuleAccessSettingsStatus,
