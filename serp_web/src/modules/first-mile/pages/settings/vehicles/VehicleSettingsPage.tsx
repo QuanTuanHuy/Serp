@@ -32,27 +32,36 @@ export const VehicleSettingsPage: React.FC<VehicleSettingsPageProps> = ({
     }
   };
 
+  const renderScopeTabs = () => (
+    <TabsList>
+      <TabsTrigger value='first-mile'>Chặng đầu</TabsTrigger>
+      <TabsTrigger value='second-mile'>Chặng giữa</TabsTrigger>
+    </TabsList>
+  );
+
   return (
     <div className='space-y-6'>
       <div>
-        <h1 className='text-2xl font-bold tracking-tight'>Vehicles</h1>
+        <h1 className='text-2xl font-bold tracking-tight'>Phương tiện</h1>
         <p className='text-muted-foreground'>
-          Manage first-mile and second-mile vehicles from TMS settings.
+          Quản lý phương tiện chặng đầu và chặng giữa trong thiết lập TMS.
         </p>
       </div>
 
-      <Tabs value={scope} onValueChange={handleScopeChange}>
-        <TabsList className='grid w-full grid-cols-2 sm:w-auto'>
-          <TabsTrigger value='first-mile'>First-mile</TabsTrigger>
-          <TabsTrigger value='second-mile'>Second-mile</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value='first-mile' className='mt-6'>
-          <FirstMileVehicleListPage />
+      <Tabs
+        value={scope}
+        onValueChange={handleScopeChange}
+        className='space-y-4'
+      >
+        <TabsContent value='first-mile'>
+          <FirstMileVehicleListPage scopeNavigation={renderScopeTabs()} />
         </TabsContent>
 
-        <TabsContent value='second-mile' className='mt-6'>
-          <SecondMileVehicleListPage showScopeNavigation={false} />
+        <TabsContent value='second-mile'>
+          <SecondMileVehicleListPage
+            showScopeNavigation={false}
+            scopeNavigation={renderScopeTabs()}
+          />
         </TabsContent>
       </Tabs>
     </div>

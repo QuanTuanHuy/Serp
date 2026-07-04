@@ -297,6 +297,14 @@ export interface CreateVehicleRequest {
 
 export type UpdateVehicleRequest = CreateVehicleRequest;
 
+export interface VehicleListFilters {
+  keyword?: string;
+  vehicleType?: VehicleType;
+  status?: VehicleStatus;
+  postOfficeKeyword?: string;
+  courierKeyword?: string;
+}
+
 export interface VehicleImportItem {
   license_plate?: string;
   max_weight?: number;
@@ -341,7 +349,9 @@ export interface SecondMileVehicleListFilters {
   licensePlate?: string;
   vehicleType?: SecondMileVehicleType;
   hubId?: number;
+  hubKeyword?: string;
   assignedStaffId?: number;
+  driverKeyword?: string;
   status?: SecondMileVehicleStatus;
 }
 
@@ -867,6 +877,15 @@ export type FirstMileDeliveryRequestTime =
 
 export type FirstMileOrderType = 'STANDARD_ORDER';
 
+export type FirstMileOrderProductCategory =
+  | 'HIGH_VALUE'
+  | 'FRAGILE'
+  | 'IMPORTANT_DOCUMENT'
+  | 'SOLID'
+  | 'OVERSIZED'
+  | 'LIQUID'
+  | 'MAGNETIC_BATTERY';
+
 export type FirstMileOrderPickupMethod =
   | 'COURIER_PICKUP'
   | 'DROP_OFF_AT_POST_OFFICE';
@@ -911,6 +930,7 @@ export interface FirstMileOrderDetail {
   pickupTimeEnd?: string;
   deliveryRequestTime?: FirstMileDeliveryRequestTime;
   orderType?: FirstMileOrderType;
+  orderProductCategory?: FirstMileOrderProductCategory;
   feePayer?: FirstMileFeePayer;
   paymentStatus?: FirstMilePaymentStatus;
   codAmount?: number;
@@ -1006,6 +1026,7 @@ export interface CreateOrderRequest {
   delivery_request_time: FirstMileDeliveryRequestTime;
   pickup_method?: FirstMileOrderPickupMethod;
   order_type: FirstMileOrderType;
+  order_product_category?: FirstMileOrderProductCategory;
   fee_payer: FirstMileFeePayer;
   is_cod?: boolean;
   dimension_length_cm?: number;

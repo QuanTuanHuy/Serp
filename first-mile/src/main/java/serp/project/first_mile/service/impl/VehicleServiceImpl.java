@@ -27,6 +27,8 @@ import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.dto.response.VehicleResponse;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
+import serp.project.first_mile.enums.VehicleStatus;
+import serp.project.first_mile.enums.VehicleType;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
@@ -62,10 +64,20 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<VehicleResponse> getVehicles(int page, int size, String keyword) {
+    public PageResponse<VehicleResponse> getVehicles(
+            int page,
+            int size,
+            String keyword,
+            VehicleType vehicleType,
+            VehicleStatus status,
+            String postOfficeKeyword,
+            String courierKeyword
+    ) {
         Long tenantId = getCurrentTenantIdOrThrow();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
         String normalizedKeyword = normalizeKeyword(keyword);
+        String normalizedPostOfficeKeyword = normalizeKeyword(postOfficeKeyword);
+        String normalizedCourierKeyword = normalizeKeyword(courierKeyword);
 
         Page<VehicleResponse> mappedPage;
         if (isManagerScopedAccess()) {
@@ -77,13 +89,25 @@ public class VehicleServiceImpl implements VehicleService {
             mappedPage = vehicleRepository.searchByTenantIdAndManagedPostOfficeIds(
                             tenantId,
                             normalizedKeyword,
+                            vehicleType,
+                            status,
+                            normalizedPostOfficeKeyword,
+                            normalizedCourierKeyword,
                             managedPostOfficeIds,
                             LocalDate.now(),
                             pageable
                     )
                     .map(VehicleMapper::toResponse);
         } else {
-            mappedPage = vehicleRepository.searchByTenantId(tenantId, normalizedKeyword, pageable)
+            mappedPage = vehicleRepository.searchByTenantId(
+                            tenantId,
+                            normalizedKeyword,
+                            vehicleType,
+                            status,
+                            normalizedPostOfficeKeyword,
+                            normalizedCourierKeyword,
+                            pageable
+                    )
                     .map(VehicleMapper::toResponse);
         }
 

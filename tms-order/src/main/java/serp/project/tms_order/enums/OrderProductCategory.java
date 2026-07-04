@@ -8,6 +8,7 @@ package serp.project.tms_order.enums;
 public enum OrderProductCategory {
     HIGH_VALUE, // Giá trị cao
     FRAGILE, // Dễ vỡ
+    IMPORTANT_DOCUMENT, // Chứng từ quan trọng
     SOLID, // Nguyên khối
     OVERSIZED, // Quá khổ
     LIQUID, // Chất lỏng

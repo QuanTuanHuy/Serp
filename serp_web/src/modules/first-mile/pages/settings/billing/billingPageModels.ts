@@ -6,6 +6,7 @@
 import type {
   BillingCalculationType,
   BillingDeliveryService,
+  BillingProductCategory,
   BillingRouteType,
   BillingSurchargeRuleCode,
   CalculateShippingFeeRequest,
@@ -29,6 +30,7 @@ export interface BillingFormState {
   lengthCm: string;
   widthCm: string;
   heightCm: string;
+  productCategory: BillingProductCategory;
 }
 
 export interface BillingSelectOption {
@@ -50,6 +52,7 @@ export const DEFAULT_BILLING_FORM: BillingFormState = {
   lengthCm: '',
   widthCm: '',
   heightCm: '',
+  productCategory: 'SOLID',
 };
 
 export const DELIVERY_SERVICE_OPTIONS: BillingDeliveryServiceOption[] = [
@@ -98,6 +101,19 @@ const ROUTE_TYPE_LABELS: Record<BillingRouteType, string> = {
 export const getRouteTypeLabel = (value: BillingRouteType): string => {
   return ROUTE_TYPE_LABELS[value] ?? value;
 };
+
+export const BILLING_PRODUCT_CATEGORY_OPTIONS: Array<{
+  value: BillingProductCategory;
+  label: string;
+}> = [
+  { value: 'SOLID', label: 'Hàng thường' },
+  { value: 'HIGH_VALUE', label: 'Hàng giá trị cao' },
+  { value: 'FRAGILE', label: 'Hàng dễ vỡ' },
+  { value: 'IMPORTANT_DOCUMENT', label: 'Chứng từ quan trọng' },
+  { value: 'OVERSIZED', label: 'Hàng quá khổ' },
+  { value: 'LIQUID', label: 'Chất lỏng' },
+  { value: 'MAGNETIC_BATTERY', label: 'Từ tính/pin' },
+];
 
 export const normalizeCategoryLabel = (value: string): string => {
   const categoryLabels: Record<string, string> = {
@@ -158,6 +174,7 @@ export const buildCalculateRequest = (
     lengthCm: parseRequiredPositiveNumber(form.lengthCm, 'Chiều dài'),
     widthCm: parseRequiredPositiveNumber(form.widthCm, 'Chiều rộng'),
     heightCm: parseRequiredPositiveNumber(form.heightCm, 'Chiều cao'),
+    productCategory: form.productCategory,
   };
 };
 
@@ -368,7 +385,14 @@ export const getCalculationTypeLabel = (
 export const SURCHARGE_RULE_CODE_OPTIONS: Array<{
   value: BillingSurchargeRuleCode;
   label: string;
-}> = [{ value: 'VUNG_XA', label: 'Vùng xa' }];
+}> = [
+  { value: 'VUNG_XA', label: 'Vùng xa' },
+  { value: 'HANG_GIA_TRI_CAO', label: 'Hàng giá trị cao' },
+  { value: 'CHUNG_TU_QUAN_TRONG', label: 'Chứng từ quan trọng' },
+  { value: 'DE_VO', label: 'Hàng dễ vỡ' },
+  { value: 'QUA_KHO', label: 'Hàng quá khổ' },
+  { value: 'CHAT_LONG', label: 'Chất lỏng' },
+];
 
 const parseRequiredDate = (value: string, fieldLabel: string): string => {
   const normalized = value.trim();

@@ -27,6 +27,7 @@ import type {
 import {
   DELIVERY_REQUEST_TIME_OPTIONS,
   FEE_PAYER_OPTIONS,
+  ORDER_PRODUCT_CATEGORY_OPTIONS,
   ORDER_PICKUP_METHOD_OPTIONS,
   type CreateOrderFormState,
   type LocationTarget,
@@ -504,6 +505,25 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                   options={FEE_PAYER_OPTIONS}
                   placeholder='Select fee payer'
                   emptyText='No fee payers found'
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='orderProductCategory'>
+                  Phân loại hàng hóa
+                </Label>
+                <TmsCombobox
+                  id='orderProductCategory'
+                  value={createForm.orderProductCategory}
+                  onValueChange={(value) =>
+                    onFormChange(
+                      'orderProductCategory',
+                      value as CreateOrderFormState['orderProductCategory']
+                    )
+                  }
+                  options={ORDER_PRODUCT_CATEGORY_OPTIONS}
+                  placeholder='Chọn phân loại hàng hóa'
+                  emptyText='Không có phân loại phù hợp'
                 />
               </div>
 

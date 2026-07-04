@@ -65,11 +65,11 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
   onUpdateField,
 }) => {
   const postOfficeComboboxOptions = [
-    { value: NONE_VALUE, label: 'Not assigned' },
+    { value: NONE_VALUE, label: 'Chưa phân công' },
     ...postOfficeOptions,
   ];
   const courierComboboxOptions = [
-    { value: NONE_VALUE, label: 'Not assigned' },
+    { value: NONE_VALUE, label: 'Chưa phân công' },
     ...courierOptions,
   ];
 
@@ -78,18 +78,19 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
       <DialogContent className='sm:max-w-2xl'>
         <DialogHeader>
           <DialogTitle>
-            {formMode === 'create' ? 'Create vehicle' : 'Update vehicle'}
+            {formMode === 'create'
+              ? 'Thêm phương tiện'
+              : 'Cập nhật phương tiện'}
           </DialogTitle>
           <DialogDescription>
-            Fill in required fields to{' '}
-            {formMode === 'create' ? 'create a new' : 'update the'} vehicle.
+            Nhập các thông tin bắt buộc để lưu phương tiện.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className='space-y-4'>
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-license-plate'>License plate *</Label>
+              <Label htmlFor='vehicle-license-plate'>Biển số xe *</Label>
               <Input
                 id='vehicle-license-plate'
                 value={formValues.licensePlate}
@@ -101,7 +102,7 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-status'>Status *</Label>
+              <Label htmlFor='vehicle-status'>Trạng thái *</Label>
               <TmsCombobox
                 id='vehicle-status'
                 value={formValues.status}
@@ -109,14 +110,14 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                   onUpdateField('status', value as VehicleStatus)
                 }
                 options={VEHICLE_STATUS_OPTIONS}
-                placeholder='Select status'
-                emptyText='No statuses found'
+                placeholder='Chọn trạng thái'
+                emptyText='Không có trạng thái phù hợp'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-type'>Vehicle type *</Label>
+              <Label htmlFor='vehicle-type'>Loại xe *</Label>
               <TmsCombobox
                 id='vehicle-type'
                 value={formValues.vehicleType}
@@ -124,14 +125,14 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                   onUpdateField('vehicleType', value as VehicleType)
                 }
                 options={VEHICLE_TYPE_OPTIONS}
-                placeholder='Select type'
-                emptyText='No vehicle types found'
+                placeholder='Chọn loại xe'
+                emptyText='Không có loại xe phù hợp'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-max-weight'>Max weight (kg)</Label>
+              <Label htmlFor='vehicle-max-weight'>Tải trọng tối đa (kg)</Label>
               <Input
                 id='vehicle-max-weight'
                 type='number'
@@ -142,12 +143,12 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                   onUpdateField('maxWeight', event.target.value)
                 }
                 disabled={isSaving}
-                placeholder='e.g. 150'
+                placeholder='Ví dụ: 150'
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-max-volume'>Max volume (m3)</Label>
+              <Label htmlFor='vehicle-max-volume'>Thể tích tối đa (m3)</Label>
               <Input
                 id='vehicle-max-volume'
                 type='number'
@@ -158,12 +159,12 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                   onUpdateField('maxVolume', event.target.value)
                 }
                 disabled={isSaving}
-                placeholder='e.g. 3.2'
+                placeholder='Ví dụ: 3.2'
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='vehicle-post-office-id'>Post office</Label>
+              <Label htmlFor='vehicle-post-office-id'>Bưu cục</Label>
               <TmsCombobox
                 id='vehicle-post-office-id'
                 value={formValues.postOfficeId.trim() || NONE_VALUE}
@@ -179,13 +180,13 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                 options={postOfficeComboboxOptions}
                 placeholder={
                   isLoadingPostOffices
-                    ? 'Loading post offices...'
-                    : 'Select post office'
+                    ? 'Đang tải bưu cục...'
+                    : 'Chọn bưu cục'
                 }
                 emptyText={
                   isLoadingPostOffices
-                    ? 'Loading post offices...'
-                    : 'No post offices available.'
+                    ? 'Đang tải bưu cục...'
+                    : 'Không có bưu cục khả dụng.'
                 }
                 disabled={isSaving || isLoadingPostOffices}
                 loading={isLoadingPostOffices}
@@ -194,7 +195,7 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='vehicle-post-office-staff-id'>
-                Courier staff
+                Nhân viên giao nhận
               </Label>
               <TmsCombobox
                 id='vehicle-post-office-staff-id'
@@ -208,17 +209,17 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
                 options={courierComboboxOptions}
                 placeholder={
                   !formValues.postOfficeId.trim()
-                    ? 'Select post office first'
+                    ? 'Chọn bưu cục trước'
                     : isLoadingCouriers
-                      ? 'Loading couriers...'
-                      : 'Select courier'
+                      ? 'Đang tải nhân viên...'
+                      : 'Chọn nhân viên'
                 }
                 emptyText={
                   !formValues.postOfficeId.trim()
-                    ? 'Select post office first.'
+                    ? 'Chọn bưu cục trước.'
                     : isLoadingCouriers
-                      ? 'Loading couriers...'
-                      : 'No couriers available for this post office.'
+                      ? 'Đang tải nhân viên...'
+                      : 'Không có nhân viên giao nhận cho bưu cục này.'
                 }
                 disabled={
                   isSaving ||
@@ -231,8 +232,8 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
           </div>
 
           <p className='text-xs text-muted-foreground'>
-            For manager role, available post offices and couriers are limited to
-            your managed scope.
+            Với vai trò quản lý, danh sách bưu cục và nhân viên giao nhận được
+            giới hạn theo phạm vi phụ trách.
           </p>
 
           <DialogFooter>
@@ -242,11 +243,11 @@ export const VehicleFormDialog: React.FC<VehicleFormDialogProps> = ({
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' disabled={isSaving}>
               {isSaving && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-              {formMode === 'create' ? 'Create' : 'Save changes'}
+              {formMode === 'create' ? 'Tạo mới' : 'Lưu thay đổi'}
             </Button>
           </DialogFooter>
         </form>

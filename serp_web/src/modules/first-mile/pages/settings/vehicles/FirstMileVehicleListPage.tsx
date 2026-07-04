@@ -20,6 +20,7 @@ import {
   useImportVehiclesMutation,
   useLazyExportVehicleTemplateQuery,
   useUpdateVehicleMutation,
+  useUploadVehicleImageMutation,
   useValidateVehicleImportMutation,
 } from '../../../api';
 import type {
@@ -28,6 +29,8 @@ import type {
   ValidateImportFileResponse,
   Vehicle,
   VehicleImportItem,
+  VehicleStatus,
+  VehicleType,
 } from '../../../types';
 import {
   VehicleDetailDialog,
@@ -35,13 +38,11 @@ import {
   VehicleImportCard,
   VehiclePageHeader,
   VehicleResultsCard,
-  VehicleSearchCard,
 } from './components';
 import {
   buildVehicleRequest,
   DEFAULT_VEHICLE_FORM,
   mapVehicleToFormState,
-  PAGE_SIZE,
   parseOptionalPositiveInteger,
   resolveVehicleAccessScope,
   validateVehicleForm,
@@ -52,19 +53,36 @@ import {
 interface FirstMileVehicleListPageProps {
   title?: string;
   description?: string;
+  scopeNavigation?: React.ReactNode;
 }
 
 export const FirstMileVehicleListPage: React.FC<
   FirstMileVehicleListPageProps
-> = ({ title, description }) => {
+> = ({ title, description, scopeNavigation }) => {
   const dispatch = useAppDispatch();
   const notification = useNotification();
   const profile = useAppSelector((state) => state.account.user.profile);
   const roles = profile?.roles ?? [];
 
   const [page, setPage] = React.useState(0);
+  const [pageSize, setPageSize] = React.useState(20);
   const [keywordInput, setKeywordInput] = React.useState('');
   const [keyword, setKeyword] = React.useState<string | undefined>(undefined);
+  const [vehicleTypeFilter, setVehicleTypeFilter] = React.useState<
+    VehicleType | undefined
+  >(undefined);
+  const [statusFilter, setStatusFilter] = React.useState<
+    VehicleStatus | undefined
+  >(undefined);
+  const [postOfficeKeywordInput, setPostOfficeKeywordInput] =
+    React.useState('');
+  const [postOfficeKeyword, setPostOfficeKeyword] = React.useState<
+    string | undefined
+  >(undefined);
+  const [courierKeywordInput, setCourierKeywordInput] = React.useState('');
+  const [courierKeyword, setCourierKeyword] = React.useState<
+    string | undefined
+  >(undefined);
   const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false);
   const [formMode, setFormMode] = React.useState<VehicleFormMode>('create');
   const [editingVehicleId, setEditingVehicleId] = React.useState<number | null>(
@@ -106,8 +124,12 @@ export const FirstMileVehicleListPage: React.FC<
   const { data, isLoading, isFetching, refetch } = useGetVehiclesQuery(
     {
       page,
-      size: PAGE_SIZE,
+      size: pageSize,
       keyword,
+      vehicleType: vehicleTypeFilter,
+      status: statusFilter,
+      postOfficeKeyword,
+      courierKeyword,
     },
     {
       skip: !canViewVehicles,
@@ -144,6 +166,8 @@ export const FirstMileVehicleListPage: React.FC<
   const [createVehicle, { isLoading: isCreating }] = useCreateVehicleMutation();
   const [updateVehicle, { isLoading: isUpdating }] = useUpdateVehicleMutation();
   const [deleteVehicle, { isLoading: isDeleting }] = useDeleteVehicleMutation();
+  const [uploadVehicleImage, { isLoading: isUploadingImage }] =
+    useUploadVehicleImageMutation();
   const [triggerExportVehicleTemplate, { isFetching: isExportingTemplate }] =
     useLazyExportVehicleTemplateQuery();
   const [validateVehicleImport, { isLoading: isValidatingImport }] =
@@ -172,7 +196,7 @@ export const FirstMileVehicleListPage: React.FC<
         return courierCode;
       }
 
-      return `Courier #${courier.id}`;
+      return `Nhân viên giao nhận #${courier.id}`;
     },
     []
   );
@@ -189,7 +213,7 @@ export const FirstMileVehicleListPage: React.FC<
             ? `${postOfficeCode} - ${postOfficeName}`
             : postOfficeCode ||
               postOfficeName ||
-              `Post office #${postOffice.id}`,
+              `Bưu cục #${postOffice.id}`,
       };
     });
 
@@ -201,7 +225,7 @@ export const FirstMileVehicleListPage: React.FC<
     ) {
       options.unshift({
         value: String(selectedPostOfficeNumericId),
-        label: `Post office #${selectedPostOfficeNumericId}`,
+        label: `Bưu cục #${selectedPostOfficeNumericId}`,
       });
     }
 
@@ -244,7 +268,7 @@ export const FirstMileVehicleListPage: React.FC<
             ? formatCourierOptionLabel(
                 selectedCourier as PostOfficeStaff & { id: number }
               )
-            : `Courier #${selectedCourierStaffId}`,
+            : `Nhân viên giao nhận #${selectedCourierStaffId}`,
       });
     }
 
@@ -343,17 +367,17 @@ export const FirstMileVehicleListPage: React.FC<
       const courierId = postOfficeStaffId ?? 0;
 
       if (!Number.isInteger(courierId) || courierId <= 0) {
-        return 'Not assigned';
+        return 'Chưa phân công';
       }
 
       const courier = courierById[courierId];
 
       if (!courier) {
         if (failedCourierIdRef.current.has(courierId)) {
-          return `Courier #${courierId}`;
+          return `Nhân viên giao nhận #${courierId}`;
         }
 
-        return 'Loading courier...';
+        return 'Đang tải nhân viên giao nhận...';
       }
 
       return formatCourierOptionLabel(
@@ -384,9 +408,49 @@ export const FirstMileVehicleListPage: React.FC<
     setKeyword(keywordInput.trim() || undefined);
   };
 
+  const handleClearSearch = () => {
+    setKeywordInput('');
+    setKeyword(undefined);
+    setPage(0);
+  };
+
+  const handleVehicleTypeFilterChange = (value?: VehicleType) => {
+    setVehicleTypeFilter(value);
+    setPage(0);
+  };
+
+  const handleStatusFilterChange = (value?: VehicleStatus) => {
+    setStatusFilter(value);
+    setPage(0);
+  };
+
+  const handlePostOfficeSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    setPage(0);
+    setPostOfficeKeyword(postOfficeKeywordInput.trim() || undefined);
+  };
+
+  const handleClearPostOfficeSearch = () => {
+    setPostOfficeKeywordInput('');
+    setPostOfficeKeyword(undefined);
+    setPage(0);
+  };
+
+  const handleCourierSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    setPage(0);
+    setCourierKeyword(courierKeywordInput.trim() || undefined);
+  };
+
+  const handleClearCourierSearch = () => {
+    setCourierKeywordInput('');
+    setCourierKeyword(undefined);
+    setPage(0);
+  };
+
   const handleOpenDetails = (vehicleId: number) => {
     if (!canViewVehicles) {
-      notification.error('You do not have permission to access vehicle data.');
+      notification.error('Bạn không có quyền truy cập dữ liệu phương tiện.');
       return;
     }
 
@@ -404,7 +468,7 @@ export const FirstMileVehicleListPage: React.FC<
   const handleOpenCreateDialog = () => {
     if (!canManageVehicles) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can create vehicles.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được tạo phương tiện.'
       );
       return;
     }
@@ -418,7 +482,7 @@ export const FirstMileVehicleListPage: React.FC<
   const handleOpenEditDialog = (vehicle: Vehicle) => {
     if (!canManageVehicles) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can update vehicles.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được cập nhật phương tiện.'
       );
       return;
     }
@@ -458,7 +522,7 @@ export const FirstMileVehicleListPage: React.FC<
 
     if (!canManageVehicles) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can modify vehicles.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được chỉnh sửa phương tiện.'
       );
       return;
     }
@@ -475,7 +539,7 @@ export const FirstMileVehicleListPage: React.FC<
       !formValues.postOfficeStaffId.trim()
     ) {
       notification.error(
-        'For manager role, either post office or courier staff is required.'
+        'Với vai trò quản lý, cần chọn bưu cục hoặc nhân viên giao nhận.'
       );
       return;
     }
@@ -485,7 +549,7 @@ export const FirstMileVehicleListPage: React.FC<
     try {
       if (formMode === 'create') {
         await createVehicle(payload).unwrap();
-        notification.success('Vehicle created successfully.');
+        notification.success('Đã tạo phương tiện.');
 
         if (page !== 0) {
           setPage(0);
@@ -494,7 +558,7 @@ export const FirstMileVehicleListPage: React.FC<
         }
       } else {
         if (editingVehicleId === null) {
-          notification.error('Missing vehicle id for update.');
+          notification.error('Thiếu mã phương tiện để cập nhật.');
           return;
         }
 
@@ -503,14 +567,14 @@ export const FirstMileVehicleListPage: React.FC<
           body: payload,
         }).unwrap();
 
-        notification.success('Vehicle updated successfully.');
+        notification.success('Đã cập nhật phương tiện.');
         void refetch();
       }
 
       setIsFormDialogOpen(false);
       setEditingVehicleId(null);
     } catch (error) {
-      notification.error('Failed to save vehicle.', {
+      notification.error('Không thể lưu phương tiện.', {
         description: getErrorMessage(error),
       });
     }
@@ -519,12 +583,31 @@ export const FirstMileVehicleListPage: React.FC<
   const handleRequestDelete = (vehicle: Vehicle) => {
     if (!canManageVehicles) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can delete vehicles.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được xóa phương tiện.'
       );
       return;
     }
 
     setDeleteTarget(vehicle);
+  };
+
+  const handleUploadVehicleImage = async (vehicle: Vehicle, file: File) => {
+    if (!canManageVehicles) {
+      notification.error(
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được tải ảnh phương tiện.'
+      );
+      return;
+    }
+
+    try {
+      await uploadVehicleImage({ id: vehicle.id, file }).unwrap();
+      notification.success('Đã tải ảnh phương tiện.');
+      void refetch();
+    } catch (error) {
+      notification.error('Không thể tải ảnh phương tiện.', {
+        description: getErrorMessage(error),
+      });
+    }
   };
 
   const handleDeleteVehicle = async () => {
@@ -534,14 +617,14 @@ export const FirstMileVehicleListPage: React.FC<
 
     if (!canManageVehicles) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can delete vehicles.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được xóa phương tiện.'
       );
       return;
     }
 
     try {
       await deleteVehicle(deleteTarget.id).unwrap();
-      notification.success('Vehicle deleted successfully.');
+      notification.success('Đã xóa phương tiện.');
       setDeleteTarget(null);
 
       if ((data?.items.length ?? 0) === 1 && page > 0) {
@@ -550,7 +633,7 @@ export const FirstMileVehicleListPage: React.FC<
         void refetch();
       }
     } catch (error) {
-      notification.error('Failed to delete vehicle.', {
+      notification.error('Không thể xóa phương tiện.', {
         description: getErrorMessage(error),
       });
     }
@@ -584,7 +667,7 @@ export const FirstMileVehicleListPage: React.FC<
   const handleDownloadTemplate = async () => {
     if (!canManageVehicles) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can download vehicle templates.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được tải mẫu phương tiện.'
       );
       return;
     }
@@ -601,9 +684,9 @@ export const FirstMileVehicleListPage: React.FC<
       link.remove();
       URL.revokeObjectURL(downloadUrl);
 
-      notification.success('Vehicle template downloaded successfully.');
+      notification.success('Đã tải mẫu nhập phương tiện.');
     } catch (error) {
-      notification.error('Failed to download vehicle template.', {
+      notification.error('Không thể tải mẫu nhập phương tiện.', {
         description: getErrorMessage(error),
       });
     }
@@ -612,14 +695,14 @@ export const FirstMileVehicleListPage: React.FC<
   const handleValidateImportFile = async () => {
     if (!canManageVehicles) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can validate vehicle imports.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được kiểm tra tệp nhập phương tiện.'
       );
       return;
     }
 
     const formData = buildImportFormData();
     if (!formData) {
-      notification.error('Please select an Excel file first.');
+      notification.error('Vui lòng chọn tệp Excel trước.');
       return;
     }
 
@@ -628,12 +711,12 @@ export const FirstMileVehicleListPage: React.FC<
       setValidateImportResult(result);
 
       if (result.is_success) {
-        notification.success('File validated successfully.', {
-          description: `${result.data.length} row(s) are ready to import.`,
+        notification.success('Tệp nhập hợp lệ.', {
+          description: `${result.data.length} dòng sẵn sàng để nhập.`,
         });
       }
     } catch (error) {
-      notification.error('Failed to validate vehicle import file.', {
+      notification.error('Không thể kiểm tra tệp nhập phương tiện.', {
         description: getErrorMessage(error),
       });
     }
@@ -642,13 +725,13 @@ export const FirstMileVehicleListPage: React.FC<
   const handleImportFile = async () => {
     if (!canManageVehicles) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can import vehicles.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được nhập phương tiện.'
       );
       return;
     }
 
     if (!validateImportResult) {
-      notification.error('Please validate the selected file before importing.');
+      notification.error('Vui lòng kiểm tra tệp đã chọn trước khi nhập.');
       return;
     }
 
@@ -658,7 +741,7 @@ export const FirstMileVehicleListPage: React.FC<
 
     const formData = buildImportFormData();
     if (!formData) {
-      notification.error('Please select an Excel file first.');
+      notification.error('Vui lòng chọn tệp Excel trước.');
       return;
     }
 
@@ -667,13 +750,13 @@ export const FirstMileVehicleListPage: React.FC<
       setLastImportJob(importResult);
       resetImportFileSelection();
 
-      notification.success('Vehicle import job created.', {
-        description: `Job #${importResult.id} is ${importResult.status}.`,
+      notification.success('Đã tạo lệnh nhập phương tiện.', {
+        description: `Lệnh #${importResult.id} đang ở trạng thái ${importResult.status}.`,
       });
 
       void refetch();
     } catch (error) {
-      notification.error('Failed to import vehicle file.', {
+      notification.error('Không thể nhập tệp phương tiện.', {
         description: getErrorMessage(error),
       });
     }
@@ -686,6 +769,7 @@ export const FirstMileVehicleListPage: React.FC<
           canManageVehicles={canManageVehicles}
           title={title}
           description={description}
+          scopeNavigation={scopeNavigation}
           onCreateVehicle={handleOpenCreateDialog}
           importAction={
             <VehicleImportCard
@@ -706,17 +790,6 @@ export const FirstMileVehicleListPage: React.FC<
           }
         />
 
-        <VehicleSearchCard
-          canViewVehicles={canViewVehicles}
-          keywordInput={keywordInput}
-          isFetching={isFetching}
-          onKeywordInputChange={setKeywordInput}
-          onSubmit={handleSearch}
-          onRefresh={() => {
-            void refetch();
-          }}
-        />
-
         <VehicleResultsCard
           canViewVehicles={canViewVehicles}
           canManageVehicles={canManageVehicles}
@@ -725,9 +798,32 @@ export const FirstMileVehicleListPage: React.FC<
           isFetching={isFetching}
           isSaving={isSaving}
           isDeleting={isDeleting}
+          isUploadingImage={isUploadingImage}
+          pageSize={pageSize}
+          keywordInput={keywordInput}
+          vehicleTypeFilter={vehicleTypeFilter}
+          statusFilter={statusFilter}
+          postOfficeKeywordInput={postOfficeKeywordInput}
+          courierKeywordInput={courierKeywordInput}
           onViewDetails={handleOpenDetails}
           onEdit={handleOpenEditDialog}
+          onUploadImage={handleUploadVehicleImage}
           onDelete={handleRequestDelete}
+          onKeywordInputChange={setKeywordInput}
+          onSearchSubmit={handleSearch}
+          onClearSearch={handleClearSearch}
+          onVehicleTypeFilterChange={handleVehicleTypeFilterChange}
+          onStatusFilterChange={handleStatusFilterChange}
+          onPostOfficeKeywordInputChange={setPostOfficeKeywordInput}
+          onPostOfficeSearchSubmit={handlePostOfficeSearch}
+          onClearPostOfficeSearch={handleClearPostOfficeSearch}
+          onCourierKeywordInputChange={setCourierKeywordInput}
+          onCourierSearchSubmit={handleCourierSearch}
+          onClearCourierSearch={handleClearCourierSearch}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(0);
+          }}
           onPreviousPage={() => {
             setPage((prev) => Math.max(prev - 1, 0));
           }}
@@ -769,14 +865,14 @@ export const FirstMileVehicleListPage: React.FC<
             setDeleteTarget(null);
           }
         }}
-        title='Delete vehicle'
+        title='Xóa phương tiện'
         description={
           deleteTarget
-            ? `This will permanently delete vehicle ${deleteTarget.licensePlate}.`
-            : 'This action cannot be undone.'
+            ? `Thao tác này sẽ xóa vĩnh viễn phương tiện ${deleteTarget.licensePlate}.`
+            : 'Thao tác này không thể hoàn tác.'
         }
-        confirmText='Delete'
-        cancelText='Cancel'
+        confirmText='Xóa'
+        cancelText='Hủy'
         onConfirm={handleDeleteVehicle}
         isLoading={isDeleting}
         variant='destructive'

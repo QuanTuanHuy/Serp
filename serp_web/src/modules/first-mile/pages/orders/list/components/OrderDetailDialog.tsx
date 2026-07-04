@@ -34,6 +34,7 @@ import type {
   FirstMileOrderStatus,
   FirstMileOrderTimelineItem,
 } from '../../../../types';
+import { getOrderProductCategoryLabel } from '../orderPageModels';
 import { OrderRoutePreviewMap } from './OrderRoutePreviewMap';
 
 interface OrderDetailDialogProps {
@@ -426,6 +427,14 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
               <div>
                 <p className='text-muted-foreground'>Order type</p>
                 <p className='font-medium'>{detailOrder.orderType || '--'}</p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Phân loại hàng hóa</p>
+                <p className='font-medium'>
+                  {getOrderProductCategoryLabel(
+                    detailOrder.orderProductCategory
+                  )}
+                </p>
               </div>
               <div>
                 <p className='text-muted-foreground'>Fee payer</p>

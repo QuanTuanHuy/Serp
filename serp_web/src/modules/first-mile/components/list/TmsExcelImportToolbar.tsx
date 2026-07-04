@@ -102,8 +102,8 @@ export const TmsExcelImportToolbar = <T extends object>({
     key: ImportStep;
     label: string;
   }> = [
-    { key: 'upload', label: 'Upload file' },
-    { key: 'validate', label: 'Validate data' },
+    { key: 'upload', label: 'Tải tệp lên' },
+    { key: 'validate', label: 'Kiểm tra dữ liệu' },
   ];
 
   const activeStepIndex = stepItems.findIndex(
@@ -121,17 +121,17 @@ export const TmsExcelImportToolbar = <T extends object>({
         className={className}
       >
         <FileSpreadsheet className='mr-2 h-4 w-4 text-emerald-600' />
-        Import
+        Nhập Excel
       </Button>
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className='flex h-[88vh] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-4 sm:max-w-6xl'>
           <div className='space-y-4'>
             <DialogHeader>
-              <DialogTitle>Import {entityLabel} from Excel</DialogTitle>
+              <DialogTitle>Nhập {entityLabel} từ Excel</DialogTitle>
               <DialogDescription>
-                Upload the completed workbook, validate the rows, then confirm
-                the import.
+                Tải tệp Excel đã hoàn thiện, kiểm tra dữ liệu, rồi xác nhận
+                nhập.
               </DialogDescription>
             </DialogHeader>
 
@@ -184,10 +184,10 @@ export const TmsExcelImportToolbar = <T extends object>({
                   </div>
                   <div>
                     <p className='text-sm font-medium'>
-                      Choose an Excel workbook
+                      Chọn tệp Excel
                     </p>
                     <p className='text-xs text-muted-foreground'>
-                      Supported formats: .xlsx and .xls.
+                      Hỗ trợ định dạng .xlsx và .xls.
                     </p>
                   </div>
                   <Input
@@ -200,7 +200,7 @@ export const TmsExcelImportToolbar = <T extends object>({
                   />
                   {selectedFileName ? (
                     <p className='max-w-full truncate text-sm text-muted-foreground'>
-                      Selected: {selectedFileName}
+                      Đã chọn: {selectedFileName}
                     </p>
                   ) : null}
                 </div>
@@ -208,7 +208,7 @@ export const TmsExcelImportToolbar = <T extends object>({
 
               <div className='flex flex-col gap-3 rounded-md border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between'>
                 <p className='text-sm text-muted-foreground'>
-                  Use the latest template before filling the Excel file.
+                  Dùng mẫu mới nhất trước khi điền dữ liệu Excel.
                 </p>
                 <Button
                   type='button'
@@ -221,7 +221,7 @@ export const TmsExcelImportToolbar = <T extends object>({
                   ) : (
                     <Download className='mr-2 h-4 w-4' />
                   )}
-                  Download template
+                  Tải mẫu
                 </Button>
               </div>
 
@@ -252,7 +252,7 @@ export const TmsExcelImportToolbar = <T extends object>({
                 onClick={closeDialog}
                 disabled={isBusy}
               >
-                Cancel
+                Hủy
               </Button>
               <Button
                 type='button'
@@ -264,7 +264,7 @@ export const TmsExcelImportToolbar = <T extends object>({
                 ) : (
                   <FileUp className='mr-2 h-4 w-4' />
                 )}
-                Validate file
+                Kiểm tra tệp
               </Button>
             </DialogFooter>
           ) : null}

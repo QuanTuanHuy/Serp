@@ -35,9 +35,9 @@ export const VehicleSearchCard: React.FC<VehicleSearchCardProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Search</CardTitle>
+        <CardTitle>Tìm kiếm</CardTitle>
         <CardDescription>
-          Search vehicles by license plate inside your permitted data scope.
+          Tìm phương tiện theo biển số trong phạm vi dữ liệu được phép.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -48,12 +48,12 @@ export const VehicleSearchCard: React.FC<VehicleSearchCardProps> = ({
               className='pl-10'
               value={keywordInput}
               onChange={(event) => onKeywordInputChange(event.target.value)}
-              placeholder='Search vehicle by license plate...'
+              placeholder='Tìm theo biển số xe...'
               disabled={!canViewVehicles}
             />
           </div>
           <Button type='submit' disabled={!canViewVehicles}>
-            Apply
+            Áp dụng
           </Button>
           <Button
             type='button'
@@ -62,7 +62,7 @@ export const VehicleSearchCard: React.FC<VehicleSearchCardProps> = ({
             disabled={!canViewVehicles || isFetching}
           >
             <RefreshCw className='mr-2 h-4 w-4' />
-            Refresh
+            Làm mới
           </Button>
         </form>
       </CardContent>

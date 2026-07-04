@@ -993,6 +993,7 @@ export const OrderListPage: React.FC = () => {
       delivery_request_time: createForm.deliveryRequestTime,
       pickup_method: createForm.pickupMethod,
       order_type: createForm.orderType,
+      order_product_category: createForm.orderProductCategory,
       fee_payer: createForm.feePayer,
       is_cod: createForm.isCod === 'true',
       ...(dimensionLengthCm !== undefined
@@ -1113,6 +1114,9 @@ export const OrderListPage: React.FC = () => {
         lengthCm,
         widthCm,
         heightCm,
+        ...(order.orderProductCategory
+          ? { productCategory: order.orderProductCategory }
+          : {}),
       };
     },
     []

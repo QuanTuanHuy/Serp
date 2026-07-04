@@ -49,16 +49,16 @@ export const VehicleDetailDialog: React.FC<VehicleDetailDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>Vehicle details</DialogTitle>
+          <DialogTitle>Chi tiết phương tiện</DialogTitle>
           <DialogDescription>
-            Review complete vehicle information and audit fields.
+            Xem thông tin phương tiện và lịch sử cập nhật.
           </DialogDescription>
         </DialogHeader>
 
         {isFetchingVehicleDetail ? (
           <div className='flex items-center gap-2 text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Loading vehicle details...
+            Đang tải chi tiết phương tiện...
           </div>
         ) : vehicleDetail ? (
           <div className='space-y-4'>
@@ -66,7 +66,7 @@ export const VehicleDetailDialog: React.FC<VehicleDetailDialogProps> = ({
               {imageUrl ? (
                 <Image
                   src={imageUrl}
-                  alt={`Vehicle ${vehicleDetail.licensePlate}`}
+                  alt={`Phương tiện ${vehicleDetail.licensePlate}`}
                   fill
                   unoptimized
                   sizes='(min-width: 640px) 672px, 100vw'
@@ -74,72 +74,60 @@ export const VehicleDetailDialog: React.FC<VehicleDetailDialogProps> = ({
                 />
               ) : (
                 <div className='flex h-full w-full items-center justify-center text-sm text-muted-foreground'>
-                  No image
+                  Chưa có ảnh
                 </div>
               )}
             </div>
 
             <div className='grid gap-3 text-sm sm:grid-cols-2'>
               <div>
-                <p className='text-muted-foreground'>Vehicle ID</p>
-                <p className='font-medium'>{vehicleDetail.id}</p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>License plate</p>
+                <p className='text-muted-foreground'>Biển số xe</p>
                 <p className='font-medium'>{vehicleDetail.licensePlate}</p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Status</p>
+                <p className='text-muted-foreground'>Trạng thái</p>
                 <p className='font-medium'>
                   {formatStatusLabel(vehicleDetail.status)}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Vehicle type</p>
+                <p className='text-muted-foreground'>Loại xe</p>
                 <p className='font-medium'>
                   {formatVehicleType(vehicleDetail.vehicleType)}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Max weight (kg)</p>
+                <p className='text-muted-foreground'>Tải trọng tối đa (kg)</p>
                 <p className='font-medium'>
                   {formatOptionalNumber(vehicleDetail.maxWeight)}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Max volume (m3)</p>
+                <p className='text-muted-foreground'>Thể tích tối đa (m3)</p>
                 <p className='font-medium'>
                   {formatOptionalNumber(vehicleDetail.maxVolume)}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Post office</p>
+                <p className='text-muted-foreground'>Bưu cục</p>
                 <p className='font-medium'>
                   {buildPostOfficeLabel(vehicleDetail)}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Courier staff</p>
+                <p className='text-muted-foreground'>Nhân viên giao nhận</p>
                 <p className='font-medium'>
                   {resolveCourierLabel(vehicleDetail.postOfficeStaffId)}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Created by</p>
-                <p className='font-medium'>{vehicleDetail.createdBy || '--'}</p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Updated by</p>
-                <p className='font-medium'>{vehicleDetail.updatedBy || '--'}</p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Created at</p>
+                <p className='text-muted-foreground'>Thời gian tạo</p>
                 <p className='font-medium'>
                   {formatDateTime(vehicleDetail.createdAt)}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Updated at</p>
+                <p className='text-muted-foreground'>Thời gian cập nhật</p>
                 <p className='font-medium'>
                   {formatDateTime(vehicleDetail.updatedAt)}
                 </p>
@@ -148,7 +136,7 @@ export const VehicleDetailDialog: React.FC<VehicleDetailDialogProps> = ({
           </div>
         ) : (
           <p className='text-sm text-muted-foreground'>
-            Vehicle details are unavailable.
+            Không có dữ liệu chi tiết phương tiện.
           </p>
         )}
 
@@ -158,12 +146,12 @@ export const VehicleDetailDialog: React.FC<VehicleDetailDialogProps> = ({
             variant='outline'
             onClick={() => onOpenChange(false)}
           >
-            Close
+            Đóng
           </Button>
           {canManageVehicles && vehicleDetail && (
             <Button type='button' onClick={onEditFromDetails}>
               <Pencil className='mr-2 h-4 w-4' />
-              Edit vehicle
+              Sửa phương tiện
             </Button>
           )}
         </DialogFooter>

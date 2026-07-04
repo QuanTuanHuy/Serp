@@ -19,6 +19,7 @@ import lombok.NoArgsConstructor;
 import serp.project.tms_order.enums.DeliveryRequestTime;
 import serp.project.tms_order.enums.FeePayer;
 import serp.project.tms_order.enums.OrderPickupMethod;
+import serp.project.tms_order.enums.OrderProductCategory;
 import serp.project.tms_order.enums.OrderType;
 
 import java.time.LocalDateTime;
@@ -134,6 +135,10 @@ public class CreateOrderRequest {
     @JsonAlias("orderType")
     @NotNull
     private OrderType orderType;
+
+    @JsonProperty("order_product_category")
+    @JsonAlias("orderProductCategory")
+    private OrderProductCategory orderProductCategory;
 
     @JsonProperty("fee_payer")
     @JsonAlias("feePayer")

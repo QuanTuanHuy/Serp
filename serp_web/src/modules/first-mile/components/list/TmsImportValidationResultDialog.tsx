@@ -264,12 +264,12 @@ export function TmsImportValidationResultPanel<T extends object>({
             <XCircle className='h-5 w-5 text-destructive' />
           )}
           {isSuccess
-            ? 'Your Excel file is ready to import'
-            : 'Review Excel rows before importing'}
+            ? 'Tệp Excel đã sẵn sàng để nhập'
+            : 'Kiểm tra các dòng Excel trước khi nhập'}
         </DialogTitle>
         <DialogDescription>
-          Green rows are valid. Red rows need changes; review the Errors column,
-          update the Excel file, then import the {entityLabel} file again.
+          Dòng màu xanh là hợp lệ. Dòng màu đỏ cần chỉnh sửa; hãy xem cột Lỗi,
+          cập nhật tệp Excel rồi nhập lại tệp {entityLabel}.
         </DialogDescription>
       </DialogHeader>
 
@@ -278,13 +278,13 @@ export function TmsImportValidationResultPanel<T extends object>({
           <Table className='min-w-max'>
             <TableHeader className='sticky top-0 z-10 bg-background'>
               <TableRow>
-                <TableHead className='min-w-20'>Row</TableHead>
+                <TableHead className='min-w-20'>Dòng</TableHead>
                 {columns.map(([key, label]) => (
                   <TableHead key={key} className='min-w-44'>
                     {label || key}
                   </TableHead>
                 ))}
-                <TableHead className='min-w-72'>Errors</TableHead>
+                <TableHead className='min-w-72'>Lỗi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -327,7 +327,7 @@ export function TmsImportValidationResultPanel<T extends object>({
                       >
                         {hasErrors
                           ? Array.from(new Set(row.errors)).join(' ')
-                          : 'OK'}
+                          : 'Hợp lệ'}
                       </TableCell>
                     </TableRow>
                   );
@@ -340,7 +340,7 @@ export function TmsImportValidationResultPanel<T extends object>({
                   >
                     {errorMessages.length > 0
                       ? errorMessages.join(' ')
-                      : 'No parsed rows are available.'}
+                      : 'Không có dòng dữ liệu đã phân tích.'}
                   </TableCell>
                 </TableRow>
               )}
@@ -356,7 +356,7 @@ export function TmsImportValidationResultPanel<T extends object>({
             onClick={onBack}
             disabled={isImporting}
           >
-            Back
+            Quay lại
           </Button>
         ) : null}
         <Button
@@ -365,7 +365,7 @@ export function TmsImportValidationResultPanel<T extends object>({
           onClick={onClose}
           disabled={isImporting}
         >
-          Cancel
+          Hủy
         </Button>
         <Button
           type='button'
@@ -379,7 +379,7 @@ export function TmsImportValidationResultPanel<T extends object>({
           ) : (
             <FileUp className='mr-2 h-4 w-4' />
           )}
-          Confirm import
+          Xác nhận nhập
         </Button>
       </DialogFooter>
     </>

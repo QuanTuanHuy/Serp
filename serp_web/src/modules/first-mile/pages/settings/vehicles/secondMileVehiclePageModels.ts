@@ -32,17 +32,17 @@ export const VEHICLE_STATUS_OPTIONS: Array<{
   value: SecondMileVehicleStatus;
   label: string;
 }> = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'INACTIVE', label: 'Inactive' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'ACTIVE', label: 'Đang hoạt động' },
+  { value: 'INACTIVE', label: 'Ngừng hoạt động' },
+  { value: 'MAINTENANCE', label: 'Bảo trì' },
 ];
 
 export const VEHICLE_TYPE_OPTIONS: Array<{
   value: SecondMileVehicleType;
   label: string;
 }> = [
-  { value: 'TRUCK', label: 'Truck' },
-  { value: 'VAN', label: 'Van' },
+  { value: 'TRUCK', label: 'Xe tải' },
+  { value: 'VAN', label: 'Xe van' },
 ];
 
 export const DEFAULT_VEHICLE_FORM: VehicleFormState = {
@@ -72,11 +72,12 @@ export const getStatusBadgeVariant = (
 };
 
 export const formatStatusLabel = (status: SecondMileVehicleStatus): string =>
+  VEHICLE_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
   status.replaceAll('_', ' ');
 
 export const formatVehicleType = (
   vehicleType: SecondMileVehicleType
-): string => (vehicleType === 'TRUCK' ? 'Truck' : 'Van');
+): string => (vehicleType === 'TRUCK' ? 'Xe tải' : 'Xe van');
 
 export const formatDateTime = (value?: string): string => {
   if (!value) {
@@ -104,7 +105,7 @@ export const buildHubLabel = (
   hubById?: Record<number, Hub>
 ): string => {
   if (!hubId) {
-    return 'Not assigned';
+    return 'Chưa phân công';
   }
 
   const hub = hubById?.[hubId];
@@ -183,36 +184,36 @@ export const validateVehicleForm = (
   values: VehicleFormState
 ): string | null => {
   if (!values.licensePlate.trim()) {
-    return 'License plate is required.';
+    return 'Vui lòng nhập biển số xe.';
   }
 
   const maxBags = parseNonNegativeInteger(values.maxBags);
   if (maxBags === undefined) {
-    return 'Max bags must be a non-negative integer.';
+    return 'Số bao tối đa phải là số nguyên không âm.';
   }
 
   const maxWeight = parseOptionalNumber(values.maxWeight);
   if (maxWeight === undefined || maxWeight <= 0) {
-    return 'Max weight must be a number greater than 0.';
+    return 'Tải trọng tối đa phải là số lớn hơn 0.';
   }
 
   const maxVolume = parseOptionalNumber(values.maxVolume);
   if (maxVolume === undefined || maxVolume <= 0) {
-    return 'Max volume must be a number greater than 0.';
+    return 'Thể tích tối đa phải là số lớn hơn 0.';
   }
 
   if (
     !values.hubId.trim() ||
     parseOptionalPositiveInteger(values.hubId) === undefined
   ) {
-    return 'Hub is required.';
+    return 'Vui lòng chọn hub.';
   }
 
   if (
     values.assignedStaffId.trim() &&
     parseOptionalPositiveInteger(values.assignedStaffId) === undefined
   ) {
-    return 'Driver must be selected from the list.';
+    return 'Tài xế phải được chọn từ danh sách.';
   }
 
   return null;

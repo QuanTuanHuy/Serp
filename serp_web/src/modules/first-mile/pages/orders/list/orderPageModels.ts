@@ -9,6 +9,7 @@ import type {
   FirstMileFeePayer,
   FirstMileOrderDetail,
   FirstMileOrderPickupMethod,
+  FirstMileOrderProductCategory,
   FirstMileOrderProductItem,
   FirstMileOrderStatus,
   FirstMileOrderType,
@@ -93,6 +94,7 @@ export interface CreateOrderFormState {
   deliveryRequestTime: FirstMileDeliveryRequestTime;
   pickupMethod: FirstMileOrderPickupMethod;
   orderType: FirstMileOrderType;
+  orderProductCategory: FirstMileOrderProductCategory;
   feePayer: FirstMileFeePayer;
   isCod: 'true' | 'false';
   dimensionLengthCm: string;
@@ -128,6 +130,7 @@ export const DEFAULT_CREATE_ORDER_FORM: CreateOrderFormState = {
   deliveryRequestTime: 'BUSINESS_HOURS',
   pickupMethod: 'COURIER_PICKUP',
   orderType: 'STANDARD_ORDER',
+  orderProductCategory: 'SOLID',
   feePayer: 'SENDER',
   isCod: 'false',
   dimensionLengthCm: '',
@@ -167,6 +170,31 @@ export const FEE_PAYER_OPTIONS: Array<{
   { value: 'SENDER', label: 'Sender' },
   { value: 'RECEIVER', label: 'Receiver' },
 ];
+
+export const ORDER_PRODUCT_CATEGORY_OPTIONS: Array<{
+  value: FirstMileOrderProductCategory;
+  label: string;
+}> = [
+  { value: 'SOLID', label: 'Hàng thường' },
+  { value: 'HIGH_VALUE', label: 'Hàng giá trị cao' },
+  { value: 'FRAGILE', label: 'Hàng dễ vỡ' },
+  { value: 'IMPORTANT_DOCUMENT', label: 'Chứng từ quan trọng' },
+  { value: 'OVERSIZED', label: 'Hàng quá khổ' },
+  { value: 'LIQUID', label: 'Chất lỏng' },
+  { value: 'MAGNETIC_BATTERY', label: 'Từ tính/pin' },
+];
+
+export const getOrderProductCategoryLabel = (
+  category?: FirstMileOrderProductCategory
+): string => {
+  if (!category) {
+    return '--';
+  }
+  return (
+    ORDER_PRODUCT_CATEGORY_OPTIONS.find((option) => option.value === category)
+      ?.label ?? category
+  );
+};
 
 export const resolveOrderAccessScope = (roles: string[]): OrderAccessScope => {
   if (roles.includes('TMS_ADMIN')) {
@@ -370,6 +398,7 @@ export const mapOrderToFormState = (
     deliveryRequestTime: order.deliveryRequestTime || 'BUSINESS_HOURS',
     pickupMethod: order.pickupMethod || 'COURIER_PICKUP',
     orderType: order.orderType || 'STANDARD_ORDER',
+    orderProductCategory: order.orderProductCategory || 'SOLID',
     feePayer: order.feePayer || 'SENDER',
     isCod:
       order.codAmount !== undefined &&
