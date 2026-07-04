@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components';
 import { Badge } from '@/shared/components/ui';
 import {
@@ -241,7 +242,10 @@ export default function PurchaseDashboardPage() {
                     statusStyles.APPROVED;
                   return (
                     <li key={o.id} className='text-sm'>
-                      <div className='flex items-center justify-between'>
+                      <Link
+                        href={`/purchase/purchase-orders/${o.id}`}
+                        className='flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                      >
                         <div>
                           <div className='font-medium'>
                             {o.orderName || o.id}
@@ -266,7 +270,7 @@ export default function PurchaseDashboardPage() {
                             {s.label}
                           </Badge>
                         </div>
-                      </div>
+                      </Link>
                     </li>
                   );
                 })}
@@ -292,7 +296,10 @@ export default function PurchaseDashboardPage() {
                     statusStyles.CREATED;
                   return (
                     <li key={o.id} className='text-sm'>
-                      <div className='flex items-center justify-between'>
+                      <Link
+                        href={`/purchase/purchase-orders/${o.id}`}
+                        className='flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                      >
                         <div>
                           <div className='font-medium'>
                             {o.orderName || o.id}
@@ -317,7 +324,7 @@ export default function PurchaseDashboardPage() {
                             {s.label}
                           </Badge>
                         </div>
-                      </div>
+                      </Link>
                     </li>
                   );
                 })}

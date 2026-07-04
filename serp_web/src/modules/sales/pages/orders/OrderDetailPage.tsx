@@ -83,7 +83,7 @@ const STATUS_CONFIG = {
     icon: XCircle,
   },
   FULLY_DELIVERED: {
-    label: 'Đã giao hàng',
+    label: 'Hoàn thành',
     color: 'text-purple-700 dark:text-purple-400',
     bgColor: 'bg-purple-100 dark:bg-purple-900/30',
     icon: Package,

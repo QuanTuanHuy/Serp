@@ -307,31 +307,6 @@ export const ShipmentListPage: React.FC<ShipmentListPageProps> = ({
                   <option value=''>Tất cả trạng thái</option>
                   <option value='CREATED'>Đã tạo</option>
                   <option value='IMPORTED'>Đã nhập kho</option>
-                  <option value='EXPORTED'>Đã xuất kho</option>
-                </select>
-              </div>
-
-              <div>
-                <label className='text-sm font-medium mb-1.5 block'>
-                  Loại phiếu
-                </label>
-                <select
-                  value={typeFilter}
-                  onChange={(e) => {
-                    const value = e.target.value as ShipmentType | '';
-                    setTypeFilter(value);
-                    dispatch(
-                      setShipmentFilters({
-                        ...filters,
-                        shipmentTypeId: value || undefined,
-                      })
-                    );
-                  }}
-                  className='w-full px-3 py-2 border rounded-lg bg-background'
-                >
-                  <option value=''>Tất cả loại</option>
-                  <option value='INBOUND'>Nhập kho</option>
-                  <option value='OUTBOUND'>Xuất kho</option>
                 </select>
               </div>
             </div>

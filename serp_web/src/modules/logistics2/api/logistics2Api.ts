@@ -761,7 +761,11 @@ export const logistics2Api = api.injectEndpoints({
         };
       },
       extraOptions: LOGISTICS2_SERVICE,
-      invalidatesTags: [{ type: 'logistics2/VehicleShipper', id: 'LIST' }],
+      invalidatesTags: (result, error, arg) => [
+        { type: 'logistics2/VehicleShipper', id: 'LIST' },
+        { type: 'logistics2/Vehicle', id: 'LIST' },
+        { type: 'logistics2/Vehicle', id: arg.vehicleId },
+      ],
     }),
 
     requestCancelVehicleShipper: builder.mutation<
@@ -776,6 +780,7 @@ export const logistics2Api = api.injectEndpoints({
       invalidatesTags: (result, error, vehicleShipperId) => [
         { type: 'logistics2/VehicleShipper', id: vehicleShipperId },
         { type: 'logistics2/VehicleShipper', id: 'LIST' },
+        { type: 'logistics2/Vehicle', id: 'LIST' },
       ],
     }),
 
@@ -788,6 +793,7 @@ export const logistics2Api = api.injectEndpoints({
       invalidatesTags: (result, error, vehicleShipperId) => [
         { type: 'logistics2/VehicleShipper', id: vehicleShipperId },
         { type: 'logistics2/VehicleShipper', id: 'LIST' },
+        { type: 'logistics2/Vehicle', id: 'LIST' },
       ],
     }),
   }),
