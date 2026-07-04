@@ -13,7 +13,7 @@ import {
   AvatarImage,
   Badge,
   Button,
-  ScrollArea,
+  Input,
   Separator,
   Sheet,
   SheetContent,
@@ -67,6 +67,15 @@ export function UserDetailsDrawer({
     user?.status === 'SUSPENDED' ? 'ACTIVE' : ('SUSPENDED' as UserStatus);
 
   const [activeTab, setActiveTab] = useState('overview');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredModules = user?.moduleAccesses?.filter((module) => {
+    const search = searchTerm.toLowerCase();
+    return (
+      module.moduleName?.toLowerCase().includes(search) ||
+      module.moduleCode?.toLowerCase().includes(search)
+    );
+  }) ?? [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -200,39 +209,52 @@ export function UserDetailsDrawer({
                 </TabsContent>
 
                 <TabsContent value='access' className='space-y-4 focus-visible:ring-0 focus-visible:ring-offset-0 mt-0'>
-                  <section className='space-y-3'>
-                    <h3 className='text-sm font-semibold'>Module access</h3>
-                    <ScrollArea className='max-h-56 rounded-md border'>
-                      <div className='divide-y'>
-                        {user.moduleAccesses.length > 0 ? (
-                          user.moduleAccesses.map((module) => (
-                            <div
-                              key={`${module.moduleId}-${module.moduleCode}`}
-                              className='flex items-center justify-between gap-3 p-3'
-                            >
-                              <div className='min-w-0'>
-                                <p className='text-sm font-medium'>
-                                  {module.moduleName || module.moduleCode}
-                                </p>
-                                <p className='text-xs text-muted-foreground'>
-                                  {module.moduleCode}
-                                </p>
-                              </div>
-                              <Badge
-                                variant={module.isActive ? 'default' : 'secondary'}
-                              >
-                                {module.isActive ? 'Enabled' : 'Disabled'}
-                              </Badge>
+                  <div className='space-y-4'>
+                    <div className='flex items-center gap-2'>
+                      <Input
+                        placeholder='Search modules...'
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className='flex-1 h-9 rounded-lg'
+                      />
+                    </div>
+
+                    <div className='rounded-xl border bg-card overflow-hidden divide-y divide-border/60'>
+                      {filteredModules.length > 0 ? (
+                        filteredModules.map((module) => (
+                          <div
+                            key={`${module.moduleId}-${module.moduleCode}`}
+                            className='flex items-center justify-between gap-3 p-3.5 hover:bg-muted/30 transition-colors'
+                          >
+                            <div className='min-w-0'>
+                              <p className='text-sm font-semibold text-foreground truncate'>
+                                {module.moduleName || module.moduleCode}
+                              </p>
+                              <p className='text-xs text-muted-foreground mt-0.5'>
+                                {module.moduleCode}
+                              </p>
                             </div>
-                          ))
-                        ) : (
-                          <div className='p-3 text-sm text-muted-foreground'>
-                            No module access records.
+                            <Badge
+                              variant='outline'
+                              className={
+                                module.isActive
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 font-medium hover:bg-emerald-50/85'
+                                  : 'bg-muted/80 text-muted-foreground border-border/50 font-medium'
+                              }
+                            >
+                              {module.isActive ? 'Enabled' : 'Disabled'}
+                            </Badge>
                           </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </section>
+                        ))
+                      ) : (
+                        <div className='p-8 text-center text-sm text-muted-foreground'>
+                          {user.moduleAccesses.length > 0
+                            ? `No module accesses found matching "${searchTerm}".`
+                            : 'No module access records.'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>
