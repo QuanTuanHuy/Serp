@@ -46,9 +46,12 @@ func (s *ScheduleTaskClientAdapter) GetScheduleTasksByPlanID(ctx context.Context
 	return &result, nil
 }
 
-func NewScheduleTaskClientAdapter(props *properties.ExternalServiceProperties) port.IScheduleTaskClientPort {
+func NewScheduleTaskClientAdapter(
+	props *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IScheduleTaskClientPort {
 	baseURL := "http://" + props.PTMSchedule.Host + ":" + props.PTMSchedule.Port + "/ptm-schedule"
-	apiClient := utils.NewBaseAPIClient(baseURL, props.PTMSchedule.Timeout)
+	apiClient := clientFactory.New(baseURL, props.PTMSchedule.Timeout)
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 
 	return &ScheduleTaskClientAdapter{

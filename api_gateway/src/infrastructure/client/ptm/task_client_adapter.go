@@ -181,9 +181,12 @@ func (t *TaskClientAdapter) DeleteTask(ctx context.Context, taskID int64) (*resp
 	return &result, nil
 }
 
-func NewTaskClientAdapter(taskManagerProps *properties.ExternalServiceProperties) port.ITaskClientPort {
+func NewTaskClientAdapter(
+	taskManagerProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.ITaskClientPort {
 	baseURL := "http://" + taskManagerProps.PTMTask.Host + ":" + taskManagerProps.PTMTask.Port + "/ptm-task"
-	apiClient := utils.NewBaseAPIClient(baseURL, taskManagerProps.PTMTask.Timeout)
+	apiClient := clientFactory.New(baseURL, taskManagerProps.PTMTask.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

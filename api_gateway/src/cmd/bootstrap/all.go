@@ -56,10 +56,12 @@ func CoreInfrastructure() fx.Option {
 		golib.ProvideProps(properties.NewCorsProperties),
 		golib.ProvideProps(properties.NewRateLimitProperties),
 		golib.ProvideProps(properties.NewResilienceProperties),
+		golib.ProvideProps(properties.NewTransportProperties),
 
 		// Provide utilities
 		fx.Provide(utils.NewJWTUtils),
 		fx.Provide(utils.NewKeycloakJwksUtils),
+		fx.Provide(utils.NewBaseAPIClientFactory),
 		fx.Provide(middleware.NewJWTMiddleware),
 		fx.Provide(middleware.NewCorsMiddleware),
 		fx.Provide(common.NewGenericProxyController),

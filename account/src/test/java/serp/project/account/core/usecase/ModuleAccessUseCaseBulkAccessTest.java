@@ -274,7 +274,7 @@ class ModuleAccessUseCaseBulkAccessTest {
     }
 
     @Test
-    void bulkRevokeUsersFromModuleShouldRevokeActiveAccessAndSkipMissingAccess() {
+    void bulkRevokeUsersFromModuleShouldRevokeExistingAccessAndSkipMissingAccess() {
         var request = BulkModuleAccessUsersRequest.builder()
                 .userIds(List.of(1L, 2L, 3L))
                 .build();
@@ -294,19 +294,56 @@ class ModuleAccessUseCaseBulkAccessTest {
         when(userModuleAccessService.getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(
                 List.of(1L, 2L, 3L), 20L, 10L))
                 .thenReturn(List.of(activeAccess, inactiveAccess));
-        when(userModuleAccessService.saveAll(List.of(activeAccess))).thenReturn(List.of(activeAccess));
+        when(userModuleAccessService.saveAll(List.of(activeAccess, inactiveAccess)))
+                .thenReturn(List.of(activeAccess, inactiveAccess));
         when(roleService.getRolesByModuleId(20L)).thenReturn(List.of(moduleRole));
 
         var response = useCase.bulkRevokeUsersFromModule(10L, 20L, request, 99L);
 
         BulkModuleAccessResponse data = (BulkModuleAccessResponse) response.getData();
         assertEquals(200, response.getCode());
-        assertEquals(List.of(1L), data.getRevokedUserIds());
-        assertEquals(2, data.getSkippedCount());
+        assertEquals(List.of(1L, 2L), data.getRevokedUserIds());
+        assertEquals(1, data.getSkippedCount());
         assertEquals("USER_MODULE_ACCESS_NOT_FOUND", data.getSkippedUsers().get(0).getReason());
-        assertEquals("USER_MODULE_ACCESS_NOT_FOUND", data.getSkippedUsers().get(1).getReason());
         assertEquals(false, activeAccess.getIsActive());
-        verify(userModuleAccessService).saveAll(List.of(activeAccess));
+        assertEquals(false, inactiveAccess.getIsActive());
+        verify(userModuleAccessService).saveAll(List.of(activeAccess, inactiveAccess));
+        verify(combineRoleService).removeRolesFromUsers(List.of(user1, user2), List.of(moduleRole));
+        verify(userSyncPublisher).publishUserSync(10L, 1L);
+        verify(userSyncPublisher).publishUserSync(10L, 2L);
+        verify(keycloakUserService).logoutUser("kc-1");
+        verify(keycloakUserService).logoutUser("kc-2");
+    }
+
+    @Test
+    void bulkRevokeUsersFromModuleShouldRevokeExistingExpiredAccessLikeSingleRevoke() {
+        var request = BulkModuleAccessUsersRequest.builder()
+                .userIds(List.of(1L))
+                .build();
+        RoleEntity moduleRole = RoleEntity.builder()
+                .id(10L)
+                .name("MODULE_USER")
+                .moduleId(20L)
+                .build();
+        UserEntity user1 = user(1L, "kc-1");
+        UserModuleAccessEntity expiredAccess = access(1L, true);
+        expiredAccess.setExpiresAt(System.currentTimeMillis() - 1_000L);
+
+        when(userService.getUsersByOrganizationIdAndIds(10L, List.of(1L)))
+                .thenReturn(List.of(user1));
+        when(userModuleAccessService.getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(
+                List.of(1L), 20L, 10L))
+                .thenReturn(List.of(expiredAccess));
+        when(userModuleAccessService.saveAll(List.of(expiredAccess))).thenReturn(List.of(expiredAccess));
+        when(roleService.getRolesByModuleId(20L)).thenReturn(List.of(moduleRole));
+
+        var response = useCase.bulkRevokeUsersFromModule(10L, 20L, request, 99L);
+
+        BulkModuleAccessResponse data = (BulkModuleAccessResponse) response.getData();
+        assertEquals(List.of(1L), data.getRevokedUserIds());
+        assertEquals(0, data.getSkippedCount());
+        assertEquals(false, expiredAccess.getIsActive());
+        verify(userModuleAccessService).saveAll(List.of(expiredAccess));
         verify(combineRoleService).removeRolesFromUsers(List.of(user1), List.of(moduleRole));
         verify(userSyncPublisher).publishUserSync(10L, 1L);
         verify(keycloakUserService).logoutUser("kc-1");

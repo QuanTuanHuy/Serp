@@ -199,9 +199,12 @@ func (m *ModuleClientAdapter) GetMyModules(ctx context.Context) (*response.BaseR
 	return &result, nil
 }
 
-func NewModuleClientAdapter(authProps *properties.ExternalServiceProperties) port.IModuleClientPort {
+func NewModuleClientAdapter(
+	authProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IModuleClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, authProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

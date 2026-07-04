@@ -187,9 +187,12 @@ func (a *AuthClientAdapter) ChangePassword(ctx context.Context, req *request.Cha
 	return &result, nil
 }
 
-func NewAuthClientAdapter(authProps *properties.ExternalServiceProperties) port.IAuthClientPort {
+func NewAuthClientAdapter(
+	authProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IAuthClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, authProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

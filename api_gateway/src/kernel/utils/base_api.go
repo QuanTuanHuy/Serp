@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golibs-starter/golib/log"
+	"github.com/serp/api-gateway/src/kernel/properties"
 )
 
 type HTTPClient interface {
@@ -21,6 +22,10 @@ type BaseAPIClient struct {
 	client  HTTPClient
 	timeout time.Duration
 	baseURL string
+}
+
+type BaseAPIClientFactory struct {
+	transportProps *properties.TransportProperties
 }
 
 type HTTPRequestConfig struct {
@@ -37,15 +42,36 @@ type HTTPResponse struct {
 	Headers    http.Header
 }
 
+func NewBaseAPIClientFactory(transportProps *properties.TransportProperties) *BaseAPIClientFactory {
+	return &BaseAPIClientFactory{transportProps: transportProps}
+}
+
+func (f *BaseAPIClientFactory) New(baseURL string, timeout time.Duration) *BaseAPIClient {
+	return NewBaseAPIClientWithHTTPClient(NewHTTPClient(timeout, f.transportProps), baseURL, timeout)
+}
+
 func NewBaseAPIClient(baseURL string, timeout time.Duration) *BaseAPIClient {
 	if timeout == 0 {
 		timeout = 30 * time.Second
 	}
 
 	return &BaseAPIClient{
-		client: &http.Client{
-			Timeout: timeout,
-		},
+		client:  NewHTTPClient(timeout, properties.NewDefaultTransportProperties()),
+		timeout: timeout,
+		baseURL: baseURL,
+	}
+}
+
+func NewBaseAPIClientWithHTTPClient(client *http.Client, baseURL string, timeout time.Duration) *BaseAPIClient {
+	if timeout == 0 {
+		timeout = 30 * time.Second
+	}
+	if client == nil {
+		client = NewHTTPClient(timeout, properties.NewDefaultTransportProperties())
+	}
+
+	return &BaseAPIClient{
+		client:  client,
 		timeout: timeout,
 		baseURL: baseURL,
 	}

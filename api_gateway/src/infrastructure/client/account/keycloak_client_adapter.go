@@ -48,9 +48,12 @@ func (k *KeycloakClientAdapter) GetKeycloakClientSecret(ctx context.Context, cli
 	return &result, nil
 }
 
-func NewKeycloakClientAdapter(keycloakProps *properties.ExternalServiceProperties) port.IKeycloakClientPort {
+func NewKeycloakClientAdapter(
+	keycloakProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IKeycloakClientPort {
 	baseUrl := "http://" + keycloakProps.AccountService.Host + ":" + keycloakProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, keycloakProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, keycloakProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

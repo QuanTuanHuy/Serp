@@ -140,9 +140,12 @@ func (r *RoleClientAdapter) UpdateRole(ctx context.Context, roleId int64, req *r
 	return &result, nil
 }
 
-func NewRoleClientAdapter(authProps *properties.ExternalServiceProperties) port.IRoleClientPort {
+func NewRoleClientAdapter(
+	authProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IRoleClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, authProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

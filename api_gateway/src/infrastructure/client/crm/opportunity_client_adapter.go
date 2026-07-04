@@ -258,11 +258,14 @@ func (o *OpportunityClientAdapter) DeleteOpportunity(ctx context.Context, opport
 	return &result, nil
 }
 
-func NewOpportunityClientAdapter(props *properties.ExternalServiceProperties) port.IOpportunityClientPort {
+func NewOpportunityClientAdapter(
+	props *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IOpportunityClientPort {
 	baseURL := fmt.Sprintf("http://%s:%s/crm", props.CrmService.Host, props.CrmService.Port)
 
 	return &OpportunityClientAdapter{
-		apiClient:      utils.NewBaseAPIClient(baseURL, props.CrmService.Timeout),
+		apiClient:      clientFactory.New(baseURL, props.CrmService.Timeout),
 		circuitBreaker: utils.NewDefaultCircuitBreaker(),
 	}
 }

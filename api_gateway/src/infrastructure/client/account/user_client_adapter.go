@@ -160,9 +160,12 @@ func (u *UserClientAdapter) UpdateUserInfo(ctx context.Context, userId int64, re
 	return &result, nil
 }
 
-func NewUserClientAdapter(authProps *properties.ExternalServiceProperties) port.IUserClientPort {
+func NewUserClientAdapter(
+	authProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IUserClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, authProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

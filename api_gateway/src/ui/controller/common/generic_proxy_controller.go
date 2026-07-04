@@ -48,6 +48,7 @@ type GenericProxyController struct {
 func NewGenericProxyController(
 	svcProps *properties.ExternalServiceProperties,
 	resProps *properties.ResilienceProperties,
+	transportProps *properties.TransportProperties,
 ) *GenericProxyController {
 	routes := buildServiceRoutes(svcProps)
 
@@ -56,7 +57,7 @@ func NewGenericProxyController(
 	}
 
 	for _, route := range routes {
-		proxy, err := controller.buildProxy(route, resProps)
+		proxy, err := controller.buildProxy(route, resProps, transportProps)
 		if err != nil {
 			log.Warn("Failed to build proxy for service %s: %v", route.Name, err)
 			continue
@@ -185,7 +186,11 @@ func (c *GenericProxyController) ProxyHandler(serviceName string) gin.HandlerFun
 }
 
 // buildProxy creates a pre-configured reverse proxy with circuit breaker and retry support.
-func (c *GenericProxyController) buildProxy(route ServiceRoute, resProps *properties.ResilienceProperties) (*httputil.ReverseProxy, error) {
+func (c *GenericProxyController) buildProxy(
+	route ServiceRoute,
+	resProps *properties.ResilienceProperties,
+	transportProps *properties.TransportProperties,
+) (*httputil.ReverseProxy, error) {
 	remote, err := url.Parse(route.Target)
 	if err != nil {
 		return nil, fmt.Errorf("invalid target URL for %s: %w", route.Name, err)
@@ -195,7 +200,8 @@ func (c *GenericProxyController) buildProxy(route ServiceRoute, resProps *proper
 
 	proxy := httputil.NewSingleHostReverseProxy(remote)
 
-	proxy.Transport = utils.NewResilientTransport(
+	proxy.Transport = utils.NewResilientTransportWithBase(
+		utils.NewUpstreamTransport(transportProps),
 		cb,
 		resProps.MaxRetries,
 		resProps.InitialDelay,

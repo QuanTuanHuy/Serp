@@ -159,9 +159,12 @@ func (s *ScheduleEventClientAdapter) SplitEvent(ctx context.Context, eventID int
 	return &result, nil
 }
 
-func NewScheduleEventClientAdapter(props *properties.ExternalServiceProperties) port.IScheduleEventClientPort {
+func NewScheduleEventClientAdapter(
+	props *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IScheduleEventClientPort {
 	baseURL := "http://" + props.PTMSchedule.Host + ":" + props.PTMSchedule.Port + "/ptm-schedule"
-	apiClient := utils.NewBaseAPIClient(baseURL, props.PTMSchedule.Timeout)
+	apiClient := clientFactory.New(baseURL, props.PTMSchedule.Timeout)
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 
 	return &ScheduleEventClientAdapter{
