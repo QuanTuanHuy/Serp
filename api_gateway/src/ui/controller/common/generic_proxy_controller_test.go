@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package common
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -340,6 +341,92 @@ func TestGenericProxyController_CRM_POSTDoesNotRetry(t *testing.T) {
 	}
 }
 
+func newBenchmarkGenericProxyGateway(b *testing.B, responseBody []byte) (*httptest.Server, *http.Client) {
+	b.Helper()
+	gin.SetMode(gin.TestMode)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(responseBody)
+	}))
+
+	u, err := url.Parse(upstream.URL)
+	if err != nil {
+		upstream.Close()
+		b.Fatalf("parse upstream URL: %v", err)
+	}
+
+	resProps := defaultResilienceProps()
+	resProps.MaxRetries = 0
+
+	controller := NewGenericProxyController(
+		&properties.ExternalServiceProperties{
+			CrmService: properties.ServiceProperty{Host: u.Hostname(), Port: u.Port()},
+		},
+		resProps,
+	)
+
+	r := gin.New()
+	r.Any("/crm/api/v1/*proxyPath", controller.ProxyHandler("crm"))
+
+	gateway := httptest.NewServer(r)
+	b.Cleanup(func() {
+		gateway.Close()
+		upstream.Close()
+	})
+
+	return gateway, &http.Client{}
+}
+
+func benchmarkGenericProxyGET(b *testing.B, responseBody []byte) {
+	gateway, client := newBenchmarkGenericProxyGateway(b, responseBody)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		resp, err := client.Get(gateway.URL + "/crm/api/v1/leads?stage=open")
+		if err != nil {
+			b.Fatalf("request failed: %v", err)
+		}
+		_, _ = io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			b.Fatalf("expected %d, got %d", http.StatusOK, resp.StatusCode)
+		}
+	}
+}
+
+func benchmarkGenericProxyPOST(b *testing.B, requestBody []byte, responseBody []byte) {
+	gateway, client := newBenchmarkGenericProxyGateway(b, responseBody)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		req, err := http.NewRequest(
+			http.MethodPost,
+			gateway.URL+"/crm/api/v1/leads",
+			bytes.NewReader(requestBody),
+		)
+		if err != nil {
+			b.Fatalf("new request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			b.Fatalf("request failed: %v", err)
+		}
+		_, _ = io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			b.Fatalf("expected %d, got %d", http.StatusOK, resp.StatusCode)
+		}
+	}
+}
+
 func BenchmarkGenericProxyController_CRM_GET_200(b *testing.B) {
 	gin.SetMode(gin.TestMode)
 
@@ -381,4 +468,28 @@ func BenchmarkGenericProxyController_CRM_GET_200(b *testing.B) {
 			b.Fatalf("expected %d, got %d", http.StatusOK, resp.StatusCode)
 		}
 	}
+}
+
+func BenchmarkGenericProxyController_CRM_GET_SmallJSON(b *testing.B) {
+	benchmarkGenericProxyGET(b, []byte(`{"code":200,"status":"success","data":{"id":1}}`))
+}
+
+func BenchmarkGenericProxyController_CRM_GET_MediumJSON(b *testing.B) {
+	item := `{"id":1,"name":"lead","stage":"open","ownerId":1001,"amount":123456789}`
+	body := []byte(`{"code":200,"status":"success","data":[` + strings.Repeat(item+",", 49) + item + `]}`)
+	benchmarkGenericProxyGET(b, body)
+}
+
+func BenchmarkGenericProxyController_CRM_POST_SmallJSON(b *testing.B) {
+	benchmarkGenericProxyPOST(
+		b,
+		[]byte(`{"name":"lead","stage":"open"}`),
+		[]byte(`{"code":200,"status":"success","data":{"id":1}}`),
+	)
+}
+
+func BenchmarkGenericProxyController_CRM_POST_MediumJSON(b *testing.B) {
+	requestBody := []byte(`{"name":"lead","notes":"` + strings.Repeat("x", 4096) + `"}`)
+	responseBody := []byte(`{"code":200,"status":"success","data":{"id":1}}`)
+	benchmarkGenericProxyPOST(b, requestBody, responseBody)
 }
