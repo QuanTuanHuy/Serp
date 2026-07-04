@@ -154,6 +154,49 @@ export const settingsModulesApi = api.injectEndpoints({
       ],
     }),
 
+    bulkAssignUsersToModule: build.mutation<
+      ApiResponse<any>,
+      {
+        organizationId: number;
+        moduleId: number;
+        userIds: number[];
+        roleId?: number;
+      }
+    >({
+      query: ({ organizationId, moduleId, userIds, roleId }) => ({
+        url: `/organizations/${organizationId}/modules/${moduleId}/users/bulk`,
+        method: 'POST',
+        body: { userIds, roleId },
+      }),
+      transformResponse: createApiResponseTransform<any>(),
+      invalidatesTags: (_result, _error, { moduleId }) => [
+        { type: 'settings/Module', id: moduleId },
+        { type: 'settings/ModuleUsers', id: moduleId },
+        { type: 'settings/Module', id: 'LIST' },
+      ],
+    }),
+
+    bulkRevokeUsersFromModule: build.mutation<
+      ApiResponse<any>,
+      {
+        organizationId: number;
+        moduleId: number;
+        userIds: number[];
+      }
+    >({
+      query: ({ organizationId, moduleId, userIds }) => ({
+        url: `/organizations/${organizationId}/modules/${moduleId}/users/bulk-revoke`,
+        method: 'POST',
+        body: { userIds },
+      }),
+      transformResponse: createApiResponseTransform<any>(),
+      invalidatesTags: (_result, _error, { moduleId }) => [
+        { type: 'settings/Module', id: moduleId },
+        { type: 'settings/ModuleUsers', id: moduleId },
+        { type: 'settings/Module', id: 'LIST' },
+      ],
+    }),
+
     requestMoreModules: build.mutation<
       { message: string },
       { additionalModuleIds: number[] }
@@ -183,4 +226,6 @@ export const {
   useRequestMoreModulesMutation,
   useUpdateModuleAccessSettingsMutation,
   useBackfillModuleAutoGrantMutation,
+  useBulkAssignUsersToModuleMutation,
+  useBulkRevokeUsersFromModuleMutation,
 } = settingsModulesApi;
