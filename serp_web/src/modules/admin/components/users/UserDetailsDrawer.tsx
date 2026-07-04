@@ -63,8 +63,8 @@ export function UserDetailsDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className='w-full overflow-y-auto p-0 sm:max-w-2xl'>
-        <SheetHeader className='border-b px-6 py-4'>
+      <SheetContent className='w-full p-0 sm:max-w-2xl flex flex-col h-full overflow-hidden'>
+        <SheetHeader className='border-b px-6 py-4 flex-shrink-0'>
           <SheetTitle className='text-lg font-semibold'>
             User details
           </SheetTitle>
@@ -73,15 +73,15 @@ export function UserDetailsDrawer({
           </SheetDescription>
         </SheetHeader>
 
-        <div className='space-y-6 px-6 py-5'>
-          {isLoading || !user ? (
-            <div className='space-y-4'>
-              <Skeleton className='h-20 w-full' />
-              <Skeleton className='h-44 w-full' />
-              <Skeleton className='h-36 w-full' />
-            </div>
-          ) : (
-            <>
+        {isLoading || !user ? (
+          <div className='flex-1 space-y-4 px-6 py-5 overflow-y-auto'>
+            <Skeleton className='h-20 w-full' />
+            <Skeleton className='h-44 w-full' />
+            <Skeleton className='h-36 w-full' />
+          </div>
+        ) : (
+          <>
+            <div className='flex-1 overflow-y-auto px-6 py-5 space-y-6'>
               <section className='flex items-start justify-between gap-4'>
                 <div className='flex items-center gap-3'>
                   <Avatar className='h-12 w-12'>
@@ -111,34 +111,6 @@ export function UserDetailsDrawer({
                       <Badge variant='outline'>{user.userType}</Badge>
                     </div>
                   </div>
-                </div>
-
-                <div className='flex flex-col items-end gap-2'>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    onClick={() => onEdit(user.id, organizationId)}
-                  >
-                    Edit user
-                  </Button>
-                  <Button
-                    type='button'
-                    variant='secondary'
-                    onClick={() => onAccess(user.id, organizationId)}
-                  >
-                    Access
-                  </Button>
-                  <Button
-                    type='button'
-                    variant={
-                      targetStatus === 'SUSPENDED' ? 'destructive' : 'default'
-                    }
-                    onClick={() =>
-                      onToggleStatus(user.id, organizationId, user.status)
-                    }
-                  >
-                    {targetStatus === 'SUSPENDED' ? 'Suspend' : 'Activate'}
-                  </Button>
                 </div>
               </section>
 
@@ -249,9 +221,38 @@ export function UserDetailsDrawer({
                   </div>
                 </ScrollArea>
               </section>
-            </>
-          )}
-        </div>
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className='border-t px-6 py-4 flex items-center justify-end gap-2 bg-background flex-shrink-0'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => onEdit(user.id, organizationId)}
+              >
+                Edit user
+              </Button>
+              <Button
+                type='button'
+                variant='secondary'
+                onClick={() => onAccess(user.id, organizationId)}
+              >
+                Access
+              </Button>
+              <Button
+                type='button'
+                variant={
+                  targetStatus === 'SUSPENDED' ? 'destructive' : 'default'
+                }
+                onClick={() =>
+                  onToggleStatus(user.id, organizationId, user.status)
+                }
+              >
+                {targetStatus === 'SUSPENDED' ? 'Suspend' : 'Activate'}
+              </Button>
+            </div>
+          </>
+        )}
       </SheetContent>
     </Sheet>
   );
