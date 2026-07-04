@@ -128,7 +128,7 @@ export function UserDetailsDrawer({
                 </TabsList>
 
                 <TabsContent value='overview' className='space-y-6 focus-visible:ring-0 focus-visible:ring-offset-0 mt-0'>
-                  <section className='grid gap-3 sm:grid-cols-2'>
+                  <section className='grid gap-4 sm:grid-cols-2 border rounded-xl p-4 bg-muted/20'>
                     <InfoTile
                       icon={<Mail className='h-4 w-4' />}
                       label='Email'
@@ -282,12 +282,14 @@ function InfoTile({
   value?: string | null;
 }) {
   return (
-    <div className='rounded-lg border p-3'>
-      <div className='flex items-center gap-2 text-xs font-medium text-muted-foreground'>
+    <div className='flex items-start gap-2.5 py-1'>
+      <div className='mt-0.5 text-muted-foreground/80 flex-shrink-0'>
         {icon}
-        {label}
       </div>
-      <p className='mt-2 truncate text-sm font-medium'>{value || 'N/A'}</p>
+      <div className='min-w-0'>
+        <span className='text-xs text-muted-foreground block font-medium'>{label}</span>
+        <span className='mt-0.5 text-sm font-medium text-foreground block truncate'>{value || '—'}</span>
+      </div>
     </div>
   );
 }
