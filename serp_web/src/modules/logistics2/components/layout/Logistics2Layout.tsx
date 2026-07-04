@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 layout
-*/
-
 'use client';
 
 import React from 'react';

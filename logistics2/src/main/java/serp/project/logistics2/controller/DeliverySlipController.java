@@ -46,7 +46,7 @@ public class DeliverySlipController {
                 .orElseThrow(() -> new AppException(AppErrorCode.UNAUTHORIZED));
         log.info("[DeliverySlipController] Create delivery slip for shipment {} by user id {} and tenant id {}",
                 form.getOutboundShipmentId(), userId, tenantId);
-        deliverySlipService.createSlip(form, tenantId, userId);
+        deliverySlipService.createSlip(form, userId, tenantId);
         return ResponseEntity.ok(GeneralResponse.success("Tạo phiếu giao hàng thành công"));
     }
 

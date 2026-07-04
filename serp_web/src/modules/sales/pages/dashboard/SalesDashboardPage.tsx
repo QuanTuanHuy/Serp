@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -46,7 +47,7 @@ const STATUS_CONFIG = {
     icon: XCircle,
   },
   FULLY_DELIVERED: {
-    label: 'Đã giao hàng',
+    label: 'Hoàn thành',
     bg: 'bg-purple-100 dark:bg-purple-900/30',
     text: 'text-purple-700 dark:text-purple-400',
     dot: 'bg-purple-500',
@@ -266,7 +267,10 @@ export const SalesDashboardPage: React.FC = () => {
 
                   return (
                     <li key={order.id} className='text-sm'>
-                      <div className='flex items-center justify-between gap-4'>
+                      <Link
+                        href={`/sales/orders/${order.id}`}
+                        className='flex items-center justify-between gap-4 rounded-lg p-2 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                      >
                         <div>
                           <div className='font-medium'>
                             {order.orderName || order.id}
@@ -287,7 +291,7 @@ export const SalesDashboardPage: React.FC = () => {
                           />
                           {status.label}
                         </Badge>
-                      </div>
+                      </Link>
                     </li>
                   );
                 })}
@@ -315,7 +319,10 @@ export const SalesDashboardPage: React.FC = () => {
 
                   return (
                     <li key={order.id} className='text-sm'>
-                      <div className='flex items-center justify-between gap-4'>
+                      <Link
+                        href={`/sales/orders/${order.id}`}
+                        className='flex items-center justify-between gap-4 rounded-lg p-2 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                      >
                         <div>
                           <div className='font-medium'>
                             {order.orderName || order.id}
@@ -336,7 +343,7 @@ export const SalesDashboardPage: React.FC = () => {
                           />
                           {status.label}
                         </Badge>
-                      </div>
+                      </Link>
                     </li>
                   );
                 })}

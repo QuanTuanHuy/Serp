@@ -1,5 +1,3 @@
-// Sales Pages Barrel Exports (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 // Dashboard Pages
 export * from './dashboard';
 

@@ -1,8 +1,3 @@
-/**
- * Author: QuanTuanHuy
- * Description: Part of Serp Project - Purchase Auth Guard
- */
-
 'use client';
 
 import React from 'react';

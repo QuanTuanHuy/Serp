@@ -4,5 +4,5 @@ public enum SaleChannel {
 
     PARTNER,
     ONLINE,
-
+    RETAIL
 }

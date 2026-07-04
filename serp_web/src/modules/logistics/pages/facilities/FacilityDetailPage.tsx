@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics Facility Detail Page
-*/
-
 'use client';
 
 import { useMemo, useState } from 'react';

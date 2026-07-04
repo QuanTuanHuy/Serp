@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Create Inventory Item Page
-*/
-
 'use client';
 
 import { useState } from 'react';

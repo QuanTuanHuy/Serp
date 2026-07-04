@@ -1,5 +1,3 @@
-// Purchase SupplierListPage Component (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 'use client';
 
 import { useState, useMemo } from 'react';

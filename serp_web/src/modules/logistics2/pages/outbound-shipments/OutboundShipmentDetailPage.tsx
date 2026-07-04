@@ -1,10 +1,3 @@
-/**
- * Outbound Shipment Detail Page - Logistics Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Outbound shipment detail (read-only)
- */
-
 'use client';
 
 import { useMemo, useState } from 'react';

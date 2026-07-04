@@ -1,5 +1,3 @@
-// Sales Types & Interfaces (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 // Constants
 export type ResponseStatus = 'SUCCESS' | 'FAILED';
 export type EntityType = 'PRODUCT' | 'SUPPLIER' | 'CUSTOMER' | 'FACILITY';

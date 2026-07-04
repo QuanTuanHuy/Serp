@@ -1,5 +1,3 @@
-// Sales Header Component (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 'use client';
 
 import React, { useState, useEffect } from 'react';

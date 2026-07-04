@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Create Shipment Page
-*/
-
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';

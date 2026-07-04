@@ -1,5 +1,3 @@
-// Sales Selectors (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../../../lib/store';
 import type {

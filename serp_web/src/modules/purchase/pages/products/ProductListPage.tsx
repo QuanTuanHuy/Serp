@@ -1,5 +1,3 @@
-// Purchase Product List Page (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 'use client';
 
 import React from 'react';
