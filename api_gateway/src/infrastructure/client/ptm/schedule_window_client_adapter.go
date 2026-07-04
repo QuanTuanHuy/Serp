@@ -77,9 +77,12 @@ func (s *ScheduleWindowClientAdapter) MaterializeWindows(ctx context.Context, pa
 	return &result, nil
 }
 
-func NewScheduleWindowClientAdapter(props *properties.ExternalServiceProperties) port.IScheduleWindowClientPort {
+func NewScheduleWindowClientAdapter(
+	props *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IScheduleWindowClientPort {
 	baseURL := "http://" + props.PTMSchedule.Host + ":" + props.PTMSchedule.Port + "/ptm-schedule"
-	apiClient := utils.NewBaseAPIClient(baseURL, props.PTMSchedule.Timeout)
+	apiClient := clientFactory.New(baseURL, props.PTMSchedule.Timeout)
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 
 	return &ScheduleWindowClientAdapter{

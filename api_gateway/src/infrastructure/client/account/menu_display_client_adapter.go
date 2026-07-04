@@ -318,9 +318,12 @@ func (m *MenuDisplayClientAdapter) GetAllMenuDisplays(ctx context.Context, param
 	return &result, nil
 }
 
-func NewMenuDisplayClientAdapter(authProps *properties.ExternalServiceProperties) port.IMenuDisplayClientPort {
+func NewMenuDisplayClientAdapter(
+	authProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IMenuDisplayClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, authProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

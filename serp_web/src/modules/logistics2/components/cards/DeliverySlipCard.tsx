@@ -34,7 +34,7 @@ import { Customer, DeliverySlip, Order, OutboundShipment } from '../../types';
 
 const statusStyles = {
   PENDING: {
-    label: 'Đang chờ xử lý',
+    label: 'Chờ lên kế hoạch',
     bg: 'bg-slate-100 dark:bg-slate-900/30',
     text: 'text-slate-700 dark:text-slate-400',
     dot: 'bg-slate-500',

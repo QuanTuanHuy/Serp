@@ -70,6 +70,16 @@ app:
     initialDelay: 100ms
     maxDelay: 2s
 
+  transport:
+    maxIdleConns: 200
+    maxIdleConnsPerHost: 100
+    maxConnsPerHost: 200
+    idleConnTimeout: 90s
+    dialTimeout: 5s
+    tlsHandshakeTimeout: 5s
+    responseHeaderTimeout: 15s
+    expectContinueTimeout: 1s
+
 external:
   services:
     accountService:

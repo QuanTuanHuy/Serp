@@ -175,9 +175,12 @@ func (o *OrganizationClientAdapter) UpdateUserStatusInOrganization(ctx context.C
 	return &result, nil
 }
 
-func NewOrganizationClientAdapter(authProps *properties.ExternalServiceProperties) port.IOrganizationClientPort {
+func NewOrganizationClientAdapter(
+	authProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IOrganizationClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, authProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

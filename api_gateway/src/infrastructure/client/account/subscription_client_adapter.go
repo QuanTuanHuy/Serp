@@ -521,9 +521,12 @@ func (s *SubscriptionClientAdapter) GetSubscriptionHistory(ctx context.Context) 
 	return &result, nil
 }
 
-func NewSubscriptionClientAdapter(authProps *properties.ExternalServiceProperties) port.ISubscriptionClientPort {
+func NewSubscriptionClientAdapter(
+	authProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.ISubscriptionClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, authProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

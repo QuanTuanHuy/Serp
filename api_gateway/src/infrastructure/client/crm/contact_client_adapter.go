@@ -181,11 +181,14 @@ func (c *ContactClientAdapter) DeleteContact(ctx context.Context, customerId int
 	return &result, nil
 }
 
-func NewContactClientAdapter(props *properties.ExternalServiceProperties) port.IContactClientPort {
+func NewContactClientAdapter(
+	props *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IContactClientPort {
 	baseURL := fmt.Sprintf("http://%s:%s/crm", props.CrmService.Host, props.CrmService.Port)
 
 	return &ContactClientAdapter{
-		apiClient:      utils.NewBaseAPIClient(baseURL, props.CrmService.Timeout),
+		apiClient:      clientFactory.New(baseURL, props.CrmService.Timeout),
 		circuitBreaker: utils.NewDefaultCircuitBreaker(),
 	}
 }

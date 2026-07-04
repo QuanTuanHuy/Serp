@@ -215,9 +215,12 @@ func (n *NoteClientAdapter) GetNotesByTaskID(ctx context.Context, taskID int64) 
 	return &result, nil
 }
 
-func NewNoteClientAdapter(taskManagerProps *properties.ExternalServiceProperties) port.INoteClientPort {
+func NewNoteClientAdapter(
+	taskManagerProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.INoteClientPort {
 	baseURL := "http://" + taskManagerProps.PTMTask.Host + ":" + taskManagerProps.PTMTask.Port + "/ptm-task"
-	apiClient := utils.NewBaseAPIClient(baseURL, taskManagerProps.PTMTask.Timeout)
+	apiClient := clientFactory.New(baseURL, taskManagerProps.PTMTask.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

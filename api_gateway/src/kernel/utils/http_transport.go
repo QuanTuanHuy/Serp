@@ -10,9 +10,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
+	"github.com/serp/api-gateway/src/kernel/properties"
 	"github.com/sony/gobreaker/v2"
 )
 
@@ -185,6 +187,39 @@ func isCircuitBreakerOpen(err error) bool {
 	return err == gobreaker.ErrOpenState || err == gobreaker.ErrTooManyRequests
 }
 
+func NewUpstreamTransport(props *properties.TransportProperties) *http.Transport {
+	if props == nil {
+		props = properties.NewDefaultTransportProperties()
+	}
+
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   props.DialTimeout,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          props.MaxIdleConns,
+		MaxIdleConnsPerHost:   props.MaxIdleConnsPerHost,
+		MaxConnsPerHost:       props.MaxConnsPerHost,
+		IdleConnTimeout:       props.IdleConnTimeout,
+		TLSHandshakeTimeout:   props.TLSHandshakeTimeout,
+		ResponseHeaderTimeout: props.ResponseHeaderTimeout,
+		ExpectContinueTimeout: props.ExpectContinueTimeout,
+	}
+}
+
+func NewHTTPClient(timeout time.Duration, props *properties.TransportProperties) *http.Client {
+	if timeout == 0 {
+		timeout = 30 * time.Second
+	}
+
+	return &http.Client{
+		Timeout:   timeout,
+		Transport: NewUpstreamTransport(props),
+	}
+}
+
 // ResilientTransport combines retry and circuit breaker.
 // Chain: CircuitBreaker -> Retry -> Base Transport, so breaker counts each
 // logical request once after retries finish.
@@ -198,7 +233,20 @@ func NewResilientTransport(
 	maxRetries int,
 	initialDelay, maxDelay time.Duration,
 ) *ResilientTransport {
-	retryTransport := NewRetryTransport(http.DefaultTransport, maxRetries, initialDelay, maxDelay)
+	return NewResilientTransportWithBase(http.DefaultTransport, cb, maxRetries, initialDelay, maxDelay)
+}
+
+func NewResilientTransportWithBase(
+	base http.RoundTripper,
+	cb *gobreaker.CircuitBreaker[*http.Response],
+	maxRetries int,
+	initialDelay, maxDelay time.Duration,
+) *ResilientTransport {
+	if base == nil {
+		base = http.DefaultTransport
+	}
+
+	retryTransport := NewRetryTransport(base, maxRetries, initialDelay, maxDelay)
 	cbTransport := NewCircuitBreakerTransport(retryTransport, cb)
 
 	return &ResilientTransport{

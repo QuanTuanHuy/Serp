@@ -291,9 +291,12 @@ func (m *ModuleAccessClientAdapter) GetModulesAccessibleByUser(ctx context.Conte
 	return &result, nil
 }
 
-func NewModuleAccessClientAdapter(authProps *properties.ExternalServiceProperties) port.IModuleAccessClientPort {
+func NewModuleAccessClientAdapter(
+	authProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IModuleAccessClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, authProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 
