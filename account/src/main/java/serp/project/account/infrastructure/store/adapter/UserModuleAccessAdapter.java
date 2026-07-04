@@ -88,4 +88,26 @@ public class UserModuleAccessAdapter implements IUserModuleAccessPort {
     public void deleteUserModuleAccess(Long id) {
         userModuleAccessRepository.deleteById(id);
     }
+
+    @Override
+    public List<UserModuleAccessEntity> saveAll(List<UserModuleAccessEntity> userModuleAccesses) {
+        if (userModuleAccesses == null || userModuleAccesses.isEmpty()) {
+            return List.of();
+        }
+        var models = userModuleAccessMapper.toModelList(userModuleAccesses);
+        return userModuleAccessMapper.toEntityList(userModuleAccessRepository.saveAll(models));
+    }
+
+    @Override
+    public List<UserModuleAccessEntity> getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(
+            List<Long> userIds, Long moduleId, Long organizationId) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        return userModuleAccessMapper.toEntityList(
+                userModuleAccessRepository.findByUserIdInAndModuleIdAndOrganizationId(
+                        userIds,
+                        moduleId,
+                        organizationId));
+    }
 }

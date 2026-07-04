@@ -86,4 +86,50 @@ class ModuleAccessControllerTest {
         assertEquals(30L, captor.getValue().getRoleId());
         assertEquals(40L, captor.getValue().getDepartmentId());
     }
+
+    @Test
+    void updateModuleAccessSettingsShouldPassAuthenticatedUserToUseCase() {
+        when(authUtils.canAccessOrganization(10L)).thenReturn(true);
+        when(authUtils.getCurrentUserId()).thenReturn(java.util.Optional.of(99L));
+        GeneralResponse<?> responseBody = GeneralResponse.builder()
+                .code(200)
+                .status("SUCCESS")
+                .message("OK")
+                .data(Map.of("autoGrantToNewUsers", true))
+                .build();
+        doReturn(responseBody).when(moduleAccessUseCase).updateModuleAccessSettings(
+                any(), any(), any(), any());
+
+        var response = controller.updateModuleAccessSettings(
+                10L,
+                20L,
+                serp.project.account.core.domain.dto.request.UpdateModuleAccessSettingsRequest.builder()
+                        .autoGrantToNewUsers(true)
+                        .build());
+
+        assertEquals(200, response.getStatusCodeValue());
+        verify(moduleAccessUseCase).updateModuleAccessSettings(
+                org.mockito.Mockito.eq(10L),
+                org.mockito.Mockito.eq(20L),
+                any(),
+                org.mockito.Mockito.eq(99L));
+    }
+
+    @Test
+    void backfillAutoGrantShouldPassAuthenticatedUserToUseCase() {
+        when(authUtils.canAccessOrganization(10L)).thenReturn(true);
+        when(authUtils.getCurrentUserId()).thenReturn(java.util.Optional.of(99L));
+        GeneralResponse<?> responseBody = GeneralResponse.builder()
+                .code(200)
+                .status("SUCCESS")
+                .message("OK")
+                .data(Map.of("grantedCount", 1))
+                .build();
+        doReturn(responseBody).when(moduleAccessUseCase).backfillAutoGrant(10L, 20L, 99L);
+
+        var response = controller.backfillAutoGrant(10L, 20L);
+
+        assertEquals(200, response.getStatusCodeValue());
+        verify(moduleAccessUseCase).backfillAutoGrant(10L, 20L, 99L);
+    }
 }

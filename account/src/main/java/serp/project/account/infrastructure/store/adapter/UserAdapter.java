@@ -23,6 +23,7 @@ import serp.project.account.infrastructure.store.mapper.UserRowMapper;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.infrastructure.store.model.UserModel;
 import serp.project.account.infrastructure.store.query.UserQueryBuilder;
+import org.springframework.data.domain.PageRequest;
 import serp.project.account.infrastructure.store.repository.IUserRepository;
 
 @Component
@@ -131,5 +132,26 @@ public class UserAdapter implements IUserPort {
         return counts.stream().collect(Collectors.toMap(
                 c -> c[0].toString(),
                 c -> Integer.parseInt(c[1].toString())));
+    }
+
+    @Override
+    public Long countActiveUsersWithoutModuleAccess(Long organizationId, Long moduleId) {
+        Long count = userRepository.countActiveUsersWithoutModuleAccess(
+                organizationId,
+                moduleId,
+                UserStatus.ACTIVE);
+        return count == null ? 0L : count;
+    }
+
+    @Override
+    public List<UserEntity> getActiveUsersWithoutModuleAccess(Long organizationId, Long moduleId, int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        return userMapper.toEntityList(userRepository.findActiveUsersWithoutModuleAccess(
+                organizationId,
+                moduleId,
+                UserStatus.ACTIVE,
+                PageRequest.of(0, limit)));
     }
 }

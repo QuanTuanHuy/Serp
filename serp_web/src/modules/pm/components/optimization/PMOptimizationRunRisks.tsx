@@ -23,28 +23,28 @@ import type {
 } from '../../types/api';
 
 const CODE_LABELS: Record<string, string> = {
-  DEPENDENCY_CYCLE: 'Vòng lặp phụ thuộc',
-  DEPENDENCY_VIOLATION: 'Vi phạm thứ tự phụ thuộc',
-  EXTERNAL_DEPENDENCY: 'Phụ thuộc ngoài phạm vi',
-  MISSING_ESTIMATE: 'Thiếu thời gian ước lượng',
-  DEFAULT_DURATION_USED: 'Sử dụng thời lượng mặc định',
-  LOW_CONFIDENCE_DURATION: 'Ước lượng thời gian độ tin cậy thấp',
-  NO_ELIGIBLE_ASSIGNEE: 'Không tìm thấy người thực hiện phù hợp',
-  OVER_CAPACITY: 'Quá tải tài nguyên/tải trọng',
-  LATE_RISK: 'Rủi ro trễ hạn',
-  STALE_ITEM: 'Dữ liệu gốc đã bị thay đổi',
-  PERMISSION_DENIED: 'Không có quyền cập nhật công việc',
-  INVALID_OVERRIDE: 'Ghi đè không hợp lệ',
-  REQUIRED_SKILL_MISSING: 'Thiếu kỹ năng bắt buộc',
-  PARTIAL_SKILL_MATCH: 'Chỉ đáp ứng một phần kỹ năng',
+  DEPENDENCY_CYCLE: 'Dependency Cycle',
+  DEPENDENCY_VIOLATION: 'Dependency Violation',
+  EXTERNAL_DEPENDENCY: 'External Dependency',
+  MISSING_ESTIMATE: 'Missing Estimate',
+  DEFAULT_DURATION_USED: 'Default Duration Used',
+  LOW_CONFIDENCE_DURATION: 'Low Confidence Duration',
+  NO_ELIGIBLE_ASSIGNEE: 'No Eligible Assignee',
+  OVER_CAPACITY: 'Over Capacity',
+  LATE_RISK: 'Late Risk',
+  STALE_ITEM: 'Stale Work Item',
+  PERMISSION_DENIED: 'Permission Denied',
+  INVALID_OVERRIDE: 'Invalid Override',
+  REQUIRED_SKILL_MISSING: 'Required Skill Missing',
+  PARTIAL_SKILL_MATCH: 'Partial Skill Match',
 };
 
 const CATEGORIES = {
-  ALL: 'Tất cả',
-  DEPENDENCY: 'Phụ thuộc',
-  CAPACITY: 'Tải trọng',
-  SKILLS: 'Kỹ năng',
-  SYSTEM: 'Hệ thống',
+  ALL: 'All',
+  DEPENDENCY: 'Dependencies',
+  CAPACITY: 'Capacity',
+  SKILLS: 'Skills',
+  SYSTEM: 'System',
 };
 
 export interface UnifiedRisk {
@@ -103,9 +103,9 @@ export function PMOptimizationRunRisks({
             (it) => it.workItemId === Number(predId)
           );
           if (matchedItem?.workItem) {
-            return `Tác vụ liên quan: ${matchedItem.workItem.key} (${matchedItem.workItem.summary})`;
+            return `Related work item: ${matchedItem.workItem.key} (${matchedItem.workItem.summary})`;
           }
-          return `Tác vụ ID: ${predId}`;
+          return `Work item ID: ${predId}`;
         }
 
         if (
@@ -120,7 +120,7 @@ export function PMOptimizationRunRisks({
             data.availableCapacity !== undefined
               ? `${data.availableCapacity}h`
               : '?';
-          return `Yêu cầu: ${req} | Khả dụng: ${avail}`;
+          return `Required: ${req} | Available: ${avail}`;
         }
 
         return Object.entries(data)
@@ -444,7 +444,7 @@ export function PMOptimizationRunRisks({
             <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
             <Input
               type='text'
-              placeholder='Tìm kiếm mã công việc, từ khóa...'
+              placeholder='Search work item key, keyword...'
               className='pl-8'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -484,7 +484,7 @@ export function PMOptimizationRunRisks({
                   <div className='space-y-0.5'>
                     {isGlobal ? (
                       <CardTitle className='text-sm font-semibold'>
-                        Rủi ro chung dự án (Global Risks)
+                        Global / Project Risks
                       </CardTitle>
                     ) : (
                       <div className='flex flex-wrap items-center gap-2'>
@@ -509,7 +509,7 @@ export function PMOptimizationRunRisks({
                       onClick={() => onLocateItem(group.workItemId!)}
                     >
                       <MapPin className='mr-1.5 h-3.5 w-3.5' />
-                      Định vị
+                      Locate
                     </Button>
                   ) : null}
                 </CardHeader>
@@ -544,7 +544,7 @@ export function PMOptimizationRunRisks({
                           </p>
                           {risk.details ? (
                             <div className='mt-1 text-xs font-medium text-muted-foreground bg-muted/40 px-2 py-1 rounded inline-block'>
-                              Chi tiết: {risk.details}
+                              Details: {risk.details}
                             </div>
                           ) : null}
                         </div>
@@ -557,7 +557,7 @@ export function PMOptimizationRunRisks({
           })
         ) : (
           <div className='rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground'>
-            Không tìm thấy rủi ro nào khớp với bộ lọc.
+            No risks found matching the filters.
           </div>
         )}
       </div>
