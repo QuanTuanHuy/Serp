@@ -107,6 +107,7 @@ import {
   normalizeSecondMileHubImportHistory,
   normalizeSecondMileHubStaffAssignment,
   normalizeSecondMileHubStaff,
+  normalizePostOfficeStaff,
   normalizePostOfficeStaffAssignment,
   normalizeHubPostOfficeMapping,
   normalizeHubPostOfficeMappingPage,
@@ -1501,6 +1502,23 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<PostOffice>,
     }),
 
+    uploadPostOfficeImage: builder.mutation<
+      PostOffice,
+      { id: number; file: File }
+    >({
+      query: ({ id, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/post-offices/${id}/image`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<PostOffice>,
+    }),
+
     deletePostOffice: builder.mutation<string, number>({
       query: (id) => ({
         url: `/post-offices/${id}`,
@@ -2027,7 +2045,10 @@ export const firstMileApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff[]>,
+      transformResponse: (response: FirstMileApiResponse<unknown[]>) =>
+        unwrapFirstMileResultOrRaw<unknown[]>(response).map((item) =>
+          normalizePostOfficeStaff(item)
+        ),
     }),
 
     getPostOfficeStaffById: builder.query<PostOfficeStaff, number>({
@@ -2036,7 +2057,8 @@ export const firstMileApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff>,
+      transformResponse: (response: FirstMileApiResponse<unknown>) =>
+        normalizePostOfficeStaff(unwrapFirstMileResultOrRaw<unknown>(response)),
     }),
 
     getAssignablePostOfficeStaffs: builder.query<
@@ -2052,7 +2074,10 @@ export const firstMileApi = api.injectEndpoints({
         },
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff[]>,
+      transformResponse: (response: FirstMileApiResponse<unknown[]>) =>
+        unwrapFirstMileResultOrRaw<unknown[]>(response).map((item) =>
+          normalizePostOfficeStaff(item)
+        ),
     }),
 
     getPostOfficeStaffAssignmentsByPostOffice: builder.query<
@@ -2360,6 +2385,7 @@ export const {
   useGetPostOfficeByIdQuery,
   useCreatePostOfficeMutation,
   useUpdatePostOfficeMutation,
+  useUploadPostOfficeImageMutation,
   useDeletePostOfficeMutation,
   useGeocodePostOfficeByIdMutation,
   useGeocodeNullPostOfficesMutation,

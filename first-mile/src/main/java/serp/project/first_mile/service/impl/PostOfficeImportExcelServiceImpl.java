@@ -133,9 +133,7 @@ public class PostOfficeImportExcelServiceImpl implements PostOfficeImportExcelSe
 
     private static final Map<String, PostOfficeStatus> STATUS_MAP = Map.of(
             "hoạt động", PostOfficeStatus.ACTIVE,
-            "ngừng hoạt động", PostOfficeStatus.INACTIVE,
-            "bị đình chỉ", PostOfficeStatus.SUSPENDED,
-            "bảo trì", PostOfficeStatus.MAINTENANCE
+            "ngừng hoạt động", PostOfficeStatus.INACTIVE
     );
 
     private final PostOfficeRepository postOfficeRepository;

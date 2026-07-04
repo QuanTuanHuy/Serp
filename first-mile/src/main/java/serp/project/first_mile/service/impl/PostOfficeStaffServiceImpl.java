@@ -73,12 +73,13 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        String normalizedKeyword = normalizeText(keyword);
+        String keywordLike = buildKeywordLike(keyword);
         List<PostOfficeStaff> staffs = postOfficeStaffRepository.findAssignableByTenantIdAndRoleAndStatusAndKeyword(
                 tenantId,
                 role,
                 PostOfficeStaffStatus.ACTIVE,
-                normalizedKeyword
+                keywordLike,
+                LocalDate.now()
         );
         return staffs.stream().map(PostOfficeStaffMapper::toResponse).toList();
     }
@@ -538,5 +539,10 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String buildKeywordLike(String value) {
+        String normalized = normalizeText(value);
+        return normalized == null ? null : "%" + normalized.toLowerCase() + "%";
     }
 }

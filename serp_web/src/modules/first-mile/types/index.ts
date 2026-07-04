@@ -36,11 +36,7 @@ export interface FirstMilePaginatedData<T> {
   hasPrevious: boolean;
 }
 
-export type PostOfficeStatus =
-  | 'ACTIVE'
-  | 'INACTIVE'
-  | 'MAINTENANCE'
-  | 'SUSPENDED';
+export type PostOfficeStatus = 'ACTIVE' | 'INACTIVE';
 export type ImportType = 'ORDER' | 'POST_OFFICE' | 'VEHICLE' | 'HUB';
 export type ImportHistoryStatus =
   | 'PENDING'
@@ -239,6 +235,7 @@ export interface PostOfficeStaffAssignment {
   staffCode?: string;
   staffFullName?: string;
   staffRole?: PostOfficeStaffRole;
+  staffStatus?: PostOfficeStaffStatus;
   assignedFrom?: string;
   assignedTo?: string;
   isPrimary?: boolean;

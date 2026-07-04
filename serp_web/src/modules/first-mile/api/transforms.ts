@@ -18,6 +18,7 @@ import type {
   ImportHistory,
   ImportHistoryStatus,
   ImportType,
+  PostOfficeStaff,
   PostOfficeStaffAssignment,
   AutoSecondMileBaggingPlan,
   SecondMileBag,
@@ -125,6 +126,38 @@ export const normalizeSecondMileHubStaff = (
   };
 };
 
+export const normalizePostOfficeStaff = (raw: unknown): PostOfficeStaff => {
+  const record = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: Number(record.id ?? 0),
+    code: readField<string>(record, 'code', 'code'),
+    fullName: readField<string>(record, 'full_name', 'fullName'),
+    phoneNumber: readField<string>(record, 'phone_number', 'phoneNumber'),
+    email: readField<string>(record, 'email', 'email'),
+    avatarUrl: readField<string>(record, 'avatar_url', 'avatarUrl'),
+    role: readField(record, 'role', 'role'),
+    status: readField(record, 'status', 'status'),
+    hireDate: readField<string>(record, 'hire_date', 'hireDate'),
+    maxDailyStops: readField<number>(
+      record,
+      'max_daily_stops',
+      'maxDailyStops'
+    ),
+    maxDailyParcels: readField<number>(
+      record,
+      'max_daily_parcels',
+      'maxDailyParcels'
+    ),
+    notes: readField<string>(record, 'notes', 'notes'),
+    userId: readField<number>(record, 'user_id', 'userId'),
+    createdAt: readField<string>(record, 'created_at', 'createdAt'),
+    updatedAt: readField<string>(record, 'updated_at', 'updatedAt'),
+    createdBy: readField<string>(record, 'created_by', 'createdBy'),
+    updatedBy: readField<string>(record, 'updated_by', 'updatedBy'),
+    tenantId: readField<number>(record, 'tenant_id', 'tenantId'),
+  };
+};
+
 export const normalizePostOfficeStaffAssignment = (
   raw: unknown
 ): PostOfficeStaffAssignment => {
@@ -150,6 +183,7 @@ export const normalizePostOfficeStaffAssignment = (
       'staffFullName'
     ),
     staffRole: readField(record, 'staff_role', 'staffRole'),
+    staffStatus: readField(record, 'staff_status', 'staffStatus'),
     assignedFrom: readField<string>(record, 'assigned_from', 'assignedFrom'),
     assignedTo: readField<string>(record, 'assigned_to', 'assignedTo'),
     isPrimary: readField<boolean>(record, 'is_primary', 'isPrimary'),

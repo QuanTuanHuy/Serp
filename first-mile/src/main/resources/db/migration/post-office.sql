@@ -22,8 +22,9 @@ CREATE TABLE post_offices (
                               current_delivery_load INTEGER NOT NULL DEFAULT 0,
                               priority INTEGER NOT NULL DEFAULT 100,
 
-    -- Enum PostOfficeStatus lưu dưới dạng String
-                              status VARCHAR(20) NOT NULL DEFAULT 'INACTIVE',
+                              -- Enum PostOfficeStatus lưu dưới dạng String
+                              status VARCHAR(20) NOT NULL DEFAULT 'INACTIVE'
+                                  CHECK (status IN ('ACTIVE', 'INACTIVE')),
 
     -- Optimistic Locking
                               version BIGINT,

@@ -15,6 +15,7 @@ import serp.project.second_mile.enums.HubStaffRole;
 import serp.project.second_mile.enums.HubStaffStatus;
 import serp.project.second_mile.repository.projection.CodeNameProjection;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,8 +59,17 @@ public interface HubStaffRepository extends JpaRepository<HubStaff, Long>, JpaSp
                 and s.role = :role
                 and s.status = :status
                 and (
-                    lower(coalesce(s.code, '')) like concat('%', lower(cast(:keyword as string)), '%')
-                    or lower(coalesce(s.fullName, '')) like concat('%', lower(cast(:keyword as string)), '%')
+                    :keywordLike is null
+                    or lower(coalesce(s.code, '')) like :keywordLike
+                    or lower(coalesce(s.fullName, '')) like :keywordLike
+                )
+                and not exists (
+                    select 1
+                    from HubStaffAssignment a
+                    where a.staff = s
+                        and a.tenantId = :tenantId
+                        and a.assignedFrom <= :today
+                        and (a.assignedTo is null or a.assignedTo >= :today)
                 )
             order by s.fullName asc
             """)
@@ -67,7 +77,8 @@ public interface HubStaffRepository extends JpaRepository<HubStaff, Long>, JpaSp
             @Param("tenantId") Long tenantId,
             @Param("role") HubStaffRole role,
             @Param("status") HubStaffStatus status,
-            @Param("keyword") String keyword
+            @Param("keywordLike") String keywordLike,
+            @Param("today") LocalDate today
     );
 
     boolean existsByTenantIdAndUserIdAndRoleInAndStatus(
