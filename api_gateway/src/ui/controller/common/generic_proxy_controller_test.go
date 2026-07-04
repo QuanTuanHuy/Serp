@@ -90,6 +90,220 @@ func TestGenericProxyController_CRM_RewritePathAndForwardHeaders(t *testing.T) {
 	}
 }
 
+func TestGenericProxyController_Account_RewritePathAndPreserveRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	type upstreamRequest struct {
+		method string
+		path   string
+		query  string
+		auth   string
+		body   string
+	}
+
+	var got upstreamRequest
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		got = upstreamRequest{
+			method: r.Method,
+			path:   r.URL.Path,
+			query:  r.URL.RawQuery,
+			auth:   r.Header.Get("Authorization"),
+			body:   string(body),
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer upstream.Close()
+
+	u, err := url.Parse(upstream.URL)
+	if err != nil {
+		t.Fatalf("parse upstream url: %v", err)
+	}
+
+	controller := NewGenericProxyController(
+		&properties.ExternalServiceProperties{
+			AccountService: properties.ServiceProperty{Host: u.Hostname(), Port: u.Port()},
+		},
+		defaultResilienceProps(),
+		properties.NewDefaultTransportProperties(),
+	)
+
+	r := gin.New()
+	r.Any("/api/v1/*proxyPath", controller.ProxyHandler("account"))
+	gateway := httptest.NewServer(r)
+	defer gateway.Close()
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		gateway.URL+"/api/v1/organizations/10/modules/20/auto-grant/backfill?dryRun=true",
+		strings.NewReader(`{"scope":"all"}`),
+	)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer account-token")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do request: %v", err)
+	}
+	_, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+	if got.method != http.MethodPost {
+		t.Fatalf("expected method %q, got %q", http.MethodPost, got.method)
+	}
+	if got.path != "/account-service/api/v1/organizations/10/modules/20/auto-grant/backfill" {
+		t.Fatalf("expected path %q, got %q",
+			"/account-service/api/v1/organizations/10/modules/20/auto-grant/backfill", got.path)
+	}
+	if got.query != "dryRun=true" {
+		t.Fatalf("expected query %q, got %q", "dryRun=true", got.query)
+	}
+	if got.auth != "Bearer account-token" {
+		t.Fatalf("expected auth %q, got %q", "Bearer account-token", got.auth)
+	}
+	if got.body != `{"scope":"all"}` {
+		t.Fatalf("expected body %q, got %q", `{"scope":"all"}`, got.body)
+	}
+}
+
+func TestGenericProxyController_FirstMile_RewritePathAndForwardHeaders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var gotPath string
+	var gotQuery string
+	var gotAuth string
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		gotAuth = r.Header.Get("Authorization")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}))
+	defer upstream.Close()
+
+	u, err := url.Parse(upstream.URL)
+	if err != nil {
+		t.Fatalf("parse upstream url: %v", err)
+	}
+	host := u.Hostname()
+	port := u.Port()
+	if port == "" {
+		t.Fatalf("expected upstream port")
+	}
+
+	controller := NewGenericProxyController(
+		&properties.ExternalServiceProperties{
+			FirstMileService: properties.ServiceProperty{Host: host, Port: port},
+		},
+		defaultResilienceProps(),
+		properties.NewDefaultTransportProperties(),
+	)
+
+	r := gin.New()
+	r.Any("/first-mile/api/v1/*proxyPath", controller.ProxyHandler("first-mile"))
+	gateway := httptest.NewServer(r)
+	defer gateway.Close()
+
+	req, err := http.NewRequest(http.MethodGet, gateway.URL+"/first-mile/api/v1/orders?x=1", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer test")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do request: %v", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+	if gotPath != "/api/v1/orders" {
+		t.Fatalf("expected rewritten path %q, got %q", "/api/v1/orders", gotPath)
+	}
+	if gotQuery != "x=1" {
+		t.Fatalf("expected query %q, got %q", "x=1", gotQuery)
+	}
+	if gotAuth != "Bearer test" {
+		t.Fatalf("expected auth header %q, got %q", "Bearer test", gotAuth)
+	}
+}
+
+func TestGenericProxyController_SecondMile_RewritePathAndForwardHeaders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	var gotPath string
+	var gotQuery string
+	var gotAuth string
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		gotAuth = r.Header.Get("Authorization")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	}))
+	defer upstream.Close()
+
+	u, err := url.Parse(upstream.URL)
+	if err != nil {
+		t.Fatalf("parse upstream url: %v", err)
+	}
+	host := u.Hostname()
+	port := u.Port()
+	if port == "" {
+		t.Fatalf("expected upstream port")
+	}
+
+	controller := NewGenericProxyController(
+		&properties.ExternalServiceProperties{
+			SecondMileService: properties.ServiceProperty{Host: host, Port: port},
+		},
+		defaultResilienceProps(),
+		properties.NewDefaultTransportProperties(),
+	)
+
+	r := gin.New()
+	r.Any("/second-mile/api/v1/*proxyPath", controller.ProxyHandler("second-mile"))
+	gateway := httptest.NewServer(r)
+	defer gateway.Close()
+
+	req, err := http.NewRequest(http.MethodGet, gateway.URL+"/second-mile/api/v1/orders?x=1", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer test")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do request: %v", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+	if gotPath != "/api/v1/orders" {
+		t.Fatalf("expected rewritten path %q, got %q", "/api/v1/orders", gotPath)
+	}
+	if gotQuery != "x=1" {
+		t.Fatalf("expected query %q, got %q", "x=1", gotQuery)
+	}
+	if gotAuth != "Bearer test" {
+		t.Fatalf("expected auth header %q, got %q", "Bearer test", gotAuth)
+	}
+}
+
 func TestGenericProxyController_CRM_CircuitBreakerCountsLogicalRequestsAfterRetries(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

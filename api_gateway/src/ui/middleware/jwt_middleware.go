@@ -24,61 +24,71 @@ func NewJWTMiddleware(jwtUtils *utils.JWTUtils) *JWTMiddleware {
 	}
 }
 
-// AuthenticateJWT validates JWT token and extracts user information
+// AuthenticateJWT validates JWT token and extracts user information.
 func (m *JWTMiddleware) AuthenticateJWT() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing or invalid authorization header")
-			c.Abort()
+		if !m.AuthenticateJWTContext(c) {
 			return
 		}
 
-		const bearerPrefix = "Bearer "
-		if !strings.HasPrefix(authHeader, bearerPrefix) {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing or invalid authorization header")
-			c.Abort()
-			return
-		}
-
-		token := strings.TrimPrefix(authHeader, bearerPrefix)
-		if token == "" {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing or invalid authorization header")
-			c.Abort()
-			return
-		}
-
-		claims, err := m.jwtUtils.ValidateToken(token)
-		if err != nil {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid or expired token")
-			c.Abort()
-			return
-		}
-
-		if !m.jwtUtils.IsAccessToken(token) {
-			utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid token type")
-			c.Abort()
-			return
-		}
-
-		// Set user information in context
-		c.Set("userID", claims.UserID)
-		c.Set("userEmail", claims.Email)
-		c.Set("userFullName", claims.FullName)
-		c.Set("preferredUsername", claims.PreferredUsername)
-		c.Set("emailVerified", claims.EmailVerified)
-		c.Set("token", token)
-
-		roles, err := m.jwtUtils.ExtractRoles(token)
-		if err != nil {
-			log.Warn(c, "Failed to extract roles: ", err)
-			roles = []string{}
-		}
-		c.Set("roles", roles)
-
-		log.Debugc(c, "JWT authentication successful for user: ", claims.UserID, " (", claims.Email, ")")
 		c.Next()
 	}
+}
+
+// AuthenticateJWTContext validates JWT token, stores claims on Gin context,
+// and returns whether the request may continue.
+func (m *JWTMiddleware) AuthenticateJWTContext(c *gin.Context) bool {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing or invalid authorization header")
+		c.Abort()
+		return false
+	}
+
+	const bearerPrefix = "Bearer "
+	if !strings.HasPrefix(authHeader, bearerPrefix) {
+		utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing or invalid authorization header")
+		c.Abort()
+		return false
+	}
+
+	token := strings.TrimPrefix(authHeader, bearerPrefix)
+	if token == "" {
+		utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Missing or invalid authorization header")
+		c.Abort()
+		return false
+	}
+
+	claims, err := m.jwtUtils.ValidateToken(token)
+	if err != nil {
+		utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid or expired token")
+		c.Abort()
+		return false
+	}
+
+	if !m.jwtUtils.IsAccessToken(token) {
+		utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid token type")
+		c.Abort()
+		return false
+	}
+
+	// Set user information in context
+	c.Set("userID", claims.UserID)
+	c.Set("userEmail", claims.Email)
+	c.Set("userFullName", claims.FullName)
+	c.Set("preferredUsername", claims.PreferredUsername)
+	c.Set("emailVerified", claims.EmailVerified)
+	c.Set("token", token)
+
+	roles, err := m.jwtUtils.ExtractRoles(token)
+	if err != nil {
+		log.Warn(c, "Failed to extract roles: ", err)
+		roles = []string{}
+	}
+	c.Set("roles", roles)
+
+	log.Debugc(c, "JWT authentication successful for user: ", claims.UserID, " (", claims.Email, ")")
+	return true
 }
 
 // RequireRole checks if user has specific role
