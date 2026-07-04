@@ -123,6 +123,9 @@ public class Constants {
         public static final String MODULE_NOT_IN_SUBSCRIPTION_PLAN = "Module not found in subscription plan";
         public static final String MAX_USERS_LIMIT_REACHED = "Maximum users limit reached for this module";
         public static final String NO_PERMISSION_TO_ACCESS_ORGANIZATION = "You don't have permission to access this organization";
+        public static final String AUTO_GRANT_POLICY_NOT_ENABLED = "Auto-grant policy is not enabled for this module";
+        public static final String AUTO_GRANT_REQUIRES_DEFAULT_MODULE_ROLE =
+                "Module auto-grant requires at least one default module role";
 
         // Department errors
         public static final String DEPARTMENT_NOT_FOUND = "Department not found";
