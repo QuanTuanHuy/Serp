@@ -61,4 +61,11 @@ public interface IUserModuleAccessService {
             Long organizationId,
             Long grantedBy,
             Long expiresAt);
+
+    List<UserModuleAccessEntity> getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(
+            List<Long> userIds,
+            Long moduleId,
+            Long organizationId);
+
+    List<UserModuleAccessEntity> saveAll(List<UserModuleAccessEntity> userModuleAccesses);
 }

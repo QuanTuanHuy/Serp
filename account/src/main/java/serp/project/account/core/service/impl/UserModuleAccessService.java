@@ -267,6 +267,28 @@ public class UserModuleAccessService implements IUserModuleAccessService {
         }
     }
 
+    @Override
+    public List<UserModuleAccessEntity> getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(
+            List<Long> userIds,
+            Long moduleId,
+            Long organizationId) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        return userModuleAccessPort.getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(
+                userIds,
+                moduleId,
+                organizationId);
+    }
+
+    @Override
+    public List<UserModuleAccessEntity> saveAll(List<UserModuleAccessEntity> userModuleAccesses) {
+        if (userModuleAccesses == null || userModuleAccesses.isEmpty()) {
+            return List.of();
+        }
+        return userModuleAccessPort.saveAll(userModuleAccesses);
+    }
+
     private ModuleEntity validateModuleAvailable(Long moduleId) {
         ModuleEntity module = modulePort.getModuleById(moduleId);
         if (module == null) {
