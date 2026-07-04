@@ -22,6 +22,7 @@ import serp.project.account.core.service.IOrganizationService;
 import serp.project.account.core.service.IUserService;
 import serp.project.account.core.usecase.support.OrganizationRoleResolver;
 import serp.project.account.core.usecase.support.UserSyncPublisher;
+import serp.project.account.core.usecase.support.ModuleAutoGrantService;
 import serp.project.account.infrastructure.store.mapper.UserMapper;
 import serp.project.account.kernel.utils.CollectionUtils;
 
@@ -39,6 +40,7 @@ public class UserProvisioningCoordinator {
     private final OrganizationRoleResolver organizationRoleResolver;
     private final UserMapper userMapper;
     private final UserSyncPublisher userSyncPublisher;
+    private final ModuleAutoGrantService moduleAutoGrantService;
 
     @Transactional(rollbackFor = Exception.class)
     public UserEntity createOrganizationUser(OrganizationEntity organization, CreateUserForOrgRequest request) {
@@ -61,6 +63,10 @@ public class UserProvisioningCoordinator {
 
             combineRoleService.assignRolesToUser(user, roles);
             assignOrganizationRoles(organization.getId(), user.getId(), roles);
+            moduleAutoGrantService.grantConfiguredModulesToNewUser(
+                    organization.getId(),
+                    user.getId(),
+                    organization.getOwnerId());
             userSyncPublisher.publishUserSync(organization.getId(), user.getId());
             return user;
         } catch (Exception e) {
