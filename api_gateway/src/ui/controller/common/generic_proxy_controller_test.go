@@ -56,6 +56,7 @@ func TestGenericProxyController_CRM_RewritePathAndForwardHeaders(t *testing.T) {
 			CrmService: properties.ServiceProperty{Host: host, Port: port},
 		},
 		defaultResilienceProps(),
+		properties.NewDefaultTransportProperties(),
 	)
 
 	r := gin.New()
@@ -120,6 +121,7 @@ func TestGenericProxyController_FirstMile_RewritePathAndForwardHeaders(t *testin
 			FirstMileService: properties.ServiceProperty{Host: host, Port: port},
 		},
 		defaultResilienceProps(),
+		properties.NewDefaultTransportProperties(),
 	)
 
 	r := gin.New()
@@ -184,6 +186,7 @@ func TestGenericProxyController_SecondMile_RewritePathAndForwardHeaders(t *testi
 			SecondMileService: properties.ServiceProperty{Host: host, Port: port},
 		},
 		defaultResilienceProps(),
+		properties.NewDefaultTransportProperties(),
 	)
 
 	r := gin.New()
@@ -245,6 +248,7 @@ func TestGenericProxyController_CRM_CircuitBreakerCountsLogicalRequestsAfterRetr
 			CrmService: properties.ServiceProperty{Host: host, Port: port},
 		},
 		resProps,
+		properties.NewDefaultTransportProperties(),
 	)
 
 	r := gin.New()
@@ -314,6 +318,7 @@ func TestGenericProxyController_CRM_POSTDoesNotRetry(t *testing.T) {
 			CrmService: properties.ServiceProperty{Host: host, Port: port},
 		},
 		defaultResilienceProps(),
+		properties.NewDefaultTransportProperties(),
 	)
 
 	r := gin.New()
@@ -365,6 +370,7 @@ func newBenchmarkGenericProxyGateway(b *testing.B, responseBody []byte) (*httpte
 			CrmService: properties.ServiceProperty{Host: u.Hostname(), Port: u.Port()},
 		},
 		resProps,
+		properties.NewDefaultTransportProperties(),
 	)
 
 	r := gin.New()
@@ -445,6 +451,7 @@ func BenchmarkGenericProxyController_CRM_GET_200(b *testing.B) {
 			CrmService: properties.ServiceProperty{Host: host, Port: port},
 		},
 		defaultResilienceProps(),
+		properties.NewDefaultTransportProperties(),
 	)
 
 	r := gin.New()
