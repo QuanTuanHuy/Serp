@@ -3,6 +3,9 @@
  * Description: Part of Serp Project - First-mile app layout route
  */
 
+import '@/modules/first-mile/api/firstMileApi';
+import '@/modules/first-mile/api/billingApi';
+import '@/modules/first-mile/api/dashboardApi';
 import { FirstMileLayout } from '@/modules/first-mile';
 
 export default function FirstMileLayoutRoute({

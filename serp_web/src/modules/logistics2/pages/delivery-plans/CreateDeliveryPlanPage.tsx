@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 create delivery plan page
-*/
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -43,7 +38,7 @@ const SLIP_STATUS_META: Record<
   { label: string; badgeClass: string }
 > = {
   PENDING: {
-    label: 'Chờ xử lý',
+    label: 'Chờ lên kế hoạch',
     badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
   },
   ASSIGNED: {

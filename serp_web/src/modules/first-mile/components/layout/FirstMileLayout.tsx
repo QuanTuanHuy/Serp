@@ -7,7 +7,6 @@
 
 import React from 'react';
 import {
-  DynamicSidebar,
   RouteGuard,
   SidebarProvider,
   useSidebarContext,
@@ -15,6 +14,7 @@ import {
 import { cn } from '@/shared/utils';
 import { FirstMileAuthGuard } from '../FirstMileAuthGuard';
 import { FirstMileHeader } from './FirstMileHeader';
+import { TmsDynamicSidebar } from './TmsDynamicSidebar';
 
 interface FirstMileLayoutProps {
   children: React.ReactNode;
@@ -28,7 +28,7 @@ const FirstMileLayoutContent: React.FC<FirstMileLayoutProps> = ({
 
   return (
     <div className='flex min-h-screen bg-background'>
-      <DynamicSidebar moduleCode='TMS' />
+      <TmsDynamicSidebar />
 
       <div
         ref={containerRef}

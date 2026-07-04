@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Create New Supplier Page
-*/
-
 'use client';
 
 import { useRouter } from 'next/navigation';

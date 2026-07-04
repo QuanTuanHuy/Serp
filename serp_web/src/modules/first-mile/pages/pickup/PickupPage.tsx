@@ -23,27 +23,40 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Switch,
 } from '@/shared/components';
+import { TmsCombobox } from '@/modules/first-mile/components';
 import { useNotification } from '@/shared/hooks';
 import {
+  useCompletePickupTripMutation,
+  useConfirmPickupTripPostOfficeInboundMutation,
   useGetActiveCouriersByPostOfficeQuery,
   useGetPickupTrackingOverviewQuery,
   useGetPostOfficesQuery,
+  useGetProvincesQuery,
+  useReturnPickupTripToPostOfficeMutation,
+  useGetWardsByProvinceCodeQuery,
   usePickupCheckinOrderMutation,
 } from '../../api';
 import type {
+  FirstMileOrderStatus,
   PickupTrackingOrder,
   PickupTrackingOverviewResponse,
   PickupTrackingTrip,
   PostOffice,
   PostOfficeStaff,
+  Province,
+  Ward,
 } from '../../types';
+import { PickupCheckinDetailDialog } from './components/PickupCheckinDetailDialog';
 import { PickupOrdersMap } from './components/PickupOrdersMap';
+import { PickupPostOfficeInboundDialog } from './components/PickupPostOfficeInboundDialog';
+import {
+  isPickupCheckinDevFeatureAvailable,
+  readDevCheckinModePreference,
+  resolveValidCheckinCoordinates,
+  writeDevCheckinModePreference,
+} from './pickupCheckinDev';
 
 type PickupPageAccessScope =
   | 'ADMIN_ALL'
@@ -114,38 +127,6 @@ const formatNumber = (value?: number): string => {
   return String(value);
 };
 
-const getScopeLabel = (scope: PickupPageAccessScope): string => {
-  if (scope === 'ADMIN_ALL') {
-    return 'TMS admin';
-  }
-
-  if (scope === 'MANAGER_SCOPED') {
-    return 'Post office manager';
-  }
-
-  if (scope === 'COURIER_SELF') {
-    return 'Courier';
-  }
-
-  return 'No access';
-};
-
-const getScopeDescription = (scope: PickupPageAccessScope): string => {
-  if (scope === 'ADMIN_ALL') {
-    return 'Track pickup operations across post offices and couriers.';
-  }
-
-  if (scope === 'MANAGER_SCOPED') {
-    return 'Track pickup operations for couriers in your managed post offices.';
-  }
-
-  if (scope === 'COURIER_SELF') {
-    return 'Track and check in your assigned pickup orders.';
-  }
-
-  return 'Your account does not have permission to access pickup tracking.';
-};
-
 const canCheckinOrder = (
   order: PickupTrackingOrder,
   isCourier: boolean
@@ -157,6 +138,57 @@ const canCheckinOrder = (
   return (
     order.orderStatus === 'ASSIGNED_TO_PICKUP' ||
     order.orderStatus === 'PICKING_UP'
+  );
+};
+
+const canViewCheckinDetail = (order: PickupTrackingOrder): boolean =>
+  Boolean(order.checkedIn && order.orderId);
+
+const canCompleteTrip = (trip: PickupTrackingTrip): boolean =>
+  trip.tripId !== undefined &&
+  (trip.tripStatus === 'PLANNED' || trip.tripStatus === 'IN_PROGRESS');
+
+const RETURNABLE_TO_POST_OFFICE_ORDER_STATUSES: FirstMileOrderStatus[] = [
+  'PICKING_UP',
+  'PICKED_UP',
+];
+
+const canReturnTripToPostOffice = (
+  trip: PickupTrackingTrip,
+  orders: PickupTrackingOrder[]
+): boolean => {
+  if (trip.tripId === undefined || trip.tripStatus !== 'COMPLETED') {
+    return false;
+  }
+
+  if (trip.returnableToPostOfficeOrders !== undefined) {
+    return trip.returnableToPostOfficeOrders > 0;
+  }
+
+  return orders.some(
+    (order) =>
+      order.tripId === trip.tripId &&
+      order.orderStatus !== undefined &&
+      RETURNABLE_TO_POST_OFFICE_ORDER_STATUSES.includes(order.orderStatus)
+  );
+};
+
+const canConfirmPostOfficeInbound = (
+  trip: PickupTrackingTrip,
+  orders: PickupTrackingOrder[]
+): boolean => {
+  if (trip.tripId === undefined || trip.tripStatus !== 'COMPLETED') {
+    return false;
+  }
+
+  if (trip.pendingPostOfficeInboundOrders !== undefined) {
+    return trip.pendingPostOfficeInboundOrders > 0;
+  }
+
+  return orders.some(
+    (order) =>
+      order.tripId === trip.tripId &&
+      order.orderStatus === 'PENDING_ORIGIN_POST_OFFICE_INBOUND'
   );
 };
 
@@ -184,8 +216,12 @@ export const PickupPage: React.FC = () => {
 
   const canAccess = accessScope !== 'NO_ACCESS';
   const isCourierScope = accessScope === 'COURIER_SELF';
+  const canManagePostOfficeInbound =
+    accessScope === 'ADMIN_ALL' || accessScope === 'MANAGER_SCOPED';
 
   const [tripDate, setTripDate] = React.useState(getTodayDateInputValue);
+  const [selectedProvinceCode, setSelectedProvinceCode] = React.useState('');
+  const [selectedWardCode, setSelectedWardCode] = React.useState('');
   const [selectedPostOfficeId, setSelectedPostOfficeId] = React.useState('');
   const [selectedCourierStaffId, setSelectedCourierStaffId] =
     React.useState('all');
@@ -194,23 +230,100 @@ export const PickupPage: React.FC = () => {
   >(undefined);
 
   const [isCheckinDialogOpen, setIsCheckinDialogOpen] = React.useState(false);
+  const [isCheckinDetailDialogOpen, setIsCheckinDetailDialogOpen] =
+    React.useState(false);
+  const [checkinDetailOrder, setCheckinDetailOrder] =
+    React.useState<PickupTrackingOrder | null>(null);
   const [checkinOrder, setCheckinOrder] =
     React.useState<PickupTrackingOrder | null>(null);
   const [checkinPhoto, setCheckinPhoto] = React.useState<File | null>(null);
   const [checkinLatitude, setCheckinLatitude] = React.useState('');
   const [checkinLongitude, setCheckinLongitude] = React.useState('');
   const [isResolvingLocation, setIsResolvingLocation] = React.useState(false);
+  const isDevCheckinFeatureAvailable = isPickupCheckinDevFeatureAvailable();
+  const [devCheckinMode, setDevCheckinMode] = React.useState(false);
 
-  const shouldLoadPostOffices = canAccess && !isCourierScope;
+  React.useEffect(() => {
+    if (isDevCheckinFeatureAvailable) {
+      setDevCheckinMode(readDevCheckinModePreference());
+    }
+  }, [isDevCheckinFeatureAvailable]);
+
+  const shouldLoadLocationFilters = canAccess && !isCourierScope;
+
+  const { data: provincesData, isLoading: isLoadingProvinces } =
+    useGetProvincesQuery(
+      {
+        page: 0,
+        size: POST_OFFICE_PAGE_SIZE,
+      },
+      {
+        skip: !shouldLoadLocationFilters,
+      }
+    );
+
+  const provinceOptions = React.useMemo<Province[]>(
+    () => provincesData?.items ?? [],
+    [provincesData]
+  );
+  const provinceComboboxOptions = React.useMemo(
+    () =>
+      provinceOptions.flatMap((province) =>
+        province.provinceCode
+          ? [
+              {
+                value: province.provinceCode,
+                label: `${province.name} (${province.provinceCode})`,
+              },
+            ]
+          : []
+      ),
+    [provinceOptions]
+  );
+
+  const { data: wardsData, isLoading: isLoadingWards } =
+    useGetWardsByProvinceCodeQuery(
+      {
+        provinceCode: selectedProvinceCode,
+        page: 0,
+        size: POST_OFFICE_PAGE_SIZE,
+      },
+      {
+        skip: !shouldLoadLocationFilters || !selectedProvinceCode,
+      }
+    );
+
+  const wardOptions = React.useMemo<Ward[]>(
+    () => wardsData?.items ?? [],
+    [wardsData]
+  );
+  const wardComboboxOptions = React.useMemo(
+    () => [
+      { value: 'ALL', label: 'All wards in province' },
+      ...wardOptions.flatMap((ward) =>
+        ward.wardCode
+          ? [
+              {
+                value: ward.wardCode,
+                label: `${ward.name} (${ward.wardCode})`,
+              },
+            ]
+          : []
+      ),
+    ],
+    [wardOptions]
+  );
 
   const { data: postOfficesData, isLoading: isLoadingPostOffices } =
     useGetPostOfficesQuery(
       {
         page: 0,
         size: POST_OFFICE_PAGE_SIZE,
+        provinceCode: selectedProvinceCode || undefined,
+        ...(selectedWardCode ? { wardCode: selectedWardCode } : {}),
       },
       {
-        skip: !shouldLoadPostOffices,
+        skip: !shouldLoadLocationFilters || !selectedProvinceCode,
       }
     );
 
@@ -218,9 +331,42 @@ export const PickupPage: React.FC = () => {
     () => postOfficesData?.items ?? [],
     [postOfficesData]
   );
+  const postOfficeComboboxOptions = React.useMemo(
+    () =>
+      postOfficeOptions.map((postOffice) => ({
+        value: String(postOffice.id),
+        label: `${postOffice.code} - ${postOffice.name}`,
+      })),
+    [postOfficeOptions]
+  );
 
   React.useEffect(() => {
-    if (isCourierScope || !postOfficeOptions.length) {
+    if (!provinceOptions.length) {
+      return;
+    }
+
+    const hasSelectedProvince = provinceOptions.some(
+      (province) => province.provinceCode === selectedProvinceCode
+    );
+
+    if (!hasSelectedProvince) {
+      setSelectedProvinceCode(provinceOptions[0].provinceCode);
+    }
+  }, [provinceOptions, selectedProvinceCode]);
+
+  React.useEffect(() => {
+    setSelectedWardCode('');
+    setSelectedPostOfficeId('');
+    setSelectedCourierStaffId('all');
+  }, [selectedProvinceCode]);
+
+  React.useEffect(() => {
+    setSelectedPostOfficeId('');
+    setSelectedCourierStaffId('all');
+  }, [selectedWardCode]);
+
+  React.useEffect(() => {
+    if (isCourierScope || !selectedProvinceCode || !postOfficeOptions.length) {
       return;
     }
 
@@ -231,7 +377,20 @@ export const PickupPage: React.FC = () => {
     if (!hasSelectedPostOffice) {
       setSelectedPostOfficeId(String(postOfficeOptions[0].id));
     }
-  }, [isCourierScope, postOfficeOptions, selectedPostOfficeId]);
+  }, [
+    isCourierScope,
+    postOfficeOptions,
+    selectedPostOfficeId,
+    selectedProvinceCode,
+  ]);
+
+  const handleProvinceChange = (value: string) => {
+    setSelectedProvinceCode(value);
+  };
+
+  const handleWardChange = (value: string) => {
+    setSelectedWardCode(value === 'ALL' ? '' : value);
+  };
 
   const selectedPostOfficeNumericId = React.useMemo(
     () => parseOptionalPositiveInteger(selectedPostOfficeId),
@@ -273,6 +432,16 @@ export const PickupPage: React.FC = () => {
         fullName: courier.fullName?.trim() || 'Unknown courier',
       }));
   }, [couriersData]);
+  const courierComboboxOptions = React.useMemo(
+    () => [
+      { value: 'all', label: 'All couriers' },
+      ...courierOptions.map((courier) => ({
+        value: String(courier.id),
+        label: `${courier.code} - ${courier.fullName}`,
+      })),
+    ],
+    [courierOptions]
+  );
 
   React.useEffect(() => {
     setSelectedCourierStaffId('all');
@@ -369,6 +538,48 @@ export const PickupPage: React.FC = () => {
 
   const [pickupCheckinOrder, { isLoading: isSubmittingCheckin }] =
     usePickupCheckinOrderMutation();
+  const [completePickupTrip, { isLoading: isCompletingTrip }] =
+    useCompletePickupTripMutation();
+  const [returnPickupTripToPostOffice, { isLoading: isReturningTrip }] =
+    useReturnPickupTripToPostOfficeMutation();
+  const [
+    confirmPostOfficeInbound,
+    { isLoading: isConfirmingPostOfficeInbound },
+  ] = useConfirmPickupTripPostOfficeInboundMutation();
+  const [inboundTrip, setInboundTrip] =
+    React.useState<PickupTrackingTrip | null>(null);
+
+  const applyValidCheckinCoordinates = React.useCallback(
+    (order: PickupTrackingOrder) => {
+      const coordinates = resolveValidCheckinCoordinates(order);
+      if (!coordinates) {
+        notification.error('Pickup location is missing for this order.', {
+          description:
+            'Ensure the order has sender coordinates before check-in.',
+        });
+        return false;
+      }
+
+      setCheckinLatitude(coordinates.latitude.toFixed(6));
+      setCheckinLongitude(coordinates.longitude.toFixed(6));
+      return true;
+    },
+    [notification]
+  );
+
+  const handleDevCheckinModeChange = (enabled: boolean) => {
+    setDevCheckinMode(enabled);
+    writeDevCheckinModePreference(enabled);
+
+    if (enabled && checkinOrder) {
+      applyValidCheckinCoordinates(checkinOrder);
+    }
+  };
+
+  const handleOpenCheckinDetailDialog = (order: PickupTrackingOrder) => {
+    setCheckinDetailOrder(order);
+    setIsCheckinDetailDialogOpen(true);
+  };
 
   const handleOpenCheckinDialog = (order: PickupTrackingOrder) => {
     setCheckinOrder(order);
@@ -376,6 +587,24 @@ export const PickupPage: React.FC = () => {
     setCheckinLatitude('');
     setCheckinLongitude('');
     setIsCheckinDialogOpen(true);
+
+    if (devCheckinMode) {
+      applyValidCheckinCoordinates(order);
+    }
+  };
+
+  const handleResolveCheckinLocation = async () => {
+    if (devCheckinMode) {
+      if (!checkinOrder) {
+        notification.error('Please select an order to check in.');
+        return;
+      }
+
+      applyValidCheckinCoordinates(checkinOrder);
+      return;
+    }
+
+    await handleResolveCurrentLocation();
   };
 
   const handleResolveCurrentLocation = async () => {
@@ -451,27 +680,78 @@ export const PickupPage: React.FC = () => {
     }
   };
 
-  return (
-    <div className='space-y-6'>
-      <div className='flex flex-col gap-2'>
-        <h1 className='text-2xl font-bold tracking-tight'>Pickup Tracking</h1>
-        <p className='text-muted-foreground'>
-          Monitor assigned pickup orders on map, check in orders, and review
-          pickup statistics.
-        </p>
-      </div>
+  const handleCompleteTrip = async (trip: PickupTrackingTrip) => {
+    if (!trip.tripId) {
+      notification.error('Trip id is missing.');
+      return;
+    }
 
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-3'>
-            <span>Access Scope</span>
-            <Badge variant={canAccess ? 'default' : 'secondary'}>
-              {getScopeLabel(accessScope)}
-            </Badge>
-          </CardTitle>
-          <CardDescription>{getScopeDescription(accessScope)}</CardDescription>
-        </CardHeader>
-      </Card>
+    try {
+      await completePickupTrip(trip.tripId).unwrap();
+      notification.success(
+        `Trip ${trip.tripCode || `#${trip.tripId}`} completed successfully.`
+      );
+      void refetchOverview();
+    } catch (error) {
+      notification.error('Failed to complete trip.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleReturnTripToPostOffice = async (trip: PickupTrackingTrip) => {
+    if (!trip.tripId) {
+      notification.error('Trip id is missing.');
+      return;
+    }
+
+    try {
+      await returnPickupTripToPostOffice(trip.tripId).unwrap();
+      notification.success(
+        `Trip ${trip.tripCode || `#${trip.tripId}`} returned to post office. Orders are awaiting post office inbound scan.`
+      );
+      void refetchOverview();
+    } catch (error) {
+      notification.error('Failed to return trip to post office.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  const handleOpenPostOfficeInbound = (trip: PickupTrackingTrip) => {
+    setInboundTrip(trip);
+  };
+
+  const handleConfirmPostOfficeInbound = async (orderCodes: string[]) => {
+    if (!inboundTrip?.tripId) {
+      return;
+    }
+
+    if (orderCodes.length === 0) {
+      notification.error('Scan at least one order before confirming inbound.');
+      return;
+    }
+
+    try {
+      await confirmPostOfficeInbound({
+        tripId: inboundTrip.tripId,
+        body: { orderCodes },
+      }).unwrap();
+      notification.success('Post office inbound confirmed successfully.');
+      setInboundTrip(null);
+      void refetchOverview();
+    } catch (error) {
+      notification.error('Failed to confirm post office inbound.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
+  return (
+    <div className='space-y-4'>
+      <div className='flex flex-col gap-1'>
+        <h1 className='text-2xl font-bold tracking-tight'>Pickup Tracking</h1>
+      </div>
 
       {!canAccess ? (
         <Card>
@@ -484,14 +764,11 @@ export const PickupPage: React.FC = () => {
         </Card>
       ) : (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Tracking Filters</CardTitle>
-              <CardDescription>
-                Select trip date and tracking scope.
-              </CardDescription>
+          <Card className='gap-3 py-5'>
+            <CardHeader className='px-5 py-0'>
+              <CardTitle className='text-base'>Tracking filters</CardTitle>
             </CardHeader>
-            <CardContent className='grid gap-4 md:grid-cols-3'>
+            <CardContent className='grid gap-3 px-5 py-0 md:grid-cols-2 xl:grid-cols-5'>
               <div className='space-y-2'>
                 <Label htmlFor='trip-date'>Trip date</Label>
                 <Input
@@ -505,128 +782,286 @@ export const PickupPage: React.FC = () => {
               {!isCourierScope ? (
                 <>
                   <div className='space-y-2'>
-                    <Label>Post office</Label>
-                    <Select
-                      value={selectedPostOfficeId}
-                      onValueChange={setSelectedPostOfficeId}
-                      disabled={
-                        isLoadingPostOffices || !postOfficeOptions.length
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select post office' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {postOfficeOptions.map((postOffice) => (
-                          <SelectItem
-                            key={postOffice.id}
-                            value={String(postOffice.id)}
-                          >
-                            {postOffice.code} - {postOffice.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor='pickup-province'>Province</Label>
+                    <TmsCombobox
+                      id='pickup-province'
+                      value={selectedProvinceCode}
+                      onValueChange={handleProvinceChange}
+                      options={provinceComboboxOptions}
+                      placeholder='Select province'
+                      emptyText='No provinces found'
+                      disabled={isLoadingProvinces || !provinceOptions.length}
+                      loading={isLoadingProvinces}
+                    />
                   </div>
 
                   <div className='space-y-2'>
-                    <Label>Courier</Label>
-                    <Select
+                    <Label htmlFor='pickup-ward'>Ward</Label>
+                    <TmsCombobox
+                      id='pickup-ward'
+                      value={selectedWardCode || 'ALL'}
+                      onValueChange={handleWardChange}
+                      options={wardComboboxOptions}
+                      placeholder={
+                        selectedProvinceCode
+                          ? 'Select ward (optional)'
+                          : 'Select province first'
+                      }
+                      emptyText={
+                        isLoadingWards ? 'Loading wards...' : 'No wards found'
+                      }
+                      disabled={!selectedProvinceCode || isLoadingWards}
+                      loading={isLoadingWards}
+                    />
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='pickup-post-office'>Post office</Label>
+                    <TmsCombobox
+                      id='pickup-post-office'
+                      value={selectedPostOfficeId}
+                      onValueChange={setSelectedPostOfficeId}
+                      options={postOfficeComboboxOptions}
+                      placeholder={
+                        selectedProvinceCode
+                          ? 'Select post office'
+                          : 'Select province first'
+                      }
+                      emptyText='No post offices found'
+                      disabled={
+                        !selectedProvinceCode ||
+                        isLoadingPostOffices ||
+                        !postOfficeOptions.length
+                      }
+                      loading={isLoadingPostOffices}
+                    />
+                    {selectedProvinceCode &&
+                    !isLoadingPostOffices &&
+                    !postOfficeOptions.length ? (
+                      <p className='text-xs text-muted-foreground'>
+                        No post offices found for selected location.
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='pickup-courier'>Courier</Label>
+                    <TmsCombobox
+                      id='pickup-courier'
                       value={selectedCourierStaffId}
                       onValueChange={setSelectedCourierStaffId}
+                      options={courierComboboxOptions}
+                      placeholder='All couriers in post office'
+                      emptyText='No couriers found'
                       disabled={!selectedPostOfficeId || isLoadingCouriers}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='All couriers in post office' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All couriers</SelectItem>
-                        {courierOptions.map((courier) => (
-                          <SelectItem
-                            key={courier.id}
-                            value={String(courier.id)}
-                          >
-                            {courier.code} - {courier.fullName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      loading={isLoadingCouriers}
+                    />
                   </div>
                 </>
               ) : (
-                <div className='md:col-span-2 rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground'>
+                <div className='rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground md:col-span-2'>
                   You are viewing your own assigned pickup orders.
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-            <Card>
-              <CardHeader className='pb-2'>
+          <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>Total trips</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.totalTrips)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>Total orders</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.totalOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>Checked-in orders</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.checkedInOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>Pending check-in</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.pendingCheckinOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>PICKING_UP orders</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.pickingUpOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
 
-            <Card>
-              <CardHeader className='pb-2'>
+            <Card className='gap-2 py-3'>
+              <CardHeader className='px-4 py-0'>
                 <CardDescription>PICKED_UP orders</CardDescription>
-                <CardTitle className='text-2xl'>
+                <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.pickedUpOrders)}
                 </CardTitle>
               </CardHeader>
             </Card>
+
+            {canManagePostOfficeInbound ? (
+              <Card className='gap-2 py-3'>
+                <CardHeader className='px-4 py-0'>
+                  <CardDescription>Pending post office inbound</CardDescription>
+                  <CardTitle className='text-xl'>
+                    {formatNumber(
+                      pickupOverview?.pendingPostOfficeInboundOrders
+                    )}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            ) : null}
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Pickup map</CardTitle>
+          <Card className='gap-3 py-5'>
+            <CardHeader className='px-5 py-0'>
+              <CardTitle className='text-base'>Assigned trips</CardTitle>
+            </CardHeader>
+            <CardContent className='px-5 py-0'>
+              {trips.length === 0 ? (
+                <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
+                  No trips found for selected filters.
+                </div>
+              ) : (
+                <div className='overflow-x-auto rounded-md border'>
+                  <table className='w-full min-w-[820px] text-sm'>
+                    <thead className='bg-muted/40 text-left'>
+                      <tr>
+                        <th className='px-3 py-2 font-medium'>Trip</th>
+                        <th className='px-3 py-2 font-medium'>Courier</th>
+                        <th className='px-3 py-2 font-medium'>Status</th>
+                        <th className='px-3 py-2 font-medium'>
+                          Check-in progress
+                        </th>
+                        <th className='px-3 py-2 font-medium'>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trips.map((trip) => (
+                        <tr key={trip.tripId} className='border-t'>
+                          <td className='px-3 py-2'>
+                            <div className='font-medium'>
+                              {trip.tripCode || `#${trip.tripId}`}
+                            </div>
+                            <div className='text-xs text-muted-foreground'>
+                              {formatDateTime(trip.plannedStartTime)} -{' '}
+                              {formatDateTime(trip.plannedEndTime)}
+                            </div>
+                          </td>
+                          <td className='px-3 py-2'>
+                            <div>{trip.courierName || '--'}</div>
+                            <div className='text-xs text-muted-foreground'>
+                              {trip.courierCode || '--'}
+                            </div>
+                          </td>
+                          <td className='px-3 py-2'>
+                            <Badge
+                              variant={
+                                trip.tripStatus === 'COMPLETED'
+                                  ? 'default'
+                                  : 'secondary'
+                              }
+                            >
+                              {trip.tripStatus || '--'}
+                            </Badge>
+                          </td>
+                          <td className='px-3 py-2'>
+                            {formatNumber(trip.checkedInOrders)} /{' '}
+                            {formatNumber(trip.totalOrders)}
+                          </td>
+                          <td className='px-3 py-2'>
+                            <div className='flex flex-wrap gap-2'>
+                              {canCompleteTrip(trip) ? (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  disabled={isCompletingTrip || isReturningTrip}
+                                  onClick={() => void handleCompleteTrip(trip)}
+                                >
+                                  Complete trip
+                                </Button>
+                              ) : null}
+                              {canReturnTripToPostOffice(trip, orders) ? (
+                                <Button
+                                  size='sm'
+                                  disabled={isCompletingTrip || isReturningTrip}
+                                  onClick={() =>
+                                    void handleReturnTripToPostOffice(trip)
+                                  }
+                                >
+                                  Return to post office
+                                </Button>
+                              ) : null}
+                              {canManagePostOfficeInbound &&
+                              canConfirmPostOfficeInbound(trip, orders) ? (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  disabled={
+                                    isCompletingTrip ||
+                                    isReturningTrip ||
+                                    isConfirmingPostOfficeInbound
+                                  }
+                                  onClick={() =>
+                                    handleOpenPostOfficeInbound(trip)
+                                  }
+                                >
+                                  Receive at post office
+                                </Button>
+                              ) : null}
+                              {!canCompleteTrip(trip) &&
+                              !canReturnTripToPostOffice(trip, orders) &&
+                              !(
+                                canManagePostOfficeInbound &&
+                                canConfirmPostOfficeInbound(trip, orders)
+                              ) ? (
+                                <span className='text-xs text-muted-foreground'>
+                                  No actions
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className='gap-3 py-5'>
+            <CardHeader className='px-5 py-0'>
+              <CardTitle className='text-base'>Pickup map</CardTitle>
               <CardDescription>
                 {ordersWithCoordinates.length} assigned order(s) with location.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className='px-5 py-0'>
               {ordersWithCoordinates.length === 0 ? (
-                <div className='rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground'>
+                <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
                   No assigned pickup orders with coordinates for selected
                   filters.
                 </div>
@@ -635,33 +1070,34 @@ export const PickupPage: React.FC = () => {
                   orders={ordersWithCoordinates}
                   selectedOrderId={selectedOrderId}
                   onSelectOrder={setSelectedOrderId}
+                  className='h-[320px]'
                 />
               )}
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Assigned orders</CardTitle>
-              <CardDescription>
-                {isLoadingOverview
-                  ? 'Loading assigned pickup orders...'
-                  : `${orders.length} order(s) found in ${trips.length} trip(s).`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='flex justify-end'>
-                <Button
-                  variant='outline'
-                  onClick={() => void refetchOverview()}
-                  disabled={isFetchingOverview}
-                >
-                  {isFetchingOverview ? 'Refreshing...' : 'Refresh'}
-                </Button>
+          <Card className='gap-3 py-5'>
+            <CardHeader className='flex flex-col gap-2 px-5 py-0 sm:flex-row sm:items-center sm:justify-between'>
+              <div>
+                <CardTitle className='text-base'>Assigned orders</CardTitle>
+                <CardDescription>
+                  {isLoadingOverview
+                    ? 'Loading assigned pickup orders...'
+                    : `${orders.length} order(s) in ${trips.length} trip(s).`}
+                </CardDescription>
               </div>
-
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => void refetchOverview()}
+                disabled={isFetchingOverview}
+              >
+                {isFetchingOverview ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            </CardHeader>
+            <CardContent className='px-5 py-0'>
               {orders.length === 0 ? (
-                <div className='rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground'>
+                <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
                   No assigned pickup orders for selected filters.
                 </div>
               ) : (
@@ -714,39 +1150,61 @@ export const PickupPage: React.FC = () => {
                               </div>
                             </td>
                             <td className='px-3 py-2'>
-                              <Badge
-                                variant={
-                                  order.checkedIn ? 'default' : 'secondary'
-                                }
-                              >
-                                {order.checkedIn
-                                  ? `Checked in ${formatDateTime(order.checkinTime)}`
-                                  : 'Pending'}
-                              </Badge>
+                              {canViewCheckinDetail(order) ? (
+                                <button
+                                  type='button'
+                                  className='inline-flex'
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleOpenCheckinDetailDialog(order);
+                                  }}
+                                >
+                                  <Badge variant='default'>
+                                    Checked in{' '}
+                                    {formatDateTime(order.checkinTime)}
+                                  </Badge>
+                                </button>
+                              ) : (
+                                <Badge variant='secondary'>Pending</Badge>
+                              )}
                             </td>
                             <td className='px-3 py-2'>
-                              {canCheckinOrder(order, isCourierScope) ? (
-                                <Button
-                                  size='sm'
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleOpenCheckinDialog(order);
-                                  }}
-                                >
-                                  Check in
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant='outline'
-                                  size='sm'
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setSelectedOrderId(order.orderId);
-                                  }}
-                                >
-                                  View
-                                </Button>
-                              )}
+                              <div className='flex flex-wrap gap-2'>
+                                {canCheckinOrder(order, isCourierScope) ? (
+                                  <Button
+                                    size='sm'
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleOpenCheckinDialog(order);
+                                    }}
+                                  >
+                                    Check in
+                                  </Button>
+                                ) : null}
+                                {canViewCheckinDetail(order) ? (
+                                  <Button
+                                    variant='outline'
+                                    size='sm'
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleOpenCheckinDetailDialog(order);
+                                    }}
+                                  >
+                                    View check-in
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant='outline'
+                                    size='sm'
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setSelectedOrderId(order.orderId);
+                                    }}
+                                  >
+                                    View
+                                  </Button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -759,18 +1217,18 @@ export const PickupPage: React.FC = () => {
           </Card>
 
           {selectedOrder ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>
+            <Card className='gap-3 py-5'>
+              <CardHeader className='px-5 py-0'>
+                <CardTitle className='text-base'>
                   Order detail:{' '}
                   {selectedOrder.orderCode || `#${selectedOrder.orderId}`}
                 </CardTitle>
                 <CardDescription>
-                  Trip {selectedOrder.tripCode || '--'} · Courier{' '}
+                  Trip {selectedOrder.tripCode || '--'} | Courier{' '}
                   {selectedOrder.courierName || '--'}
                 </CardDescription>
               </CardHeader>
-              <CardContent className='grid gap-3 sm:grid-cols-2'>
+              <CardContent className='grid gap-3 px-5 py-0 sm:grid-cols-3'>
                 <div>
                   <div className='text-xs text-muted-foreground'>Sender</div>
                   <div className='font-medium'>
@@ -780,6 +1238,30 @@ export const PickupPage: React.FC = () => {
                   <div className='text-sm text-muted-foreground'>
                     {selectedOrder.senderAddressDetail || '--'}
                   </div>
+                </div>
+
+                <div className='space-y-2'>
+                  <div className='text-xs text-muted-foreground'>Check-in</div>
+                  {canViewCheckinDetail(selectedOrder) ? (
+                    <>
+                      <Badge variant='default'>
+                        Checked in {formatDateTime(selectedOrder.checkinTime)}
+                      </Badge>
+                      <div>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() =>
+                            handleOpenCheckinDetailDialog(selectedOrder)
+                          }
+                        >
+                          View check-in detail
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <Badge variant='secondary'>Pending check-in</Badge>
+                  )}
                 </div>
 
                 <div>
@@ -804,6 +1286,31 @@ export const PickupPage: React.FC = () => {
         </>
       )}
 
+      <PickupPostOfficeInboundDialog
+        open={Boolean(inboundTrip)}
+        trip={inboundTrip}
+        orders={orders}
+        isConfirming={isConfirmingPostOfficeInbound}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInboundTrip(null);
+          }
+        }}
+        onConfirm={handleConfirmPostOfficeInbound}
+      />
+
+      <PickupCheckinDetailDialog
+        open={isCheckinDetailDialogOpen}
+        orderId={checkinDetailOrder?.orderId}
+        orderCode={checkinDetailOrder?.orderCode}
+        onOpenChange={(open) => {
+          setIsCheckinDetailDialogOpen(open);
+          if (!open) {
+            setCheckinDetailOrder(null);
+          }
+        }}
+      />
+
       <Dialog open={isCheckinDialogOpen} onOpenChange={setIsCheckinDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -811,11 +1318,31 @@ export const PickupPage: React.FC = () => {
               Pickup check-in {checkinOrder?.orderCode || ''}
             </DialogTitle>
             <DialogDescription>
-              Upload pickup photo and share your current location.
+              {devCheckinMode
+                ? 'Upload pickup photo. Development mode fills coordinates at the order pickup location.'
+                : 'Upload pickup photo and share your current location.'}
             </DialogDescription>
           </DialogHeader>
 
           <div className='space-y-4'>
+            {isDevCheckinFeatureAvailable ? (
+              <div className='flex items-center justify-between gap-4 rounded-md border border-dashed border-amber-500/50 bg-amber-500/5 px-3 py-2'>
+                <div className='space-y-0.5'>
+                  <Label htmlFor='dev-checkin-mode' className='text-sm'>
+                    Development mode
+                  </Label>
+                  <p className='text-xs text-muted-foreground'>
+                    Fill check-in coordinates at pickup location (within radius)
+                    instead of your current GPS position.
+                  </p>
+                </div>
+                <Switch
+                  id='dev-checkin-mode'
+                  checked={devCheckinMode}
+                  onCheckedChange={handleDevCheckinModeChange}
+                />
+              </div>
+            ) : null}
             <div className='space-y-2'>
               <Label htmlFor='checkin-photo'>Photo</Label>
               <Input
@@ -836,7 +1363,11 @@ export const PickupPage: React.FC = () => {
                   id='checkin-latitude'
                   value={checkinLatitude}
                   readOnly
-                  placeholder='Resolve current location'
+                  placeholder={
+                    devCheckinMode
+                      ? 'Auto-filled from pickup location'
+                      : 'Resolve current location'
+                  }
                 />
               </div>
 
@@ -846,7 +1377,11 @@ export const PickupPage: React.FC = () => {
                   id='checkin-longitude'
                   value={checkinLongitude}
                   readOnly
-                  placeholder='Resolve current location'
+                  placeholder={
+                    devCheckinMode
+                      ? 'Auto-filled from pickup location'
+                      : 'Resolve current location'
+                  }
                 />
               </div>
             </div>
@@ -854,12 +1389,14 @@ export const PickupPage: React.FC = () => {
             <Button
               type='button'
               variant='outline'
-              onClick={() => void handleResolveCurrentLocation()}
+              onClick={() => void handleResolveCheckinLocation()}
               disabled={isResolvingLocation}
             >
               {isResolvingLocation
                 ? 'Resolving location...'
-                : 'Use current location'}
+                : devCheckinMode
+                  ? 'Fill valid pickup location'
+                  : 'Use current location'}
             </Button>
           </div>
 

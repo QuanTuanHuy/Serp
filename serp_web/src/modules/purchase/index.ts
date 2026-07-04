@@ -1,5 +1,3 @@
-// Purchase Module Entry Point (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 // Export API
 export * from './api/purchaseApi';
 

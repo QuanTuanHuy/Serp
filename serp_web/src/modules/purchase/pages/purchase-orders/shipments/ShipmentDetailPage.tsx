@@ -1,10 +1,3 @@
-/**
- * Shipment Detail Page - Purchase Module (View Only)
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Shipment detail view (read-only)
- */
-
 'use client';
 
 import { useMemo, useState } from 'react';

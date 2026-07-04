@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Purchase Facility Detail Page
-*/
-
 'use client';
 
 import { useState } from 'react';
@@ -41,6 +36,7 @@ import {
 import { formatDateStringVN, formatPhoneNumber } from '@/shared/utils/format';
 import { toast } from 'sonner';
 import { UpdateAddressDialog } from '../../components/dialogs/UpdateAddressDialog';
+import { useUser } from '@/modules/account';
 
 interface FacilityDetailPageProps {
   facilityId: string;
@@ -63,6 +59,10 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
   facilityId,
 }) => {
   const router = useRouter();
+
+  const { user } = useUser();
+  const isPurchaseAdmin = user?.roles.includes('PURCHASE_ADMIN');
+
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
 
   const {
@@ -176,31 +176,33 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
           </div>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant='outline' size='icon' disabled={isDeleting}>
-              <MoreHorizontal className='h-4 w-4' />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuItem onClick={handleEdit}>
-              <Edit className='mr-2 h-4 w-4' />
-              Chỉnh sửa kho hàng
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsAddressDialogOpen(true)}>
-              <MapPin className='mr-2 h-4 w-4' />
-              Thay đổi địa chỉ
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleDelete}
-              className='text-destructive focus:text-destructive'
-            >
-              <Trash2 className='mr-2 h-4 w-4' />
-              Xóa kho hàng
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {isPurchaseAdmin && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='outline' size='icon' disabled={isDeleting}>
+                <MoreHorizontal className='h-4 w-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={handleEdit}>
+                <Edit className='mr-2 h-4 w-4' />
+                Chỉnh sửa kho hàng
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsAddressDialogOpen(true)}>
+                <MapPin className='mr-2 h-4 w-4' />
+                Thay đổi địa chỉ
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleDelete}
+                className='text-destructive focus:text-destructive'
+              >
+                <Trash2 className='mr-2 h-4 w-4' />
+                Xóa kho hàng
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Detail Cards */}

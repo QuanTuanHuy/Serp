@@ -5,8 +5,8 @@ import com.example.ttcrs.algorithm.vrp.Intervals;
 public class Warehouse {
 	private String code;
 	private String locationCode;
-	private int hardConstraintType;
-	private int vehicleConstraintType;
+	private int hardConstraintType; // 0: no constraint
+	private int vehicleConstraintType; // 0: no constraint
 	private int[] drivers;
 	private int[] vehicles;
 	private Checkin[] checkin;

@@ -121,6 +121,18 @@ external:
       host: ${CRM_SERVICE_HOST}
       port: ${CRM_SERVICE_PORT}
       timeout: 15s
+    paymentService:
+      host: ${PAYMENT_SERVICE_HOST}
+      port: ${PAYMENT_SERVICE_PORT}
+      timeout: 15s
+    tmsBillingService:
+      host: ${TMS_BILLING_SERVICE_HOST}
+      port: ${TMS_BILLING_SERVICE_PORT}
+      timeout: 15s
+    tmsOrderService:
+      host: ${TMS_ORDER_SERVICE_HOST}
+      port: ${TMS_ORDER_SERVICE_PORT}
+      timeout: 15s
     notificationService:
       host: ${NOTIFICATION_SERVICE_HOST}
       port: ${NOTIFICATION_SERVICE_PORT}
@@ -131,7 +143,16 @@ external:
       port: ${DISCUSS_SERVICE_PORT}
       timeout: 15s
       webSocketPath: /discuss/ws/discuss
+    schoolBusService:
+      host: ${SCHOOL_BUS_SERVICE_HOST}
+      port: ${SCHOOL_BUS_SERVICE_PORT}
+      timeout: 15s
+      webSocketPath: /school-bus/api/v1/ws/school-bus
     pmCoreService:
       host: ${PM_CORE_SERVICE_HOST}
       port: ${PM_CORE_SERVICE_PORT}
+      timeout: 15s
+    ttcrsService:
+      host: ${TTCRS_SERVICE_HOST}
+      port: ${TTCRS_SERVICE_PORT}
       timeout: 15s

@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Order Form Component
-*/
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -117,6 +112,10 @@ export const OrderForm: React.FC<OrderFormProps> = ({
   const products = productsResponse?.data?.items || [];
   const preSelectedCustomer = preSelectedCustomerResponse?.data;
 
+  const availableProducts = products.filter(
+    (p) => !items.some((i) => i.productId === p.id)
+  );
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -192,6 +191,13 @@ export const OrderForm: React.FC<OrderFormProps> = ({
   };
 
   const addItem = (productId: string) => {
+    if (items.some((i) => i.productId === productId)) {
+      toast.error('Sản phẩm này đã được thêm vào đơn');
+      setProductSearch('');
+      setShowProductDropdown(false);
+      return;
+    }
+
     const maxSeqId = Math.max(0, ...items.map((i) => i.orderItemSeqId));
     setItems([
       ...items,
@@ -439,25 +445,31 @@ export const OrderForm: React.FC<OrderFormProps> = ({
                     />
                   </div>
 
-                  {showProductDropdown && products.length > 0 && (
+                  {showProductDropdown && (
                     <div className='absolute z-10 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-60 overflow-auto'>
-                      {products.map((product) => (
-                        <button
-                          key={product.id}
-                          type='button'
-                          onClick={() => addItem(product.id)}
-                          className='w-full px-4 py-2 text-left hover:bg-muted transition-colors flex items-center justify-between'
-                        >
-                          <div>
-                            <p className='font-medium'>{product.name}</p>
-                            <p className='text-sm text-muted-foreground'>
-                              {product.skuCode || 'N/A'} • $
-                              {product.retailPrice}
-                            </p>
-                          </div>
-                          <Plus className='h-4 w-4' />
-                        </button>
-                      ))}
+                      {availableProducts.length > 0 ? (
+                        availableProducts.map((product) => (
+                          <button
+                            key={product.id}
+                            type='button'
+                            onClick={() => addItem(product.id)}
+                            className='w-full px-4 py-2 text-left hover:bg-muted transition-colors flex items-center justify-between'
+                          >
+                            <div>
+                              <p className='font-medium'>{product.name}</p>
+                              <p className='text-sm text-muted-foreground'>
+                                {product.skuCode || 'N/A'} • đ
+                                {product.retailPrice?.toLocaleString() || 0}
+                              </p>
+                            </div>
+                            <Plus className='h-4 w-4' />
+                          </button>
+                        ))
+                      ) : (
+                        <div className='px-4 py-2 text-sm text-muted-foreground'>
+                          Không còn sản phẩm nào để thêm
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

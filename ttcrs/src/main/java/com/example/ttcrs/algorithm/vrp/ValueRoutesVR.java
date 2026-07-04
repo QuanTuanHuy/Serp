@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import com.example.ttcrs.algorithm.vrp.entities.Point;
-
+// Bản sao giá trị để lưu trạng thái hiện tại của các tuyến đường, được sử dụng để so sánh với trạng thái mới sau khi thực hiện các thao tác như di chuyển điểm từ tuyến đường này sang tuyến đường khác hoặc đảo ngược hướng của một đoạn tuyến đường.
 public class ValueRoutesVR {
 	private HashMap<Point, Point> next;
 	private HashMap<Point, Point> prev;
@@ -34,6 +34,7 @@ public class ValueRoutesVR {
 	public int route(Point p){
 		return route.get(p);
 	}
+	// Stores the current values of the routes
 	public void store(){
 		for(Point p : allPoints){
 			next.put(p, XR.next(p));

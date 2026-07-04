@@ -1,0 +1,87 @@
+spring:
+  application:
+    name: "school-bus-service"
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/serp_school_bus}
+    username: ${DB_USERNAME:serp}
+    password: ${DB_PASSWORD:serp123}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration,classpath:db/migration-data
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/serp/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:8180}/realms/serp
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: ${KAFKA_SCHOOL_BUS_GROUP_ID:school-bus-sync-user}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      missing-topics-fatal: false
+
+server:
+  port: ${SERVER_PORT:8094}
+  servlet:
+    context-path: /school-bus/api/v1
+
+security:
+  role-prefix: ROLE_
+  roles:
+    serp_service: ${SECURITY_ROLE_SERP_SERVICE:SERP_SERVICES}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+map:
+  nominatim:
+    base-url: ${MAP_NOMINATIM_BASE_URL:https://nominatim.openstreetmap.org}
+    user-agent: ${MAP_NOMINATIM_USER_AGENT:SERP-SchoolBus/0.1 (local-dev)}
+  routing:
+    user-agent: ${MAP_ROUTING_USER_AGENT:SERP-SchoolBus/0.1 (local-dev)}
+    osrm:
+      base-url: ${MAP_ROUTING_OSRM_BASE_URL:https://router.project-osrm.org}
+      profile: ${MAP_ROUTING_OSRM_PROFILE:driving}
+
+school-bus:
+  kafka:
+    topics:
+      account-user-events: ${SYNC_USER_TOPIC:SYNC_USER}
+      user-notifications: ${NOTIFICATION_USER_TOPIC:serp.notification.user.events}
+  notification:
+    source-service: ${SCHOOL_BUS_NOTIFICATION_SOURCE:school-bus-service}
+  account-sync:
+    enabled: ${SCHOOL_BUS_ACCOUNT_SYNC_ENABLED:true}
+    cron: ${SCHOOL_BUS_ACCOUNT_SYNC_CRON:0 */30 * * * *}
+    initial-lookback-days: ${SCHOOL_BUS_ACCOUNT_SYNC_INITIAL_LOOKBACK_DAYS:30}
+  account-service:
+    base-url: ${ACCOUNT_SERVICE_BASE_URL:http://localhost:8081/account-service}
+  keycloak:
+    url: ${KEYCLOAK_URL:http://localhost:8180}
+    realm: ${KEYCLOAK_REALM:serp}
+    client-id: ${KEYCLOAK_CLIENT_ID:serp-school-bus}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET:your-client-secret}
+

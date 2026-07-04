@@ -35,7 +35,7 @@ public class RequestEntity {
     @Column(name = "customer_id")
     private Long customerId;
 
-    @Column(name = "src_location_code", nullable = false, length = 50)
+    @Column(name = "src_location_code", length = 50)
     private String srcLocationCode;
 
     @Column(name = "dest_location_code", nullable = false, length = 50)
@@ -59,6 +59,10 @@ public class RequestEntity {
     @Column(name = "container_size", length = 20)
     @Enumerated(EnumType.STRING)
     private ContainerSize containerSize;
+
+    /** Mã container (số container) phục vụ request này */
+    @Column(name = "container_code", length = 50)
+    private String containerCode;
 
     @Column(name = "drop_trailer_required")
     private Boolean dropTrailerRequired;

@@ -85,14 +85,6 @@ const formatNumber = (value?: number | null, suffix?: string) => {
   }`;
 };
 
-const formatShortId = (value?: string | null) => {
-  if (!value) {
-    return '--';
-  }
-
-  return value.length > 12 ? `${value.slice(0, 10)}...` : value;
-};
-
 const formatVehicleType = (vehicleType?: string) => {
   if (!vehicleType) {
     return 'Chưa xác định';
@@ -111,19 +103,6 @@ const formatVehicleType = (vehicleType?: string) => {
       return 'Xe tải nhẹ 2 tấn';
     default:
       return vehicleType;
-  }
-};
-
-const formatVehicleShipperStatus = (status?: string) => {
-  switch (status) {
-    case 'ACTIVE':
-      return 'Đang hoạt động';
-    case 'INACTIVATE_REQUESTED':
-      return 'Đang chờ hủy';
-    case 'CANCELED':
-      return 'Đã hủy';
-    default:
-      return 'Không xác định';
   }
 };
 

@@ -28,7 +28,7 @@ public class TruckContainerInitializer {
 
 		int id = 0;
 		int groupId = 0;
-
+		// IdAndGroup là một lớp tiện ích để theo dõi ID và groupId hiện tại khi xây dựng các điểm trong mô hình. ID được sử dụng để gán cho mỗi điểm một định danh duy nhất, trong khi groupId được sử dụng để nhóm các điểm liên quan với nhau (ví dụ cùng một yêu cầu, cùng một xe tải, cùng một mooc) để dễ dàng quản lý và áp dụng các ràng buộc liên quan đến nhóm đó.
 		IdAndGroup cursor = new IdAndGroup(id, groupId);
 		cursor = buildTruckPoints(solver, cursor);
 		cursor = buildMoocPoints(solver, cursor);
@@ -39,7 +39,7 @@ public class TruckContainerInitializer {
 
 		buildWeightManagersAndMaxTravelTime(solver);
 	}
-
+	// Đếm số lượng yêu cầu và phương tiện từ dữ liệu đầu vào
 	private void loadRequestsAndCounts(TruckContainerSolver solver) {
 		solver.exEmptyRequests = solver.input.getExEmptyRequests();
 		solver.exLadenRequests = solver.input.getExLadenRequests();
@@ -61,33 +61,33 @@ public class TruckContainerInitializer {
 		solver.deliveryPoints = new ArrayList<Point>();
 		solver.rejectPickupPoints = new ArrayList<Point>();
 		solver.rejectDeliveryPoints = new ArrayList<Point>();
-		solver.startPoints = new ArrayList<Point>();
+		solver.startPoints = new ArrayList<Point>(); //điểm bắt đầu của xe tải
 		solver.stopPoints = new ArrayList<Point>();
 		solver.startMoocPoints = new ArrayList<Point>();
 		solver.stopMoocPoints = new ArrayList<Point>();
-		solver.point2Type = new HashMap<Point, String>();
+		solver.point2Type = new HashMap<Point, String>(); //loại điểm: điểm bắt đầu xe tải, điểm kết thúc xe tải, điểm bắt đầu mooc, điểm kết thúc mooc, điểm pickup container, điểm delivery container
 
-		solver.pickup2Delivery = new HashMap<Point, Point>();
-		solver.delivery2Pickup = new HashMap<Point, Point>();
+		solver.pickup2Delivery = new HashMap<Point, Point>(); // ánh xạ giữa điểm pickup và điểm delivery tương ứng của cùng một yêu cầu
+		solver.delivery2Pickup = new HashMap<Point, Point>(); // ánh xạ ngược lại giữa điểm delivery và điểm pickup tương ứng
 
-		solver.start2stopMoocPoint = new HashMap<Point, Point>();
-		solver.stop2startMoocPoint = new HashMap<Point, Point>();
+		solver.start2stopMoocPoint = new HashMap<Point, Point>(); // ánh xạ giữa điểm bắt đầu mooc và điểm kết thúc mooc tương ứng (vì một mooc có thể có nhiều cặp điểm bắt đầu-kết thúc nếu nó có thể được sử dụng nhiều lần) để dễ dàng truy xuất điểm kết thúc mooc từ điểm bắt đầu mooc và ngược lại.
+		solver.stop2startMoocPoint = new HashMap<Point, Point>(); // ánh xạ ngược lại giữa điểm kết thúc mooc và điểm bắt đầu mooc tương ứng để dễ dàng truy xuất điểm bắt đầu mooc từ điểm kết thúc mooc.
 
-		solver.startPoint2Truck = new HashMap<Point, Truck>();
-		solver.startPoint2Mooc = new HashMap<Point, Mooc>();
+		solver.startPoint2Truck = new HashMap<Point, Truck>(); // ánh xạ giữa điểm bắt đầu của xe tải và đối tượng Truck tương ứng để dễ dàng truy xuất thông tin về xe tải từ điểm bắt đầu của nó.
+		solver.startPoint2Mooc = new HashMap<Point, Mooc>(); // ánh xạ giữa điểm bắt đầu của mooc và đối tượng Mooc tương ứng để dễ dàng truy xuất thông tin về mooc từ điểm bắt đầu của nó.
 
-		solver.point2Group = new HashMap<Point, Integer>();
-		solver.group2marked = new HashMap<Integer, Integer>();
+		solver.point2Group = new HashMap<Point, Integer>(); // nhóm các điểm liên quan (ví dụ cùng 1 yêu cầu, cùng 1 xe tải, cùng 1 mooc) để dễ dàng quản lý và áp dụng các ràng buộc liên quan đến nhóm đó
+		solver.group2marked = new HashMap<Integer, Integer>(); // đánh dấu trạng thái của từng nhóm (ví dụ đã được xử lý hay chưa)
 
 		solver.group2EE = new HashMap<Integer, ExportEmptyRequests>();
 		solver.group2EL = new HashMap<Integer, ExportLadenRequests>();
 		solver.group2IE = new HashMap<Integer, ImportEmptyRequests>();
 		solver.group2IL = new HashMap<Integer, ImportLadenRequests>();
 
-		solver.point2moocWeight = new HashMap<Point, Integer>();
-		solver.point2containerWeight = new HashMap<Point, Integer>();
+		solver.point2moocWeight = new HashMap<Point, Integer>(); // trọng số thay đổi số mooc khi đi qua điểm đó. Ví dụ start mooc +2, end mooc -2, điểm pickup/delivery thường 0.
+		solver.point2containerWeight = new HashMap<Point, Integer>(); // trọng số thay đổi số container khi đi qua điểm đó. Ví dụ điểm pickup +1 (hoặc +2 nếu là container 40ft), điểm delivery -1 (hoặc -2 nếu là container 40ft), điểm start/stop mooc thường 0.
 
-		solver.route2DeliveryMooc = new HashMap<Integer, Point>();
+		solver.route2DeliveryMooc = new HashMap<Integer, Point>(); // ánh xạ giữa tuyến đường (route) và điểm delivery mooc tương ứng trên tuyến đó để dễ dàng truy xuất điểm delivery mooc từ tuyến đường, phục vụ cho việc áp dụng ràng buộc liên quan đến mooc trên tuyến đường đó.
 	}
 
 	private IdAndGroup buildTruckPoints(TruckContainerSolver solver, IdAndGroup cursor) {
@@ -98,12 +98,14 @@ public class TruckContainerInitializer {
 			Truck truck = solver.input.getTrucks()[i];
 			groupId++;
 			solver.group2marked.put(groupId, 0);
+			// 1 group tương ứng với 1 xe
 			for (int j = 0; j < truck.getReturnDepotCodes().length; j++) {
 				id++;
 				Point sp = new Point(id, truck.getDepotTruckLocationCode());
-
+				// Tạo điểm bắt đầu cho xe tải, với ID duy nhất và mã vị trí của depot nơi xe bắt đầu. Điểm này sẽ được sử dụng để đại diện cho vị trí xuất phát của xe tải trong mô hình VRP.
+				// Dù lặp nhiều lần cho mỗi depot trả về của xe tải, nhưng điểm bắt đầu của xe tải vẫn là điểm duy nhất với mã vị trí của depot đó. Các điểm kết thúc khác nhau sẽ được tạo ra cho mỗi depot trả về, nhưng chúng sẽ có mã vị trí khác nhau tương ứng với các depot đó.
 				solver.points.add(sp);
-				solver.startPoints.add(sp);
+				solver.startPoints.add(sp); 
 				solver.point2Type.put(sp, TruckContainerSolver.START_TRUCK);
 				solver.startPoint2Truck.put(sp, truck);
 
@@ -117,6 +119,7 @@ public class TruckContainerInitializer {
 				id++;
 				DepotTruck depotTruck = solver.mCode2DepotTruck.get(truck.getReturnDepotCodes()[j]);
 				Point tp = new Point(id, depotTruck.getLocationCode());
+				// Tạo điểm kết thúc cho xe tải, với ID duy nhất và mã vị trí của depot nơi xe kết thúc. Điểm này sẽ được sử dụng để đại diện cho vị trí kết thúc của xe tải trong mô hình VRP. Mỗi depot trả về của xe tải sẽ tương ứng với một điểm kết thúc khác nhau, nhưng tất cả các điểm kết thúc này sẽ có mã vị trí khác nhau tương ứng với các depot đó. Điểm bắt đầu của xe tải sẽ được tạo ra một lần duy nhất với mã vị trí của depot bắt đầu, trong khi điểm kết thúc sẽ được tạo ra nhiều lần cho mỗi depot trả về nhưng với mã vị trí khác nhau.
 				solver.points.add(tp);
 				solver.stopPoints.add(tp);
 				solver.point2Type.put(tp, TruckContainerSolver.END_TRUCK);
@@ -268,6 +271,7 @@ public class TruckContainerInitializer {
 		int groupId = cursor.groupId;
 
 		for (int i = 0; i < solver.exLadenRequests.length; i++) {
+			// 1 group tương ứng với 1 yêu cầu laden xuất, bao gồm 1 điểm pickup tại warehouse và 1 điểm delivery tại port
 			groupId++;
 			solver.group2marked.put(groupId, 0);
 			solver.group2EL.put(groupId, solver.exLadenRequests[i]);
@@ -467,16 +471,17 @@ public class TruckContainerInitializer {
 		solver.nwMooc = new NodeWeightsManager(solver.points);
 		solver.nwContainer = new NodeWeightsManager(solver.points);
 		solver.awm = new ArcWeightsManager(solver.points);
+		// Tính toán trọng số cung đường giữa tất cả các cặp điểm và lưu vào ArcWeightsManager. Đồng thời, tìm thời gian di chuyển lớn nhất giữa bất kỳ hai điểm nào để thiết lập giá trị MAX_TRAVELTIME, có thể được sử dụng sau này trong thuật toán giải để áp dụng các ràng buộc liên quan đến thời gian di chuyển tối đa.
 		double max_time = Double.MIN_VALUE;
 		for (int i = 0; i < solver.points.size(); i++) {
 			for (int j = 0; j < solver.points.size(); j++) {
 				double tmp_cost = solver.getTravelTime(solver.points.get(i).getLocationCode(),
 						solver.points.get(j).getLocationCode());
 				solver.awm.setWeight(solver.points.get(i), solver.points.get(j), tmp_cost);
-				max_time = tmp_cost > max_time ? tmp_cost : max_time;
+				max_time = tmp_cost > max_time ? tmp_cost : max_time; //
 			}
-			solver.nwMooc.setWeight(solver.points.get(i), solver.point2moocWeight.get(solver.points.get(i)));
-			solver.nwContainer.setWeight(solver.points.get(i), solver.point2containerWeight.get(solver.points.get(i)));
+			solver.nwMooc.setWeight(solver.points.get(i), solver.point2moocWeight.get(solver.points.get(i))); // Thiết lập trọng số thay đổi số mooc khi đi qua điểm đó vào NodeWeightsManager nwMooc.
+			solver.nwContainer.setWeight(solver.points.get(i), solver.point2containerWeight.get(solver.points.get(i))); // Thiết lập trọng số thay đổi số container khi đi qua điểm đó vào NodeWeightsManager nwContainer.
 		}
 		TruckContainerSolver.MAX_TRAVELTIME = max_time;
 	}

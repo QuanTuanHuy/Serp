@@ -11,7 +11,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 
 @Data
 @NoArgsConstructor
@@ -23,12 +22,6 @@ public class UpdatePostOfficeStaffAssignmentRequest {
 
     @JsonProperty("assigned_to")
     private LocalDate assignedTo;
-
-    @JsonProperty("shift_start_time")
-    private LocalTime shiftStartTime;
-
-    @JsonProperty("shift_end_time")
-    private LocalTime shiftEndTime;
 
     @JsonProperty("is_primary")
     private Boolean isPrimary;

@@ -1,59 +1,30 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Inventory Item Detail Page
-*/
-
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import {
   Card,
   CardContent,
   CardHeader,
   Button,
   Badge,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Input,
-  Label,
 } from '@/shared/components/ui';
 import {
   ArrowLeft,
-  MoreHorizontal,
-  Edit,
-  Trash2,
   Package,
   MapPin,
-  Calendar,
-  Clock,
   CheckCircle2,
   XCircle,
   AlertCircle,
   Box,
-  TrendingUp,
-  TrendingDown,
   Archive,
-  Save,
   Truck,
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import {
   useGetInventoryItemQuery,
-  useUpdateInventoryItemMutation,
-  useDeleteInventoryItemMutation,
   useGetProductQuery,
   useGetFacilityQuery,
 } from '../../api/salesApi';
-import type { InventoryItemStatus, InventoryItemUpdateForm } from '../../types';
 import { formatDateStringVN } from '@/shared/utils/format';
 
 interface InventoryDetailPageProps {
@@ -62,7 +33,7 @@ interface InventoryDetailPageProps {
 
 const STATUS_CONFIG = {
   VALID: {
-    label: 'Hợp lệ',
+    label: 'Còn hạn',
     color: 'text-emerald-700 dark:text-emerald-400',
     bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
     icon: CheckCircle2,
@@ -73,8 +44,8 @@ const STATUS_CONFIG = {
     bgColor: 'bg-rose-100 dark:bg-rose-900/30',
     icon: XCircle,
   },
-  DAMAGED: {
-    label: 'Hư hỏng',
+  EXPIRING_SOON: {
+    label: 'Sắp hết hạn',
     color: 'text-amber-700 dark:text-amber-400',
     bgColor: 'bg-amber-100 dark:bg-amber-900/30',
     icon: AlertCircle,
@@ -85,7 +56,6 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
   itemId,
 }) => {
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
 
   // Fetch inventory item data
   const {
@@ -93,10 +63,6 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
     isLoading,
     isError,
   } = useGetInventoryItemQuery(itemId);
-  const [updateInventoryItem, { isLoading: isUpdating }] =
-    useUpdateInventoryItemMutation();
-  const [deleteInventoryItem, { isLoading: isDeleting }] =
-    useDeleteInventoryItemMutation();
 
   const item = itemResponse?.data;
 
@@ -112,74 +78,11 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
   const product = productResponse?.data;
   const facility = facilityResponse?.data;
 
-  // Edit form state
-  const [editData, setEditData] = useState({
-    quantityOnHand: item?.quantityOnHand || 0,
-    expirationDate: item?.expirationDate || '',
-    manufacturingDate: item?.manufacturingDate || '',
-    statusId: item?.statusId || 'VALID',
-  });
-
   const statusConfig = item
     ? STATUS_CONFIG[item.statusId as keyof typeof STATUS_CONFIG] ||
       STATUS_CONFIG.VALID
     : STATUS_CONFIG.VALID;
   const StatusIcon = statusConfig.icon;
-
-  const handleEdit = () => {
-    setEditData({
-      quantityOnHand: item?.quantityOnHand || 0,
-      expirationDate: item?.expirationDate || '',
-      manufacturingDate: item?.manufacturingDate || '',
-      statusId: item?.statusId || 'VALID',
-    });
-    setIsEditing(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!item) return;
-
-    try {
-      const updatePayload: InventoryItemUpdateForm = {
-        quantity: editData.quantityOnHand,
-        statusId: editData.statusId as InventoryItemStatus,
-      };
-
-      if (editData.expirationDate) {
-        updatePayload.expirationDate = editData.expirationDate;
-      }
-      if (editData.manufacturingDate) {
-        updatePayload.manufacturingDate = editData.manufacturingDate;
-      }
-
-      await updateInventoryItem({
-        inventoryItemId: item.id,
-        data: updatePayload,
-      }).unwrap();
-
-      toast.success('Cập nhật thành công');
-      setIsEditing(false);
-    } catch (error: any) {
-      const errorMessage =
-        error?.data?.message || 'Không thể cập nhật. Vui lòng thử lại.';
-      toast.error(errorMessage);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!item) return;
-    if (!confirm('Bạn có chắc chắn muốn xóa mục tồn kho này không?')) return;
-
-    try {
-      await deleteInventoryItem(item.id).unwrap();
-      toast.success('Xóa thành công');
-      router.push('/sales/inventory');
-    } catch (error: any) {
-      const errorMessage =
-        error?.data?.message || 'Không thể xóa. Vui lòng thử lại.';
-      toast.error(errorMessage);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -238,7 +141,9 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
           <div>
             <div className='flex items-center gap-3 mb-1'>
               <h1 className='text-2xl font-bold tracking-tight'>
-                {product?.name || item.productId.slice(0, 8)}
+                {product?.name ||
+                  item.productId?.slice(0, 8) ||
+                  'Sản phẩm không rõ'}
               </h1>
               <Badge
                 variant='secondary'
@@ -253,64 +158,18 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
               </Badge>
             </div>
             <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-              <span>Lô hàng: {item.lotId}</span>
+              <span>Lô hàng: {item.lotId || 'N/A'}</span>
               <span>•</span>
-              <span>ID: {item.id.slice(0, 8)}...</span>
+              <span>ID: {item.id?.slice(0, 8) || 'N/A'}...</span>
             </div>
           </div>
-        </div>
-
-        {/* Actions */}
-        <div className='flex items-center gap-2'>
-          {isEditing ? (
-            <>
-              <Button
-                onClick={handleSaveEdit}
-                disabled={isUpdating}
-                className='gap-2'
-              >
-                <Save className='h-4 w-4' />
-                Lưu
-              </Button>
-              <Button
-                variant='outline'
-                onClick={() => setIsEditing(false)}
-                disabled={isUpdating}
-              >
-                Hủy
-              </Button>
-            </>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant='outline' size='icon'>
-                  <MoreHorizontal className='h-4 w-4' />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end'>
-                <DropdownMenuItem onClick={handleEdit}>
-                  <Edit className='h-4 w-4 mr-2' />
-                  Chỉnh sửa
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleDelete}
-                  className='text-destructive'
-                  disabled={isDeleting}
-                >
-                  <Trash2 className='h-4 w-4 mr-2' />
-                  Xóa
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
       </div>
 
       {/* Warning Badges */}
       {(isExpiringSoon || isExpired) && (
         <div className='flex gap-2'>
-          {isExpiringSoon && (
+          {isExpiringSoon && !isExpired && (
             <Badge
               variant='secondary'
               className='gap-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
@@ -340,21 +199,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
                 <p className='text-sm text-muted-foreground mb-1'>
                   Tồn kho thực
                 </p>
-                {isEditing ? (
-                  <Input
-                    type='number'
-                    value={editData.quantityOnHand}
-                    onChange={(e) =>
-                      setEditData({
-                        ...editData,
-                        quantityOnHand: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className='w-32'
-                  />
-                ) : (
-                  <p className='text-2xl font-bold'>{item.quantityOnHand}</p>
-                )}
+                <p className='text-2xl font-bold'>{item.quantityOnHand || 0}</p>
               </div>
               <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30'>
                 <Box className='h-6 w-6 text-blue-600 dark:text-blue-400' />
@@ -369,7 +214,7 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
               <div>
                 <p className='text-sm text-muted-foreground mb-1'>Chưa giao</p>
                 <p className='text-2xl font-bold text-purple-600 dark:text-purple-400'>
-                  {item.quantityCommitted}
+                  {item.quantityCommitted || 0}
                 </p>
               </div>
               <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30'>
@@ -383,9 +228,9 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
           <CardContent className='pt-6'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm text-muted-foreground mb-1'>Đã đặt</p>
+                <p className='text-sm text-muted-foreground mb-1'>Chưa xuất</p>
                 <p className='text-2xl font-bold text-amber-600 dark:text-amber-400'>
-                  {item.quantityReserved}
+                  {item.quantityReserved || 0}
                 </p>
               </div>
               <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/30'>
@@ -401,9 +246,9 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
               <div>
                 <p className='text-sm text-muted-foreground mb-1'>Khả dụng</p>
                 <p className='text-2xl font-bold text-emerald-600 dark:text-emerald-400'>
-                  {item.quantityOnHand -
-                    item.quantityCommitted -
-                    item.quantityReserved}
+                  {(item.quantityOnHand || 0) -
+                    (item.quantityCommitted || 0) -
+                    (item.quantityReserved || 0)}
                 </p>
               </div>
               <div className='flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30'>
@@ -428,25 +273,25 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
             <div className='flex justify-between'>
               <span className='text-muted-foreground'>Tên sản phẩm</span>
               <span className='font-medium'>
-                {product?.name || item.productId.slice(0, 8)}
+                {product?.name || item.productId?.slice(0, 8) || 'N/A'}
               </span>
             </div>
             {product && (
               <>
                 <div className='flex justify-between'>
                   <span className='text-muted-foreground'>Đơn vị</span>
-                  <span className='font-medium'>{product.unit}</span>
+                  <span className='font-medium'>{product.unit || 'N/A'}</span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-muted-foreground'>Giá vốn</span>
                   <span className='font-medium'>
-                    đ{product.costPrice.toLocaleString()}
+                    đ{product.costPrice?.toLocaleString() || 0}
                   </span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-muted-foreground'>Giá bán</span>
                   <span className='font-medium'>
-                    đ{product.retailPrice.toLocaleString()}
+                    đ{product.retailPrice?.toLocaleString() || 0}
                   </span>
                 </div>
               </>
@@ -466,62 +311,40 @@ export const InventoryDetailPage: React.FC<InventoryDetailPageProps> = ({
             <div className='flex justify-between'>
               <span className='text-muted-foreground'>Kho hàng</span>
               <span className='font-medium'>
-                {facility?.name || item.facilityId.slice(0, 8)}
+                {facility?.name || item.facilityId?.slice(0, 8) || 'N/A'}
               </span>
             </div>
             {facility?.address && (
               <div className='flex justify-between'>
                 <span className='text-muted-foreground'>Địa chỉ</span>
-                <span className='font-medium'>
+                <span className='font-medium text-right max-w-[200px]'>
                   {facility?.address.fullAddress}
                 </span>
               </div>
             )}
             <div className='flex justify-between pt-2 border-t'>
-              <span className='text-muted-foreground'>Ngày nhận</span>
+              <span className='text-muted-foreground'>Ngày nhập kho</span>
               <span className='font-medium'>
-                {formatDateStringVN(item.receivedDate)}
+                {item.receivedDate
+                  ? formatDateStringVN(item.receivedDate)
+                  : 'Không xác định'}
               </span>
             </div>
-            <div className='flex justify-between'>
-              <span className='text-muted-foreground'>Ngày SX</span>
-              {isEditing ? (
-                <Input
-                  type='date'
-                  value={editData.manufacturingDate}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      manufacturingDate: e.target.value,
-                    })
-                  }
-                  className='w-40 h-8'
-                />
-              ) : (
-                <span className='font-medium'>
-                  {formatDateStringVN(item.manufacturingDate)}
-                </span>
-              )}
+            <div className='flex justify-between items-center'>
+              <span className='text-muted-foreground'>Ngày sản xuất</span>
+              <span className='font-medium'>
+                {item.manufacturingDate
+                  ? formatDateStringVN(item.manufacturingDate)
+                  : 'Không xác định'}
+              </span>
             </div>
-            <div className='flex justify-between'>
-              <span className='text-muted-foreground'>Ngày HSD</span>
-              {isEditing ? (
-                <Input
-                  type='date'
-                  value={editData.expirationDate}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      expirationDate: e.target.value,
-                    })
-                  }
-                  className='w-40 h-8'
-                />
-              ) : (
-                <span className='font-medium'>
-                  {formatDateStringVN(item.expirationDate)}
-                </span>
-              )}
+            <div className='flex justify-between items-center'>
+              <span className='text-muted-foreground'>Hạn sử dụng</span>
+              <span className='font-medium'>
+                {item.expirationDate
+                  ? formatDateStringVN(item.expirationDate)
+                  : 'Không xác định'}
+              </span>
             </div>
           </CardContent>
         </Card>

@@ -29,6 +29,7 @@ func All() fx.Option {
 		modules.PtmModule(),
 		modules.PurchaseModule(),
 		modules.LogisticsModule(),
+		modules.SchoolBusModule(),
 		modules.SalesModule(),
 
 		// HTTP server and routing

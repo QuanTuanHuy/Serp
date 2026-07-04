@@ -155,12 +155,10 @@ export function RequestDetailSheet({
   async function handleSave() {
     if (!request) return;
     const payload: UpdateRequestPayload = {};
-    if (srcLocationCode.trim())
-      payload.srcLocationCode = srcLocationCode.trim();
-    if (destLocationCode.trim())
-      payload.destLocationCode = destLocationCode.trim();
-    if (weight !== '') payload.weight = Number(weight);
-    if (containerSize) payload.containerSize = containerSize;
+    if (request.type !== 'OE' && srcLocationCode.trim()) payload.srcLocationCode = srcLocationCode.trim();
+    if (destLocationCode.trim()) payload.destLocationCode = destLocationCode.trim();
+    if (weight !== '')           payload.weight           = Number(weight);
+    if (containerSize)           payload.containerSize    = containerSize;
     payload.dropTrailerRequired = dropTrailerRequired;
     if (reason.trim()) payload.reason = reason.trim();
     if (earlyAtSrc) payload.earlyAtSrc = earlyAtSrc + ':00';
@@ -252,30 +250,26 @@ export function RequestDetailSheet({
               <div className='space-y-1.5'>
                 <Label>Origin</Label>
                 {isPending ? (
-                  <Select
-                    value={srcLocationCode}
-                    onValueChange={setSrcLocationCode}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='Select origin' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationOptions.map((loc) => (
-                        <SelectItem
-                          key={loc.locationCode}
-                          value={loc.locationCode}
-                        >
-                          {loc.locationCode}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  request.type === 'OE' ? (
+                    <div className='rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground'>
+                      Origin for OE requests is determined from the selected container when building a route.
+                    </div>
+                  ) : (
+                    <Select value={srcLocationCode} onValueChange={setSrcLocationCode}>
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select origin' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationOptions.map((loc) => (
+                          <SelectItem key={loc.locationCode} value={loc.locationCode}>
+                            {loc.locationCode}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )
                 ) : (
-                  <Input
-                    value={srcLocationCode}
-                    readOnly
-                    className='bg-muted/40 text-muted-foreground'
-                  />
+                  <Input value={request.srcLocationCode ?? '—'} readOnly className='bg-muted/40 text-muted-foreground' />
                 )}
               </div>
               <div className='space-y-1.5'>

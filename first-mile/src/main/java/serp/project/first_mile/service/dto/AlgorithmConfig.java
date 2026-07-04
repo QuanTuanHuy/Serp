@@ -1,3 +1,8 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.first_mile.service.dto;
 
 import serp.project.first_mile.enums.RoutingVehicle;
@@ -12,11 +17,6 @@ public record AlgorithmConfig(
         int orderLimit,
         double averageSpeedKmph,
         int serviceMinutesPerStop,
-        int maxIterations,
-        long maxRuntimeMillis,
-        double destroyRate,
-        double initialTemperature,
-        double coolingRate,
         boolean allowLateness,
         boolean enforcePlanningEnd,
         boolean enforceCapacity,
@@ -37,11 +37,6 @@ public record AlgorithmConfig(
                 orderLimit,
                 averageSpeedKmph,
                 serviceMinutesPerStop,
-                maxIterations,
-                maxRuntimeMillis,
-                destroyRate,
-                initialTemperature,
-                coolingRate,
                 allowLateness,
                 enforcePlanningEnd,
                 enforceCapacity,

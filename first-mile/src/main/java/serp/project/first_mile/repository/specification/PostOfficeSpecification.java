@@ -71,6 +71,19 @@ public final class PostOfficeSpecification {
                         : criteriaBuilder.isNull(root.get("location")));
             }
 
+            if (filterRequest.getMinLatitude() != null) {
+                predicates.add(criteriaBuilder.ge(root.get("locationLatitude"), filterRequest.getMinLatitude()));
+            }
+            if (filterRequest.getMaxLatitude() != null) {
+                predicates.add(criteriaBuilder.le(root.get("locationLatitude"), filterRequest.getMaxLatitude()));
+            }
+            if (filterRequest.getMinLongitude() != null) {
+                predicates.add(criteriaBuilder.ge(root.get("locationLongitude"), filterRequest.getMinLongitude()));
+            }
+            if (filterRequest.getMaxLongitude() != null) {
+                predicates.add(criteriaBuilder.le(root.get("locationLongitude"), filterRequest.getMaxLongitude()));
+            }
+
             if (filterRequest.getMinServiceRadiusM() != null) {
                 predicates.add(criteriaBuilder.ge(root.get("serviceRadiusM"), filterRequest.getMinServiceRadiusM()));
             }
@@ -90,6 +103,20 @@ public final class PostOfficeSpecification {
             }
             if (filterRequest.getMaxCurrentLoad() != null) {
                 predicates.add(criteriaBuilder.le(root.get("currentLoad"), filterRequest.getMaxCurrentLoad()));
+            }
+
+            if (filterRequest.getMinDeliveryCapacity() != null) {
+                predicates.add(criteriaBuilder.ge(root.get("deliveryCapacity"), filterRequest.getMinDeliveryCapacity()));
+            }
+            if (filterRequest.getMaxDeliveryCapacity() != null) {
+                predicates.add(criteriaBuilder.le(root.get("deliveryCapacity"), filterRequest.getMaxDeliveryCapacity()));
+            }
+
+            if (filterRequest.getMinCurrentDeliveryLoad() != null) {
+                predicates.add(criteriaBuilder.ge(root.get("currentDeliveryLoad"), filterRequest.getMinCurrentDeliveryLoad()));
+            }
+            if (filterRequest.getMaxCurrentDeliveryLoad() != null) {
+                predicates.add(criteriaBuilder.le(root.get("currentDeliveryLoad"), filterRequest.getMaxCurrentDeliveryLoad()));
             }
 
             if (filterRequest.getMinPriority() != null) {

@@ -1,89 +1,228 @@
-/**
- * Sales Dashboard Page
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Sales overview dashboard
- */
-
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui';
 import {
+  CheckCircle2,
+  Clock,
   DollarSign,
   Package,
   ShoppingCart,
-  TrendingUp,
   Users,
+  XCircle,
 } from 'lucide-react';
 import {
+  useGetCustomersQuery,
   useGetOrdersQuery,
   useGetProductsQuery,
-  useGetCustomersQuery,
 } from '../../api/salesApi';
 
+const STATUS_CONFIG = {
+  CREATED: {
+    label: 'Chờ duyệt',
+    bg: 'bg-blue-100 dark:bg-blue-900/30',
+    text: 'text-blue-700 dark:text-blue-400',
+    dot: 'bg-blue-500',
+    icon: Clock,
+  },
+  APPROVED: {
+    label: 'Đã duyệt',
+    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    dot: 'bg-emerald-500',
+    icon: CheckCircle2,
+  },
+  CANCELLED: {
+    label: 'Đã hủy',
+    bg: 'bg-rose-100 dark:bg-rose-900/30',
+    text: 'text-rose-700 dark:text-rose-400',
+    dot: 'bg-rose-500',
+    icon: XCircle,
+  },
+  FULLY_DELIVERED: {
+    label: 'Hoàn thành',
+    bg: 'bg-purple-100 dark:bg-purple-900/30',
+    text: 'text-purple-700 dark:text-purple-400',
+    dot: 'bg-purple-500',
+    icon: Package,
+  },
+};
+
+const APPROVED_STATUSES = ['APPROVED', 'FULLY_DELIVERED'];
+
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+});
+
 export const SalesDashboardPage: React.FC = () => {
-  const { data: ordersData } = useGetOrdersQuery({
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  const orderDateAfter = startOfMonth.toISOString().split('T')[0];
+  const orderDateBefore = startOfNextMonth.toISOString().split('T')[0];
+
+  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevEnd = startOfMonth;
+  const prevAfter = prevStart.toISOString().split('T')[0];
+  const prevBefore = prevEnd.toISOString().split('T')[0];
+
+  const { data: customersData } = useGetCustomersQuery({
     filters: {},
-    pagination: { page: 0, size: 10 },
+    pagination: { page: 0, size: 1000 },
   });
 
   const { data: productsData } = useGetProductsQuery({
     filters: {},
-    pagination: { page: 0, size: 10 },
+    pagination: { page: 0, size: 1000 },
   });
 
-  const { data: customersData } = useGetCustomersQuery({
-    filters: {},
-    pagination: { page: 0, size: 10 },
+  const { data: ordersData } = useGetOrdersQuery({
+    filters: { orderDateAfter, orderDateBefore },
+    pagination: { page: 0, size: 1000 },
   });
+
+  const { data: previousOrdersData } = useGetOrdersQuery({
+    filters: { orderDateAfter: prevAfter, orderDateBefore: prevBefore },
+    pagination: { page: 0, size: 1000 },
+  });
+
+  const customers = customersData?.data?.items || [];
+  const products = productsData?.data?.items || [];
+  const orders = ordersData?.data?.items || [];
+  const previousOrders = previousOrdersData?.data?.items || [];
+
+  const activeCustomers = customers.filter(
+    (customer) => customer.statusId === 'ACTIVE'
+  ).length;
+
+  const activeCustomersPrevMonth = customers.filter((customer) => {
+    const createdAt = new Date(customer.createdStamp);
+    return (
+      customer.statusId === 'ACTIVE' &&
+      createdAt >= prevStart &&
+      createdAt < prevEnd
+    );
+  }).length;
+
+  const activeProducts = products.filter(
+    (product) => product.statusId === 'ACTIVE'
+  ).length;
+
+  const activeProductsPrevMonth = products.filter((product) => {
+    const createdAt = new Date(product.createdStamp);
+    return (
+      product.statusId === 'ACTIVE' &&
+      createdAt >= prevStart &&
+      createdAt < prevEnd
+    );
+  }).length;
+
+  const approvedOrdersThisMonth = orders.filter((order) =>
+    APPROVED_STATUSES.includes(order.statusId)
+  ).length;
+
+  const approvedOrdersPrevMonth = previousOrders.filter((order) =>
+    APPROVED_STATUSES.includes(order.statusId)
+  ).length;
+
+  const totalRevenue = useMemo(() => {
+    return orders
+      .filter((order) => APPROVED_STATUSES.includes(order.statusId))
+      .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  }, [orders]);
+
+  const previousRevenue = useMemo(() => {
+    return previousOrders
+      .filter((order) => APPROVED_STATUSES.includes(order.statusId))
+      .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  }, [previousOrders]);
+
+  const customersPercent =
+    activeCustomersPrevMonth === 0
+      ? 100
+      : Math.round(
+          ((activeCustomers - activeCustomersPrevMonth) /
+            activeCustomersPrevMonth) *
+            100
+        );
+
+  const productsPercent =
+    activeProductsPrevMonth === 0
+      ? 100
+      : Math.round(
+          ((activeProducts - activeProductsPrevMonth) /
+            activeProductsPrevMonth) *
+            100
+        );
+
+  const ordersPercent =
+    approvedOrdersPrevMonth === 0
+      ? 100
+      : Math.round(
+          ((approvedOrdersThisMonth - approvedOrdersPrevMonth) /
+            approvedOrdersPrevMonth) *
+            100
+        );
+
+  const revenuePercent =
+    previousRevenue === 0
+      ? 100
+      : Math.round(((totalRevenue - previousRevenue) / previousRevenue) * 100);
+
+  const recentOrders = orders
+    .filter((order) => APPROVED_STATUSES.includes(order.statusId))
+    .sort((a, b) => +new Date(b.orderDate) - +new Date(a.orderDate))
+    .slice(0, 5);
+
+  const pendingOrders = orders
+    .filter((order) => order.statusId === 'CREATED')
+    .sort((a, b) => +new Date(b.orderDate) - +new Date(a.orderDate))
+    .slice(0, 5);
 
   const stats = [
     {
-      title: 'Total Revenue',
-      value: '$45,231.89',
-      change: '+20.1%',
-      icon: DollarSign,
-      trend: 'up',
-    },
-    {
-      title: 'Orders',
-      value: ordersData?.data?.totalItems || 0,
-      change: '+12.5%',
-      icon: ShoppingCart,
-      trend: 'up',
-    },
-    {
-      title: 'Products',
-      value: productsData?.data?.totalItems || 0,
-      change: '+5.2%',
-      icon: Package,
-      trend: 'up',
-    },
-    {
-      title: 'Customers',
-      value: customersData?.data?.totalItems || 0,
-      change: '+8.3%',
+      title: 'Khách hàng hoạt động',
+      value: activeCustomers,
+      change: customersPercent,
       icon: Users,
-      trend: 'up',
+    },
+    {
+      title: 'Đơn bán hàng',
+      value: approvedOrdersThisMonth,
+      change: ordersPercent,
+      icon: ShoppingCart,
+    },
+    {
+      title: 'Sản phẩm kinh doanh',
+      value: activeProducts,
+      change: productsPercent,
+      icon: Package,
+    },
+    {
+      title: 'Tổng doanh thu',
+      value: currencyFormatter.format(totalRevenue),
+      change: revenuePercent,
+      icon: DollarSign,
     },
   ];
 
+  const formatChange = (value: number) => `${value >= 0 ? '+' : ''}${value}%`;
+
   return (
     <div className='space-y-6'>
-      <div>
-        <h1 className='text-3xl font-bold tracking-tight'>Sales Dashboard</h1>
-        <p className='text-muted-foreground'>
-          Overview of your sales performance and key metrics
-        </p>
+      <div className='flex items-center justify-between'>
+        <h1 className='text-3xl font-bold'>Dashboard bán hàng</h1>
       </div>
 
-      {/* Stats Grid */}
       <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
         {stats.map((stat) => (
           <Card key={stat.title}>
@@ -95,96 +234,121 @@ export const SalesDashboardPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className='text-2xl font-bold'>{stat.value}</div>
-              <p className='text-xs text-muted-foreground'>
-                <span
-                  className={
-                    stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                  }
-                >
-                  {stat.change}
+              <p className='text-xs'>
+                <span className='text-emerald-600'>
+                  {formatChange(stat.change)}
                 </span>{' '}
-                from last month
+                <span className='text-muted-foreground'>
+                  so với tháng trước
+                </span>
               </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Recent Activity */}
       <div className='grid gap-4 md:grid-cols-2'>
         <Card>
           <CardHeader>
-            <CardTitle>Recent Orders</CardTitle>
+            <CardTitle>Đơn hàng gần đây</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className='space-y-3'>
-              {ordersData?.data?.items?.slice(0, 5).map((order) => (
-                <div
-                  key={order.id}
-                  className='flex items-center justify-between'
-                >
-                  <div>
-                    <p className='font-medium'>{order.orderName || 'Order'}</p>
-                    <p className='text-sm text-muted-foreground'>
-                      {order.orderDate
-                        ? new Date(order.orderDate).toLocaleDateString()
-                        : '-'}
-                    </p>
-                  </div>
-                  <div className='text-right'>
-                    <p className='font-medium'>
-                      ${order.totalAmount?.toLocaleString() || '0'}
-                    </p>
-                    <p className='text-sm text-muted-foreground'>
-                      {order.statusId}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {(!ordersData?.data?.items ||
-                ordersData.data.items.length === 0) && (
-                <p className='text-center text-sm text-muted-foreground py-4'>
-                  No recent orders
-                </p>
-              )}
-            </div>
+            {recentOrders.length === 0 ? (
+              <p className='py-4 text-center text-sm text-muted-foreground'>
+                Không có đơn hàng gần đây
+              </p>
+            ) : (
+              <ul className='space-y-2'>
+                {recentOrders.map((order) => {
+                  const status =
+                    STATUS_CONFIG[
+                      order.statusId as keyof typeof STATUS_CONFIG
+                    ] || STATUS_CONFIG.APPROVED;
+
+                  return (
+                    <li key={order.id} className='text-sm'>
+                      <Link
+                        href={`/sales/orders/${order.id}`}
+                        className='flex items-center justify-between gap-4 rounded-lg p-2 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                      >
+                        <div>
+                          <div className='font-medium'>
+                            {order.orderName || order.id}
+                          </div>
+                          <div className='text-xs text-muted-foreground'>
+                            {new Date(order.orderDate).toLocaleDateString(
+                              'vi-VN'
+                            )}{' '}
+                            — {currencyFormatter.format(order.totalAmount || 0)}
+                          </div>
+                        </div>
+                        <Badge
+                          variant='secondary'
+                          className={`${status.bg} ${status.text} gap-2`}
+                        >
+                          <span
+                            className={`h-2.5 w-2.5 rounded-full ${status.dot}`}
+                          />
+                          {status.label}
+                        </Badge>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Top Products</CardTitle>
+            <CardTitle>Đơn đang chờ duyệt</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className='space-y-3'>
-              {productsData?.data?.items?.slice(0, 5).map((product) => (
-                <div
-                  key={product.id}
-                  className='flex items-center justify-between'
-                >
-                  <div>
-                    <p className='font-medium'>{product.name}</p>
-                    <p className='text-sm text-muted-foreground'>
-                      {product.skuCode}
-                    </p>
-                  </div>
-                  <div className='text-right'>
-                    <p className='font-medium'>
-                      ${product.retailPrice?.toLocaleString() || '0'}
-                    </p>
-                    <p className='text-sm text-muted-foreground'>
-                      Stock: {product.quantityAvailable || 0}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {(!productsData?.data?.items ||
-                productsData.data.items.length === 0) && (
-                <p className='text-center text-sm text-muted-foreground py-4'>
-                  No products available
-                </p>
-              )}
-            </div>
+            {pendingOrders.length === 0 ? (
+              <p className='py-4 text-center text-sm text-muted-foreground'>
+                Không có đơn đang chờ duyệt
+              </p>
+            ) : (
+              <ul className='space-y-2'>
+                {pendingOrders.map((order) => {
+                  const status =
+                    STATUS_CONFIG[
+                      order.statusId as keyof typeof STATUS_CONFIG
+                    ] || STATUS_CONFIG.CREATED;
+
+                  return (
+                    <li key={order.id} className='text-sm'>
+                      <Link
+                        href={`/sales/orders/${order.id}`}
+                        className='flex items-center justify-between gap-4 rounded-lg p-2 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                      >
+                        <div>
+                          <div className='font-medium'>
+                            {order.orderName || order.id}
+                          </div>
+                          <div className='text-xs text-muted-foreground'>
+                            {new Date(order.orderDate).toLocaleDateString(
+                              'vi-VN'
+                            )}{' '}
+                            — {currencyFormatter.format(order.totalAmount || 0)}
+                          </div>
+                        </div>
+                        <Badge
+                          variant='secondary'
+                          className={`${status.bg} ${status.text} gap-2`}
+                        >
+                          <span
+                            className={`h-2.5 w-2.5 rounded-full ${status.dot}`}
+                          />
+                          {status.label}
+                        </Badge>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>

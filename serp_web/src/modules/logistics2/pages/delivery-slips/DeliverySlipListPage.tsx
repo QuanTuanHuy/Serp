@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 delivery slips list page
-*/
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -54,7 +49,7 @@ interface DeliverySlipListPageProps {
 }
 
 const STATUS_OPTIONS: Array<{ value: DeliverySlipStatus; label: string }> = [
-  { value: 'PENDING', label: 'Chờ xử lý' },
+  { value: 'PENDING', label: 'Chờ lên kế hoạch' },
   { value: 'ASSIGNED', label: 'Đã lên kế hoạch giao' },
   { value: 'DELIVERING', label: 'Đang giao' },
   { value: 'DELIVERED', label: 'Đã giao' },
@@ -69,7 +64,7 @@ const STATUS_CONFIG: Record<
   }
 > = {
   PENDING: {
-    label: 'Chờ xử lý',
+    label: 'Chờ lên kế hoạch',
     badgeClass:
       'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
   },
@@ -224,7 +219,7 @@ export const DeliverySlipListPage: React.FC<DeliverySlipListPageProps> = ({
 
       <div className='grid grid-cols-1 gap-4 sm:grid-cols-3'>
         <StatsCard
-          title='Chờ xử lý'
+          title='Chờ lên kế hoạch'
           value={stats.pending}
           icon={Clock3}
           variant='primary'

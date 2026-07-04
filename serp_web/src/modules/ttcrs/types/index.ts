@@ -21,7 +21,7 @@ export interface TtcrsRequest {
   id: number;
   tenantId: number;
   customerId: number | null;
-  srcLocationCode: string;
+  srcLocationCode: string | null;
   destLocationCode: string;
   earlyAtSrc: string | null;
   lateAtSrc: string | null;
@@ -29,8 +29,11 @@ export interface TtcrsRequest {
   lateAtDest: string | null;
   weight: number | null;
   containerSize: ContainerSize | null;
+  containerCode: string | null;
   dropTrailerRequired: boolean | null;
   reason: string | null;
+  evidenceAtSrc: string | null;
+  evidenceAtDest: string | null;
   status: RequestStatus;
   type: RequestType;
   transportPlanId: number | null;
@@ -78,11 +81,12 @@ export interface RequestFilterParams {
 export interface CreateRequestPayload {
   customerId: number;
   type: RequestType;
-  srcLocationCode: string;
-  destLocationCode: string;
+  srcLocationCode?: string | null;
+  destLocationCode: string | null;
   quantity: number;
   weight?: number | null;
   dropTrailerRequired?: boolean;
+  containerCode?: string | null;
   earlyAtSrc?: string | null;
   lateAtSrc?: string | null;
   earlyAtDest?: string | null;
@@ -211,6 +215,8 @@ export interface AlgorithmRouteElement {
   departureTime: string;
   travelTime: number;
   requestId: number | null;
+  trailerId?: number | null;
+  containerCode?: string | null;
 }
 
 export interface AlgorithmTruck {
@@ -251,6 +257,8 @@ export interface SaveTransportPlanStopPayload {
   action: string;
   plannedArrival: string;
   requestId: number | null;
+  trailerId?: number | null;
+  containerCode?: string | null;
 }
 
 export interface SaveTransportPlanItemPayload {
@@ -297,10 +305,17 @@ export interface TransportPlanStopDetail {
   id: number;
   sequence: number;
   locationCode: string;
+  lat: number | null;
+  lng: number | null;
   action: StopAction;
   plannedArrivalTime: string | null;
   actualArrivalTime: string | null;
+  isCompleted: boolean;
   requestId: number | null;
+  requestSrcLocationCode: string | null;
+  requestDestLocationCode: string | null;
+  evidenceUrl: string | null;
+  containerCode: string | null;
 }
 
 export interface TransportPlanDetail {
@@ -314,6 +329,30 @@ export interface TransportPlanDetail {
   status: TransportPlanStatus;
   createdStamp: string | null;
   stops: TransportPlanStopDetail[];
+  // Driver execution fields
+  cancelReason: string | null;
+  currentStop: number | null;
+  actualStartTime: string | null;
+  actualEndTime: string | null;
+  totalDistance: number | null;
+  totalTime: number | null;
+}
+
+// -------------------------------------------------------------------------
+// Driver action payloads
+// -------------------------------------------------------------------------
+
+export interface CancelRoutePayload {
+  reason: string;
+}
+
+export interface CompleteStopPayload {
+  evidenceUrl: string | null;
+  totalDistance: number | null;
+}
+
+export interface UploadEvidenceResponse {
+  url: string;
 }
 
 // Normalized row used by the Resources page
@@ -361,6 +400,7 @@ export interface UpdateRequestPayload {
   lateAtDest?: string | null;
   weight?: number | null;
   containerSize?: ContainerSize | null;
+  containerCode?: string | null;
   dropTrailerRequired?: boolean;
   reason?: string | null;
 }
@@ -369,6 +409,24 @@ export interface UpdateLocationPayload {
   type?: LocationType;
   lat?: number;
   lng?: number;
+}
+
+// -------------------------------------------------------------------------
+// Location Import
+// -------------------------------------------------------------------------
+
+export interface LocationImportError {
+  row: number;
+  field: string;
+  message: string;
+}
+
+export interface LocationImportResult {
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  errors: LocationImportError[];
+  createdLocations: LocationItem[];
 }
 
 export interface UpdateContainerPayload {

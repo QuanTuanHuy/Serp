@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 vehicle form dialog
-*/
-
 'use client';
 
 import { Loader2, Truck } from 'lucide-react';

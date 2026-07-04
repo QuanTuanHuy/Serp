@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Vehicle registration calendar page
-*/
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';

@@ -73,6 +73,14 @@ public class CreatePostOfficeRequest {
         @Min(0)
         private Integer currentLoad;
 
+        @JsonProperty("delivery_capacity")
+        @Min(0)
+        private Integer deliveryCapacity;
+
+        @JsonProperty("current_delivery_load")
+        @Min(0)
+        private Integer currentDeliveryLoad;
+
         @JsonProperty("priority")
         @Min(0)
         private Integer priority;

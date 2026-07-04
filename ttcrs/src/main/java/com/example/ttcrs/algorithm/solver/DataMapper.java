@@ -94,11 +94,11 @@ public class DataMapper {
         processContainerMapping();
         processPorts();
     }
-    
+    // Làm 3 việc: 1: Tạo container từ IE request, 2: Lọc container trùng lặp trong input, 3: Cập nhật lại danh sách container
     private void processContainers() {
         additionalContainers = new ArrayList<Container>();
         int idxCode = -1;
-        
+        // Tạo thêm các container ảo cho các yêu cầu nhập rỗng nếu chúng chưa tồn tại trong danh sách container ban đầu
         if (input.getImEmptyRequests() != null) {
             for (int i = 0; i < input.getImEmptyRequests().length; i++) {
                 ImportEmptyRequests R = input.getImEmptyRequests()[i];
@@ -109,6 +109,7 @@ public class DataMapper {
                 if (R.getDepotContainerCode() != null)
                     depotContainerCode = R.getDepotContainerCode();
                 else {
+                    // Gán depotContainerCode mặc định nếu không có thông tin trong yêu cầu
                     int idx = 0;
                     depotContainerCode = input.getDepotContainers()[idx].getCode();
                 }
@@ -126,7 +127,7 @@ public class DataMapper {
         ArrayList<String> containerCodes = new ArrayList<String>();
         Container[] temp = input.getContainers();
         ArrayList<Container> cL = new ArrayList<Container>();
-        
+        // Loại bỏ các container trùng lặp trong danh sách container ban đầu
         for (int i = 0; i < temp.length; i++) {
             if (!containerCodes.contains(temp[i].getCode())) {
                 containerCodes.add(temp[i].getCode());
@@ -143,13 +144,15 @@ public class DataMapper {
             L[i + cL.size()] = additionalContainers.get(i);
             L[i + cL.size()].setImportedContainer(true);
         }
+        // Cập nhật lại danh sách container trong input sau khi đã loại bỏ trùng lặp và thêm các container ảo
         input.setContainers(L);
     }
-    
+    // Làm 2 việc: 1: Tạo list location code từ distance matrix, 2: Tạo mapping location code -> index
     private void processLocationCodes() {
         HashSet<String> s_locationCode = new HashSet<String>();
         for (int i = 0; i < input.getDistance().length; i++) {
             DistanceElement e = input.getDistance()[i];
+            //HashSet đảm bảo rằng mỗi location code chỉ được thêm một lần duy nhất
             s_locationCode.add(e.getSrcCode());
             s_locationCode.add(e.getDestCode());
         }
@@ -160,7 +163,7 @@ public class DataMapper {
         for (String lc : s_locationCode) {
             idx++;
             locationCodes[idx] = lc;
-            mLocationCode2Index.put(lc, idx);
+            mLocationCode2Index.put(lc, idx); // Tạo mapping từ location code sang index để dễ dàng truy cập trong ma trận khoảng cách và thời gian di chuyển
         }
     }
     
@@ -171,24 +174,24 @@ public class DataMapper {
         
         for (int i = 0; i < input.getDistance().length; i++) {
             DistanceElement e = input.getDistance()[i];
-            int is = mLocationCode2Index.get(e.getSrcCode());
+            int is = mLocationCode2Index.get(e.getSrcCode()); 
             int id = mLocationCode2Index.get(e.getDestCode());
             distance[is][id] = e.getDistance();
             travelTime[is][id] = e.getTravelTime();
         }
     }
-    
+    // Làm 2 việc: 1: Loại bỏ các depot container trùng lặp trong danh sách depot container ban đầu, 2: Tạo mapping code -> depot container
     private void processDepotContainers() {
         ArrayList<DepotContainer> dcL = new ArrayList<DepotContainer>();
         ArrayList<String> codes = new ArrayList<String>();
-        
+        // Loại bỏ các depot container trùng lặp trong danh sách depot container ban đầu
         for (int i = 0; i < input.getDepotContainers().length; i++) {
             if (!codes.contains(input.getDepotContainers()[i].getCode())) {
                 codes.add(input.getDepotContainers()[i].getCode());
                 dcL.add(input.getDepotContainers()[i]);
             }
         }
-        
+        // Chuyển từ ArrayList sang mảng DepotContainer
         DepotContainer[] dpc = new DepotContainer[dcL.size()];
         for (int i = 0; i < dcL.size(); i++)
             dpc[i] = dcL.get(i);
@@ -200,7 +203,7 @@ public class DataMapper {
                     input.getDepotContainers()[i]);
         }
     }
-    
+    // Làm 2 việc: 1: Loại bỏ các depot mooc trùng lặp trong danh sách depot mooc ban đầu, 2: Tạo mapping code -> depot mooc
     private void processDepotMoocs() {
         ArrayList<DepotMooc> depotMoocList = new ArrayList<DepotMooc>();
         ArrayList<String> codes = new ArrayList<String>();
@@ -223,7 +226,7 @@ public class DataMapper {
                     input.getDepotMoocs()[i]);
         }
     }
-    
+    // Làm 2 việc: 1: Loại bỏ các depot truck trùng lặp trong danh sách depot truck ban đầu, 2: Tạo mapping code -> depot truck
     private void processDepotTrucks() {
         ArrayList<DepotTruck> depotTruckList = new ArrayList<DepotTruck>();
         ArrayList<String> codes = new ArrayList<String>();
@@ -246,7 +249,7 @@ public class DataMapper {
                     input.getDepotTrucks()[i]);
         }
     }
-    
+    // Làm 2 việc: 1: Loại bỏ các warehouse trùng lặp trong danh sách warehouse ban đầu, 2: Tạo mapping code -> warehouse
     private void processWarehouses() {
         ArrayList<Warehouse> whList = new ArrayList<Warehouse>();
         ArrayList<String> codes = new ArrayList<String>();
@@ -269,7 +272,7 @@ public class DataMapper {
                     input.getWarehouses()[i]);
         }
     }
-    
+    // Làm 2 việc: 1: Loại bỏ các mooc trùng lặp trong danh sách mooc ban đầu, 2: Tạo mapping code -> mooc
     private void processMoocs() {
         ArrayList<Mooc> moocList = new ArrayList<Mooc>();
         ArrayList<String> codes = new ArrayList<String>();
@@ -292,7 +295,7 @@ public class DataMapper {
             mCode2Mooc.put(mooc.getCode(), mooc);
         }
     }
-    
+    // Làm 2 việc: 1: Loại bỏ các truck trùng lặp trong danh sách truck ban đầu, 2: Tạo mapping code -> truck
     private void processTrucks() {
         ArrayList<Truck> truckList = new ArrayList<Truck>();
         ArrayList<String> codes = new ArrayList<String>();
@@ -315,7 +318,7 @@ public class DataMapper {
             mCode2Truck.put(truck.getCode(), truck);
         }
     }
-    
+    // Tạo mapping code -> container để dễ dàng truy cập thông tin container theo mã container trong quá trình xây dựng mô hình và giải quyết bài toán
     private void processContainerMapping() {
         mCode2Container = new HashMap<String, Container>();
         for (int i = 0; i < input.getContainers().length; i++) {
@@ -323,7 +326,7 @@ public class DataMapper {
             mCode2Container.put(c.getCode(), c);
         }
     }
-    
+    // Làm 2 việc: 1: Loại bỏ các port trùng lặp trong danh sách port ban đầu, 2: Tạo mapping code -> port
     private void processPorts() {
         ArrayList<Port> portList = new ArrayList<Port>();
         ArrayList<String> codes = new ArrayList<String>();

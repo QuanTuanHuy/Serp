@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics Components Barrel Export
-*/
-
 export * from './layout';
 export * from './LogisticsAuthGuard';
 

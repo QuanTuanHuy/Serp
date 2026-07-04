@@ -9,4 +9,6 @@ public interface OrderItemRepository extends JpaRepository<OrderItemEntity,Strin
 
     List<OrderItemEntity> findByTenantIdAndOrderId(Long tenantId, String orderId);
 
+    void deleteByOrderId(String orderId);
+
 }

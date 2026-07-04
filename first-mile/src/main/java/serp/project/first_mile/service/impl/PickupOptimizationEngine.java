@@ -13,23 +13,18 @@ import serp.project.first_mile.caller.DistanceMatrixCaller;
 import serp.project.first_mile.caller.dto.DistanceMatrixElement;
 import serp.project.first_mile.caller.dto.DistanceMatrixResult;
 import serp.project.first_mile.caller.dto.GeoPoint;
-import serp.project.first_mile.domain.Order;
-import serp.project.first_mile.enums.PickupDestroyOperator;
-import serp.project.first_mile.enums.PickupRepairOperator;
+import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.first_mile.service.dto.*;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
 import java.util.Set;
 
 @Service
@@ -37,27 +32,23 @@ import java.util.Set;
 @Slf4j
 class PickupOptimizationEngine {
 
-    private static final double OPERATOR_REACTION_FACTOR = 0.2;
-    private static final double OPERATOR_MIN_WEIGHT = 0.1;
-    private static final int OPERATOR_UPDATE_SEGMENT = 25;
-
     private static final double EARTH_RADIUS_KM = 6371.0;
     private static final double EPSILON = 1e-9;
     private static final double HUGE_OBJECTIVE = 1e15;
+    private static final double GRAMS_PER_KILOGRAM = 1000.0;
 
     private static final String REASON_UNASSIGNED = "UNASSIGNED";
     private static final String REASON_NO_FEASIBLE_INSERTION = "NO_FEASIBLE_INSERTION";
-    private static final String REASON_ALNS_REMOVAL = "REMOVED_BY_ALNS";
     private static final String REASON_MISSING_SENDER_LOCATION = "MISSING_SENDER_LOCATION";
     private static final String REASON_INVALID_SENDER_LOCATION = "INVALID_SENDER_LOCATION";
 
     private final DistanceMatrixCaller distanceMatrixCaller;
 
-    PreparedOrderData prepareOrders(List<Order> candidateOrders) {
+    PreparedOrderData prepareOrders(List<TmsOrderOperationView> candidateOrders) {
         List<PickupOrderNode> assignableOrders = new ArrayList<>();
         List<UnassignedOrderState> unassignedOrders = new ArrayList<>();
 
-        for (Order order : candidateOrders) {
+        for (TmsOrderOperationView order : candidateOrders) {
             Point senderLocation = order.getSenderLocation();
             if (senderLocation == null) {
                 unassignedOrders.add(new UnassignedOrderState(
@@ -87,7 +78,7 @@ class PickupOptimizationEngine {
                     order.getSenderPhone(),
                     latitude,
                     longitude,
-                    safePositive(order.getTotalWeight()),
+                    normalizeOrderWeightKg(order.getTotalWeight()),
                     safePositive(order.getTotalVolume()),
                     order.getPickupTimeStart(),
                     order.getPickupTimeEnd()
@@ -102,7 +93,7 @@ class PickupOptimizationEngine {
         return new PreparedOrderData(assignableOrders, unassignedOrders);
     }
 
-    PickupOrderNode toOrderNodeWithoutLocation(Order order) {
+    PickupOrderNode toOrderNodeWithoutLocation(TmsOrderOperationView order) {
         return new PickupOrderNode(
                 order.getId(),
                 order.getOrderCode(),
@@ -111,7 +102,7 @@ class PickupOptimizationEngine {
                 order.getSenderPhone(),
                 null,
                 null,
-                safePositive(order.getTotalWeight()),
+                normalizeOrderWeightKg(order.getTotalWeight()),
                 safePositive(order.getTotalVolume()),
                 order.getPickupTimeStart(),
                 order.getPickupTimeEnd()
@@ -153,7 +144,7 @@ class PickupOptimizationEngine {
         return metricProvider;
     }
 
-    SolutionState buildInitialSolution(
+    SolutionState buildGreedySolution(
             List<RouteState> initialRoutes,
             PreparedOrderData preparedOrderData,
             AlgorithmConfig config
@@ -178,80 +169,6 @@ class PickupOptimizationEngine {
         return solution;
     }
 
-    SolutionState runAlns(SolutionState initialSolution, AlgorithmConfig config) {
-        Random random = new Random();
-        SolutionState currentSolution = deepCopySolution(initialSolution);
-        SolutionState bestSolution = deepCopySolution(initialSolution);
-
-        SolutionEvaluation currentEvaluation = evaluateSolution(currentSolution, config);
-        SolutionEvaluation bestEvaluation = currentEvaluation;
-
-        EnumMap<PickupDestroyOperator, Double> destroyWeights = initializeDestroyWeights();
-        EnumMap<PickupDestroyOperator, Double> destroyScores = initializeDestroyWeights();
-        EnumMap<PickupDestroyOperator, Integer> destroyUsages = initializeDestroyUsages();
-
-        EnumMap<PickupRepairOperator, Double> repairWeights = initializeRepairWeights();
-        EnumMap<PickupRepairOperator, Double> repairScores = initializeRepairWeights();
-        EnumMap<PickupRepairOperator, Integer> repairUsages = initializeRepairUsages();
-
-        long deadlineNanos = System.nanoTime() + config.maxRuntimeMillis() * 1_000_000L;
-        double temperature = config.initialTemperature();
-
-        for (int iteration = 1; iteration <= config.maxIterations(); iteration++) {
-            if (System.nanoTime() > deadlineNanos) {
-                break;
-            }
-
-            PickupDestroyOperator destroyOperator = selectDestroyOperator(destroyWeights, random);
-            PickupRepairOperator repairOperator = selectRepairOperator(repairWeights, random);
-
-            destroyUsages.put(destroyOperator, destroyUsages.get(destroyOperator) + 1);
-            repairUsages.put(repairOperator, repairUsages.get(repairOperator) + 1);
-
-            SolutionState candidateSolution = deepCopySolution(currentSolution);
-            applyDestroy(candidateSolution, destroyOperator, random, config);
-            applyRepair(candidateSolution, repairOperator, config);
-            markNoFeasibleUnassigned(candidateSolution);
-
-            SolutionEvaluation candidateEvaluation = evaluateSolution(candidateSolution, config);
-            double previousCurrentObjective = currentEvaluation.objectiveScore();
-            boolean accepted = shouldAccept(
-                    candidateEvaluation.objectiveScore(),
-                    previousCurrentObjective,
-                    temperature,
-                    random
-            );
-
-            if (accepted) {
-                currentSolution = candidateSolution;
-                currentEvaluation = candidateEvaluation;
-            }
-
-            double reward = 0.0;
-            if (candidateEvaluation.objectiveScore() + EPSILON < bestEvaluation.objectiveScore()) {
-                bestSolution = candidateSolution;
-                bestEvaluation = candidateEvaluation;
-                reward = 8.0;
-            } else if (candidateEvaluation.objectiveScore() + EPSILON < previousCurrentObjective) {
-                reward = 4.0;
-            } else if (accepted) {
-                reward = 1.0;
-            }
-
-            destroyScores.put(destroyOperator, destroyScores.get(destroyOperator) + reward);
-            repairScores.put(repairOperator, repairScores.get(repairOperator) + reward);
-
-            if (iteration % OPERATOR_UPDATE_SEGMENT == 0) {
-                updateDestroyWeights(destroyWeights, destroyScores, destroyUsages);
-                updateRepairWeights(repairWeights, repairScores, repairUsages);
-            }
-
-            temperature = Math.max(0.0001, temperature * config.coolingRate());
-        }
-
-        return bestSolution;
-    }
-
     void applyGreedyRepair(SolutionState solution, AlgorithmConfig config) {
         while (true) {
             List<UnassignedOrderState> reinsertableOrders = getReinsertableUnassigned(solution.unassignedOrders());
@@ -268,7 +185,7 @@ class PickupOptimizationEngine {
                     continue;
                 }
 
-                if (bestDecision == null || candidate.deltaCost() < bestDecision.candidate().deltaCost()) {
+                if (isBetterInsertionDecision(state.order(), candidate, bestDecision, config)) {
                     bestDecision = new InsertionDecision(state.order(), candidate);
                 }
             }
@@ -382,164 +299,61 @@ class PickupOptimizationEngine {
         return evaluation != null && evaluation.objectiveScore() >= HUGE_OBJECTIVE;
     }
 
-    private void applyDestroy(
-            SolutionState solution,
-            PickupDestroyOperator destroyOperator,
-            Random random,
-            AlgorithmConfig config
-    ) {
-        int totalAssignedOrders = countAssignedOrders(solution.routes());
-        if (totalAssignedOrders <= 0) {
-            return;
-        }
-
-        int removeCount = Math.max(1, (int) Math.round(totalAssignedOrders * config.destroyRate()));
-        removeCount = Math.min(removeCount, totalAssignedOrders);
-
-        if (destroyOperator == PickupDestroyOperator.WORST) {
-            applyWorstDestroy(solution, removeCount, random, config);
-            return;
-        }
-
-        applyRandomDestroy(solution, removeCount, random);
-    }
-
-    private void applyRandomDestroy(SolutionState solution, int removeCount, Random random) {
-        List<RouteOrderRef> orderRefs = collectAssignedOrderRefs(solution.routes());
-        if (orderRefs.isEmpty()) {
-            return;
-        }
-
-        Collections.shuffle(orderRefs, random);
-        List<RouteOrderRef> selected = new ArrayList<>(orderRefs.subList(0, Math.min(removeCount, orderRefs.size())));
-        selected.sort(Comparator
-                .comparingInt(RouteOrderRef::routeIndex)
-                .thenComparing(RouteOrderRef::stopIndex)
-                .reversed());
-
-        for (RouteOrderRef ref : selected) {
-            removeAssignedOrder(solution, ref.routeIndex(), ref.stopIndex(), REASON_ALNS_REMOVAL);
-        }
-    }
-
-    private void applyWorstDestroy(SolutionState solution, int removeCount, Random random, AlgorithmConfig config) {
-        List<RouteOrderContribution> contributions = new ArrayList<>();
-
-        for (int routeIndex = 0; routeIndex < solution.routes().size(); routeIndex++) {
-            RouteState route = solution.routes().get(routeIndex);
-            for (int stopIndex = 0; stopIndex < route.stops().size(); stopIndex++) {
-                double contribution = estimateMarginalDistanceContribution(route, stopIndex, config);
-                contribution += random.nextDouble() * 0.0001;
-                contributions.add(new RouteOrderContribution(routeIndex, stopIndex, contribution));
-            }
-        }
-
-        if (contributions.isEmpty()) {
-            return;
-        }
-
-        contributions.sort(Comparator.comparingDouble(RouteOrderContribution::contribution).reversed());
-
-        List<RouteOrderRef> selected = new ArrayList<>();
-        int upperBound = Math.min(removeCount, contributions.size());
-        for (int i = 0; i < upperBound; i++) {
-            RouteOrderContribution contribution = contributions.get(i);
-            selected.add(new RouteOrderRef(contribution.routeIndex(), contribution.stopIndex()));
-        }
-
-        selected.sort(Comparator
-                .comparingInt(RouteOrderRef::routeIndex)
-                .thenComparing(RouteOrderRef::stopIndex)
-                .reversed());
-
-        for (RouteOrderRef ref : selected) {
-            removeAssignedOrder(solution, ref.routeIndex(), ref.stopIndex(), REASON_ALNS_REMOVAL);
-        }
-    }
-
-    private void removeAssignedOrder(SolutionState solution, int routeIndex, int stopIndex, String reason) {
-        if (routeIndex < 0 || routeIndex >= solution.routes().size()) {
-            return;
-        }
-
-        RouteState route = solution.routes().get(routeIndex);
-        if (stopIndex < 0 || stopIndex >= route.stops().size()) {
-            return;
-        }
-
-        PickupOrderNode removedOrder = route.stops().remove(stopIndex);
-        removeUnassignedOrder(solution.unassignedOrders(), removedOrder.orderId());
-        solution.unassignedOrders().add(new UnassignedOrderState(removedOrder, reason, true));
-    }
-
-    private void applyRepair(
-            SolutionState solution,
-            PickupRepairOperator repairOperator,
-            AlgorithmConfig config
-    ) {
-        if (repairOperator == PickupRepairOperator.REGRET_2) {
-            applyRegret2Repair(solution, config);
-            return;
-        }
-
-        applyGreedyRepair(solution, config);
-    }
-
-    private void applyRegret2Repair(SolutionState solution, AlgorithmConfig config) {
-        while (true) {
-            List<UnassignedOrderState> reinsertableOrders = getReinsertableUnassigned(solution.unassignedOrders());
-            if (reinsertableOrders.isEmpty()) {
-                return;
-            }
-
-            Map<Integer, Double> routeCosts = computeRouteCosts(solution.routes(), config);
-            RegretDecision bestDecision = null;
-
-            for (UnassignedOrderState state : reinsertableOrders) {
-                List<InsertionCandidate> topCandidates = findTopInsertionCandidates(
-                        state.order(),
-                        solution.routes(),
-                        routeCosts,
-                        config,
-                        2
-                );
-                if (topCandidates.isEmpty()) {
-                    continue;
-                }
-
-                InsertionCandidate bestCandidate = topCandidates.get(0);
-                double secondCost = topCandidates.size() > 1 ? topCandidates.get(1).deltaCost() : bestCandidate.deltaCost() + 100.0;
-                double regretValue = secondCost - bestCandidate.deltaCost();
-
-                RegretDecision currentDecision = new RegretDecision(state.order(), bestCandidate, regretValue);
-                if (bestDecision == null) {
-                    bestDecision = currentDecision;
-                    continue;
-                }
-
-                if (currentDecision.regretValue() > bestDecision.regretValue() + EPSILON) {
-                    bestDecision = currentDecision;
-                    continue;
-                }
-
-                if (Math.abs(currentDecision.regretValue() - bestDecision.regretValue()) <= EPSILON
-                        && currentDecision.candidate().deltaCost() < bestDecision.candidate().deltaCost()) {
-                    bestDecision = currentDecision;
-                }
-            }
-
-            if (bestDecision == null) {
-                return;
-            }
-
-            applyInsertion(solution, bestDecision.order(), bestDecision.candidate());
-        }
-    }
-
     private void applyInsertion(SolutionState solution, PickupOrderNode order, InsertionCandidate candidate) {
         RouteState route = solution.routes().get(candidate.routeIndex());
         route.stops().add(candidate.insertPosition(), order);
         removeUnassignedOrder(solution.unassignedOrders(), order.orderId());
+    }
+
+    private boolean isBetterInsertionDecision(
+            PickupOrderNode order,
+            InsertionCandidate candidate,
+            InsertionDecision currentBest,
+            AlgorithmConfig config
+    ) {
+        if (currentBest == null) {
+            return true;
+        }
+
+        int orderPriority = dispatchPriority(order, config);
+        int bestPriority = dispatchPriority(currentBest.order(), config);
+        if (orderPriority != bestPriority) {
+            return orderPriority < bestPriority;
+        }
+
+        if (orderPriority == 0) {
+            int pickupEndCompare = comparePickupTimeEnd(order, currentBest.order());
+            if (pickupEndCompare != 0) {
+                return pickupEndCompare < 0;
+            }
+        }
+
+        return candidate.deltaCost() < currentBest.candidate().deltaCost();
+    }
+
+    private int dispatchPriority(PickupOrderNode order, AlgorithmConfig config) {
+        return isBacklogOrder(order, config) ? 0 : 1;
+    }
+
+    private boolean isBacklogOrder(PickupOrderNode order, AlgorithmConfig config) {
+        return order != null
+                && order.pickupTimeEnd() != null
+                && config != null
+                && config.planningStartTime() != null
+                && order.pickupTimeEnd().isBefore(config.planningStartTime());
+    }
+
+    private int comparePickupTimeEnd(PickupOrderNode first, PickupOrderNode second) {
+        if (first.pickupTimeEnd() == null && second.pickupTimeEnd() == null) {
+            return 0;
+        }
+        if (first.pickupTimeEnd() == null) {
+            return 1;
+        }
+        if (second.pickupTimeEnd() == null) {
+            return -1;
+        }
+        return first.pickupTimeEnd().compareTo(second.pickupTimeEnd());
     }
 
     private InsertionCandidate findBestInsertion(
@@ -577,44 +391,6 @@ class PickupOptimizationEngine {
         return bestCandidate;
     }
 
-    private List<InsertionCandidate> findTopInsertionCandidates(
-            PickupOrderNode order,
-            List<RouteState> routes,
-            Map<Integer, Double> routeCosts,
-            AlgorithmConfig config,
-            int topN
-    ) {
-        List<InsertionCandidate> candidates = new ArrayList<>();
-
-        for (int routeIndex = 0; routeIndex < routes.size(); routeIndex++) {
-            RouteState route = routes.get(routeIndex);
-            double oldCost = routeCosts.getOrDefault(routeIndex, HUGE_OBJECTIVE);
-            int maxInsertionPosition = route.stops().size();
-
-            for (int insertPosition = 0; insertPosition <= maxInsertionPosition; insertPosition++) {
-                List<PickupOrderNode> newStops = new ArrayList<>(route.stops());
-                newStops.add(insertPosition, order);
-
-                RouteEvaluation newEvaluation = evaluateRoute(route, newStops, config);
-                if (!newEvaluation.feasible()) {
-                    continue;
-                }
-
-                boolean usedRoute = !newStops.isEmpty();
-                double newCost = calculateRouteCost(newEvaluation, usedRoute, config);
-                double deltaCost = newCost - oldCost;
-                candidates.add(new InsertionCandidate(routeIndex, insertPosition, deltaCost));
-            }
-        }
-
-        candidates.sort(Comparator.comparingDouble(InsertionCandidate::deltaCost));
-        if (candidates.size() <= topN) {
-            return candidates;
-        }
-
-        return new ArrayList<>(candidates.subList(0, topN));
-    }
-
     private List<UnassignedOrderState> getReinsertableUnassigned(List<UnassignedOrderState> unassignedOrders) {
         List<UnassignedOrderState> result = new ArrayList<>();
         for (UnassignedOrderState state : unassignedOrders) {
@@ -623,20 +399,6 @@ class PickupOptimizationEngine {
             }
         }
         return result;
-    }
-
-    private SolutionState deepCopySolution(SolutionState source) {
-        List<RouteState> copiedRoutes = new ArrayList<>();
-        for (RouteState route : source.routes()) {
-            copiedRoutes.add(route.copy());
-        }
-
-        List<UnassignedOrderState> copiedUnassigned = new ArrayList<>();
-        for (UnassignedOrderState unassignedOrder : source.unassignedOrders()) {
-            copiedUnassigned.add(unassignedOrder.copy());
-        }
-
-        return new SolutionState(copiedRoutes, copiedUnassigned);
     }
 
     private RouteEvaluation evaluateRoute(RouteState route, List<PickupOrderNode> stops, AlgorithmConfig config) {
@@ -766,38 +528,6 @@ class PickupOptimizationEngine {
         return cost;
     }
 
-    private boolean shouldAccept(double candidateObjective, double currentObjective, double temperature, Random random) {
-        if (candidateObjective + EPSILON < currentObjective) {
-            return true;
-        }
-
-        if (temperature <= EPSILON) {
-            return false;
-        }
-
-        double probability = Math.exp((currentObjective - candidateObjective) / temperature);
-        return random.nextDouble() < probability;
-    }
-
-    private List<RouteOrderRef> collectAssignedOrderRefs(List<RouteState> routes) {
-        List<RouteOrderRef> refs = new ArrayList<>();
-        for (int routeIndex = 0; routeIndex < routes.size(); routeIndex++) {
-            RouteState route = routes.get(routeIndex);
-            for (int stopIndex = 0; stopIndex < route.stops().size(); stopIndex++) {
-                refs.add(new RouteOrderRef(routeIndex, stopIndex));
-            }
-        }
-        return refs;
-    }
-
-    private int countAssignedOrders(List<RouteState> routes) {
-        int total = 0;
-        for (RouteState route : routes) {
-            total += route.stops().size();
-        }
-        return total;
-    }
-
     private void removeUnassignedOrder(List<UnassignedOrderState> unassignedOrders, Long orderId) {
         if (orderId == null) {
             return;
@@ -809,29 +539,6 @@ class PickupOptimizationEngine {
                 return;
             }
         }
-    }
-
-    private double estimateMarginalDistanceContribution(RouteState route, int stopIndex, AlgorithmConfig config) {
-        PickupOrderNode current = route.stops().get(stopIndex);
-
-        PickupOrderNode previous;
-        if (stopIndex == 0) {
-            previous = null;
-        } else {
-            previous = route.stops().get(stopIndex - 1);
-        }
-
-        PickupOrderNode next;
-        if (stopIndex == route.stops().size() - 1) {
-            next = null;
-        } else {
-            next = route.stops().get(stopIndex + 1);
-        }
-
-        double viaCurrent = resolveLegMetric(previous, current, route, config).distanceKm()
-                + resolveLegMetric(current, next, route, config).distanceKm();
-        double direct = resolveLegMetric(previous, next, route, config).distanceKm();
-        return viaCurrent - direct;
     }
 
     private void populateDistanceMatrixMetrics(TravelMetricProvider metricProvider, AlgorithmConfig config) {
@@ -996,102 +703,6 @@ class PickupOptimizationEngine {
         return Math.max(1L, Math.round(durationSeconds / 60.0));
     }
 
-    private EnumMap<PickupDestroyOperator, Double> initializeDestroyWeights() {
-        EnumMap<PickupDestroyOperator, Double> weights = new EnumMap<>(PickupDestroyOperator.class);
-        for (PickupDestroyOperator operator : PickupDestroyOperator.values()) {
-            weights.put(operator, 1.0);
-        }
-        return weights;
-    }
-
-    private EnumMap<PickupDestroyOperator, Integer> initializeDestroyUsages() {
-        EnumMap<PickupDestroyOperator, Integer> usages = new EnumMap<>(PickupDestroyOperator.class);
-        for (PickupDestroyOperator operator : PickupDestroyOperator.values()) {
-            usages.put(operator, 0);
-        }
-        return usages;
-    }
-
-    private EnumMap<PickupRepairOperator, Double> initializeRepairWeights() {
-        EnumMap<PickupRepairOperator, Double> weights = new EnumMap<>(PickupRepairOperator.class);
-        for (PickupRepairOperator operator : PickupRepairOperator.values()) {
-            weights.put(operator, 1.0);
-        }
-        return weights;
-    }
-
-    private EnumMap<PickupRepairOperator, Integer> initializeRepairUsages() {
-        EnumMap<PickupRepairOperator, Integer> usages = new EnumMap<>(PickupRepairOperator.class);
-        for (PickupRepairOperator operator : PickupRepairOperator.values()) {
-            usages.put(operator, 0);
-        }
-        return usages;
-    }
-
-    private PickupDestroyOperator selectDestroyOperator(EnumMap<PickupDestroyOperator, Double> weights, Random random) {
-        return rouletteSelect(weights, random, PickupDestroyOperator.RANDOM);
-    }
-
-    private PickupRepairOperator selectRepairOperator(EnumMap<PickupRepairOperator, Double> weights, Random random) {
-        return rouletteSelect(weights, random, PickupRepairOperator.GREEDY);
-    }
-
-    private <T extends Enum<T>> T rouletteSelect(EnumMap<T, Double> weights, Random random, T fallback) {
-        double totalWeight = 0.0;
-        for (double weight : weights.values()) {
-            totalWeight += Math.max(weight, 0.0);
-        }
-
-        if (totalWeight <= EPSILON) {
-            return fallback;
-        }
-
-        double randomValue = random.nextDouble() * totalWeight;
-        double cumulative = 0.0;
-        for (Map.Entry<T, Double> entry : weights.entrySet()) {
-            cumulative += Math.max(entry.getValue(), 0.0);
-            if (randomValue <= cumulative) {
-                return entry.getKey();
-            }
-        }
-
-        return fallback;
-    }
-
-    private void updateDestroyWeights(
-            EnumMap<PickupDestroyOperator, Double> weights,
-            EnumMap<PickupDestroyOperator, Double> scores,
-            EnumMap<PickupDestroyOperator, Integer> usages
-    ) {
-        for (PickupDestroyOperator operator : PickupDestroyOperator.values()) {
-            double averageScore = usages.get(operator) == 0
-                    ? 0.0
-                    : scores.get(operator) / usages.get(operator);
-            double updatedWeight = (1 - OPERATOR_REACTION_FACTOR) * weights.get(operator)
-                    + OPERATOR_REACTION_FACTOR * Math.max(OPERATOR_MIN_WEIGHT, averageScore);
-            weights.put(operator, updatedWeight);
-            scores.put(operator, 0.0);
-            usages.put(operator, 0);
-        }
-    }
-
-    private void updateRepairWeights(
-            EnumMap<PickupRepairOperator, Double> weights,
-            EnumMap<PickupRepairOperator, Double> scores,
-            EnumMap<PickupRepairOperator, Integer> usages
-    ) {
-        for (PickupRepairOperator operator : PickupRepairOperator.values()) {
-            double averageScore = usages.get(operator) == 0
-                    ? 0.0
-                    : scores.get(operator) / usages.get(operator);
-            double updatedWeight = (1 - OPERATOR_REACTION_FACTOR) * weights.get(operator)
-                    + OPERATOR_REACTION_FACTOR * Math.max(OPERATOR_MIN_WEIGHT, averageScore);
-            weights.put(operator, updatedWeight);
-            scores.put(operator, 0.0);
-            usages.put(operator, 0);
-        }
-    }
-
     private boolean isValidCoordinate(double latitude, double longitude) {
         return latitude >= -90.0 && latitude <= 90.0
                 && longitude >= -180.0 && longitude <= 180.0;
@@ -1126,5 +737,9 @@ class PickupOptimizationEngine {
             return 0.0;
         }
         return value;
+    }
+
+    private double normalizeOrderWeightKg(Double weightGram) {
+        return safePositive(weightGram) / GRAMS_PER_KILOGRAM;
     }
 }

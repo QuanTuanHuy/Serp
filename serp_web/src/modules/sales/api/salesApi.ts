@@ -1,5 +1,3 @@
-// Sales API Endpoints (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 import { api } from '@/lib/store/api';
 import type {
   Address,
@@ -469,7 +467,7 @@ export const salesApi = api.injectEndpoints({
     }),
 
     // Order endpoints
-    getOrders: builder.query<
+    getSalesOrders: builder.query<
       APIResponse<PaginatedResponse<Order>>,
       { filters?: OrderFilters; pagination: PaginationParams }
     >({
@@ -483,24 +481,24 @@ export const salesApi = api.injectEndpoints({
         result?.data?.items
           ? [
               ...result.data.items.map(({ id }) => ({
-                type: 'Order' as const,
+                type: 'SalesOrder' as const,
                 id,
               })),
-              { type: 'Order', id: 'LIST' },
+              { type: 'SalesOrder', id: 'LIST' },
             ]
-          : [{ type: 'Order', id: 'LIST' }],
+          : [{ type: 'SalesOrder', id: 'LIST' }],
     }),
 
-    getOrder: builder.query<APIResponse<Order>, string>({
+    getSalesOrder: builder.query<APIResponse<Order>, string>({
       query: (orderId) => ({
         url: `/order/search/${orderId}`,
         method: 'GET',
       }),
       extraOptions: { service: 'sales' },
-      providesTags: (result, error, id) => [{ type: 'Order', id }],
+      providesTags: (result, error, id) => [{ type: 'SalesOrder', id }],
     }),
 
-    createOrder: builder.mutation<APIResponse<Order>, OrderCreationForm>({
+    createSalesOrder: builder.mutation<APIResponse<Order>, OrderCreationForm>({
       query: (data) => ({
         url: '/order/create',
         method: 'POST',
@@ -508,12 +506,12 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       invalidatesTags: [
-        { type: 'Order', id: 'LIST' },
+        { type: 'SalesOrder', id: 'LIST' },
         { type: 'Product', id: 'LIST' },
       ],
     }),
 
-    updateOrder: builder.mutation<
+    updateSalesOrder: builder.mutation<
       APIResponse<Order>,
       { orderId: string; data: OrderUpdateForm }
     >({
@@ -524,26 +522,29 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       invalidatesTags: (result, error, { orderId }) => [
-        { type: 'Order', id: orderId },
-        { type: 'Order', id: 'LIST' },
+        { type: 'SalesOrder', id: orderId },
+        { type: 'SalesOrder', id: 'LIST' },
         { type: 'Product', id: 'LIST' },
       ],
     }),
 
-    deleteOrder: builder.mutation<APIResponse<{ deleted: boolean }>, string>({
+    deleteSalesOrder: builder.mutation<
+      APIResponse<{ deleted: boolean }>,
+      string
+    >({
       query: (orderId) => ({
         url: `/order/delete/${orderId}`,
         method: 'DELETE',
       }),
       extraOptions: { service: 'sales' },
       invalidatesTags: (result, error, orderId) => [
-        { type: 'Order', id: orderId },
-        { type: 'Order', id: 'LIST' },
+        { type: 'SalesOrder', id: orderId },
+        { type: 'SalesOrder', id: 'LIST' },
         { type: 'Product', id: 'LIST' },
       ],
     }),
 
-    addProductToOrder: builder.mutation<
+    addProductToSalesOrder: builder.mutation<
       APIResponse<Order>,
       { orderId: string; data: OrderItem }
     >({
@@ -554,13 +555,13 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       invalidatesTags: (result, error, { orderId }) => [
-        { type: 'Order', id: orderId },
-        { type: 'Order', id: 'LIST' },
+        { type: 'SalesOrder', id: orderId },
+        { type: 'SalesOrder', id: 'LIST' },
         { type: 'Product', id: 'LIST' },
       ],
     }),
 
-    deleteProductFromOrder: builder.mutation<
+    deleteProductFromSalesOrder: builder.mutation<
       APIResponse<Order>,
       { orderId: string; orderItemId: string }
     >({
@@ -570,25 +571,25 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       invalidatesTags: (result, error, { orderId }) => [
-        { type: 'Order', id: orderId },
-        { type: 'Order', id: 'LIST' },
+        { type: 'SalesOrder', id: orderId },
+        { type: 'SalesOrder', id: 'LIST' },
         { type: 'Product', id: 'LIST' },
       ],
     }),
 
-    approveOrder: builder.mutation<APIResponse<Order>, string>({
+    approveSalesOrder: builder.mutation<APIResponse<Order>, string>({
       query: (orderId) => ({
         url: `/order/manage/${orderId}/approve`,
         method: 'PATCH',
       }),
       extraOptions: { service: 'sales' },
       invalidatesTags: (result, error, orderId) => [
-        { type: 'Order', id: orderId },
-        { type: 'Order', id: 'LIST' },
+        { type: 'SalesOrder', id: orderId },
+        { type: 'SalesOrder', id: 'LIST' },
       ],
     }),
 
-    cancelOrder: builder.mutation<
+    cancelSalesOrder: builder.mutation<
       APIResponse<Order>,
       { orderId: string; data: OrderCancellationForm }
     >({
@@ -599,8 +600,8 @@ export const salesApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'sales' },
       invalidatesTags: (result, error, { orderId }) => [
-        { type: 'Order', id: orderId },
-        { type: 'Order', id: 'LIST' },
+        { type: 'SalesOrder', id: orderId },
+        { type: 'SalesOrder', id: 'LIST' },
       ],
     }),
   }),
@@ -644,13 +645,13 @@ export const {
   useUpdateProductMutation,
   useDeleteProductMutation,
   // Order hooks
-  useGetOrdersQuery,
-  useGetOrderQuery,
-  useCreateOrderMutation,
-  useUpdateOrderMutation,
-  useDeleteOrderMutation,
-  useAddProductToOrderMutation,
-  useDeleteProductFromOrderMutation,
-  useApproveOrderMutation,
-  useCancelOrderMutation,
+  useGetSalesOrdersQuery: useGetOrdersQuery,
+  useGetSalesOrderQuery: useGetOrderQuery,
+  useCreateSalesOrderMutation: useCreateOrderMutation,
+  useUpdateSalesOrderMutation: useUpdateOrderMutation,
+  useDeleteSalesOrderMutation: useDeleteOrderMutation,
+  useAddProductToSalesOrderMutation: useAddProductToOrderMutation,
+  useDeleteProductFromSalesOrderMutation: useDeleteProductFromOrderMutation,
+  useApproveSalesOrderMutation: useApproveOrderMutation,
+  useCancelSalesOrderMutation: useCancelOrderMutation,
 } = salesApi;

@@ -5,7 +5,7 @@ import com.example.ttcrs.algorithm.models.input.ContainerTruckMoocInput;
 import com.example.ttcrs.algorithm.vrp.utils.DateTimeUtils;
 import com.example.ttcrs.algorithm.models.requests.*;
 
-
+// Mục đích của file này là để tính startWorkingTime của các xe tải nếu nó chưa được cung cấp trong dữ liệu đầu vào.
 public class InputAnalyzer {
 	public static final int OFFSET_SECOND = 259200;
 	public String analyze(ContainerTruckMoocInput input){
@@ -14,6 +14,7 @@ public class InputAnalyzer {
 	}
 	public void standardize(ContainerTruckMoocInput input){
 		// set startWorkingTime of trucks if NULL
+		// find the minimum date time in all requests, minus OFFSET_SECOND, and set as startWorkingTime of trucks
 		int minDateTime = Integer.MAX_VALUE;
 		if(input.getExRequests() != null){
 			for(int i = 0; i < input.getExRequests().length; i++){
@@ -191,6 +192,7 @@ public class InputAnalyzer {
 			for(int i = 0; i < input.getTrucks().length; i++){
 				Truck truck = input.getTrucks()[i];
 				if(truck.getStartWorkingTime() == null){
+					// set startWorkingTime of truck to minDateTime - OFFSET_SECOND because we want to make sure that all requests are available at the start of the working time of trucks
 					truck.setStartWorkingTime(DateTimeUtils.unixTimeStamp2DateTime(minDateTime - OFFSET_SECOND));
 				}
 			}

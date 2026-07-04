@@ -1,10 +1,3 @@
-/**
- * Order Detail Page - Purchase Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Purchase order detail with item management
- */
-
 'use client';
 
 import { useState } from 'react';
@@ -73,6 +66,7 @@ import {
 } from '../../api/purchaseApi';
 import { UserProfile, useGetUsersQuery } from '@/modules/admin';
 import type { OrderItem, OrderItemUpdateForm, Shipment } from '../../types';
+import { useUser } from '@/modules/account';
 
 interface OrderDetailPageProps {
   orderId: string;
@@ -81,7 +75,7 @@ interface OrderDetailPageProps {
 // Order status configuration
 const STATUS_CONFIG = {
   CREATED: {
-    label: 'Đã tạo',
+    label: 'Chờ phê duyệt',
     color: 'text-blue-700 dark:text-blue-400',
     bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     icon: Clock,
@@ -207,14 +201,6 @@ const ShipmentCard = ({
               <Truck className='h-4 w-4 text-muted-foreground' />
               <span className='text-muted-foreground'>
                 Giao hàng: {formatDate(shipment.expectedDeliveryDate)}
-              </span>
-            </div>
-          )}
-          {shipment.totalQuantity && (
-            <div className='flex items-center gap-2'>
-              <Package className='h-4 w-4 text-muted-foreground' />
-              <span className='text-muted-foreground'>
-                Số lượng: {shipment.totalQuantity}
               </span>
             </div>
           )}
@@ -360,6 +346,12 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
   orderId,
 }) => {
   const router = useRouter();
+
+  const { user } = useUser();
+  const hasModerationPermission =
+    user?.roles?.includes('PURCHASE_ADMIN') ||
+    user?.roles?.includes('PURCHASE_MANAGER');
+
   const [activeTab, setActiveTab] = useState('overview');
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<OrderItem | undefined>();
@@ -586,7 +578,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
         </div>
         {(order.statusId === 'CREATED' || order.statusId === 'CANCELLED') && (
           <div className='flex items-center gap-2'>
-            {order.statusId === 'CREATED' && (
+            {order.statusId === 'CREATED' && hasModerationPermission && (
               <Button
                 onClick={handleApprove}
                 disabled={isApproving}
@@ -608,7 +600,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                   <Edit className='mr-2 h-4 w-4' />
                   Chỉnh sửa đơn hàng
                 </DropdownMenuItem>
-                {order.statusId === 'CREATED' && (
+                {order.statusId === 'CREATED' && hasModerationPermission && (
                   <DropdownMenuItem onClick={() => setShowCancelDialog(true)}>
                     <XCircle className='mr-2 h-4 w-4' />
                     Hủy đơn hàng
@@ -637,7 +629,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
             Sản phẩm ({order.items?.length || 0})
           </TabsTrigger>
           <TabsTrigger value='shipments'>
-            Phiếu kho ({shipments.length})
+            Phiếu nhập ({shipments.length})
           </TabsTrigger>
         </TabsList>
 
@@ -911,7 +903,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                         </div>
                         <div>
                           <Label className='text-muted-foreground'>
-                            Còn thiếu
+                            Chưa nhập
                           </Label>
                           <p className='font-medium'>
                             {item.quantityRemaining} {item.product?.unit || ''}
@@ -1017,7 +1009,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
             <Card className='border-destructive/50 bg-destructive/5'>
               <CardContent className='p-6 text-center'>
                 <p className='text-destructive'>
-                  Đã xảy ra lỗi khi tải phiếu kho. Vui lòng thử lại sau.
+                  Đã xảy ra lỗi khi tải phiếu nhập. Vui lòng thử lại sau.
                 </p>
               </CardContent>
             </Card>
@@ -1028,9 +1020,11 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
                 <div>
-                  <h3 className='text-lg font-semibold'>Danh sách phiếu kho</h3>
+                  <h3 className='text-lg font-semibold'>
+                    Danh sách phiếu nhập
+                  </h3>
                   <p className='text-sm text-muted-foreground'>
-                    {shipments.length} phiếu kho (chỉ xem)
+                    {shipments.length} phiếu nhập
                   </p>
                 </div>
               </div>
@@ -1057,10 +1051,10 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                   <Truck className='w-10 h-10 text-muted-foreground' />
                 </div>
                 <h3 className='text-lg font-semibold mb-2'>
-                  Chưa có phiếu kho
+                  Chưa có phiếu nhập
                 </h3>
                 <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
-                  Phiếu kho sẽ được tạo bởi bộ phận logistics.
+                  Phiếu nhập sẽ được tạo bởi bộ phận logistics.
                 </p>
               </CardContent>
             </Card>

@@ -7,22 +7,34 @@ import java.util.Random;
 
 import com.example.ttcrs.algorithm.vrp.entities.Point;
 import com.example.ttcrs.algorithm.vrp.enums.PointType;
-
-public class VarRoutesVR{
-
-	private int[] next;
-	private int[] prev;
-	private int[] route;
-	private int N;
-	private int K;
-	private int n;
+// Lớp VarRoutesVR (Variable Routes for Vehicle Routing Problem) 
+// đại diện cho một biến giải pháp (biến quản lý các route cho 
+// bài toán định tuyến xe) trong bài toán Vehicle Routing Problem (VRP). 
+// Nó quản lý các tuyến đường của các phương tiện, bao gồm các điểm bắt 
+// đầu, điểm kết thúc, và các điểm khách hàng trên mỗi tuyến đường. Lớp 
+// này sử dụng các mảng để lưu trữ thông tin về tuyến đường
+// mảng next: lưu trữ điểm tiếp theo trên tuyến đường,
+// mảng prev: lưu trữ điểm trước đó
+// mảng route để lưu trữ số hiệu của tuyến đường mà mỗi điểm thuộc về. 
+// Lớp cũng cung cấp các phương thức để thêm tuyến đường mới, thêm điểm 
+// khách hàng vào tuyến đường, và cập nhật thông tin về tuyến 
+// đường sau khi thực hiện các thao tác như di chuyển điểm từ 
+// tuyến đường này sang tuyến đường khác hoặc đảo ngược hướng 
+// của một đoạn tuyến đường.
+public class VarRoutesVR{ 
+	private int[] next; // điểm có giá trị null là điểm kết thúc của tuyến đường
+	private int[] prev; // điểm có giá trị null là điểm bắt đầu của tuyến đường
+	private int[] route; // lưu trữ số hiệu của tuyến đường mà mỗi điểm thuộc về
+	private int N; // tổng số stops
+	private int K; // tổng số routes
+	private int n; // tổng số khách hàng
 	
 	// store old values of next, prev, route
 	private int[] old_next;
 	private int[] old_prev;
 	private int[] old_route;
 	
-	private int[] index;
+	private int[] index; // lưu trữ vị trí của điểm trên tuyến đường, điểm bắt đầu có index 0, điểm tiếp theo có index 1, ...
 	
 	private PointType[] pointType;
 	private ArrayList<Point> startingPoints;
@@ -88,7 +100,7 @@ public class VarRoutesVR{
 		old_route = _old_route;
 		pointType = _pointType;
 	}
-	
+	// thêm một tuyến đường mới với điểm bắt đầu sp và điểm kết thúc tp
 	public void addRoute(Point sp, Point tp){
 		if (N + 2 > maxNbPoints) {
 			scaleUp();
@@ -97,16 +109,16 @@ public class VarRoutesVR{
 		K++;
 		allPoints.add(sp);
 		startingPoints.add(sp);
-		mPoint2Index.put(sp, N++);
+		mPoint2Index.put(sp, N++); // index of sp is N-1, để dễ dàng truy cập sau này
 		pointType[N - 1] = PointType.STARTING_ROUTE;
 		
 		allPoints.add(tp);
 		terminatingPoints.add(tp);
-		mPoint2Index.put(tp, N++);
+		mPoint2Index.put(tp, N++); // index of tp is N-1, để dễ dàng truy cập sau này	
 		pointType[N - 1] = PointType.TERMINATING_ROUTE;
 		
-		next[N - 2] = N - 1;
-        prev[N - 1] = N - 2;
+		next[N - 2] = N - 1; // next of sp is tp
+        prev[N - 1] = N - 2; // prev of tp is sp
         prev[N - 2] = next[N - 1] = Constants.NULL_POINT;
         route[N - 2] = route[N - 1] = K;
         old_next[N - 2] = old_prev[N - 2] = old_route[N - 2] = Constants.NULL_POINT;
@@ -144,7 +156,7 @@ public class VarRoutesVR{
 	public ArrayList<Point> getTerminatingPoints() {
 		return terminatingPoints;
 	}
-	
+	// Hàm này được sử dụng để cập nhật trạng thái của biến giải pháp VarRoutesVR dựa trên giá trị của một đối tượng ValueRoutesVR.
 	public void setValue(ValueRoutesVR val){
 		copySolution();
 		for (Point p : allPoints) {
@@ -218,8 +230,9 @@ public class VarRoutesVR{
 		return this.mgr;
 	}
 	
-	// add the point o to the end of the route k
+	// add point u to the end of route k but before the terminating point of route k
     private void addPoint2Route(int k, int u) {
+		// add point u between prev[tp] and tp, where tp is the terminating point of route k
         next[prev[getIndex(getTerminatingPointOfRoute(k))]] = u;
         prev[u] = prev[getIndex(getTerminatingPointOfRoute(k))];
         next[u] = getIndex(getTerminatingPointOfRoute(k));
@@ -245,9 +258,9 @@ public class VarRoutesVR{
         next[s] = prev[s];
         prev[s] = tmp;
     }
-
+// Hàm update(int k) được sử dụng để cập nhật thông tin về tuyến đường k sau khi thực hiện các thao tác như di chuyển điểm từ tuyến đường này sang tuyến đường khác hoặc đảo ngược hướng của một đoạn tuyến đường.
     private void update(int k) {
-    	int s = getIndex(getStartingPointOfRoute(k));
+    	int s = getIndex(getStartingPointOfRoute(k)); // index of the starting point of route k
     	int t = getIndex(getTerminatingPointOfRoute(k));
     	index[s] = 0;
     	for (int x = s; x != t; x = next[x]) {
@@ -296,7 +309,7 @@ public class VarRoutesVR{
 	public String name(){
 		return "VarRoutesVR";
 	}
-	
+	// Hàm isBefore(Point x, Point y) được sử dụng để kiểm tra xem điểm x có nằm trước điểm y trên cùng một tuyến đường hay không.
 	public boolean isBefore(Point x, Point y) {
 		int idx = getIndex(x);
 		int idy = getIndex(y);
@@ -358,7 +371,7 @@ public class VarRoutesVR{
 //			mgr.performTwoPointsMove(allPoints.get(idx), allPoints.get(idy));
 //		}
 	}
-	
+	// Hàm initStartingTerminatingPoints() được sử dụng để khởi tạo các điểm bắt đầu và điểm kết thúc cho mỗi tuyến đường trong bài toán Vehicle Routing Problem (VRP).
 	private void initStartingTerminatingPoints(){
 		for (int i = 1; i <= K; i++) {
 			int ids = getIndex(getStartingPointOfRoute(i));
@@ -369,7 +382,8 @@ public class VarRoutesVR{
             route[ids] = route[idt] = i;
         }
 	}
-	
+	// Hàm initSequential() được sử dụng để khởi tạo giải pháp ban đầu cho bài toán Vehicle Routing Problem (VRP) bằng cách phân chia các điểm khách hàng thành các tuyến đường một cách tuần tự.
+	// Ví dụ: nếu có n khách hàng và K tuyến đường, thì mỗi tuyến đường sẽ được gán một số lượng khách hàng gần bằng nhau (n/K khách hàng mỗi tuyến đường), và các khách hàng sẽ được gán vào các tuyến đường theo thứ tự xuất hiện của chúng trong danh sách clientPoints.
 	public void initSequential(){
 		initStartingTerminatingPoints();
 		Random rand = new Random();
@@ -1650,7 +1664,7 @@ public class VarRoutesVR{
     	    	isStartingPoint(y2)) && route[getIndex(y2)] != Constants.NULL_POINT
     	    	&& route[getIndex(y1)] == route[getIndex(y2)] && index[getIndex(y1)] <= index[getIndex(y2)]);
     }
-    
+    // Đặt x sau y, tức là thêm (y,x) và (x, next[y])
     public void performAddOnePoint(Point x, Point y){
     	// add point x between y and next[y]
     	if (!checkPerformAddOnePoint(x, y)) {

@@ -3,7 +3,6 @@ package com.example.ttcrs.dto.request.request;
 import com.example.ttcrs.constant.RequestType;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,12 +25,10 @@ public class CreateRequestDTO {
     @NotNull(message = "type không được để trống")
     private RequestType type;
 
-    /** Mã location điểm đi */
-    @NotBlank(message = "srcLocationCode không được để trống")
+    /** Mã location điểm đi (bắt buộc với OF/IF/IE; OE có thể để trống) */
     private String srcLocationCode;
 
-    /** Mã location điểm đến */
-    @NotBlank(message = "destLocationCode không được để trống")
+    /** Mã location điểm đến (bắt buộc với OF/IF/OE; IE có thể để trống) */
     private String destLocationCode;
 
     /**
@@ -48,6 +45,9 @@ public class CreateRequestDTO {
 
     /** Có cần cắt mooc (drop trailer) tại điểm đến không */
     private Boolean dropTrailerRequired = false;
+
+    /** Mã container (số container) — bắt buộc với IE/IF/OF, không dùng cho OE */
+    private String containerCode;
 
     // -------------------------------------------------------------------------
     // Time window fields — điền tuỳ theo loại request

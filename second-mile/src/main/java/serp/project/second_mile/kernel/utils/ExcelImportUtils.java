@@ -113,6 +113,32 @@ public final class ExcelImportUtils {
         return value != null && !value.trim().isEmpty();
     }
 
+    public static Double parseNumber(String rawValue) {
+        if (!hasText(rawValue)) {
+            return null;
+        }
+
+        String value = rawValue.trim().replace(" ", "");
+        if (value.matches("[-+]?\\d+(\\.\\d+)?")) {
+            return Double.parseDouble(value);
+        }
+
+        if (value.matches("[-+]?\\d+(,\\d+)?")) {
+            return Double.parseDouble(value.replace(",", "."));
+        }
+
+        if (value.matches("[-+]?\\d{1,3}(,\\d{3})+(\\.\\d+)?")) {
+            return Double.parseDouble(value.replace(",", ""));
+        }
+
+        if (value.matches("[-+]?\\d{1,3}(\\.\\d{3})+(,\\d+)?")) {
+            String normalized = value.replace(".", "").replace(",", ".");
+            return Double.parseDouble(normalized);
+        }
+
+        return null;
+    }
+
     public static CodeNameValue parseCodeAndName(String value, Pattern codeNamePattern) {
         String normalizedValue = normalizeWhitespace(value);
         var matcher = codeNamePattern.matcher(normalizedValue);

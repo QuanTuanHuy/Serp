@@ -1,13 +1,20 @@
+/*
+Author: Nguyen The Anh
+Description: Part of Serp Project
+*/
+
 package serp.project.first_mile.repository;
 
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.first_mile.domain.TripOrder;
 import serp.project.first_mile.enums.TripStatus;
+import serp.project.first_mile.enums.TripType;
 
 import java.util.Collection;
 import java.util.List;
@@ -17,6 +24,12 @@ import java.util.Optional;
 public interface TripOrderRepository extends JpaRepository<TripOrder, Long> {
 
     List<TripOrder> findByTrip_IdOrderBySequenceNoAsc(Long tripId);
+
+    List<TripOrder> findByTenantIdAndTrip_IdOrderBySequenceNoAsc(Long tenantId, Long tripId);
+
+    Optional<TripOrder> findByTenantIdAndTrip_IdAndOrderId(Long tenantId, Long tripId, Long orderId);
+
+    long countByTenantIdAndTrip_Id(Long tenantId, Long tripId);
 
     @Query("""
             select to
@@ -30,43 +43,80 @@ public interface TripOrderRepository extends JpaRepository<TripOrder, Long> {
             @Param("tripIds") Collection<Long> tripIds
     );
 
-        @Lock(LockModeType.PESSIMISTIC_WRITE)
-        Optional<TripOrder> findFirstByTenantIdAndOrderIdAndTrip_CourierStaffIdAndTrip_StatusInOrderByTrip_IdDesc(
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<TripOrder> findFirstByTenantIdAndOrderIdAndTrip_TripTypeAndTrip_CourierStaffIdAndTrip_StatusInOrderByTrip_IdDesc(
             Long tenantId,
             Long orderId,
+            TripType tripType,
             Long courierStaffId,
             Collection<TripStatus> statuses
-        );
+    );
 
     void deleteByTrip_Id(Long tripId);
+
+    @Modifying
+    @Query("""
+            delete from TripOrder to
+            where to.tenantId = :tenantId
+                and to.orderId in :orderIds
+                and to.trip.tripType = :tripType
+                and to.trip.status in :statuses
+                and to.trip.id <> :targetTripId
+            """)
+    int deleteByTenantIdAndOrderIdInAndTripStatusInAndTripIdNot(
+            @Param("tenantId") Long tenantId,
+            @Param("orderIds") Collection<Long> orderIds,
+            @Param("tripType") TripType tripType,
+            @Param("statuses") Collection<TripStatus> statuses,
+            @Param("targetTripId") Long targetTripId
+    );
 
     @Query("""
             select (count(to) > 0)
             from TripOrder to
             where to.tenantId = :tenantId
                 and to.orderId = :orderId
+                and to.trip.tripType = :tripType
                 and to.trip.status in :statuses
                 and (:excludeTripId is null or to.trip.id <> :excludeTripId)
             """)
     boolean existsByTenantIdAndOrderIdAndTripStatusIn(
             @Param("tenantId") Long tenantId,
             @Param("orderId") Long orderId,
+            @Param("tripType") TripType tripType,
             @Param("statuses") Collection<TripStatus> statuses,
             @Param("excludeTripId") Long excludeTripId
     );
 
-        @Query("""
+    @Query("""
             select (count(to) > 0)
             from TripOrder to
             where to.tenantId = :tenantId
             and to.orderId = :orderId
+            and to.trip.tripType = :tripType
             and to.trip.courierStaffId = :courierStaffId
             and to.trip.status in :statuses
             """)
-        boolean existsByTenantIdAndOrderIdAndCourierStaffIdAndTripStatusIn(
+    boolean existsByTenantIdAndOrderIdAndCourierStaffIdAndTripStatusIn(
             @Param("tenantId") Long tenantId,
             @Param("orderId") Long orderId,
+            @Param("tripType") TripType tripType,
             @Param("courierStaffId") Long courierStaffId,
             @Param("statuses") Collection<TripStatus> statuses
-        );
+    );
+
+    @Query("""
+            select (count(to) > 0)
+            from TripOrder to
+            where to.tenantId = :tenantId
+                and to.orderId = :orderId
+                and to.trip.tripType = :tripType
+                and to.trip.status in :statuses
+            """)
+    boolean existsByTenantIdAndOrderIdAndTripTypeAndTripStatusIn(
+            @Param("tenantId") Long tenantId,
+            @Param("orderId") Long orderId,
+            @Param("tripType") TripType tripType,
+            @Param("statuses") Collection<TripStatus> statuses
+    );
 }

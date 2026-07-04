@@ -1,5 +1,5 @@
-import { Supplier } from '@/modules/purchase';
-import { Order } from '@/modules/sales';
+import { Supplier } from '@/modules/logistics';
+import { Order } from '@/modules/logistics';
 import {
   Badge,
   Button,
@@ -34,7 +34,7 @@ import { Customer } from '../../types';
 
 const statusStyles = {
   CREATED: {
-    label: 'Đã tạo',
+    label: 'Chờ duyệt',
     bg: 'bg-blue-100 dark:bg-blue-900/30',
     text: 'text-blue-700 dark:text-blue-400',
     dot: 'bg-blue-500',
@@ -58,7 +58,7 @@ const statusStyles = {
     accent: '#f43f5e',
   },
   FULLY_DELIVERED: {
-    label: 'Đã giao hàng',
+    label: 'Hoàn thành',
     bg: 'bg-purple-100 dark:bg-purple-900/30',
     text: 'text-purple-700 dark:text-purple-400',
     dot: 'bg-purple-500',
@@ -212,7 +212,7 @@ export const OrderCard = ({
               style={{ backgroundColor: status.accent }}
             />
 
-            <div className='flex-1 min-w-0'>
+            <div className='grid flex-1'>
               <h3 className='font-semibold text-base leading-tight mb-1 truncate'>
                 {orderTitle}
               </h3>

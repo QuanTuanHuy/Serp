@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 vehicle-shipper list page
-*/
-
 'use client';
 
 import { useEffect, useState } from 'react';

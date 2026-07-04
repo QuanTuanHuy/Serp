@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 my routes page
-*/
-
 'use client';
 
 import { useRouter } from 'next/navigation';

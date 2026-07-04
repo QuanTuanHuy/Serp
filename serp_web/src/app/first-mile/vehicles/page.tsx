@@ -1,10 +1,10 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - First-mile vehicles route page
+ * Description: Part of Serp Project - Legacy TMS vehicles redirect
  */
 
-import { VehicleListPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
-export default function FirstMileVehiclesRoutePage() {
-  return <VehicleListPage />;
+export default function VehiclesScopePage() {
+  redirect('/first-mile/settings/vehicles');
 }

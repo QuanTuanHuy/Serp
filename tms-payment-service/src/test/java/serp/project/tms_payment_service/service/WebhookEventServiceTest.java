@@ -1,0 +1,36 @@
+/*
+ * Author: QuanTuanHuy
+ * Description: Part of Serp Project
+ */
+package serp.project.tms_payment_service.service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import serp.project.tms_payment_service.repository.WebhookEventRepository;
+
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class WebhookEventServiceTest {
+
+    @Test
+    void processRetryableEventsDispatchesThroughTransactionalProxy() {
+        WebhookEventRepository webhookEventRepository = mock(WebhookEventRepository.class);
+        WebhookEventService self = mock(WebhookEventService.class);
+        WebhookEventService service = new WebhookEventService(
+                webhookEventRepository,
+                new ObjectMapper(),
+                self
+        );
+
+        when(webhookEventRepository.findRetryableEventIds(any())).thenReturn(List.of(14L));
+
+        service.processRetryableEvents(100);
+
+        verify(self).dispatchEvent(14L);
+    }
+}

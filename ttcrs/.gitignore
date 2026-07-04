@@ -32,8 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 
-application.yaml
-
-*.sql
 *.md
 *.json
+schema.sql
+ttcrs_schema_v2.sql

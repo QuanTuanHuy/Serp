@@ -12,6 +12,7 @@ const (
 	CategoryEmail  NotificationCategory = "EMAIL"
 	CategoryCRM    NotificationCategory = "CRM"
 	CategoryPTM    NotificationCategory = "PTM"
+	CategoryTMS    NotificationCategory = "TMS"
 )
 
 func (nc NotificationCategory) String() string {

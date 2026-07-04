@@ -32,6 +32,11 @@ go run src/main.go
 | Logistics2   | 9004 | `/logistics2/api/v1/*`                     | Warehouse & inventory (v2) |
 | Notification | 8090 | `/notification/api/v1/*`                   | Alerts & notifications     |
 | Sales        | 8090 | `/sales/api/v1/*`                          | Sales orders               |
+| First Mile   | 8101 | `/first-mile/api/v1/*`                     | TMS first-mile operations  |
+| Second Mile  | 8102 | `/second-mile/api/v1/*`                    | TMS second-mile operations |
+| Payment      | 8103 | `/payment/api/v1/*`                        | TMS payment gateway        |
+| TMS Billing  | 8104 | `/tms-billing-service/api/v1/*`            | TMS pricing and fees       |
+| TMS Order    | 8105 | `/tms-order/api/v1/*`                      | TMS orders                 |
 | Discuss      | 8092 | `/discuss/api/v1/*`                        | Team messaging             |
 
 ## Configuration

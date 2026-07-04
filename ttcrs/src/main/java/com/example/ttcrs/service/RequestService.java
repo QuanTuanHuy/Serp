@@ -1,6 +1,7 @@
 package com.example.ttcrs.service;
 
 import com.example.ttcrs.constant.RequestStatus;
+import com.example.ttcrs.constant.RequestType;
 import com.example.ttcrs.dto.request.request.CreateRequestDTO;
 import com.example.ttcrs.dto.request.request.RequestFilterDTO;
 import com.example.ttcrs.dto.request.request.UpdateRequestDTO;
@@ -108,6 +109,20 @@ public class RequestService {
         log.info("Creating {} requests for customerId={}, tenantId={}, type={}",
                 dto.getQuantity(), dto.getCustomerId(), tenantId, dto.getType());
 
+                if (dto.getType() != RequestType.OE) {
+                        if (dto.getSrcLocationCode() == null || dto.getSrcLocationCode().isBlank()) {
+                                throw new IllegalArgumentException("srcLocationCode không được để trống");
+                        }
+                        if (dto.getContainerCode() == null || dto.getContainerCode().isBlank()) {
+                                throw new IllegalArgumentException("containerCode không được để trống với loại request " + dto.getType());
+                        }
+                }
+                if (dto.getType() != RequestType.IE) {
+                        if (dto.getDestLocationCode() == null || dto.getDestLocationCode().isBlank()) {
+                                throw new IllegalArgumentException("destLocationCode không được để trống");
+                        }
+                }
+
         List<RequestEntity> entities = new ArrayList<>(dto.getQuantity());
         for (int i = 0; i < dto.getQuantity(); i++) {
             entities.add(RequestEntity.builder()
@@ -117,6 +132,7 @@ public class RequestService {
                     .srcLocationCode(dto.getSrcLocationCode())
                     .destLocationCode(dto.getDestLocationCode())
                     .weight(dto.getWeight())
+                    .containerCode(dto.getContainerCode())
                     .dropTrailerRequired(dto.getDropTrailerRequired())
                     .earlyAtSrc(dto.getEarlyAtSrc())
                     .lateAtSrc(dto.getLateAtSrc())
@@ -251,6 +267,75 @@ public class RequestService {
     }
 
     /**
+     * Lấy danh sách Request có phân trang cho Customer.
+     * Lọc theo tenantId + customer_id = userId từ JWT.
+     */
+    public PageResponse<RequestResponseDTO> getCustomerRequests(RequestFilterDTO filter) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException("Cannot resolve tenant from token."));
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new IllegalStateException("Cannot resolve userId from token."));
+
+        Specification<RequestEntity> spec = Specification
+                .where(RequestSpecs.withTenantId(tenantId))
+                .and(RequestSpecs.withCustomerId(userId))
+                .and(RequestSpecs.withStatuses(filter.getStatuses()))
+                .and(RequestSpecs.withType(filter.getType()))
+                .and(RequestSpecs.withSrcLocationCode(filter.getSrcLocationCode()))
+                .and(RequestSpecs.withDestLocationCode(filter.getDestLocationCode()))
+                .and(RequestSpecs.withCreatedBetween(filter.getCreatedFrom(), filter.getCreatedTo()));
+
+        Page<RequestResponseDTO> resultPage = requestRepository
+                .findAll(spec, buildPageable(filter))
+                .map(RequestResponseDTO::fromEntity);
+
+        return PageResponse.from(resultPage);
+    }
+
+    /**
+     * Lấy chi tiết một Request theo ID (dành cho Customer).
+     * Kiểm tra tenantId + customer_id = userId để đảm bảo chỉ thấy request của mình.
+     */
+    public RequestResponseDTO getCustomerRequestById(Long id) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException("Cannot resolve tenant from token."));
+        Long userId = authUtils.getCurrentUserId()
+                .orElseThrow(() -> new IllegalStateException("Cannot resolve userId from token."));
+
+        RequestEntity entity = requestRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found: " + id));
+
+        if (!entity.getTenantId().equals(tenantId) || !userId.equals(entity.getCustomerId())) {
+            throw new IllegalArgumentException("Request not found: " + id);
+        }
+
+        return RequestResponseDTO.fromEntity(entity);
+    }
+
+    /**
+     * Lấy chi tiết một Request theo ID (dành cho Dispatcher).
+     *
+     * @param id ID của request
+     * @return {@link RequestResponseDTO}
+     * @throws IllegalArgumentException nếu không tìm thấy hoặc không thuộc tenant
+     */
+    public RequestResponseDTO getRequestById(Long id) {
+        Long tenantId = authUtils.getCurrentTenantId()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Không thể xác định tenant từ token."
+                ));
+
+        RequestEntity entity = requestRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found: " + id));
+
+        if (!entity.getTenantId().equals(tenantId)) {
+            throw new IllegalArgumentException("Request not found: " + id);
+        }
+
+        return RequestResponseDTO.fromEntity(entity);
+    }
+
+    /**
      * Cập nhật một Request theo ID.
      * Chỉ được phép cập nhật khi request đang ở trạng thái PENDING.
      *
@@ -279,7 +364,9 @@ public class RequestService {
 
         log.info("Updating request id={}, tenantId={}", id, tenantId);
 
-        if (dto.getSrcLocationCode()  != null && !dto.getSrcLocationCode().isBlank())
+        if (entity.getType() != RequestType.OE
+                && dto.getSrcLocationCode() != null
+                && !dto.getSrcLocationCode().isBlank())
             entity.setSrcLocationCode(dto.getSrcLocationCode());
         if (dto.getDestLocationCode() != null && !dto.getDestLocationCode().isBlank())
             entity.setDestLocationCode(dto.getDestLocationCode());
@@ -290,6 +377,7 @@ public class RequestService {
         if (dto.getWeight()           != null) entity.setWeight(dto.getWeight());
         if (dto.getContainerSize()    != null) entity.setContainerSize(dto.getContainerSize());
         if (dto.getDropTrailerRequired() != null) entity.setDropTrailerRequired(dto.getDropTrailerRequired());
+        if (dto.getContainerCode()      != null) entity.setContainerCode(dto.getContainerCode());
         if (dto.getReason()           != null) entity.setReason(dto.getReason());
 
         return RequestResponseDTO.fromEntity(requestRepository.save(entity));

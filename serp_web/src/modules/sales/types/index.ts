@@ -1,5 +1,3 @@
-// Sales Types & Interfaces (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 // Constants
 export type ResponseStatus = 'SUCCESS' | 'FAILED';
 export type EntityType = 'PRODUCT' | 'SUPPLIER' | 'CUSTOMER' | 'FACILITY';
@@ -390,6 +388,6 @@ export interface OrderFilters {
   saleChannelId?: SaleChannel;
   orderDateAfter?: string;
   orderDateBefore?: string;
-  deliveryDateAfter?: string;
-  deliveryDateBefore?: string;
+  deliveryAfter?: string;
+  deliveryBefore?: string;
 }

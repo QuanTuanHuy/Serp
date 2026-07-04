@@ -35,4 +35,11 @@ public interface VehicleShipperRepository extends JpaRepository<VehicleShipperEn
     Optional<VehicleShipperEntity> findByIdAndTenantIdWithLock(@Param("id") String id,
             @Param("tenantId") Long tenantId);
 
+    boolean existsByVehicleIdAndWorkingDateAndStatusAndTenantId(
+            String vehicleId,
+            LocalDate workingDate,
+            String status,
+            Long tenantId
+    );
+
 }

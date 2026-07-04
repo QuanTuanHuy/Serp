@@ -1,5 +1,3 @@
-// Sales Store Slice (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type {
   Customer,

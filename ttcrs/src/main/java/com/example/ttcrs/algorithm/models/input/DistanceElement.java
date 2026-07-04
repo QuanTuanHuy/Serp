@@ -3,7 +3,7 @@ package com.example.ttcrs.algorithm.models.input;
 public class DistanceElement {
 	private String srcCode;
 	private String destCode;
-	private boolean isDriverBalance;
+	private boolean isDriverBalance; // chỉ ra xem khoảng cách này có liên quan đến việc cân bằng lái xe hay không, có thể được sử dụng để xác định xem khoảng cách này có ảnh hưởng đến việc phân bổ lái xe hay không.
 	private int[] drivers;
 	private double distance;
 	private double travelTime;

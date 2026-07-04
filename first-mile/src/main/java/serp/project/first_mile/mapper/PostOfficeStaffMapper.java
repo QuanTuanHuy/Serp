@@ -1,5 +1,5 @@
 /*
-Author: QuanTuanHuy
+Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
@@ -71,8 +71,6 @@ public final class PostOfficeStaffMapper {
                 staffRole,
                 assignment.getAssignedFrom(),
                 assignment.getAssignedTo(),
-                assignment.getShiftStartTime(),
-                assignment.getShiftEndTime(),
                 assignment.getIsPrimary(),
                 assignment.getNotes(),
                 assignment.getCreatedAt(),

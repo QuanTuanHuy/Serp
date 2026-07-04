@@ -1,5 +1,3 @@
-// Sales CustomerListPage Component (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -37,6 +35,7 @@ import {
   selectCustomerFilters,
 } from '../../store/selectors';
 import type { Customer, CustomerStatus } from '../../types';
+import { useUser } from '@/modules/account';
 
 interface CustomerListPageProps {
   className?: string;
@@ -127,11 +126,13 @@ const StatsCard = ({
 // Enhanced CustomerCard component with gradients and animations
 const CustomerCard = ({
   customer,
+  canEdit = false,
   onClick,
   onEdit,
   onDelete,
 }: {
   customer: Customer;
+  canEdit?: boolean;
   onClick?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -202,32 +203,34 @@ const CustomerCard = ({
             </div>
           </div>
 
-          <div className='flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.();
-              }}
-              title='Chỉnh sửa'
-            >
-              <Edit className='h-4 w-4' />
-            </Button>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='h-8 w-8 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400'
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.();
-              }}
-              title='Xóa'
-            >
-              <Trash2 className='h-4 w-4' />
-            </Button>
-          </div>
+          {canEdit && (
+            <div className='flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.();
+                }}
+                title='Chỉnh sửa'
+              >
+                <Edit className='h-4 w-4' />
+              </Button>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.();
+                }}
+                title='Xóa'
+              >
+                <Trash2 className='h-4 w-4' />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Contact Info */}
@@ -299,6 +302,11 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
 }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
+
+  const { user } = useUser();
+  const hasEditPermission =
+    user?.roles?.includes('SALES_MANAGER') ||
+    user?.roles?.includes('SALES_ADMIN');
 
   const pagination = useAppSelector(selectCustomerPagination);
   const filters = useAppSelector(selectCustomerFilters);
@@ -373,15 +381,17 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
           <h1 className='text-2xl font-bold tracking-tight'>Khách hàng</h1>
           <p className='text-muted-foreground'>Quản lý khách hàng của bạn</p>
         </div>
-        <div className='flex items-center gap-2'>
-          <Button
-            onClick={() => router.push('/sales/customers/new')}
-            className='gap-2'
-          >
-            <Plus className='h-4 w-4' />
-            Thêm khách hàng mới
-          </Button>
-        </div>
+        {hasEditPermission && (
+          <div className='flex items-center gap-2'>
+            <Button
+              onClick={() => router.push('/sales/customers/new')}
+              className='gap-2'
+            >
+              <Plus className='h-4 w-4' />
+              Thêm khách hàng mới
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Quick Stats */}
@@ -528,6 +538,7 @@ export const CustomerListPage: React.FC<CustomerListPageProps> = ({
             <CustomerCard
               key={customer.id}
               customer={customer}
+              canEdit={hasEditPermission}
               onClick={() => handleViewCustomer(customer.id)}
               onEdit={() => handleEditCustomer(customer.id)}
               onDelete={() => handleDeleteCustomer(customer.id)}

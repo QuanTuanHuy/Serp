@@ -1,5 +1,3 @@
-// Purchase API Endpoints (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 import { api } from '@/lib/store/api';
 import type {
   Address,
@@ -374,7 +372,7 @@ export const purchaseApi = api.injectEndpoints({
     }),
 
     // Order endpoints
-    getOrders: builder.query<
+    getPurchaseOrders: builder.query<
       APIResponse<PaginatedResponse<Order>>,
       { filters?: OrderFilters; pagination: PaginationParams }
     >({
@@ -396,7 +394,7 @@ export const purchaseApi = api.injectEndpoints({
           : [{ type: 'PurchaseOrder', id: 'LIST' }],
     }),
 
-    getOrder: builder.query<APIResponse<Order>, string>({
+    getPurchaseOrder: builder.query<APIResponse<Order>, string>({
       query: (orderId) => ({
         url: `/order/search/${orderId}`,
         method: 'GET',
@@ -405,7 +403,10 @@ export const purchaseApi = api.injectEndpoints({
       providesTags: (result, error, id) => [{ type: 'PurchaseOrder', id }],
     }),
 
-    createOrder: builder.mutation<APIResponse<Order>, OrderCreationForm>({
+    createPurchaseOrder: builder.mutation<
+      APIResponse<Order>,
+      OrderCreationForm
+    >({
       query: (data) => ({
         url: '/order/create',
         method: 'POST',
@@ -415,7 +416,7 @@ export const purchaseApi = api.injectEndpoints({
       invalidatesTags: [{ type: 'PurchaseOrder', id: 'LIST' }],
     }),
 
-    updateOrder: builder.mutation<
+    updatePurchaseOrder: builder.mutation<
       APIResponse<Order>,
       { orderId: string; data: OrderUpdateForm }
     >({
@@ -431,7 +432,10 @@ export const purchaseApi = api.injectEndpoints({
       ],
     }),
 
-    deleteOrder: builder.mutation<APIResponse<{ deleted: boolean }>, string>({
+    deletePurchaseOrder: builder.mutation<
+      APIResponse<{ deleted: boolean }>,
+      string
+    >({
       query: (orderId) => ({
         url: `/order/delete/${orderId}`,
         method: 'DELETE',
@@ -443,7 +447,7 @@ export const purchaseApi = api.injectEndpoints({
       ],
     }),
 
-    approveOrder: builder.mutation<APIResponse<Order>, string>({
+    approvePurchaseOrder: builder.mutation<APIResponse<Order>, string>({
       query: (orderId) => ({
         url: `/order/manage/${orderId}/approve`,
         method: 'PATCH',
@@ -455,7 +459,7 @@ export const purchaseApi = api.injectEndpoints({
       ],
     }),
 
-    cancelOrder: builder.mutation<
+    cancelPurchaseOrder: builder.mutation<
       APIResponse<Order>,
       { orderId: string; data: OrderCancellationForm }
     >({
@@ -471,7 +475,7 @@ export const purchaseApi = api.injectEndpoints({
       ],
     }),
 
-    addProductToOrder: builder.mutation<
+    addProductToPurchaseOrder: builder.mutation<
       APIResponse<Order>,
       { orderId: string; data: OrderItem }
     >({
@@ -486,7 +490,7 @@ export const purchaseApi = api.injectEndpoints({
       ],
     }),
 
-    updateProductInOrder: builder.mutation<
+    updateProductInPurchaseOrder: builder.mutation<
       APIResponse<Order>,
       { orderId: string; orderItemId: string; data: OrderItemUpdateForm }
     >({
@@ -501,7 +505,7 @@ export const purchaseApi = api.injectEndpoints({
       ],
     }),
 
-    deleteProductFromOrder: builder.mutation<
+    deleteProductFromPurchaseOrder: builder.mutation<
       APIResponse<Order>,
       { orderId: string; orderItemId: string }
     >({
@@ -570,16 +574,16 @@ export const {
   useCreateProductMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
-  useGetOrdersQuery,
-  useGetOrderQuery,
-  useCreateOrderMutation,
-  useUpdateOrderMutation,
-  useDeleteOrderMutation,
-  useApproveOrderMutation,
-  useCancelOrderMutation,
-  useAddProductToOrderMutation,
-  useUpdateProductInOrderMutation,
-  useDeleteProductFromOrderMutation,
+  useGetPurchaseOrdersQuery: useGetOrdersQuery,
+  useGetPurchaseOrderQuery: useGetOrderQuery,
+  useCreatePurchaseOrderMutation: useCreateOrderMutation,
+  useUpdatePurchaseOrderMutation: useUpdateOrderMutation,
+  useDeletePurchaseOrderMutation: useDeleteOrderMutation,
+  useApprovePurchaseOrderMutation: useApproveOrderMutation,
+  useCancelPurchaseOrderMutation: useCancelOrderMutation,
+  useAddProductToPurchaseOrderMutation: useAddProductToOrderMutation,
+  useUpdateProductInPurchaseOrderMutation: useUpdateProductInOrderMutation,
+  useDeleteProductFromPurchaseOrderMutation: useDeleteProductFromOrderMutation,
   useGetShipmentQuery,
   useGetShipmentsByOrderQuery,
 } = purchaseApi;

@@ -1,5 +1,5 @@
 /*
-Author: QuanTuanHuy
+Author: Nguyen The Anh
 Description: Part of Serp Project
 */
 
@@ -14,7 +14,6 @@ import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import serp.project.first_mile.enums.PickupOptimizationEffort;
 import serp.project.first_mile.enums.PickupOptimizationGoal;
 import serp.project.first_mile.enums.PickupShift;
 
@@ -59,9 +58,6 @@ public class ManualAssignPickupOrdersRequest {
     @JsonProperty("optimization_goal")
     private PickupOptimizationGoal optimizationGoal;
 
-    @JsonProperty("optimization_effort")
-    private PickupOptimizationEffort optimizationEffort;
-
     @JsonProperty("average_speed_kmph")
     @DecimalMin(value = "1.0")
     private Double averageSpeedKmph;
@@ -78,4 +74,7 @@ public class ManualAssignPickupOrdersRequest {
 
     @JsonProperty("enforce_capacity")
     private Boolean enforceCapacity;
+
+    @JsonProperty("force_assign")
+    private Boolean forceAssign;
 }

@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Reusable list scaffold for Logistics2 pages
-*/
-
 'use client';
 
 import { useMemo } from 'react';

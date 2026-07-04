@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 vehicle status dialog
-*/
-
 'use client';
 
 import { Loader2, PauseCircle, PlayCircle } from 'lucide-react';

@@ -1,10 +1,3 @@
-/**
- * Delivery Slip Detail Page - Logistics2 Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Delivery slip details with item management
- */
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -84,7 +77,7 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; bgColor: string; icon: React.ElementType }
 > = {
   PENDING: {
-    label: 'Chờ xử lý',
+    label: 'Chờ lên kế hoạch',
     color: 'text-slate-700 dark:text-slate-300',
     bgColor: 'bg-slate-100 dark:bg-slate-900/40',
     icon: Clock3,

@@ -1,10 +1,3 @@
-/**
- * Shipment Detail Page - Logistics Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Shipment detail view
- */
-
 'use client';
 
 import { useMemo, useState } from 'react';

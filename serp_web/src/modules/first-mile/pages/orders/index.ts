@@ -3,4 +3,5 @@
  * Description: Part of Serp Project - Order pages exports
  */
 
-export * from './OrderListPage';
+export * from './list';
+export * from './tracking';

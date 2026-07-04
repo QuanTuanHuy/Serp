@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Sales Order Detail Page
-*/
-
 'use client';
 
 import { useState } from 'react';
@@ -61,6 +56,7 @@ import {
   useGetCustomerQuery,
 } from '../../api/salesApi';
 import { useGetUsersQuery, UserProfile } from '@/modules/admin';
+import { useUser } from '@/modules/account';
 
 interface OrderDetailPageProps {
   orderId: string;
@@ -69,7 +65,7 @@ interface OrderDetailPageProps {
 // Order status configuration
 const STATUS_CONFIG = {
   CREATED: {
-    label: 'Đã tạo',
+    label: 'Chờ duyệt',
     color: 'text-blue-700 dark:text-blue-400',
     bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     icon: Clock,
@@ -87,7 +83,7 @@ const STATUS_CONFIG = {
     icon: XCircle,
   },
   FULLY_DELIVERED: {
-    label: 'Đã giao hàng',
+    label: 'Hoàn thành',
     color: 'text-purple-700 dark:text-purple-400',
     bgColor: 'bg-purple-100 dark:bg-purple-900/30',
     icon: Package,
@@ -103,6 +99,12 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
   orderId,
 }) => {
   const router = useRouter();
+
+  const { user } = useUser();
+  const hasModerationPermission =
+    user?.roles?.includes('SALES_ADMIN') ||
+    user?.roles?.includes('SALES_MANAGER');
+
   const [activeTab, setActiveTab] = useState('overview');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancellationNote, setCancellationNote] = useState('');
@@ -368,7 +370,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
 
         {(order.statusId === 'CREATED' || order.statusId === 'CANCELLED') && (
           <div className='flex items-center gap-2'>
-            {order.statusId === 'CREATED' && (
+            {order.statusId === 'CREATED' && hasModerationPermission && (
               <Button
                 onClick={handleApprove}
                 disabled={isApproving}
@@ -390,7 +392,7 @@ export const OrderDetailPage: React.FC<OrderDetailPageProps> = ({
                   <Edit className='mr-2 h-4 w-4' />
                   Chỉnh sửa đơn hàng
                 </DropdownMenuItem>
-                {order.statusId === 'CREATED' && (
+                {order.statusId === 'CREATED' && hasModerationPermission && (
                   <DropdownMenuItem onClick={() => setShowCancelDialog(true)}>
                     <XCircle className='mr-2 h-4 w-4' />
                     Hủy đơn hàng

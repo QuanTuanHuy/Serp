@@ -1,5 +1,3 @@
-// EditSupplierPage Component (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 'use client';
 
 import { useRouter } from 'next/navigation';

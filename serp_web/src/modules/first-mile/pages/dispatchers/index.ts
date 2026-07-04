@@ -3,4 +3,5 @@
  * Description: Part of Serp Project - Dispatcher pages exports
  */
 
-export * from './DispatchersPage';
+export * from './first-mile';
+export * from './last-mile';

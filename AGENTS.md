@@ -8,16 +8,19 @@ Keep it cross-repo and lightweight; when a module has its own `AGENTS.md`, that 
   - `account/AGENTS.md`
   - `api_gateway/AGENTS.md`
   - `discuss_service/AGENTS.md`
+  - `first-mile/AGENTS.md`
+  - `second-mile/AGENTS.md`
   - `notification_service/AGENTS.md`
   - `pm_core/AGENTS.md`
   - `serp_web/AGENTS.md`
+  - `serp_web/src/modules/first-mile/AGENTS.md` (TMS first-mile + second-mile UI)
 - Modules without a local guide currently rely on this root file plus nearby code conventions.
 
 ## Repo Map
 - Frontend: `serp_web/` - Next.js 15, React 19, TypeScript.
 - Python service: `serp_llm/` - FastAPI, SQLAlchemy async, Poetry.
 - Go services: `api_gateway/`, `notification_service/`, `ptm_schedule/`, `ptm_task/`.
-- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
+- Spring Boot services: `account/`, `crm/`, `discuss_service/`, `first-mile/`, `second-mile/`, `tms-billing-service/`, `tms-order/`, `logistics/`, `mailservice/`, `pm_core/`, `ptm_optimization/`, `purchase_service/`, `sales/`.
 - Shared Java libraries: `serp_java_platform/`.
 - Local infrastructure entrypoint: `docker-compose.dev.yml`.
 
@@ -53,7 +56,7 @@ npx prettier --check src/path/to/file.tsx
 - There is currently no `test` script and no checked-in frontend test framework, so there is no supported single-test command today.
 
 ### Spring Boot services
-Applies to `account`, `crm`, `discuss_service`, `first-mile`, `logistics`, `mailservice`, `pm_core`, `ptm_optimization`, `purchase_service`, and `sales`.
+Applies to `account`, `crm`, `discuss_service`, `first-mile`, `second-mile`, `tms-order`, `logistics`, `mailservice`, `pm_core`, `ptm_optimization`, `purchase_service`, and `sales`.
 Run from the service directory.
 ```bash
 ./run-dev.sh                    # when present
@@ -66,7 +69,7 @@ Run from the service directory.
 ./mvnw -DskipTests clean package
 ```
 - On Windows CMD or PowerShell, use `mvnw.cmd`.
-- `sales/` and `first-mile/` currently do not have `run-dev.sh`; start them via the Maven wrapper.
+- `sales/`, `first-mile/`, and `second-mile/` currently do not have `run-dev.sh`; start them via the Maven wrapper.
 - Most services do not have a dedicated lint plugin, so `clean compile` and `test` are the practical quality gate.
 
 ### Shared Java platform (`serp_java_platform`)

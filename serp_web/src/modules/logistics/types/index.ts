@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics Module Types
-*/
-
 // Constants
 export type ResponseStatus = 'SUCCESS' | 'FAILED';
 export type EntityType = 'PRODUCT' | 'SUPPLIER' | 'CUSTOMER' | 'FACILITY';
@@ -64,7 +59,7 @@ export interface Address {
   createdStamp: string;
   lastUpdatedStamp: string;
   tenantId: number;
-  isDefault: boolean;
+  default: boolean;
 }
 
 export interface AddressCreationForm {
@@ -74,7 +69,7 @@ export interface AddressCreationForm {
   latitude: number;
   longitude: number;
   fullAddress: string;
-  isDefault?: boolean;
+  default?: boolean;
 }
 
 export interface AddressUpdateForm {
@@ -82,7 +77,7 @@ export interface AddressUpdateForm {
   latitude?: number;
   longitude?: number;
   fullAddress?: string;
-  isDefault?: boolean;
+  default?: boolean;
 }
 
 // Category types

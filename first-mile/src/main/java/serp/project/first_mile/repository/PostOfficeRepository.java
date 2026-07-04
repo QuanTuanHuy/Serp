@@ -74,7 +74,9 @@ public interface PostOfficeRepository extends JpaRepository<PostOffice, Long>, J
     Optional<PostOffice> findByCodeIgnoreCaseAndTenantId(String code, Long tenantId);
 
     @Query(value = """
-            select po.*
+            select po.*,
+                   ST_Y(CAST(po.location AS geometry)) as "locationLatitude",
+                   ST_X(CAST(po.location AS geometry)) as "locationLongitude"
             from post_offices po
             where po.tenant_id = :tenantId
                 and po.status = 'ACTIVE'
@@ -94,6 +96,32 @@ public interface PostOfficeRepository extends JpaRepository<PostOffice, Long>, J
     Optional<PostOffice> findBestAssignablePostOfficeForSenderForUpdate(
             @Param("tenantId") Long tenantId,
             @Param("senderLocation") Point senderLocation,
+            @Param("operationalDate") LocalDate operationalDate
+    );
+
+    @Query(value = """
+            select po.*,
+                   ST_Y(CAST(po.location AS geometry)) as "locationLatitude",
+                   ST_X(CAST(po.location AS geometry)) as "locationLongitude"
+            from post_offices po
+            where po.tenant_id = :tenantId
+                and po.status = 'ACTIVE'
+                and po.location is not null
+                and po.service_radius_m > 0
+                and po.delivery_capacity > po.current_delivery_load
+                and (po.operational_start_date is null or po.operational_start_date <= :operationalDate)
+                and (po.operational_end_date is null or po.operational_end_date >= :operationalDate)
+                and ST_DWithin(po.location, :receiverLocation, po.service_radius_m)
+            order by po.priority asc,
+                     ST_Distance(po.location, :receiverLocation) asc,
+                     po.current_delivery_load asc,
+                     po.id asc
+            limit 1
+            for update skip locked
+            """, nativeQuery = true)
+    Optional<PostOffice> findBestAssignablePostOfficeForReceiverForUpdate(
+            @Param("tenantId") Long tenantId,
+            @Param("receiverLocation") Point receiverLocation,
             @Param("operationalDate") LocalDate operationalDate
     );
 

@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics Pages Barrel Export
-*/
-
 export * from './facilities';
 export * from './inventory';
 export * from './products';

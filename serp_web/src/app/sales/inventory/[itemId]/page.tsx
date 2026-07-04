@@ -1,18 +1,13 @@
-/**
- * Inventory Item Detail Page
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - View inventory item details
- */
-
 import { InventoryDetailPage } from '@/modules/sales';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     itemId: string;
-  };
+  }>;
 }
 
-export default function InventoryItemDetailPage({ params }: PageProps) {
-  return <InventoryDetailPage itemId={params.itemId} />;
+export default async function InventoryItemDetailPage({ params }: PageProps) {
+  const resolvedParams = await params;
+
+  return <InventoryDetailPage itemId={resolvedParams.itemId} />;
 }

@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Register vehicle dialog
-*/
-
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { LoaderCircle } from 'lucide-react';

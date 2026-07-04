@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 module types
-*/
-
 // Common response types
 export type ResponseStatus = 'SUCCESS' | 'FAILED';
 export type SortDirection = 'asc' | 'desc';

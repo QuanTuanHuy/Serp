@@ -29,6 +29,8 @@ jobs:
       crm: ${{ steps.changes.outputs.crm }}
       first-mile: ${{ steps.changes.outputs.first-mile }}
       second-mile: ${{ steps.changes.outputs.second-mile }}
+      tms-order: ${{ steps.changes.outputs.tms-order }}
+      tms-billing-service: ${{ steps.changes.outputs.tms-billing-service }}
       serp-web: ${{ steps.changes.outputs.serp-web }}
       purchase: ${{ steps.changes.outputs.purchase }}
       logistics: ${{ steps.changes.outputs.logistics }}
@@ -37,7 +39,10 @@ jobs:
       routing: ${{ steps.changes.outputs.routing }}
       notification: ${{ steps.changes.outputs.notification }}
       discuss-service: ${{ steps.changes.outputs.discuss-service }}
+      tms-payment-service: ${{ steps.changes.outputs.tms-payment-service }}
       pm-core: ${{ steps.changes.outputs.pm-core }}
+      school-bus-service: ${{ steps.changes.outputs.school-bus-service }}
+      ttcrs: ${{ steps.changes.outputs.ttcrs }}
     steps:
       - name: Download changes artifact
 
@@ -58,6 +63,8 @@ jobs:
           echo "crm=$(jq -r .crm changes.json)" >> $GITHUB_OUTPUT
           echo "first-mile=$(jq -r '."first-mile"' changes.json)" >> $GITHUB_OUTPUT
           echo "second-mile=$(jq -r '."second-mile"' changes.json)" >> $GITHUB_OUTPUT
+          echo "tms-order=$(jq -r '."tms-order"' changes.json)" >> $GITHUB_OUTPUT
+          echo "tms-billing-service=$(jq -r '."tms-billing-service"' changes.json)" >> $GITHUB_OUTPUT
           echo "serp-web=$(jq -r '."serp-web"' changes.json)" >> $GITHUB_OUTPUT
           echo "purchase=$(jq -r .purchase changes.json)" >> $GITHUB_OUTPUT
           echo "logistics=$(jq -r .logistics changes.json)" >> $GITHUB_OUTPUT
@@ -66,7 +73,10 @@ jobs:
           echo "routing=$(jq -r '."routing"' changes.json)" >> $GITHUB_OUTPUT
           echo "notification=$(jq -r .notification changes.json)" >> $GITHUB_OUTPUT
           echo "discuss-service=$(jq -r '."discuss-service"' changes.json)" >> $GITHUB_OUTPUT
+          echo "tms-payment-service=$(jq -r '."tms-payment-service"' changes.json)" >> $GITHUB_OUTPUT
           echo "pm-core=$(jq -r '."pm-core"' changes.json)" >> $GITHUB_OUTPUT
+          echo "school-bus-service=$(jq -r '."school-bus-service"' changes.json)" >> $GITHUB_OUTPUT
+          echo "ttcrs=$(jq -r .ttcrs changes.json)" >> $GITHUB_OUTPUT
 
   deploy-account:
     needs: check-changes
@@ -215,6 +225,44 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             cd ${{ secrets.DEPLOY_PATH }}/serp_second_mile
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+  deploy-tms-order:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.tms-order == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy TMS Order Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_tms_order
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+  deploy-tms-billing-service:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.tms-billing-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy TMS Billing Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_tms_billing_service
             export IMAGE_TAG=${{ github.sha }}
             docker compose pull
             docker compose up -d --remove-orphans
@@ -391,6 +439,63 @@ jobs:
             docker compose up -d --remove-orphans
             docker image prune -f
 
+  deploy-tms-payment-service:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.tms-payment-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy TMS Payment Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_tms_payment_service
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+  deploy-school-bus-service:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.school-bus-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy School Bus Service
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/school_bus_service
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
+  deploy-ttcrs:
+    needs: check-changes
+    if: ${{ needs.check-changes.outputs.ttcrs == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy TTCRS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}/serp_ttcrs
+            export IMAGE_TAG=${{ github.sha }}
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker image prune -f
+
   notify-deployment:
     needs: check-changes
     if: always()
@@ -408,10 +513,15 @@ jobs:
           echo "- CRM: ${{ needs.check-changes.outputs.crm }}" >> $GITHUB_STEP_SUMMARY
           echo "- First Mile: ${{ needs.check-changes.outputs.first-mile }}" >> $GITHUB_STEP_SUMMARY
           echo "- Second Mile: ${{ needs.check-changes.outputs.second-mile }}" >> $GITHUB_STEP_SUMMARY
+          echo "- TMS Order Service: ${{ needs.check-changes.outputs.tms-order }}" >> $GITHUB_STEP_SUMMARY
+          echo "- TMS Billing Service: ${{ needs.check-changes.outputs.tms-billing-service }}" >> $GITHUB_STEP_SUMMARY
           echo "- Serp Web: ${{ needs.check-changes.outputs.serp-web }}" >> $GITHUB_STEP_SUMMARY
           echo "- Discuss Service: ${{ needs.check-changes.outputs.discuss-service }}" >> $GITHUB_STEP_SUMMARY
           echo "- PM Core: ${{ needs.check-changes.outputs.pm-core }}" >> $GITHUB_STEP_SUMMARY
+          echo "- TTCRS: ${{ needs.check-changes.outputs.ttcrs }}" >> $GITHUB_STEP_SUMMARY
           echo "- Logistics 2: ${{ needs.check-changes.outputs.logistics2 }}" >> $GITHUB_STEP_SUMMARY
           echo "- Logistics: ${{ needs.check-changes.outputs.logistics }}" >> $GITHUB_STEP_SUMMARY
           echo "- Sales: ${{ needs.check-changes.outputs.sales }}" >> $GITHUB_STEP_SUMMARY
           echo "- Routing: ${{ needs.check-changes.outputs.routing }}" >> $GITHUB_STEP_SUMMARY
+          echo "- TMS Payment Service: ${{ needs.check-changes.outputs.tms-payment-service }}" >> $GITHUB_STEP_SUMMARY
+          echo "- School Bus Service: ${{ needs.check-changes.outputs.school-bus-service }}" >> $GITHUB_STEP_SUMMARY

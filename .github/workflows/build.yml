@@ -23,6 +23,8 @@ jobs:
       crm: ${{ steps.changes.outputs.crm }}
       first-mile: ${{ steps.changes.outputs.first-mile }}
       second-mile: ${{ steps.changes.outputs.second-mile }}
+      tms-order: ${{ steps.changes.outputs.tms-order }}
+      tms-billing-service: ${{ steps.changes.outputs.tms-billing-service }}
       purchase: ${{ steps.changes.outputs.purchase }}
       logistics: ${{ steps.changes.outputs.logistics }}
       sales: ${{ steps.changes.outputs.sales }}
@@ -30,7 +32,10 @@ jobs:
       routing: ${{ steps.changes.outputs.routing }}
       notification: ${{ steps.changes.outputs.notification }}
       discuss-service: ${{ steps.changes.outputs.discuss-service }}
+      tms-payment-service: ${{ steps.changes.outputs.tms-payment-service }}
       pm-core: ${{ steps.changes.outputs.pm-core }}
+      school-bus-service: ${{ steps.changes.outputs.school-bus-service }}
+      ttcrs: ${{ steps.changes.outputs.ttcrs }}
     steps:
       - name: Checkout code
 
@@ -58,6 +63,10 @@ jobs:
               - 'first-mile/**'
             second-mile:
               - 'second-mile/**'
+            tms-order:
+              - 'tms-order/**'
+            tms-billing-service:
+              - 'tms-billing-service/**'
             purchase:
               - 'purchase_service/**'
             logistics:
@@ -73,8 +82,14 @@ jobs:
               - 'serp_java_platform/**'
             pm-core:
               - 'pm_core/**'
+            ttcrs:
+              - 'ttcrs/**'
             routing:
               - 'routing-service/**'
+            tms-payment-service:
+              - 'tms-payment-service/**'
+            school-bus-service:
+              - 'school_bus_service/**'
 
       - name: Create changes file
 
@@ -89,6 +104,8 @@ jobs:
             "crm": "${{ steps.changes.outputs.crm }}",
             "first-mile": "${{ steps.changes.outputs.first-mile }}",
             "second-mile": "${{ steps.changes.outputs.second-mile }}",
+            "tms-order": "${{ steps.changes.outputs.tms-order }}",
+            "tms-billing-service": "${{ steps.changes.outputs.tms-billing-service }}",
             "purchase": "${{ steps.changes.outputs.purchase }}",
             "logistics": "${{ steps.changes.outputs.logistics }}",
             "logistics2": "${{ steps.changes.outputs.logistics2 }}",
@@ -96,7 +113,10 @@ jobs:
             "sales": "${{ steps.changes.outputs.sales }}",
             "notification": "${{ steps.changes.outputs.notification }}",
             "discuss-service": "${{ steps.changes.outputs.discuss-service }}",
-            "pm-core": "${{ steps.changes.outputs.pm-core }}"
+            "pm-core": "${{ steps.changes.outputs.pm-core }}",
+            "ttcrs": "${{ steps.changes.outputs.ttcrs }}",
+            "tms-payment-service": "${{ steps.changes.outputs.tms-payment-service }}",
+            "school-bus-service": "${{ steps.changes.outputs.school-bus-service }}"
           }' > changes.json
 
       - name: Upload changes artifact
@@ -537,6 +557,90 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  build-tms-order:
+    needs: changes
+    if: ${{ needs.changes.outputs.tms-order == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build TMS Order Service
+        run: |
+          cd tms-order
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tms-order
+          file: ./tms-order/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-tms-order:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-tms-order:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-tms-billing-service:
+    needs: changes
+    if: ${{ needs.changes.outputs.tms-billing-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build TMS Billing Service
+        run: |
+          cd tms-billing-service
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tms-billing-service
+          file: ./tms-billing-service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-tms-billing-service:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-tms-billing-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   build-purchase:
     needs: changes
     if: ${{ needs.changes.outputs.purchase == 'true' }}
@@ -819,5 +923,131 @@ jobs:
           tags: |
             ${{ env.DOCKER_REGISTRY }}/serp-discuss-service:${{ env.IMAGE_TAG }}
             ${{ env.DOCKER_REGISTRY }}/serp-discuss-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-tms-payment-service:
+    needs: changes
+    if: ${{ needs.changes.outputs.tms-payment-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build TMS Payment Service
+        run: |
+          cd tms-payment-service
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./tms-payment-service
+          file: ./tms-payment-service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-tms-payment-service:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-tms-payment-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-school-bus-service:
+    needs: changes
+    if: ${{ needs.changes.outputs.school-bus-service == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build School Bus Service
+        run: |
+          cd school_bus_service
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./school_bus_service
+          file: ./school_bus_service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-school-bus-service:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-school-bus-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-ttcrs:
+    needs: changes
+    if: ${{ needs.changes.outputs.ttcrs == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build TTCRS
+        run: |
+          cd ttcrs
+          chmod +x ./mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ttcrs
+          file: ./ttcrs/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/serp-ttcrs:${{ env.IMAGE_TAG }}
+            ${{ env.DOCKER_REGISTRY }}/serp-ttcrs:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

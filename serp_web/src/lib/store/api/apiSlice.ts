@@ -236,6 +236,21 @@ export const api = createApi({
     'logistics2/Route',
     'logistics2/Vehicle',
     'logistics2/VehicleShipper',
+    // School bus tags
+    'schoolBus/School',
+    'schoolBus/Parent',
+    'schoolBus/Student',
+    'schoolBus/Bus',
+    'schoolBus/Driver',
+    'schoolBus/Attendant',
+    'schoolBus/PickupPoint',
+    'schoolBus/Depot',
+    'schoolBus/TransportRequest',
+    'schoolBus/Route',
+    'schoolBus/Attendance',
+    'schoolBus/TripExecution',
+    'schoolBus/Dashboard',
+    'schoolBus/Report',
     // Sales tags
     'SalesCustomer',
     'Address',
@@ -243,7 +258,7 @@ export const api = createApi({
     'Facility',
     'InventoryItem',
     'Product',
-    'Order',
+    'SalesOrder',
     // Notification tags
     'Notification',
     'NotificationPreference',
@@ -290,6 +305,16 @@ export const api = createApi({
     'ttcrs/Request',
     'ttcrs/Location',
     'ttcrs/Resource',
+    // TMS tags
+    'HandoverManifest',
+    'BagDistributionManifest',
+    'SecondMileBag',
+    // TMS billing tags
+    'billing/Tariff',
+    'billing/SurchargeRule',
+    'billing/ChargeableWeightConfig',
+    'billing/DeliveryService',
+    'billing/VasRule',
   ],
 
   // Define endpoints in separate files for each module

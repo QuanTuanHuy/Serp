@@ -8,10 +8,11 @@ package serp.project.first_mile.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import serp.project.first_mile.domain.Order;
+import serp.project.first_mile.caller.TmsOrderClient;
+import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
+import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.PostOfficeStaffAssignment;
@@ -26,16 +27,15 @@ import serp.project.first_mile.dto.response.PickupOptimizationResponse;
 import serp.project.first_mile.enums.OrderStatus;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
-import serp.project.first_mile.enums.PickupOptimizationEffort;
 import serp.project.first_mile.enums.PickupOptimizationGoal;
 import serp.project.first_mile.enums.PickupShift;
 import serp.project.first_mile.enums.RoutingVehicle;
 import serp.project.first_mile.enums.TripStatus;
+import serp.project.first_mile.enums.TripType;
 import serp.project.first_mile.enums.VehicleStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
-import serp.project.first_mile.repository.OrderRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
@@ -43,6 +43,7 @@ import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.repository.TripRepository;
 import serp.project.first_mile.repository.VehicleRepository;
 import serp.project.first_mile.service.PickupOptimizationService;
+import serp.project.first_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.first_mile.service.dto.*;
 
 import java.time.LocalDate;
@@ -71,23 +72,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private static final int DEFAULT_ORDER_LIMIT = 300;
     private static final double DEFAULT_AVERAGE_SPEED_KMPH = 25.0;
     private static final int DEFAULT_SERVICE_MINUTES_PER_STOP = 8;
-    private static final int DEFAULT_MAX_ITERATIONS = 300;
-    private static final long DEFAULT_MAX_RUNTIME_MILLIS = 1500L;
-    private static final double DEFAULT_DESTROY_RATE = 0.20;
-    private static final double DEFAULT_INITIAL_TEMPERATURE = 50.0;
-    private static final double DEFAULT_COOLING_RATE = 0.995;
-
-    private static final int FAST_MAX_ITERATIONS = 120;
-    private static final long FAST_MAX_RUNTIME_MILLIS = 800L;
-    private static final double FAST_DESTROY_RATE = 0.15;
-    private static final double FAST_INITIAL_TEMPERATURE = 35.0;
-    private static final double FAST_COOLING_RATE = 0.985;
-
-    private static final int THOROUGH_MAX_ITERATIONS = 650;
-    private static final long THOROUGH_MAX_RUNTIME_MILLIS = 4000L;
-    private static final double THOROUGH_DESTROY_RATE = 0.25;
-    private static final double THOROUGH_INITIAL_TEMPERATURE = 65.0;
-    private static final double THOROUGH_COOLING_RATE = 0.997;
 
     private static final boolean DEFAULT_ALLOW_LATENESS = true;
     private static final boolean DEFAULT_ENFORCE_PLANNING_END = false;
@@ -110,6 +94,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private static final String REASON_INVALID_SENDER_LOCATION = "INVALID_SENDER_LOCATION";
     private static final String REASON_ALREADY_ASSIGNED_TO_ACTIVE_TRIP = "ALREADY_ASSIGNED_TO_ACTIVE_TRIP";
     private static final String REASON_ORDER_NOT_ASSIGNABLE = "ORDER_NOT_ASSIGNABLE";
+    private static final String TRANSITION_SOURCE = "FIRST_MILE_PICKUP_OPTIMIZATION";
 
     private static final LocalTime SHIFT_MORNING_START = LocalTime.of(7, 30);
     private static final LocalTime SHIFT_MORNING_END = LocalTime.of(12, 0);
@@ -132,7 +117,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             OrderStatus.PICKUP_FAILED
     );
 
-    private final OrderRepository orderRepository;
+    private final TmsOrderClient tmsOrderClient;
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
@@ -141,6 +126,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private final TripOrderRepository tripOrderRepository;
     private final PickupOptimizationEngine pickupOptimizationEngine;
     private final FirstMileAccessUtils firstMileAccessUtils;
+    private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
 
     @Value("${distance-matrix.batch-size:20}")
     private Integer distanceMatrixBatchSize;
@@ -170,12 +156,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 postOffice.getId(),
                 tenantId,
                 request.getCourierIds(),
-                config.planningDate(),
-                config.planningStartTime().toLocalTime(),
-                config.planningEndTime().toLocalTime()
+                config.planningDate()
         );
         if (couriers.isEmpty()) {
-            throw invalidRequest("No active courier assignment is available for the selected post office and planning window.");
+            throw invalidRequest("No active courier assignment is available for the selected post office and planning date.");
         }
 
         List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
@@ -190,13 +174,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         }
 
         List<OrderStatus> statuses = resolveCandidateStatuses(request.getCandidateStatuses());
-        List<Order> candidateOrders = orderRepository.findPickupCandidateOrders(
-                tenantId,
-                statuses,
+        List<TmsOrderOperationView> candidateOrders = tmsOrderClient.findPickupCandidates(
                 postOffice.getCode(),
+                statuses,
                 config.planningStartTime(),
                 config.planningEndTime(),
-                PageRequest.of(0, config.orderLimit())
+                config.orderLimit()
         );
 
         PreparedOrderData preparedOrderData = prepareOrders(candidateOrders);
@@ -208,10 +191,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         );
         AlgorithmConfig runtimeConfig = config.withTravelMetricProvider(travelMetricProvider);
 
-        SolutionState initialSolution = buildInitialSolution(initialRoutes, preparedOrderData, runtimeConfig);
-        SolutionState optimizedSolution = runAlns(initialSolution, runtimeConfig);
+        SolutionState greedySolution = buildGreedySolution(initialRoutes, preparedOrderData, runtimeConfig);
+        sanitizeSolution(greedySolution);
 
-        return toResponse(postOffice, runtimeConfig, optimizedSolution);
+        return toResponse(postOffice, runtimeConfig, greedySolution);
     }
 
     @Override
@@ -244,12 +227,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 postOffice.getId(),
                 tenantId,
                 request.getCourierIds(),
-                shiftPlanningWindow.tripDate(),
-                shiftPlanningWindow.planningStartTime().toLocalTime(),
-                shiftPlanningWindow.planningEndTime().toLocalTime()
+                shiftPlanningWindow.tripDate()
         );
         if (couriers.isEmpty()) {
-            throw invalidRequest("No active courier assignment is available for the selected post office and shift window.");
+            throw invalidRequest("No active courier assignment is available for the selected post office and trip date.");
         }
 
         List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
@@ -275,13 +256,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         applyExistingRouteData(routes, existingTripByCourier, existingRouteData);
 
         List<OrderStatus> statuses = resolveCandidateStatuses(request.getCandidateStatuses());
-        List<Order> candidateOrders = orderRepository.findPickupCandidateOrders(
-                tenantId,
-                statuses,
+        List<TmsOrderOperationView> candidateOrders = tmsOrderClient.findPickupCandidates(
                 postOffice.getCode(),
+                statuses,
                 config.planningStartTime(),
                 config.planningEndTime(),
-                PageRequest.of(0, config.orderLimit())
+                config.orderLimit()
         );
         lockOrdersForAssignment(candidateOrders, tenantId);
 
@@ -356,6 +336,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 request.getPlanningEndTime()
         );
 
+        if (Boolean.TRUE.equals(request.getForceAssign())) {
+            return forceManualAssignPickupOrders(request, tenantId, shiftPlanningWindow);
+        }
+
         PostOffice postOffice = lockPostOfficeAndValidateScope(request.getPostOfficeId(), tenantId);
         validatePostOfficeOperational(
                 postOffice,
@@ -373,9 +357,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             courier,
             postOffice.getId(),
             tenantId,
-            shiftPlanningWindow.tripDate(),
-            shiftPlanningWindow.planningStartTime().toLocalTime(),
-            shiftPlanningWindow.planningEndTime().toLocalTime()
+            shiftPlanningWindow.tripDate()
         );
 
         AlgorithmConfig config = buildConfig(request, shiftPlanningWindow);
@@ -430,11 +412,11 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         LinkedHashSet<Long> allOrderIds = new LinkedHashSet<>(existingTripOrderIds);
         allOrderIds.addAll(requestedOrderIds);
 
-        Map<Long, Order> orderById = loadOrdersByIdMapOrThrow(allOrderIds, tenantId);
+        Map<Long, TmsOrderOperationView> orderById = loadOrdersByIdMapOrThrow(allOrderIds, tenantId);
 
         Long excludeTripId = existingTrip == null ? null : existingTrip.getId();
         for (Long orderId : requestedOrderIds) {
-            Order order = orderById.get(orderId);
+            TmsOrderOperationView order = orderById.get(orderId);
             if (order == null) {
                 throw new AppException(ErrorCode.ORDER_NOT_FOUND);
             }
@@ -445,6 +427,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             boolean assignedInAnotherTrip = tripOrderRepository.existsByTenantIdAndOrderIdAndTripStatusIn(
                     tenantId,
                     orderId,
+                    TripType.PICKUP,
                     ACTIVE_ASSIGNMENT_TRIP_STATUSES,
                     excludeTripId
             );
@@ -519,6 +502,182 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         );
     }
 
+    private PickupAssignmentResponse forceManualAssignPickupOrders(
+            ManualAssignPickupOrdersRequest request,
+            Long tenantId,
+            ShiftPlanningWindow shiftPlanningWindow
+    ) {
+        PostOffice postOffice = lockPostOfficeAndValidateScope(request.getPostOfficeId(), tenantId);
+        PostOfficeStaff courier = postOfficeStaffRepository.findByIdAndTenantId(request.getCourierStaffId(), tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_STAFF_NOT_FOUND));
+
+        Set<Long> requestedOrderIds = normalizeDistinctOrderIds(request.getOrderIds());
+        lockOrderIdsForAssignment(requestedOrderIds, tenantId);
+        loadOrdersByIdMapOrThrow(requestedOrderIds, tenantId);
+
+        Trip trip = tripRepository.findFirstByTenantIdAndTripTypeAndPostOfficeIdAndCourierStaffIdAndTripDateAndShiftAndStatusIn(
+                tenantId,
+                TripType.PICKUP,
+                postOffice.getId(),
+                courier.getId(),
+                shiftPlanningWindow.tripDate(),
+                request.getShift(),
+                REPLANNABLE_TRIP_STATUSES
+        ).orElse(null);
+        boolean createdTrip = trip == null;
+        if (trip == null) {
+            trip = new Trip();
+        }
+        if (trip.getTripCode() == null || trip.getTripCode().isBlank()) {
+            trip.setTripCode(generateTripCode(shiftPlanningWindow.tripDate(), request.getShift(), courier.getCode()));
+        }
+
+        List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
+                tenantId,
+                postOffice.getId(),
+                List.of(VehicleStatus.ACTIVE)
+        );
+        if (trip.getVehicleId() == null) {
+            trip.setVehicleId(resolveForceVehicleId(activeVehicles, courier.getId()));
+        }
+        String vehicleLicensePlate = resolveVehicleLicensePlate(activeVehicles, trip.getVehicleId());
+
+        LinkedHashSet<Long> finalTripOrderIds = new LinkedHashSet<>();
+        if (trip.getId() != null) {
+            List<TripOrder> existingTripOrders =
+                    tripOrderRepository.findByTrip_IdOrderBySequenceNoAsc(trip.getId());
+            for (TripOrder existingTripOrder : existingTripOrders) {
+                if (existingTripOrder.getOrderId() != null) {
+                    finalTripOrderIds.add(existingTripOrder.getOrderId());
+                }
+            }
+        }
+        finalTripOrderIds.addAll(requestedOrderIds);
+
+        trip.setTenantId(tenantId);
+        trip.setTripType(TripType.PICKUP);
+        trip.setPostOfficeId(postOffice.getId());
+        trip.setCourierStaffId(courier.getId());
+        trip.setShift(request.getShift());
+        trip.setTripDate(shiftPlanningWindow.tripDate());
+        trip.setPlannedStartTime(shiftPlanningWindow.planningStartTime());
+        trip.setPlannedEndTime(shiftPlanningWindow.planningEndTime());
+        trip.setStatus(TripStatus.PLANNED);
+        trip.setTotalOrders(finalTripOrderIds.size());
+        trip.setTotalDistanceKm(0.0);
+        trip.setTotalTravelMinutes(0L);
+        Trip savedTrip = tripRepository.save(trip);
+
+        tripOrderRepository.deleteByTenantIdAndOrderIdInAndTripStatusInAndTripIdNot(
+                tenantId,
+                requestedOrderIds,
+                TripType.PICKUP,
+                ACTIVE_ASSIGNMENT_TRIP_STATUSES,
+                savedTrip.getId()
+        );
+
+        tripOrderRepository.deleteByTrip_Id(savedTrip.getId());
+        List<TripOrder> forceTripOrders = new ArrayList<>();
+        int sequence = 1;
+        for (Long orderId : finalTripOrderIds) {
+            TripOrder tripOrder = new TripOrder();
+            tripOrder.setTenantId(tenantId);
+            tripOrder.setTrip(savedTrip);
+            tripOrder.setOrderId(orderId);
+            tripOrder.setSequenceNo(sequence++);
+            forceTripOrders.add(tripOrder);
+        }
+        if (!forceTripOrders.isEmpty()) {
+            tripOrderRepository.saveAll(forceTripOrders);
+        }
+
+        Map<Long, TmsOrderOperationView> assignedOrderById = loadOrdersByIdMapOrThrow(requestedOrderIds, tenantId);
+        List<TmsOrderStatusTransitionRequest.Item> transitionItems = new ArrayList<>();
+        for (TmsOrderOperationView assignedOrder : assignedOrderById.values()) {
+            if (assignedOrder == null || assignedOrder.getId() == null) {
+                continue;
+            }
+
+            Point senderLocation = assignedOrder.getSenderLocation();
+            OrderTimelineContext context = new OrderTimelineContext(
+                    LocalDateTime.now(),
+                    savedTrip.getId(),
+                    savedTrip.getTripCode(),
+                    postOffice.getId(),
+                    postOffice.getCode(),
+                    postOffice.getName(),
+                    courier.getId(),
+                    courier.getCode(),
+                    courier.getFullName(),
+                    savedTrip.getVehicleId(),
+                    vehicleLicensePlate,
+                    senderLocation == null ? null : senderLocation.getY(),
+                    senderLocation == null ? null : senderLocation.getX(),
+                    assignedOrder.getSenderName()
+            );
+            transitionItems.add(toTransitionItem(
+                    assignedOrder,
+                    List.of(OrderStatus.CREATED, OrderStatus.PICKUP_FAILED, OrderStatus.ASSIGNED_TO_PICKUP),
+                    OrderStatus.ASSIGNED_TO_PICKUP,
+                    "Order force assigned to pickup trip by manual confirmation.",
+                    context
+            ));
+        }
+        enqueueTransitions(transitionItems, tenantId);
+
+        Map<Long, TmsOrderOperationView> finalOrderById = loadOrdersByIdMapOrThrow(finalTripOrderIds, tenantId);
+        List<PickupAssignmentResponse.AssignedStopResponse> stopResponses = new ArrayList<>();
+        int stopSequence = 1;
+        for (Long orderId : finalTripOrderIds) {
+            TmsOrderOperationView order = finalOrderById.get(orderId);
+            stopResponses.add(new PickupAssignmentResponse.AssignedStopResponse(
+                    stopSequence++,
+                    orderId,
+                    order == null ? null : order.getOrderCode(),
+                    order == null ? null : order.getCustomerOrderCode(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            ));
+        }
+
+        PickupAssignmentResponse.AssignedTripResponse assignedTripResponse =
+                new PickupAssignmentResponse.AssignedTripResponse(
+                        savedTrip.getId(),
+                        savedTrip.getTripCode(),
+                        courier.getId(),
+                        courier.getCode(),
+                        courier.getFullName(),
+                        savedTrip.getVehicleId(),
+                        vehicleLicensePlate,
+                        stopResponses.size(),
+                        round3(savedTrip.getTotalDistanceKm()),
+                        savedTrip.getTotalTravelMinutes(),
+                        0L,
+                        0L,
+                        savedTrip.getPlannedStartTime(),
+                        savedTrip.getPlannedEndTime(),
+                        stopResponses
+                );
+
+        return new PickupAssignmentResponse(
+                postOffice.getId(),
+                postOffice.getCode(),
+                postOffice.getName(),
+                request.getShift(),
+                shiftPlanningWindow.tripDate(),
+                requestedOrderIds.size(),
+                requestedOrderIds.size(),
+                0,
+                createdTrip ? 1 : 0,
+                List.of(assignedTripResponse),
+                List.of()
+        );
+    }
+
     private AssignmentPersistResult persistAssignments(
             PostOffice postOffice,
             PickupShift shift,
@@ -530,6 +689,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     ) {
         Set<Long> previousAssignedOrderIds = loadAssignedOrderIdsFromTrips(existingTripByCourier.values());
         Set<Long> assignedOrderIds = extractAssignedOrderIds(solution.routes());
+        Map<Long, OrderTimelineContext> assignmentContextByOrderId = new HashMap<>();
 
         List<PickupAssignmentResponse.AssignedTripResponse> tripResponses = new ArrayList<>();
         for (int routeIndex = 0; routeIndex < solution.routes().size(); routeIndex++) {
@@ -562,6 +722,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             validateActiveTripConflict(route, tripDate, shift, trip.getId(), tenantId);
 
             trip.setTenantId(tenantId);
+            trip.setTripType(TripType.PICKUP);
             trip.setPostOfficeId(postOffice.getId());
             trip.setCourierStaffId(route.courierStaffId());
             trip.setVehicleId(route.vehicleId());
@@ -579,11 +740,41 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
             tripOrderRepository.deleteByTrip_Id(savedTrip.getId());
             saveTripOrders(savedTrip, routeEvaluation.stopDetails(), tenantId);
+            for (StopEvaluationData stopDetail : routeEvaluation.stopDetails()) {
+                if (stopDetail == null || stopDetail.order() == null || stopDetail.order().orderId() == null) {
+                    continue;
+                }
+
+                assignmentContextByOrderId.put(
+                        stopDetail.order().orderId(),
+                        new OrderTimelineContext(
+                                LocalDateTime.now(),
+                                savedTrip.getId(),
+                                savedTrip.getTripCode(),
+                                postOffice.getId(),
+                                postOffice.getCode(),
+                                postOffice.getName(),
+                                route.courierStaffId(),
+                                route.courierCode(),
+                                route.courierName(),
+                                route.vehicleId(),
+                                route.vehicleLicensePlate(),
+                                stopDetail.order().latitude(),
+                                stopDetail.order().longitude(),
+                                stopDetail.order().senderName()
+                        )
+                );
+            }
 
             tripResponses.add(toAssignedTripResponse(savedTrip, route, routeEvaluation));
         }
 
-        syncOrderStatuses(previousAssignedOrderIds, assignedOrderIds, tenantId);
+        syncOrderStatuses(
+                previousAssignedOrderIds,
+                assignedOrderIds,
+                assignmentContextByOrderId,
+                tenantId
+        );
         return new AssignmentPersistResult(tripResponses, assignedOrderIds);
     }
 
@@ -713,13 +904,32 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         tripOrderRepository.saveAll(tripOrders);
     }
 
-    private void syncOrderStatuses(Set<Long> previousAssignedOrderIds, Set<Long> assignedOrderIds, Long tenantId) {
+    private void syncOrderStatuses(
+            Set<Long> previousAssignedOrderIds,
+            Set<Long> assignedOrderIds,
+            Map<Long, OrderTimelineContext> assignmentContextByOrderId,
+            Long tenantId
+    ) {
         if (!assignedOrderIds.isEmpty()) {
-            List<Order> assignedOrders = orderRepository.findByIdInAndTenantId(assignedOrderIds, tenantId);
-            for (Order assignedOrder : assignedOrders) {
-                assignedOrder.setStatus(OrderStatus.ASSIGNED_TO_PICKUP);
+            Map<Long, TmsOrderOperationView> assignedOrderById = loadOrdersByIdMapOrThrow(assignedOrderIds, tenantId);
+            List<TmsOrderStatusTransitionRequest.Item> transitionItems = new ArrayList<>();
+            for (TmsOrderOperationView assignedOrder : assignedOrderById.values()) {
+                if (assignedOrder == null || assignedOrder.getId() == null) {
+                    continue;
+                }
+
+                OrderTimelineContext context = assignmentContextByOrderId == null
+                        ? null
+                        : assignmentContextByOrderId.get(assignedOrder.getId());
+                transitionItems.add(toTransitionItem(
+                        assignedOrder,
+                        List.of(OrderStatus.CREATED, OrderStatus.PICKUP_FAILED, OrderStatus.ASSIGNED_TO_PICKUP),
+                        OrderStatus.ASSIGNED_TO_PICKUP,
+                        "Order assigned to pickup trip.",
+                        context
+                ));
             }
-            orderRepository.saveAll(assignedOrders);
+            enqueueTransitions(transitionItems, tenantId);
         }
 
         Set<Long> releasedOrderIds = new HashSet<>(previousAssignedOrderIds);
@@ -728,8 +938,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             return;
         }
 
-        List<Order> releasedOrders = orderRepository.findByIdInAndTenantId(releasedOrderIds, tenantId);
-        for (Order releasedOrder : releasedOrders) {
+        Map<Long, TmsOrderOperationView> releasedOrderById = loadOrdersByIdMapOrThrow(releasedOrderIds, tenantId);
+        List<TmsOrderStatusTransitionRequest.Item> releaseTransitionItems = new ArrayList<>();
+        for (TmsOrderOperationView releasedOrder : releasedOrderById.values()) {
             if (releasedOrder.getId() == null) {
                 continue;
             }
@@ -737,14 +948,72 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             boolean stillAssignedToActiveTrip = tripOrderRepository.existsByTenantIdAndOrderIdAndTripStatusIn(
                     tenantId,
                     releasedOrder.getId(),
+                    TripType.PICKUP,
                     ACTIVE_ASSIGNMENT_TRIP_STATUSES,
                     null
             );
             if (!stillAssignedToActiveTrip && OrderStatus.ASSIGNED_TO_PICKUP.equals(releasedOrder.getStatus())) {
-                releasedOrder.setStatus(OrderStatus.CREATED);
+                releaseTransitionItems.add(toTransitionItem(
+                        releasedOrder,
+                        List.of(OrderStatus.ASSIGNED_TO_PICKUP),
+                        OrderStatus.CREATED,
+                        "Order released from pickup trip and moved back to CREATED.",
+                        OrderTimelineContext.empty()
+                ));
             }
         }
-        orderRepository.saveAll(releasedOrders);
+        enqueueTransitions(releaseTransitionItems, tenantId);
+    }
+
+    private TmsOrderStatusTransitionRequest.Item toTransitionItem(
+            TmsOrderOperationView order,
+            List<OrderStatus> expectedStatuses,
+            OrderStatus targetStatus,
+            String description,
+            OrderTimelineContext context
+    ) {
+        TmsOrderStatusTransitionRequest.Context transitionContext = context == null
+                ? null
+                : TmsOrderStatusTransitionRequest.Context.builder()
+                .eventTime(context.eventTime())
+                .tripId(context.tripId())
+                .tripCode(context.tripCode())
+                .postOfficeId(context.postOfficeId())
+                .postOfficeCode(context.postOfficeCode())
+                .postOfficeName(context.postOfficeName())
+                .staffId(context.courierStaffId())
+                .staffCode(context.courierCode())
+                .staffName(context.courierName())
+                .vehicleId(context.vehicleId())
+                .vehicleLicensePlate(context.vehicleLicensePlate())
+                .latitude(context.latitude())
+                .longitude(context.longitude())
+                .locationLabel(context.locationLabel())
+                .build();
+
+        return TmsOrderStatusTransitionRequest.Item.builder()
+                .orderId(order.getId())
+                .orderCode(order.getOrderCode())
+                .expectedStatuses(expectedStatuses)
+                .targetStatus(targetStatus)
+                .description(description)
+                .context(transitionContext)
+                .build();
+    }
+
+    private void enqueueTransitions(
+            List<TmsOrderStatusTransitionRequest.Item> items,
+            Long tenantId
+    ) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+
+        tmsOrderTransitionPublisherService.publish(TmsOrderStatusTransitionRequest.builder()
+                .source(TRANSITION_SOURCE)
+                .idempotencyKey(TRANSITION_SOURCE + "-" + UUID.randomUUID())
+                .items(items)
+                .build(), tenantId);
     }
 
     private Map<Long, Trip> loadReplannableTripsByCourier(
@@ -763,8 +1032,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             return new HashMap<>();
         }
 
-        List<Trip> replannableTrips = tripRepository.findByTenantIdAndPostOfficeIdAndTripDateAndShiftAndStatusIn(
+        List<Trip> replannableTrips = tripRepository.findByTenantIdAndTripTypeAndPostOfficeIdAndTripDateAndShiftAndStatusIn(
                 tenantId,
+                TripType.PICKUP,
                 postOfficeId,
                 tripDate,
                 shift,
@@ -819,10 +1089,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             }
         }
 
-        Map<Long, Order> orderById = new HashMap<>();
+        Map<Long, TmsOrderOperationView> orderById = new HashMap<>();
         if (!existingOrderIds.isEmpty()) {
-            List<Order> existingOrders = orderRepository.findByIdInAndTenantId(existingOrderIds, tenantId);
-            for (Order existingOrder : existingOrders) {
+            List<TmsOrderOperationView> existingOrders = tmsOrderClient.lookupByIds(existingOrderIds);
+            for (TmsOrderOperationView existingOrder : existingOrders) {
                 orderById.put(existingOrder.getId(), existingOrder);
             }
         }
@@ -837,7 +1107,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                     continue;
                 }
 
-                Order order = orderById.get(orderId);
+                TmsOrderOperationView order = orderById.get(orderId);
                 if (order == null) {
                     continue;
                 }
@@ -904,6 +1174,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             boolean assignedInAnotherTrip = tripOrderRepository.existsByTenantIdAndOrderIdAndTripStatusIn(
                     tenantId,
                     assignableOrder.orderId(),
+                    TripType.PICKUP,
                     ACTIVE_ASSIGNMENT_TRIP_STATUSES,
                     excludeTripId
             );
@@ -919,10 +1190,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return new PreparedOrderData(assignableOrders, unassignedOrders);
     }
 
-    private Map<Long, Order> loadOrdersByIdMapOrThrow(Collection<Long> orderIds, Long tenantId) {
-        Map<Long, Order> orderById = new HashMap<>();
-        List<Order> orders = orderRepository.findByIdInAndTenantId(orderIds, tenantId);
-        for (Order order : orders) {
+    private Map<Long, TmsOrderOperationView> loadOrdersByIdMapOrThrow(Collection<Long> orderIds, Long tenantId) {
+        Map<Long, TmsOrderOperationView> orderById = new HashMap<>();
+        List<TmsOrderOperationView> orders = tmsOrderClient.lookupByIds(orderIds);
+        for (TmsOrderOperationView order : orders) {
             orderById.put(order.getId(), order);
         }
 
@@ -935,26 +1206,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return orderById;
     }
 
-    private void lockOrdersForAssignment(List<Order> orders, Long tenantId) {
-        if (orders == null || orders.isEmpty()) {
-            return;
-        }
-
-        Set<Long> orderIds = new LinkedHashSet<>();
-        for (Order order : orders) {
-            if (order != null && order.getId() != null) {
-                orderIds.add(order.getId());
-            }
-        }
-
-        lockOrderIdsForAssignment(orderIds, tenantId);
+    private void lockOrdersForAssignment(List<TmsOrderOperationView> orders, Long tenantId) {
     }
 
     private void lockOrderIdsForAssignment(Set<Long> orderIds, Long tenantId) {
-        if (orderIds == null || orderIds.isEmpty()) {
-            return;
-        }
-        orderRepository.findByTenantIdAndIdInWithLock(tenantId, orderIds);
     }
 
     private void validateActiveTripConflict(
@@ -966,6 +1221,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     ) {
         boolean courierConflict = tripRepository.existsActiveTripByCourierAndShift(
                 tenantId,
+                TripType.PICKUP,
                 tripDate,
                 shift,
                 route.courierStaffId(),
@@ -982,6 +1238,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
         boolean vehicleConflict = tripRepository.existsActiveTripByVehicleAndShift(
                 tenantId,
+                TripType.PICKUP,
                 tripDate,
                 shift,
                 route.vehicleId(),
@@ -993,7 +1250,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         }
     }
 
-    private void validateManualOrder(Order order, String postOfficeCode, boolean alreadyInCurrentTrip) {
+    private void validateManualOrder(TmsOrderOperationView order, String postOfficeCode, boolean alreadyInCurrentTrip) {
         OrderStatus status = order.getStatus();
         if (alreadyInCurrentTrip) {
             boolean validExistingStatus = OrderStatus.ASSIGNED_TO_PICKUP.equals(status)
@@ -1021,9 +1278,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             PostOfficeStaff courier,
             Long postOfficeId,
             Long tenantId,
-            LocalDate planningDate,
-            LocalTime planningStartTime,
-            LocalTime planningEndTime
+            LocalDate planningDate
     ) {
         if (!PostOfficeStaffRole.COURIER.equals(courier.getRole())
                 || !PostOfficeStaffStatus.ACTIVE.equals(courier.getStatus())) {
@@ -1037,9 +1292,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 tenantId,
                 planningDate
             );
-        boolean assigned = assignments.stream()
-                .anyMatch(assignment -> isAssignmentUsableForWindow(assignment, planningStartTime, planningEndTime));
-        if (!assigned) {
+        if (assignments.isEmpty()) {
             throw new AppException(ErrorCode.COURIER_NOT_ASSIGNED_TO_POST_OFFICE);
         }
     }
@@ -1112,40 +1365,10 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
     private AlgorithmConfig buildConfig(AutoAssignPickupPlanRequest request, ShiftPlanningWindow shiftPlanningWindow) {
         GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
-        EffortPreset effortPreset = resolveEffortPreset(request.getOptimizationEffort());
 
         int orderLimit = resolvePositiveInt(request.getOrderLimit(), DEFAULT_ORDER_LIMIT);
         double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
         int serviceMinutesPerStop = resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
-        int maxIterations = resolvePositiveInt(
-            request.getMaxIterations(),
-            resolvePositiveInt(effortPreset.maxIterations(), DEFAULT_MAX_ITERATIONS)
-        );
-        long maxRuntimeMillis = resolvePositiveLong(
-            request.getMaxRuntimeMillis(),
-            resolvePositiveLong(effortPreset.maxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS)
-        );
-
-        double destroyRate = clamp(
-            resolvePositiveDouble(
-                request.getDestroyRate(),
-                resolvePositiveDouble(effortPreset.destroyRate(), DEFAULT_DESTROY_RATE)
-            ),
-            0.01,
-            0.90
-        );
-        double initialTemperature = resolvePositiveDouble(
-            request.getInitialTemperature(),
-            resolvePositiveDouble(effortPreset.initialTemperature(), DEFAULT_INITIAL_TEMPERATURE)
-        );
-        double coolingRate = clamp(
-            resolvePositiveDouble(
-                request.getCoolingRate(),
-                resolvePositiveDouble(effortPreset.coolingRate(), DEFAULT_COOLING_RATE)
-            ),
-            0.80,
-            0.9999
-        );
 
         boolean allowLateness = resolveBoolean(
             request.getAllowLateness(),
@@ -1190,11 +1413,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 orderLimit,
                 averageSpeedKmph,
                 serviceMinutesPerStop,
-                maxIterations,
-                maxRuntimeMillis,
-                destroyRate,
-                initialTemperature,
-                coolingRate,
                 allowLateness,
                 enforcePlanningEnd,
                 enforceCapacity,
@@ -1211,26 +1429,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
     private AlgorithmConfig buildConfig(ManualAssignPickupOrdersRequest request, ShiftPlanningWindow shiftPlanningWindow) {
         GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
-        EffortPreset effortPreset = resolveEffortPreset(request.getOptimizationEffort());
 
         double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
         int serviceMinutesPerStop = resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
-        int maxIterations = resolvePositiveInt(effortPreset.maxIterations(), DEFAULT_MAX_ITERATIONS);
-        long maxRuntimeMillis = resolvePositiveLong(effortPreset.maxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS);
-        double destroyRate = clamp(
-                resolvePositiveDouble(effortPreset.destroyRate(), DEFAULT_DESTROY_RATE),
-                0.01,
-                0.90
-        );
-        double initialTemperature = resolvePositiveDouble(
-                effortPreset.initialTemperature(),
-                DEFAULT_INITIAL_TEMPERATURE
-        );
-        double coolingRate = clamp(
-                resolvePositiveDouble(effortPreset.coolingRate(), DEFAULT_COOLING_RATE),
-                0.80,
-                0.9999
-        );
         boolean allowLateness = resolveBoolean(
                 request.getAllowLateness(),
                 goalPreset.allowLateness(),
@@ -1272,11 +1473,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 DEFAULT_ORDER_LIMIT,
                 averageSpeedKmph,
                 serviceMinutesPerStop,
-                maxIterations,
-                maxRuntimeMillis,
-                destroyRate,
-                initialTemperature,
-                coolingRate,
                 allowLateness,
                 enforcePlanningEnd,
                 enforceCapacity,
@@ -1289,13 +1485,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 matrixMaxNodes,
                 null
         );
-    }
-
-    private PostOffice getPostOfficeAndValidateScope(Long postOfficeId, Long tenantId) {
-        PostOffice postOffice = postOfficeRepository.findByIdAndTenantId(postOfficeId, tenantId)
-                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
-        validateManagerScope(postOffice.getId(), tenantId);
-        return postOffice;
     }
 
     private PostOffice lockPostOfficeAndValidateScope(Long postOfficeId, Long tenantId) {
@@ -1335,28 +1524,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return !value.isBefore(startInclusive) && !value.isAfter(endInclusive);
     }
 
-    private boolean isAssignmentUsableForWindow(
-            PostOfficeStaffAssignment assignment,
-            LocalTime planningStartTime,
-            LocalTime planningEndTime
-    ) {
-        if (assignment == null) {
-            return false;
-        }
-
-        LocalTime shiftStartTime = assignment.getShiftStartTime();
-        LocalTime shiftEndTime = assignment.getShiftEndTime();
-        if (shiftStartTime == null && shiftEndTime == null) {
-            return true;
-        }
-        if (shiftStartTime == null || shiftEndTime == null || !shiftEndTime.isAfter(shiftStartTime)) {
-            return false;
-        }
-
-        return !planningStartTime.isBefore(shiftStartTime) && !planningEndTime.isAfter(shiftEndTime);
-    }
-
-    private PickupOrderNode toOrderNodeIfValid(Order order) {
+    private PickupOrderNode toOrderNodeIfValid(TmsOrderOperationView order) {
         if (order == null) {
             return null;
         }
@@ -1387,7 +1555,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         );
     }
 
-    private PickupOrderNode toOrderNodeOrThrow(Order order, ErrorCode errorCode) {
+    private PickupOrderNode toOrderNodeOrThrow(TmsOrderOperationView order, ErrorCode errorCode) {
         PickupOrderNode orderNode = toOrderNodeIfValid(order);
         if (orderNode == null) {
             throw new AppException(errorCode);
@@ -1438,9 +1606,9 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return count;
     }
 
-    private Set<Long> extractOrderIds(List<Order> orders) {
+    private Set<Long> extractOrderIds(List<TmsOrderOperationView> orders) {
         Set<Long> orderIds = new HashSet<>();
-        for (Order order : orders) {
+        for (TmsOrderOperationView order : orders) {
             if (order.getId() != null) {
                 orderIds.add(order.getId());
             }
@@ -1466,16 +1634,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return "TRP-" + datePart + "-" + shiftPart + "-" + courierPart + "-" + randomPart;
     }
 
-    private SolutionState buildInitialSolution(
+    private SolutionState buildGreedySolution(
             List<RouteState> initialRoutes,
             PreparedOrderData preparedOrderData,
             AlgorithmConfig config
     ) {
-        return pickupOptimizationEngine.buildInitialSolution(initialRoutes, preparedOrderData, config);
-    }
-
-    private SolutionState runAlns(SolutionState initialSolution, AlgorithmConfig config) {
-        return pickupOptimizationEngine.runAlns(initialSolution, config);
+        return pickupOptimizationEngine.buildGreedySolution(initialRoutes, preparedOrderData, config);
     }
 
     private void applyGreedyRepair(SolutionState solution, AlgorithmConfig config) {
@@ -1490,11 +1654,11 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return pickupOptimizationEngine.evaluateSolution(solution, config);
     }
 
-    private PreparedOrderData prepareOrders(List<Order> candidateOrders) {
+    private PreparedOrderData prepareOrders(List<TmsOrderOperationView> candidateOrders) {
         return pickupOptimizationEngine.prepareOrders(candidateOrders);
     }
 
-    private PickupOrderNode toOrderNodeWithoutLocation(Order order) {
+    private PickupOrderNode toOrderNodeWithoutLocation(TmsOrderOperationView order) {
         return pickupOptimizationEngine.toOrderNodeWithoutLocation(order);
     }
 
@@ -1505,6 +1669,46 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             AlgorithmConfig config
     ) {
         return pickupOptimizationEngine.buildTravelMetricProvider(assignableOrders, depotLatitude, depotLongitude, config);
+    }
+
+    private Long resolveForceVehicleId(List<Vehicle> activeVehicles, Long courierStaffId) {
+        if (activeVehicles == null || activeVehicles.isEmpty()) {
+            return null;
+        }
+
+        for (Vehicle vehicle : activeVehicles) {
+            if (vehicle == null || vehicle.getId() == null) {
+                continue;
+            }
+            if (courierStaffId != null && Objects.equals(vehicle.getPostOfficeStaffId(), courierStaffId)) {
+                return vehicle.getId();
+            }
+        }
+
+        for (Vehicle vehicle : activeVehicles) {
+            if (vehicle != null && vehicle.getId() != null) {
+                return vehicle.getId();
+            }
+        }
+
+        return null;
+    }
+
+    private String resolveVehicleLicensePlate(List<Vehicle> activeVehicles, Long vehicleId) {
+        if (vehicleId == null || activeVehicles == null || activeVehicles.isEmpty()) {
+            return null;
+        }
+
+        for (Vehicle vehicle : activeVehicles) {
+            if (vehicle == null || vehicle.getId() == null) {
+                continue;
+            }
+            if (Objects.equals(vehicle.getId(), vehicleId)) {
+                return vehicle.getLicensePlate();
+            }
+        }
+
+        return null;
     }
 
     private List<RouteState> initializeRoutes(
@@ -1570,9 +1774,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             Long postOfficeId,
             Long tenantId,
             List<Long> requestCourierIds,
-            LocalDate planningDate,
-            LocalTime planningStartTime,
-            LocalTime planningEndTime
+            LocalDate planningDate
     ) {
         List<PostOfficeStaffAssignment> assignments = postOfficeStaffAssignmentRepository
                 .findActiveAssignmentsByPostOfficeIdAndTenantIdAndStaffRoleAndStaffStatus(
@@ -1592,10 +1794,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         for (PostOfficeStaffAssignment assignment : assignments) {
             PostOfficeStaff staff = assignment.getStaff();
             if (staff == null || staff.getId() == null) {
-                continue;
-            }
-
-            if (!isAssignmentUsableForWindow(assignment, planningStartTime, planningEndTime)) {
                 continue;
             }
 
@@ -1629,7 +1827,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
     private AlgorithmConfig buildConfig(OptimizePickupPlanRequest request) {
         GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
-        EffortPreset effortPreset = resolveEffortPreset(request.getOptimizationEffort());
 
         LocalDateTime planningStartTime = request.getPlanningStartTime() == null
                 ? LocalDateTime.now()
@@ -1646,35 +1843,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         int orderLimit = resolvePositiveInt(request.getOrderLimit(), DEFAULT_ORDER_LIMIT);
         double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
         int serviceMinutesPerStop = resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
-        int maxIterations = resolvePositiveInt(
-            request.getMaxIterations(),
-            resolvePositiveInt(effortPreset.maxIterations(), DEFAULT_MAX_ITERATIONS)
-        );
-        long maxRuntimeMillis = resolvePositiveLong(
-            request.getMaxRuntimeMillis(),
-            resolvePositiveLong(effortPreset.maxRuntimeMillis(), DEFAULT_MAX_RUNTIME_MILLIS)
-        );
-
-        double destroyRate = clamp(
-            resolvePositiveDouble(
-                request.getDestroyRate(),
-                resolvePositiveDouble(effortPreset.destroyRate(), DEFAULT_DESTROY_RATE)
-            ),
-            0.01,
-            0.90
-        );
-        double initialTemperature = resolvePositiveDouble(
-            request.getInitialTemperature(),
-            resolvePositiveDouble(effortPreset.initialTemperature(), DEFAULT_INITIAL_TEMPERATURE)
-        );
-        double coolingRate = clamp(
-            resolvePositiveDouble(
-                request.getCoolingRate(),
-                resolvePositiveDouble(effortPreset.coolingRate(), DEFAULT_COOLING_RATE)
-            ),
-            0.80,
-            0.9999
-        );
 
         boolean allowLateness = resolveBoolean(
             request.getAllowLateness(),
@@ -1719,11 +1887,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 orderLimit,
                 averageSpeedKmph,
                 serviceMinutesPerStop,
-                maxIterations,
-                maxRuntimeMillis,
-                destroyRate,
-                initialTemperature,
-                coolingRate,
                 allowLateness,
                 enforcePlanningEnd,
                 enforceCapacity,
@@ -1920,36 +2083,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         };
     }
 
-    private EffortPreset resolveEffortPreset(PickupOptimizationEffort optimizationEffort) {
-        PickupOptimizationEffort effectiveEffort = optimizationEffort == null
-                ? PickupOptimizationEffort.STANDARD
-                : optimizationEffort;
-
-        return switch (effectiveEffort) {
-            case FAST -> new EffortPreset(
-                    FAST_MAX_ITERATIONS,
-                    FAST_MAX_RUNTIME_MILLIS,
-                    FAST_DESTROY_RATE,
-                    FAST_INITIAL_TEMPERATURE,
-                    FAST_COOLING_RATE
-            );
-            case STANDARD -> new EffortPreset(
-                    DEFAULT_MAX_ITERATIONS,
-                    DEFAULT_MAX_RUNTIME_MILLIS,
-                    DEFAULT_DESTROY_RATE,
-                    DEFAULT_INITIAL_TEMPERATURE,
-                    DEFAULT_COOLING_RATE
-            );
-            case THOROUGH -> new EffortPreset(
-                    THOROUGH_MAX_ITERATIONS,
-                    THOROUGH_MAX_RUNTIME_MILLIS,
-                    THOROUGH_DESTROY_RATE,
-                    THOROUGH_INITIAL_TEMPERATURE,
-                    THOROUGH_COOLING_RATE
-            );
-        };
-    }
-
     private boolean resolveBoolean(Boolean explicitValue, Boolean presetValue, boolean defaultValue) {
         if (explicitValue != null) {
             return explicitValue;
@@ -1966,13 +2099,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     }
 
     private int resolvePositiveInt(Integer value, int defaultValue) {
-        if (value == null || value <= 0) {
-            return defaultValue;
-        }
-        return value;
-    }
-
-    private long resolvePositiveLong(Long value, long defaultValue) {
         if (value == null || value <= 0) {
             return defaultValue;
         }
@@ -2007,10 +2133,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         return value;
     }
 
-    private double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
     private double round3(double value) {
         return Math.round(value * 1000.0) / 1000.0;
     }
@@ -2023,15 +2145,6 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             Double latenessWeight,
             Double unassignedPenalty,
             Double usedRoutePenalty
-    ) {
-    }
-
-    private record EffortPreset(
-            Integer maxIterations,
-            Long maxRuntimeMillis,
-            Double destroyRate,
-            Double initialTemperature,
-            Double coolingRate
     ) {
     }
 

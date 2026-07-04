@@ -1,11 +1,6 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics Facility Detail Page
-*/
-
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Card,
@@ -45,6 +40,7 @@ import {
   useGetFacilityQuery,
   useDeleteFacilityMutation,
   useGetInventoryItemsQuery,
+  useGetProductsQuery,
 } from '../../api/logisticsApi';
 import { formatDateStringVN, formatPhoneNumber } from '@/shared/utils/format';
 import { toast } from 'sonner';
@@ -83,6 +79,7 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
     isLoading,
     isError,
   } = useGetFacilityQuery(facilityId);
+
   const [deleteFacility, { isLoading: isDeleting }] =
     useDeleteFacilityMutation();
 
@@ -106,12 +103,37 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
   const inventoryTotalPages = inventoryResponse?.data?.totalPages || 0;
   const inventoryCurrentPage = inventoryResponse?.data?.currentPage || 0;
 
+  const productIds = useMemo(() => {
+    return Array.from(
+      new Set(
+        inventoryItems.map((i: InventoryItem) => i.productId).filter(Boolean)
+      )
+    );
+  }, [inventoryItems]);
+
+  const { data: productsResponse } = useGetProductsQuery(
+    {
+      filters: {},
+      pagination: { page: 0, size: 100 },
+    },
+    { skip: productIds.length === 0 }
+  );
+
+  const productMap = useMemo(() => {
+    const map = new Map();
+    productsResponse?.data?.items?.forEach((product) => {
+      map.set(product.id, product);
+    });
+    return map;
+  }, [productsResponse]);
+
   const handleEdit = () => {
     router.push(`/logistics/facility/${facilityId}/edit`);
   };
 
   const handleDelete = async () => {
-    if (!confirm('Bạn có chắc chắn muốn xóa kho hàng này không?')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa kho hàng này không?'))
+      return;
 
     try {
       await deleteFacility(facilityId).unwrap();
@@ -333,12 +355,6 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
                     {formatDateStringVN(facility.lastUpdatedStamp)}
                   </span>
                 </div>
-                <div className='flex items-center justify-between text-sm'>
-                  <span className='text-muted-foreground'>Mặc định</span>
-                  <span className='font-medium'>
-                    {facility.isDefault ? 'Có' : 'Không'}
-                  </span>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -408,6 +424,8 @@ export const FacilityDetailPage: React.FC<FacilityDetailPageProps> = ({
                     <InventoryItemCard
                       key={item.id}
                       item={item}
+                      product={productMap.get(item.productId)}
+                      facility={facility}
                       onClick={() =>
                         router.push(`/logistics/inventory/${item.id}`)
                       }

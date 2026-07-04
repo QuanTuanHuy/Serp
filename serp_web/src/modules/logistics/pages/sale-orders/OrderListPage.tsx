@@ -89,7 +89,6 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
       filters: {
         ...filters,
         orderTypeId: 'SALES',
-        toCustomerId: undefined,
       },
       pagination: {
         ...pagination,
@@ -272,7 +271,7 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
           variant='success'
         />
         <StatsCard
-          title='Đã giao hàng'
+          title='Hoàn thành'
           value={stats.delivered}
           icon={PackageCheck}
           variant='warning'
@@ -376,10 +375,10 @@ export const OrderListPage: React.FC<OrderListPageProps> = ({ className }) => {
                   className='w-full px-3 py-2 border rounded-lg bg-background'
                 >
                   <option value=''>Tất cả trạng thái</option>
-                  <option value='CREATED'>Đã tạo</option>
+                  <option value='CREATED'>Chờ duyệt</option>
                   <option value='APPROVED'>Đã duyệt</option>
                   <option value='CANCELLED'>Đã hủy</option>
-                  <option value='FULLY_DELIVERED'>Đã giao hàng</option>
+                  <option value='FULLY_DELIVERED'>Hoàn thành</option>
                 </select>
               </div>
 

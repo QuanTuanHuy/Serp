@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 header
-*/
-
 'use client';
 
 import React from 'react';

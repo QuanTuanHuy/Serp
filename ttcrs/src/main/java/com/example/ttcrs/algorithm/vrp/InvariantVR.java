@@ -3,7 +3,14 @@ package com.example.ttcrs.algorithm.vrp;
 import java.util.ArrayList;
 
 import com.example.ttcrs.algorithm.vrp.entities.Point;
-
+// Invariant là 1 đối tượng/cấu trúc dữ liệu tính toán và duy trì 
+// các thông tin dẫn xuất (bất biến) (ví dụ: tổng trọng lượng route, 
+// chi phí route, số khách trên route) theo cách incremental. 
+// Invariant không nhất thiết là “quy tắc” mà là thứ cần cập nhật 
+// nhanh khi thực hiện move; nó giúp kiểm tra hoặc đánh giá các 
+// constraint/chi phí mà không phải tính lại toàn bộ từ đầu.
+// Những invariant này được thông báo (propagate) sau mỗi move 
+// để tránh tính lại toàn bộ lời giải.
 public interface InvariantVR {
 	/*
 	 * return the VRPManager
