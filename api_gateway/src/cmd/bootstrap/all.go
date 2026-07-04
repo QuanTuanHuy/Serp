@@ -24,7 +24,6 @@ func All() fx.Option {
 		CoreInfrastructure(),
 
 		// Business modules
-		modules.AccountModule(),
 		modules.CrmModule(),
 		modules.PtmModule(),
 		modules.PurchaseModule(),
@@ -64,6 +63,7 @@ func CoreInfrastructure() fx.Option {
 		fx.Provide(utils.NewBaseAPIClientFactory),
 		fx.Provide(middleware.NewJWTMiddleware),
 		fx.Provide(middleware.NewCorsMiddleware),
+		fx.Provide(middleware.NewAccountProxyJWTGateMiddleware),
 		fx.Provide(common.NewGenericProxyController),
 		fx.Provide(common.NewWebSocketProxyController),
 

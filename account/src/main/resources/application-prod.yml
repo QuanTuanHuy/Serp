@@ -87,8 +87,6 @@ app:
           second: GET
         - first: /api/v1/menu-displays/**
           second: GET
-        - first: /api/v1/keycloak/**
-          second: GET
         - first: /api/v1/subscription-plans/**
           second: GET
         - first: /api/v1/organizations/*/departments

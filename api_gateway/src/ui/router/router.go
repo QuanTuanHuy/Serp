@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golibs-starter/golib"
 	"github.com/golibs-starter/golib/web/actuator"
-	account "github.com/serp/api-gateway/src/ui/controller/account"
 	"github.com/serp/api-gateway/src/ui/controller/common"
 	crm "github.com/serp/api-gateway/src/ui/controller/crm"
 	ptm "github.com/serp/api-gateway/src/ui/controller/ptm"
@@ -26,19 +25,6 @@ type RegisterRoutersIn struct {
 	WebSocketProxyController *common.WebSocketProxyController
 	GenericProxyController   *common.GenericProxyController
 
-	AuthController             *account.AuthController
-	UserController             *account.UserController
-	KeycloakController         *account.KeycloakController
-	RoleController             *account.RoleController
-	PermissionController       *account.PermissionController
-	ModuleController           *account.ModuleController
-	SubscriptionController     *account.SubscriptionController
-	SubscriptionPlanController *account.SubscriptionPlanController
-	ModuleAccessController     *account.ModuleAccessController
-	MenuDisplayController      *account.MenuDisplayController
-	OrganizationController     *account.OrganizationController
-	DepartmentController       *account.DepartmentController
-
 	LeadController        *crm.LeadController
 	OpportunityController *crm.OpportunityController
 	CustomerController    *crm.CustomerController
@@ -54,9 +40,10 @@ type RegisterRoutersIn struct {
 	ScheduleEventController        *ptm.ScheduleEventController
 	ScheduleTaskController         *ptm.ScheduleTaskController
 
-	JWTMiddleware       *middleware.JWTMiddleware
-	CorsMiddleware      *middleware.CorsMiddleware
-	RateLimitMiddleware *middleware.RateLimitMiddleware
+	JWTMiddleware                 *middleware.JWTMiddleware
+	CorsMiddleware                *middleware.CorsMiddleware
+	RateLimitMiddleware           *middleware.RateLimitMiddleware
+	AccountProxyJWTGateMiddleware *middleware.AccountProxyJWTGateMiddleware
 }
 
 func RegisterGinRouters(p RegisterRoutersIn) {
@@ -70,18 +57,9 @@ func RegisterGinRouters(p RegisterRoutersIn) {
 
 	RegisterAccountRoutes(
 		group,
+		p.App.Path(),
 		p.GenericProxyController,
-		p.AuthController,
-		p.UserController,
-		p.RoleController,
-		p.PermissionController,
-		p.ModuleController,
-		p.SubscriptionController,
-		p.SubscriptionPlanController,
-		p.ModuleAccessController,
-		p.MenuDisplayController,
-		p.DepartmentController,
-		p.OrganizationController,
+		p.AccountProxyJWTGateMiddleware,
 	)
 
 	RegisterCrmRoutes(
