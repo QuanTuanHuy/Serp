@@ -148,6 +148,8 @@ func RegisterAccountRoutes(group *gin.RouterGroup,
 		organizationsV1.Use(middleware.AuthMiddleware()).DELETE("/:organizationId/modules/:moduleId/users/:userId", moduleAccessController.RevokeUserAccessToModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/modules/:moduleId/users", moduleAccessController.GetUsersWithAccessToModule)
 		organizationsV1.Use(middleware.AuthMiddleware()).GET("/:organizationId/users/me/modules", moduleAccessController.GetModulesAccessibleByUser)
+		organizationsV1.Use(middleware.AuthMiddleware()).PUT("/:organizationId/modules/:moduleId/access-settings", genericProxyController.ProxyHandler("account"))
+		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/modules/:moduleId/auto-grant/backfill", genericProxyController.ProxyHandler("account"))
 
 		// Department management routes
 		organizationsV1.Use(middleware.AuthMiddleware()).POST("/:organizationId/departments", departmentController.CreateDepartment)

@@ -12,7 +12,10 @@ import {
 } from '@/lib/store/api/utils';
 import type {
   AccessibleModule,
+  AutoGrantBackfillResponse,
+  ModuleAccessSettingsResponse,
   ModuleRole,
+  UpdateModuleAutoGrantRequest,
 } from '@/modules/settings/types/module-access.types';
 import type { UserProfile } from '@/modules/admin/types';
 import type { PaginatedResponse, ApiResponse } from '@/lib/store/api/types';
@@ -113,6 +116,44 @@ export const settingsModulesApi = api.injectEndpoints({
       ],
     }),
 
+    updateModuleAccessSettings: build.mutation<
+      ApiResponse<ModuleAccessSettingsResponse>,
+      {
+        organizationId: number;
+        moduleId: number;
+        body: UpdateModuleAutoGrantRequest;
+      }
+    >({
+      query: ({ organizationId, moduleId, body }) => ({
+        url: `/organizations/${organizationId}/modules/${moduleId}/access-settings`,
+        method: 'PUT',
+        body,
+      }),
+      transformResponse:
+        createApiResponseTransform<ModuleAccessSettingsResponse>(),
+      invalidatesTags: (_result, _error, { moduleId }) => [
+        { type: 'settings/Module', id: moduleId },
+        { type: 'settings/Module', id: 'LIST' },
+      ],
+    }),
+
+    backfillModuleAutoGrant: build.mutation<
+      ApiResponse<AutoGrantBackfillResponse>,
+      { organizationId: number; moduleId: number }
+    >({
+      query: ({ organizationId, moduleId }) => ({
+        url: `/organizations/${organizationId}/modules/${moduleId}/auto-grant/backfill`,
+        method: 'POST',
+      }),
+      transformResponse:
+        createApiResponseTransform<AutoGrantBackfillResponse>(),
+      invalidatesTags: (_result, _error, { moduleId }) => [
+        { type: 'settings/Module', id: moduleId },
+        { type: 'settings/ModuleUsers', id: moduleId },
+        { type: 'settings/Module', id: 'LIST' },
+      ],
+    }),
+
     requestMoreModules: build.mutation<
       { message: string },
       { additionalModuleIds: number[] }
@@ -140,4 +181,6 @@ export const {
   useGetModuleUsersQuery,
   useLazyGetModuleUsersQuery,
   useRequestMoreModulesMutation,
+  useUpdateModuleAccessSettingsMutation,
+  useBackfillModuleAutoGrantMutation,
 } = settingsModulesApi;

@@ -13,6 +13,8 @@ import {
   useRevokeUserAccessToModuleMutation,
   useGetModuleRolesQuery,
   useGetModuleUsersQuery,
+  useUpdateModuleAccessSettingsMutation,
+  useBackfillModuleAutoGrantMutation,
 } from '../services/modules/modulesApi';
 import type { AccessibleModule } from '@/modules/settings/types/module-access.types';
 import { getErrorMessage, getResponseMessage } from '@/lib/store/api/utils';
@@ -81,6 +83,10 @@ export function useSettingsModules(options?: { skipQuery?: boolean }) {
   // Mutations
   const [assignUser, assignStatus] = useAssignUserToModuleMutation();
   const [revokeUser, revokeStatus] = useRevokeUserAccessToModuleMutation();
+  const [updateModuleAccessSettings, updateModuleAccessSettingsStatus] =
+    useUpdateModuleAccessSettingsMutation();
+  const [backfillModuleAutoGrant, backfillModuleAutoGrantStatus] =
+    useBackfillModuleAutoGrantMutation();
 
   const assign = useCallback(
     async (moduleId: number, userId: number, roleId?: number) => {
@@ -127,6 +133,60 @@ export function useSettingsModules(options?: { skipQuery?: boolean }) {
     [revokeUser, organizationId, showError, success]
   );
 
+  const updateAutoGrant = useCallback(
+    async (moduleId: number, autoGrantToNewUsers: boolean) => {
+      if (!organizationId) {
+        const msg = 'Organization is not ready';
+        showError(msg);
+        throw new Error(msg);
+      }
+      try {
+        const result = await updateModuleAccessSettings({
+          organizationId,
+          moduleId,
+          body: { autoGrantToNewUsers },
+        }).unwrap();
+        success(
+          autoGrantToNewUsers
+            ? 'Auto-grant enabled'
+            : 'Auto-grant disabled. Existing access remains unchanged.'
+        );
+        return result.data;
+      } catch (e: any) {
+        showError(getErrorMessage(e));
+        throw e;
+      }
+    },
+    [organizationId, showError, success, updateModuleAccessSettings]
+  );
+
+  const backfillAutoGrant = useCallback(
+    async (moduleId: number) => {
+      if (!organizationId) {
+        const msg = 'Organization is not ready';
+        showError(msg);
+        throw new Error(msg);
+      }
+      try {
+        const result = await backfillModuleAutoGrant({
+          organizationId,
+          moduleId,
+        }).unwrap();
+        const data = result.data;
+        success(
+          `Granted ${data.grantedCount} user${
+            data.grantedCount === 1 ? '' : 's'
+          }, skipped ${data.skippedCount}.`
+        );
+        return data;
+      } catch (e: any) {
+        showError(getErrorMessage(e));
+        throw e;
+      }
+    },
+    [backfillModuleAutoGrant, organizationId, showError, success]
+  );
+
   // Expose helpers to load roles/users per module (for dialogs)
   const useModuleRoles = (moduleId?: number) =>
     useGetModuleRolesQuery(moduleId as number, { skip: !moduleId });
@@ -163,6 +223,10 @@ export function useSettingsModules(options?: { skipQuery?: boolean }) {
     revoke,
     assignStatus,
     revokeStatus,
+    updateAutoGrant,
+    backfillAutoGrant,
+    updateModuleAccessSettingsStatus,
+    backfillModuleAutoGrantStatus,
     useModuleRoles,
     useModuleUsers,
   } as const;

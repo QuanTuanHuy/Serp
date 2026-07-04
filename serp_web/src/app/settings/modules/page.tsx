@@ -26,6 +26,8 @@ import {
   Search,
   Settings,
   Sparkles,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import {
   Card,
@@ -43,6 +45,16 @@ import { SettingsStatsCard } from '@/modules/settings';
 import { Separator } from '@/shared/components/ui/separator';
 import { Progress } from '@/shared/components/ui/progress';
 import { MODULE_ICONS } from '@/shared/constants/moduleIcons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/components/ui/alert-dialog';
 
 import type { AccessibleModule } from '@/modules/settings/types/module-access.types';
 
@@ -54,6 +66,12 @@ export default function SettingsModulesPage() {
   const [selectedModule, setSelectedModule] = useState<
     AccessibleModule | undefined
   >(undefined);
+  const [backfillModule, setBackfillModule] = useState<
+    AccessibleModule | undefined
+  >(undefined);
+  const [pendingAutoGrantModuleId, setPendingAutoGrantModuleId] = useState<
+    number | undefined
+  >(undefined);
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   const {
@@ -62,6 +80,10 @@ export default function SettingsModulesPage() {
     totalActiveUsers,
     totalUsersBaseline,
     setSearch,
+    updateAutoGrant,
+    backfillAutoGrant,
+    updateModuleAccessSettingsStatus,
+    backfillModuleAutoGrantStatus,
   } = useSettingsModules();
 
   const mostUsedModule = useMemo(() => {
@@ -110,6 +132,35 @@ export default function SettingsModulesPage() {
   const handleEnableModule = (module: AccessibleModule) => {
     setSelectedModule(module);
     setRequestDialogOpen(true);
+  };
+
+  const handleAutoGrantChange = async (
+    module: AccessibleModule,
+    checked: boolean
+  ) => {
+    if (!module.moduleId) {
+      notification.error('Module ID not found');
+      return;
+    }
+
+    setPendingAutoGrantModuleId(module.moduleId);
+    try {
+      await updateAutoGrant(module.moduleId, checked);
+      if (checked) {
+        setBackfillModule(module);
+      }
+    } finally {
+      setPendingAutoGrantModuleId(undefined);
+    }
+  };
+
+  const handleBackfillConfirm = async () => {
+    if (!backfillModule?.moduleId) {
+      return;
+    }
+
+    await backfillAutoGrant(backfillModule.moduleId);
+    setBackfillModule(undefined);
   };
 
   const getModuleIcon = (moduleCode: string) => {
@@ -242,13 +293,24 @@ export default function SettingsModulesPage() {
                               {module.moduleName}
                             </CardTitle>
                             {module.isActive ? (
-                              <Badge
-                                variant='default'
-                                className='bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:text-green-300'
-                              >
-                                <CheckCircle2 className='h-3 w-3 mr-1' />
-                                Active
-                              </Badge>
+                              <>
+                                <Badge
+                                  variant='default'
+                                  className='bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900 dark:text-green-300'
+                                >
+                                  <CheckCircle2 className='h-3 w-3 mr-1' />
+                                  Active
+                                </Badge>
+                                {module.isAutoGrantToNewUsers && (
+                                  <Badge
+                                    variant='outline'
+                                    className='text-xs border-blue-200 text-blue-700 dark:border-blue-800 dark:text-blue-300'
+                                  >
+                                    <RefreshCw className='h-3 w-3 mr-1' />
+                                    Auto-grant
+                                  </Badge>
+                                )}
+                              </>
                             ) : (
                               <Badge variant='secondary'>
                                 <XCircle className='h-3 w-3 mr-1' />
@@ -307,15 +369,23 @@ export default function SettingsModulesPage() {
                           </div>
                           <Switch
                             checked={Boolean(module.isAutoGrantToNewUsers)}
-                            onCheckedChange={() =>
-                              console.log(
-                                'Toggle auto-grant',
-                                module.moduleCode
-                              )
+                            onCheckedChange={(checked) =>
+                              handleAutoGrantChange(module, checked)
+                            }
+                            disabled={
+                              pendingAutoGrantModuleId === module.moduleId ||
+                              updateModuleAccessSettingsStatus.isLoading
                             }
                             className='data-[state=checked]:bg-purple-600'
                           />
                         </div>
+
+                        {pendingAutoGrantModuleId === module.moduleId && (
+                          <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                            <Loader2 className='h-3 w-3 animate-spin' />
+                            Updating auto-grant setting...
+                          </div>
+                        )}
 
                         {module.requiredRoles &&
                           module.requiredRoles.length > 0 && (
@@ -411,6 +481,42 @@ export default function SettingsModulesPage() {
         module={selectedModule}
         onOpenChange={(v) => setDialogOpen(v)}
       />
+
+      <AlertDialog
+        open={Boolean(backfillModule)}
+        onOpenChange={(open) => !open && setBackfillModule(undefined)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Grant access to existing users?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Auto-grant is now enabled for{' '}
+              <span className='font-semibold'>
+                {backfillModule?.moduleName}
+              </span>
+              . New users will receive access automatically. You can also grant
+              this module to existing users now until the module user limit is
+              reached.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={backfillModuleAutoGrantStatus.isLoading}
+            >
+              Not now
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBackfillConfirm}
+              disabled={backfillModuleAutoGrantStatus.isLoading}
+            >
+              {backfillModuleAutoGrantStatus.isLoading && (
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              )}
+              Grant existing users
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Request Module Dialog */}
       <RequestModuleDialog

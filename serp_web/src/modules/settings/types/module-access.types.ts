@@ -51,3 +51,23 @@ export interface ModuleRole {
   organizationId?: number;
   isDefault?: boolean;
 }
+
+export interface UpdateModuleAutoGrantRequest {
+  autoGrantToNewUsers: boolean;
+}
+
+export interface ModuleAccessSettingsResponse {
+  organizationId: number;
+  moduleId: number;
+  autoGrantToNewUsers: boolean;
+  updatedBy?: number;
+  updatedAt?: string;
+}
+
+export interface AutoGrantBackfillResponse {
+  organizationId: number;
+  moduleId: number;
+  grantedCount: number;
+  skippedCount: number;
+  skippedReasons: Record<string, number>;
+}
