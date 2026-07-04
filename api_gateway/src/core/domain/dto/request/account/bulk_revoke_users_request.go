@@ -5,9 +5,8 @@ Description: Part of Serp Project
 
 package request
 
-type BulkAssignUsersRequest struct {
+type BulkRevokeUsersRequest struct {
 	OrganizationId int64   `json:"organizationId"`
 	UserIds        []int64 `json:"userIds"`
 	ModuleId       int64   `json:"moduleId"`
-	RoleId         int64   `json:"roleId"`
 }

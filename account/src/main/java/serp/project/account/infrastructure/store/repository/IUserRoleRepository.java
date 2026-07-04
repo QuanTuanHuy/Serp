@@ -17,4 +17,6 @@ public interface IUserRoleRepository extends IBaseRepository<UserRoleModel> {
     List<UserRoleModel> findByUserIdIn(List<Long> userIds);
 
     void deleteByUserIdAndRoleIdIn(Long userId, List<Long> roleIds);
+
+    void deleteByUserIdInAndRoleIdIn(List<Long> userIds, List<Long> roleIds);
 }

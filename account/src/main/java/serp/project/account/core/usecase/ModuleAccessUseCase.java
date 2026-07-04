@@ -19,8 +19,10 @@ import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.message.CreateNotificationEvent;
 import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
+import serp.project.account.core.domain.dto.request.BulkModuleAccessUsersRequest;
 import serp.project.account.core.domain.dto.response.OrgModuleAccessResponse;
 import serp.project.account.core.domain.entity.RoleEntity;
+import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
 import serp.project.account.core.exception.AppException;
@@ -38,11 +40,17 @@ import serp.project.account.kernel.utils.CollectionUtils;
 import serp.project.account.kernel.utils.ResponseUtils;
 
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import serp.project.account.core.domain.dto.request.UpdateModuleAccessSettingsRequest;
+import serp.project.account.core.domain.dto.response.BulkModuleAccessResponse;
+import serp.project.account.core.domain.dto.response.BulkModuleAccessOutcome;
 import serp.project.account.core.domain.dto.response.ModuleAccessSettingsResponse;
 import serp.project.account.core.domain.dto.response.AutoGrantBackfillResponse;
+import serp.project.account.core.domain.enums.BulkModuleAccessStatus;
 import serp.project.account.core.service.IOrganizationModuleAccessSettingService;
 import serp.project.account.core.usecase.support.ModuleAutoGrantService;
 
@@ -243,57 +251,180 @@ public class ModuleAccessUseCase {
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> bulkAssignUsersToModule(BulkAssignUsersRequest request, Long assignedBy) {
         try {
+            List<Long> requestedUserIds = request.getUserIds() == null ? List.of() : request.getUserIds();
+            List<Long> uniqueUserIds = distinctUserIds(requestedUserIds);
+
             log.info("[UseCase] Bulk assigning {} users to module {} in organization {}",
-                    request.getUserIds().size(), request.getModuleId(), request.getOrganizationId());
+                    requestedUserIds.size(), request.getModuleId(), request.getOrganizationId());
 
             var subscription = subscriptionService.getActiveOrPendingUpgrade(request.getOrganizationId());
-            var planModules = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId());
-
-            var planModule = planModules.stream()
+            var planModule = subscriptionPlanService.getPlanModules(subscription.getSubscriptionPlanId()).stream()
                     .filter(pm -> pm.getModuleId().equals(request.getModuleId()))
+                    .filter(SubscriptionPlanModuleEntity::isAccessible)
                     .findFirst()
                     .orElseThrow(() -> new AppException(Constants.ErrorMessage.MODULE_NOT_IN_SUBSCRIPTION_PLAN));
 
-            if (planModule.hasUserLimit()) {
-                int currentUsers = userModuleAccessService.countActiveUsers(
-                        request.getModuleId(), request.getOrganizationId());
-                int availableSlots = planModule.getMaxUsersPerModule() - currentUsers;
+            List<RoleEntity> moduleRoles = resolveBulkAssignRoles(request.getModuleId(), request.getRoleId());
 
-                if (request.getUserIds().size() > availableSlots) {
-                    throw new AppException(Constants.ErrorMessage.MAX_USERS_LIMIT_REACHED);
+            Map<Long, UserEntity> usersById = userService
+                    .getUsersByOrganizationIdAndIds(request.getOrganizationId(), uniqueUserIds)
+                    .stream()
+                    .collect(Collectors.toMap(UserEntity::getId, Function.identity(), (left, right) -> left));
+            Map<Long, UserModuleAccessEntity> accessByUserId = userModuleAccessService
+                    .getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(
+                            uniqueUserIds,
+                            request.getModuleId(),
+                            request.getOrganizationId())
+                    .stream()
+                    .collect(Collectors.toMap(UserModuleAccessEntity::getUserId, Function.identity(),
+                            (left, right) -> left));
+
+            int remainingSlots = resolveRemainingSlots(planModule, request.getModuleId(), request.getOrganizationId());
+            List<Long> userIdsToGrant = new ArrayList<>();
+            List<UserEntity> usersToGrant = new ArrayList<>();
+            Map<Long, BulkModuleAccessOutcome> outcomesByUserId = new LinkedHashMap<>();
+
+            for (Long userId : uniqueUserIds) {
+                UserEntity user = usersById.get(userId);
+                if (user == null) {
+                    outcomesByUserId.put(userId,
+                            new BulkModuleAccessOutcome(BulkModuleAccessStatus.SKIPPED, Constants.BulkAccessSkipReason.USER_NOT_FOUND));
+                    continue;
                 }
+
+                UserModuleAccessEntity existingAccess = accessByUserId.get(userId);
+                if (existingAccess != null && existingAccess.isActiveAccess()) {
+                    outcomesByUserId.put(userId,
+                            new BulkModuleAccessOutcome(BulkModuleAccessStatus.SKIPPED, Constants.BulkAccessSkipReason.ALREADY_HAS_ACCESS));
+                    continue;
+                }
+
+                if (remainingSlots <= 0) {
+                    outcomesByUserId.put(userId,
+                            new BulkModuleAccessOutcome(BulkModuleAccessStatus.SKIPPED,
+                                    Constants.BulkAccessSkipReason.MAX_USERS_LIMIT_REACHED));
+                    continue;
+                }
+
+                userIdsToGrant.add(userId);
+                usersToGrant.add(user);
+                remainingSlots--;
+                outcomesByUserId.put(userId,
+                        new BulkModuleAccessOutcome(BulkModuleAccessStatus.GRANTED, null));
             }
 
-            var accesses = userModuleAccessService.bulkRegisterUsersToModule(
-                    request.getUserIds(),
+            if (!CollectionUtils.isEmpty(userIdsToGrant)) {
+                userModuleAccessService.bulkRegisterUsersToModuleWithExpiration(
+                        userIdsToGrant,
+                        request.getModuleId(),
+                        request.getOrganizationId(),
+                        assignedBy,
+                        subscription.getEndDate());
+                combineRoleService.assignRolesToUsers(usersToGrant, moduleRoles);
+                usersToGrant.forEach(user -> {
+                    userSyncPublisher.publishUserSync(request.getOrganizationId(), user.getId());
+                    if (user.getKeycloakId() != null) {
+                        keycloakUserService.logoutUser(user.getKeycloakId());
+                    }
+                });
+            }
+
+            BulkModuleAccessResponse response = buildBulkResponse(
                     request.getModuleId(),
-                    request.getOrganizationId(),
-                    assignedBy);
+                    requestedUserIds,
+                    outcomesByUserId);
 
-            List<RoleEntity> moduleRoles = roleService.getRolesByModuleId(request.getModuleId()).stream()
-                    .filter(RoleEntity::isAutoAssigned)
-                    .toList();
-            if (CollectionUtils.isEmpty(moduleRoles)) {
-                throw new AppException(Constants.ErrorMessage.NO_ROLES_FOUND_FOR_MODULE);
-            }
-            for (Long userId : request.getUserIds()) {
-                var user = userService.getUserById(userId);
-                if (user != null) {
-                    combineRoleService.assignRolesToUser(user, moduleRoles);
-                    userSyncPublisher.publishUserSync(request.getOrganizationId(), userId);
-                }
-            }
-
-            // Implement later: Send notification
-
-            log.info("[UseCase] Successfully bulk assigned {} users to module {}",
-                    accesses.size(), request.getModuleId());
-            return responseUtils.success(accesses);
+            log.info("[UseCase] Bulk assigned {} users to module {}, skipped {} users",
+                    response.getGrantedCount(), request.getModuleId(), response.getSkippedCount());
+            return responseUtils.success(response);
         } catch (AppException e) {
             log.error("Error bulk assigning users to module: {}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("Unexpected error when bulk assigning users to module: {}", e.getMessage());
+            log.error("Unexpected error when bulk assigning users to module: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public GeneralResponse<?> bulkRevokeUsersFromModule(
+            Long organizationId,
+            Long moduleId,
+            BulkModuleAccessUsersRequest request,
+            Long revokedBy) {
+        try {
+            List<Long> requestedUserIds = request.getUserIds() == null ? List.of() : request.getUserIds();
+            List<Long> uniqueUserIds = distinctUserIds(requestedUserIds);
+
+            log.info("[UseCase] Bulk revoking {} users from module {} in organization {}",
+                    requestedUserIds.size(), moduleId, organizationId);
+
+            Map<Long, UserEntity> usersById = userService
+                    .getUsersByOrganizationIdAndIds(organizationId, uniqueUserIds)
+                    .stream()
+                    .collect(Collectors.toMap(UserEntity::getId, Function.identity(), (left, right) -> left));
+            Map<Long, UserModuleAccessEntity> accessByUserId = userModuleAccessService
+                    .getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(
+                            uniqueUserIds,
+                            moduleId,
+                            organizationId)
+                    .stream()
+                    .collect(Collectors.toMap(UserModuleAccessEntity::getUserId, Function.identity(),
+                            (left, right) -> left));
+
+            List<UserModuleAccessEntity> accessesToRevoke = new ArrayList<>();
+            List<UserEntity> usersToRevoke = new ArrayList<>();
+            Map<Long, BulkModuleAccessOutcome> outcomesByUserId = new LinkedHashMap<>();
+
+            for (Long userId : uniqueUserIds) {
+                UserEntity user = usersById.get(userId);
+                if (user == null) {
+                    outcomesByUserId.put(userId,
+                            new BulkModuleAccessOutcome(BulkModuleAccessStatus.SKIPPED, Constants.BulkAccessSkipReason.USER_NOT_FOUND));
+                    continue;
+                }
+
+                UserModuleAccessEntity access = accessByUserId.get(userId);
+                if (access == null || !access.isActiveAccess()) {
+                    outcomesByUserId.put(userId,
+                            new BulkModuleAccessOutcome(BulkModuleAccessStatus.SKIPPED,
+                                    Constants.BulkAccessSkipReason.USER_MODULE_ACCESS_NOT_FOUND));
+                    continue;
+                }
+
+                access.deactivate();
+                accessesToRevoke.add(access);
+                usersToRevoke.add(user);
+                outcomesByUserId.put(userId,
+                        new BulkModuleAccessOutcome(BulkModuleAccessStatus.REVOKED, null));
+            }
+
+            if (!CollectionUtils.isEmpty(accessesToRevoke)) {
+                userModuleAccessService.saveAll(accessesToRevoke);
+                List<RoleEntity> moduleRoles = roleService.getRolesByModuleId(moduleId);
+                if (!CollectionUtils.isEmpty(moduleRoles)) {
+                    combineRoleService.removeRolesFromUsers(usersToRevoke, moduleRoles);
+                }
+                usersToRevoke.forEach(user -> {
+                    userSyncPublisher.publishUserSync(organizationId, user.getId());
+                    if (user.getKeycloakId() != null) {
+                        keycloakUserService.logoutUser(user.getKeycloakId());
+                    }
+                });
+            }
+
+            BulkModuleAccessResponse response = buildBulkResponse(
+                    moduleId,
+                    requestedUserIds,
+                    outcomesByUserId);
+            log.info("[UseCase] Bulk revoked {} users from module {}, skipped {} users",
+                    response.getRevokedCount(), moduleId, response.getSkippedCount());
+            return responseUtils.success(response);
+        } catch (AppException e) {
+            log.error("Error bulk revoking users from module: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error when bulk revoking users from module: {}", e.getMessage(), e);
             throw e;
         }
     }
@@ -455,6 +586,69 @@ public class ModuleAccessUseCase {
             log.error("Unexpected error backfilling module auto-grant: {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    private List<RoleEntity> resolveBulkAssignRoles(Long moduleId, Long roleId) {
+        List<RoleEntity> moduleRoles = roleService.getRolesByModuleId(moduleId);
+        if (roleId != null) {
+            RoleEntity requestedRole = moduleRoles.stream()
+                    .filter(role -> role.getId().equals(roleId))
+                    .findFirst()
+                    .orElseThrow(() -> new AppException(Constants.ErrorMessage.ROLE_NOT_FOUND));
+            return List.of(requestedRole);
+        }
+
+        List<RoleEntity> defaultRoles = moduleRoles.stream()
+                .filter(RoleEntity::isAutoAssigned)
+                .toList();
+        if (CollectionUtils.isEmpty(defaultRoles)) {
+            throw new AppException(Constants.ErrorMessage.NO_ROLES_FOUND_FOR_MODULE);
+        }
+        return defaultRoles;
+    }
+
+    private List<Long> distinctUserIds(List<Long> requestedUserIds) {
+        if (CollectionUtils.isEmpty(requestedUserIds)) {
+            return List.of();
+        }
+        return requestedUserIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private int resolveRemainingSlots(SubscriptionPlanModuleEntity planModule, Long moduleId, Long organizationId) {
+        if (!planModule.hasUserLimit()) {
+            return Integer.MAX_VALUE;
+        }
+        int currentUsers = userModuleAccessService.countActiveUsers(moduleId, organizationId);
+        return Math.max(0, planModule.getMaxUsersPerModule() - currentUsers);
+    }
+
+    private BulkModuleAccessResponse buildBulkResponse(
+            Long moduleId,
+            List<Long> requestedUserIds,
+            Map<Long, BulkModuleAccessOutcome> outcomesByUserId) {
+        BulkModuleAccessResponse response = BulkModuleAccessResponse.empty(moduleId, requestedUserIds.size());
+        Set<Long> seenUserIds = new java.util.HashSet<>();
+        for (Long userId : requestedUserIds) {
+            if (userId == null || !seenUserIds.add(userId)) {
+                continue;
+            }
+            BulkModuleAccessOutcome outcome = outcomesByUserId.get(userId);
+            if (outcome == null) {
+                response.markSkipped(userId, Constants.BulkAccessSkipReason.USER_NOT_FOUND);
+                continue;
+            }
+            if (outcome.status() == BulkModuleAccessStatus.GRANTED) {
+                response.markGranted(userId);
+            } else if (outcome.status() == BulkModuleAccessStatus.REVOKED) {
+                response.markRevoked(userId);
+            } else {
+                response.markSkipped(userId, outcome.reason());
+            }
+        }
+        return response;
     }
 
     private SubscriptionPlanModuleEntity validateModuleInSubscription(Long organizationId, Long moduleId) {

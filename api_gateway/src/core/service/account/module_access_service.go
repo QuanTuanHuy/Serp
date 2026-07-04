@@ -19,6 +19,7 @@ type IModuleAccessService interface {
 	GetAccessibleModulesForOrganization(ctx context.Context, organizationId int64) (*response.BaseResponse, error)
 	AssignUserToModule(ctx context.Context, organizationId int64, req *request.AssignUserToModuleRequest) (*response.BaseResponse, error)
 	BulkAssignUsersToModule(ctx context.Context, req *request.BulkAssignUsersRequest) (*response.BaseResponse, error)
+	BulkRevokeUsersFromModule(ctx context.Context, req *request.BulkRevokeUsersRequest) (*response.BaseResponse, error)
 	RevokeUserAccessToModule(ctx context.Context, organizationId int64, moduleId int64, userId int64) (*response.BaseResponse, error)
 	GetUsersWithAccessToModule(ctx context.Context, params *request.GetUserParams) (*response.BaseResponse, error)
 	GetModulesAccessibleByUser(ctx context.Context, organizationId int64) (*response.BaseResponse, error)
@@ -59,6 +60,15 @@ func (m *ModuleAccessService) BulkAssignUsersToModule(ctx context.Context, req *
 	res, err := m.moduleAccessClient.BulkAssignUsersToModule(ctx, req)
 	if err != nil {
 		log.Error(ctx, "ModuleAccessService: BulkAssignUsersToModule error: ", err.Error())
+		return nil, err
+	}
+	return res, nil
+}
+
+func (m *ModuleAccessService) BulkRevokeUsersFromModule(ctx context.Context, req *request.BulkRevokeUsersRequest) (*response.BaseResponse, error) {
+	res, err := m.moduleAccessClient.BulkRevokeUsersFromModule(ctx, req)
+	if err != nil {
+		log.Error(ctx, "ModuleAccessService: BulkRevokeUsersFromModule error: ", err.Error())
 		return nil, err
 	}
 	return res, nil
