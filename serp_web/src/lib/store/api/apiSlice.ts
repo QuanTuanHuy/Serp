@@ -312,6 +312,8 @@ export const api = createApi({
     // TMS billing tags
     'billing/Tariff',
     'billing/SurchargeRule',
+    'billing/ChargeableWeightConfig',
+    'billing/DeliveryService',
     'billing/VasRule',
   ],
 

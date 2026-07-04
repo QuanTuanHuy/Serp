@@ -74,7 +74,10 @@ export function PMResourceCalendarAssignmentPanel({
 
   // 1. Gather all users (loaded from org + currently assigned users in calendar)
   const allUsersMapped = useMemo(() => {
-    const listMap = new Map<number, { id: number; name: string; email: string }>();
+    const listMap = new Map<
+      number,
+      { id: number; name: string; email: string }
+    >();
 
     // Load from fetched users
     users.forEach((u) => {
@@ -90,7 +93,9 @@ export function PMResourceCalendarAssignmentPanel({
     assignments.forEach((a) => {
       if (!listMap.has(a.userId)) {
         const u = userMap.get(a.userId);
-        const fullName = u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : '';
+        const fullName = u
+          ? `${u.firstName || ''} ${u.lastName || ''}`.trim()
+          : '';
         listMap.set(a.userId, {
           id: a.userId,
           name: fullName || u?.email || `User #${a.userId}`,
@@ -169,7 +174,11 @@ export function PMResourceCalendarAssignmentPanel({
       // A. Remove users from their old profiles
       for (const oldProfileId of Array.from(profilesToUpdate)) {
         const remaining = assignments
-          .filter((a) => a.profileId === oldProfileId && !selectedUserIds.includes(a.userId))
+          .filter(
+            (a) =>
+              a.profileId === oldProfileId &&
+              !selectedUserIds.includes(a.userId)
+          )
           .map((a) => ({
             userId: a.userId,
             effectiveFrom: a.effectiveFrom,
@@ -181,7 +190,11 @@ export function PMResourceCalendarAssignmentPanel({
       // B. Add users to the new profile
       const newAssignmentsForTarget = [
         ...assignments
-          .filter((a) => a.profileId === targetProfileId && !selectedUserIds.includes(a.userId))
+          .filter(
+            (a) =>
+              a.profileId === targetProfileId &&
+              !selectedUserIds.includes(a.userId)
+          )
           .map((a) => ({
             userId: a.userId,
             effectiveFrom: a.effectiveFrom,
@@ -216,7 +229,10 @@ export function PMResourceCalendarAssignmentPanel({
 
       for (const profileId of Array.from(profilesToUpdate)) {
         const remaining = assignments
-          .filter((a) => a.profileId === profileId && !selectedUserIds.includes(a.userId))
+          .filter(
+            (a) =>
+              a.profileId === profileId && !selectedUserIds.includes(a.userId)
+          )
           .map((a) => ({
             userId: a.userId,
             effectiveFrom: a.effectiveFrom,
@@ -225,7 +241,9 @@ export function PMResourceCalendarAssignmentPanel({
         await onSubmit(profileId, { assignments: remaining });
       }
 
-      toast.success(`Removed assignments for ${selectedUserIds.length} user(s).`);
+      toast.success(
+        `Removed assignments for ${selectedUserIds.length} user(s).`
+      );
       setSelectedUserIds([]);
     } catch (err) {
       // error handled in parent
@@ -318,14 +336,18 @@ export function PMResourceCalendarAssignmentPanel({
                 <Label className='text-xs'>Effective from</Label>
                 <PMDatePicker
                   value={bulkEffectiveFrom}
-                  onChange={(date) => setBulkEffectiveFrom(toLocalDateInputValue(date))}
+                  onChange={(date) =>
+                    setBulkEffectiveFrom(toLocalDateInputValue(date))
+                  }
                 />
               </div>
               <div className='space-y-1.5'>
                 <Label className='text-xs'>Effective to</Label>
                 <PMDatePicker
                   value={bulkEffectiveTo}
-                  onChange={(date) => setBulkEffectiveTo(toLocalDateInputValue(date))}
+                  onChange={(date) =>
+                    setBulkEffectiveTo(toLocalDateInputValue(date))
+                  }
                   placeholder='Optional'
                 />
               </div>
@@ -353,7 +375,10 @@ export function PMResourceCalendarAssignmentPanel({
             <TableHeader>
               <TableRow>
                 <TableHead className='w-[40px] pl-4'>
-                  <Checkbox checked={allSelected} onCheckedChange={handleSelectAll} />
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                  />
                 </TableHead>
                 <TableHead>User</TableHead>
                 <TableHead>Current Calendar Profile</TableHead>
@@ -363,7 +388,9 @@ export function PMResourceCalendarAssignmentPanel({
             </TableHeader>
             <TableBody>
               {filteredUsers.map((user) => {
-                const assignment = assignments.find((a) => a.userId === user.id);
+                const assignment = assignments.find(
+                  (a) => a.userId === user.id
+                );
                 const assignedProfile = profiles.find(
                   (p) => p.id === assignment?.profileId
                 );
@@ -373,7 +400,9 @@ export function PMResourceCalendarAssignmentPanel({
                     <TableCell className='pl-4'>
                       <Checkbox
                         checked={selectedUserIds.includes(user.id)}
-                        onCheckedChange={(checked) => handleSelectUser(user.id, !!checked)}
+                        onCheckedChange={(checked) =>
+                          handleSelectUser(user.id, !!checked)
+                        }
                       />
                     </TableCell>
                     <TableCell>
@@ -414,7 +443,9 @@ export function PMResourceCalendarAssignmentPanel({
                       {assignment ? (
                         <span>
                           {assignment.effectiveFrom}{' '}
-                          {assignment.effectiveTo ? `to ${assignment.effectiveTo}` : 'onwards'}
+                          {assignment.effectiveTo
+                            ? `to ${assignment.effectiveTo}`
+                            : 'onwards'}
                         </span>
                       ) : (
                         '-'

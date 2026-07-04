@@ -11,23 +11,23 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import serp.project.tms_billing_service.domain.ChargeableWeightConfig;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
-import serp.project.tms_billing_service.domain.VasRule;
+import serp.project.tms_billing_service.dto.request.admin.UpsertChargeableWeightConfigRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
-import serp.project.tms_billing_service.dto.request.admin.UpsertVasRuleRequest;
+import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfigAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.enums.CalculationType;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
-import serp.project.tms_billing_service.enums.VasRuleCode;
 import serp.project.tms_billing_service.exception.AppException;
+import serp.project.tms_billing_service.repository.ChargeableWeightConfigRepository;
+import serp.project.tms_billing_service.repository.DeliveryServiceConfigRepository;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
-import serp.project.tms_billing_service.repository.VasRuleRepository;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -40,12 +40,16 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AdminPricingServiceImplTest {
+    private static final String TIEU_CHUAN = "TIEU_CHUAN";
+
     @Mock
     private TariffRepository tariffRepository;
     @Mock
     private SurchargeRuleRepository surchargeRuleRepository;
     @Mock
-    private VasRuleRepository vasRuleRepository;
+    private ChargeableWeightConfigRepository chargeableWeightConfigRepository;
+    @Mock
+    private DeliveryServiceConfigRepository deliveryServiceConfigRepository;
 
     @InjectMocks
     private AdminPricingServiceImpl adminPricingService;
@@ -53,7 +57,7 @@ class AdminPricingServiceImplTest {
     @Test
     void shouldUpsertTariffByServiceRouteAndEffectiveDate() {
         UpsertTariffRequest request = new UpsertTariffRequest();
-        request.setServiceCode(DeliveryService.TIEU_CHUAN);
+        request.setServiceCode(TIEU_CHUAN);
         request.setRouteTypeCode(RouteType.NOI_MIEN);
         request.setBaseWeight(2000d);
         request.setBasePrice(20000d);
@@ -63,7 +67,7 @@ class AdminPricingServiceImplTest {
         request.setExpirationDate(null);
 
         when(tariffRepository.findByServiceCodeAndRouteTypeCodeAndEffectiveDate(
-                DeliveryService.TIEU_CHUAN,
+                TIEU_CHUAN,
                 RouteType.NOI_MIEN,
                 LocalDate.of(2026, 5, 20)
         )).thenReturn(Optional.empty());
@@ -121,35 +125,33 @@ class AdminPricingServiceImplTest {
     }
 
     @Test
-    void shouldListOnlyActiveVasRules() {
-        VasRule codRule = VasRule.builder()
-                .id(1L)
-                .code(VasRuleCode.COD)
-                .name("COD fee")
-                .calculationType(CalculationType.FIXED_PER_ORDER)
-                .build();
-        VasRule legacyInsuranceRule = VasRule.builder()
-                .id(2L)
-                .code(VasRuleCode.BAO_HIEM)
-                .name("Insurance fee")
-                .calculationType(CalculationType.PERCENTAGE)
-                .build();
+    void shouldUpsertChargeableWeightConfigByServiceCode() {
+        UpsertChargeableWeightConfigRequest request = new UpsertChargeableWeightConfigRequest();
+        request.setServiceCode(TIEU_CHUAN);
+        request.setMinDimensionCm(10L);
+        request.setSmallBulkyThresholdCm(100L);
+        request.setBaseWeightGram(2000L);
+        request.setStepWeightGram(500L);
+        request.setMaxWeightGram(15000L);
+        request.setVolumetricDivisor(5000d);
 
-        when(vasRuleRepository.findAll()).thenReturn(List.of(codRule, legacyInsuranceRule));
+        when(chargeableWeightConfigRepository.findByServiceCode(TIEU_CHUAN))
+                .thenReturn(Optional.empty());
+        when(chargeableWeightConfigRepository.save(org.mockito.ArgumentMatchers.any(ChargeableWeightConfig.class)))
+                .thenAnswer(invocation -> {
+                    ChargeableWeightConfig config = invocation.getArgument(0);
+                    config.setId(1L);
+                    return config;
+                });
 
-        var response = adminPricingService.listVasRules();
+        ChargeableWeightConfigAdminResponse response = adminPricingService.upsertChargeableWeightConfig(request);
 
-        assertEquals(1, response.size());
-        assertEquals(VasRuleCode.COD, response.getFirst().getCode());
-    }
+        ArgumentCaptor<ChargeableWeightConfig> captor = ArgumentCaptor.forClass(ChargeableWeightConfig.class);
+        verify(chargeableWeightConfigRepository).save(captor.capture());
+        ChargeableWeightConfig savedConfig = captor.getValue();
 
-    @Test
-    void shouldRejectUnsupportedInsuranceVasRule() {
-        UpsertVasRuleRequest request = new UpsertVasRuleRequest();
-        request.setCode(VasRuleCode.BAO_HIEM);
-        request.setName("Insurance fee");
-        request.setCalculationType(CalculationType.PERCENTAGE);
-
-        assertThrows(AppException.class, () -> adminPricingService.upsertVasRule(request));
+        assertEquals(500L, savedConfig.getStepWeightGram());
+        assertEquals(1L, response.getId());
+        assertEquals(TIEU_CHUAN, response.getServiceCode());
     }
 }

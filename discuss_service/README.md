@@ -46,11 +46,11 @@ graph TD
 
 ```
 Client sends message -> REST/WebSocket -> MessageUseCase -> MessageService (DB persist)
-  -> Spring Event (AFTER_COMMIT) -> Kafka publish -> Kafka Consumer -> MessageNewHandler
-    -> WebSocketHubAdapter.fanOutToChannelMembers()
+  -> Spring Event (AFTER_COMMIT) -> RealtimePayloadBuilder (ready WsEvent)
+    -> Kafka publish -> Kafka Consumer -> RealtimeDeliveryService
       -> channelMemberService.getMemberIds() (from DB/cache)
-      -> presenceService.getOnlineUsers() (from Redis)
-      -> sendToUser(userId, event) for each online member
+      -> presenceService.getOnlineUsers() (from Redis batch)
+      -> bounded sendToUser(userId, event) for each online member
 ```
 
 Clients subscribe to a **single personal queue**. Server handles all routing.

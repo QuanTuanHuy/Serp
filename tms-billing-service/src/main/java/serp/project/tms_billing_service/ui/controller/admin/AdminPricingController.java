@@ -15,13 +15,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import serp.project.tms_billing_service.core.service.IAdminPricingService;
 import serp.project.tms_billing_service.dto.ApiResponse;
+import serp.project.tms_billing_service.dto.request.admin.UpsertChargeableWeightConfigRequest;
+import serp.project.tms_billing_service.dto.request.admin.UpsertDeliveryServiceConfigRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
-import serp.project.tms_billing_service.dto.request.admin.UpsertVasRuleRequest;
+import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfigAdminResponse;
+import serp.project.tms_billing_service.dto.response.admin.DeliveryServiceConfigAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
-import serp.project.tms_billing_service.dto.response.admin.VasRuleAdminResponse;
-import serp.project.tms_billing_service.enums.DeliveryService;
 
 import java.util.List;
 
@@ -31,9 +32,15 @@ import java.util.List;
 public class AdminPricingController {
     private final IAdminPricingService adminPricingService;
 
+    /**
+     * Lấy danh sách biểu phí hiện hành để quản trị bảng giá.
+     *
+     * @param serviceCode mã dịch vụ cần lọc, có thể bỏ trống để lấy tất cả
+     * @return danh sách biểu phí theo dịch vụ và loại tuyến
+     */
     @GetMapping("/tariffs")
     public ApiResponse<List<TariffAdminResponse>> listTariffs(
-            @RequestParam(value = "serviceCode", required = false) DeliveryService serviceCode
+            @RequestParam(value = "serviceCode", required = false) String serviceCode
     ) {
         return ApiResponse.<List<TariffAdminResponse>>builder()
                 .message("OK")
@@ -41,6 +48,12 @@ public class AdminPricingController {
                 .build();
     }
 
+    /**
+     * Tạo mới hoặc cập nhật biểu phí theo khóa service, route type và ngày hiệu lực.
+     *
+     * @param request dữ liệu biểu phí cần lưu
+     * @return biểu phí sau khi lưu
+     */
     @PutMapping("/tariffs")
     public ApiResponse<TariffAdminResponse> upsertTariff(@RequestBody @Valid UpsertTariffRequest request) {
         return ApiResponse.<TariffAdminResponse>builder()
@@ -49,6 +62,12 @@ public class AdminPricingController {
                 .build();
     }
 
+    /**
+     * Tạo mới hoặc cập nhật quy tắc phụ phí đang được hỗ trợ.
+     *
+     * @param request dữ liệu quy tắc phụ phí
+     * @return quy tắc phụ phí sau khi lưu
+     */
     @PutMapping("/surcharge-rules")
     public ApiResponse<SurchargeRuleAdminResponse> upsertSurchargeRule(
             @RequestBody @Valid UpsertSurchargeRuleRequest request
@@ -59,6 +78,11 @@ public class AdminPricingController {
                 .build();
     }
 
+    /**
+     * Lấy các quy tắc phụ phí còn được dùng trong luồng tính phí.
+     *
+     * @return danh sách quy tắc phụ phí đang hoạt động
+     */
     @GetMapping("/surcharge-rules")
     public ApiResponse<List<SurchargeRuleAdminResponse>> listSurchargeRules() {
         return ApiResponse.<List<SurchargeRuleAdminResponse>>builder()
@@ -67,19 +91,41 @@ public class AdminPricingController {
                 .build();
     }
 
-    @PutMapping("/vas-rules")
-    public ApiResponse<VasRuleAdminResponse> upsertVasRule(@RequestBody @Valid UpsertVasRuleRequest request) {
-        return ApiResponse.<VasRuleAdminResponse>builder()
+    @GetMapping("/chargeable-weight-configs")
+    public ApiResponse<List<ChargeableWeightConfigAdminResponse>> listChargeableWeightConfigs() {
+        return ApiResponse.<List<ChargeableWeightConfigAdminResponse>>builder()
                 .message("OK")
-                .result(adminPricingService.upsertVasRule(request))
+                .result(adminPricingService.listChargeableWeightConfigs())
                 .build();
     }
 
-    @GetMapping("/vas-rules")
-    public ApiResponse<List<VasRuleAdminResponse>> listVasRules() {
-        return ApiResponse.<List<VasRuleAdminResponse>>builder()
+    @PutMapping("/chargeable-weight-configs")
+    public ApiResponse<ChargeableWeightConfigAdminResponse> upsertChargeableWeightConfig(
+            @RequestBody @Valid UpsertChargeableWeightConfigRequest request
+    ) {
+        return ApiResponse.<ChargeableWeightConfigAdminResponse>builder()
                 .message("OK")
-                .result(adminPricingService.listVasRules())
+                .result(adminPricingService.upsertChargeableWeightConfig(request))
+                .build();
+    }
+
+    @GetMapping("/delivery-services")
+    public ApiResponse<List<DeliveryServiceConfigAdminResponse>> listDeliveryServiceConfigs(
+            @RequestParam(value = "activeOnly", defaultValue = "false") boolean activeOnly
+    ) {
+        return ApiResponse.<List<DeliveryServiceConfigAdminResponse>>builder()
+                .message("OK")
+                .result(adminPricingService.listDeliveryServiceConfigs(activeOnly))
+                .build();
+    }
+
+    @PutMapping("/delivery-services")
+    public ApiResponse<DeliveryServiceConfigAdminResponse> upsertDeliveryServiceConfig(
+            @RequestBody @Valid UpsertDeliveryServiceConfigRequest request
+    ) {
+        return ApiResponse.<DeliveryServiceConfigAdminResponse>builder()
+                .message("OK")
+                .result(adminPricingService.upsertDeliveryServiceConfig(request))
                 .build();
     }
 }

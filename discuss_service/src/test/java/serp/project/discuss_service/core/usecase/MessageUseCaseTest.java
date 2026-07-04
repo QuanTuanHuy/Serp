@@ -19,6 +19,8 @@ import serp.project.discuss_service.core.domain.dto.response.ChannelMemberRespon
 import serp.project.discuss_service.core.domain.dto.response.MessageResponse;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
+import java.util.Optional;
+import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.entity.MessageEntity;
 import serp.project.discuss_service.core.domain.event.MessageReadInternalEvent;
 import serp.project.discuss_service.core.exception.AppException;
@@ -31,6 +33,8 @@ import serp.project.discuss_service.core.service.IMessageService;
 import serp.project.discuss_service.core.service.IAttachmentService;
 import serp.project.discuss_service.core.service.IAttachmentUrlService;
 import serp.project.discuss_service.core.service.IUserInfoService;
+import serp.project.discuss_service.core.service.impl.RealtimePayloadBuilder;
+import serp.project.discuss_service.core.service.impl.TypingEventDebouncer;
 import serp.project.discuss_service.testutil.TestDataFactory;
 
 import java.util.List;
@@ -72,6 +76,12 @@ class MessageUseCaseTest {
 
     @Mock
     private IUserInfoService userInfoService;
+
+    @Mock
+    private TypingEventDebouncer typingEventDebouncer;
+
+    @Mock
+    private RealtimePayloadBuilder realtimePayloadBuilder;
 
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
@@ -604,13 +614,24 @@ class MessageUseCaseTest {
         void testSendTypingIndicator_TypingTrue_SetsTyping() {
             // Given
             when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
+            when(typingEventDebouncer.shouldPublish(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, true)).thenReturn(true);
+            
+            UserInfo userInfo = UserInfo.builder().id(TestDataFactory.USER_ID_1).name("Huy").build();
+            when(userInfoService.getUserById(TestDataFactory.USER_ID_1)).thenReturn(Optional.of(userInfo));
+            
+            WsEvent wsEvent = mock(WsEvent.class);
+            when(realtimePayloadBuilder.buildTyping(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, "Huy", true)).thenReturn(wsEvent);
 
             // When
             messageUseCase.sendTypingIndicator(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, true);
 
             // Then
             verify(cacheService).setUserTyping(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1);
-            verify(eventPublisher).publishTypingIndicator(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, true);
+            verify(eventPublisher).publishRealtimeEvent(
+                    eq(String.valueOf(TestDataFactory.CHANNEL_ID)),
+                    eq(wsEvent),
+                    eq(IDiscussEventPublisher.TOPIC_PRESENCE_EVENTS)
+            );
         }
 
         @Test
@@ -618,13 +639,37 @@ class MessageUseCaseTest {
         void testSendTypingIndicator_TypingFalse_ClearsTyping() {
             // Given
             when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
+            when(typingEventDebouncer.shouldPublish(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, false)).thenReturn(true);
+            
+            WsEvent wsEvent = mock(WsEvent.class);
+            when(realtimePayloadBuilder.buildTyping(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, "", false)).thenReturn(wsEvent);
 
             // When
             messageUseCase.sendTypingIndicator(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, false);
 
             // Then
             verify(cacheService).clearUserTyping(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1);
-            verify(eventPublisher).publishTypingIndicator(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, false);
+            verify(eventPublisher).publishRealtimeEvent(
+                    eq(String.valueOf(TestDataFactory.CHANNEL_ID)),
+                    eq(wsEvent),
+                    eq(IDiscussEventPublisher.TOPIC_PRESENCE_EVENTS)
+            );
+        }
+
+        @Test
+        @DisplayName("should suppress duplicate typing event after updating typing state")
+        void testSendTypingIndicator_DuplicateTyping_SuppressesPublish() {
+            when(memberService.isMember(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1)).thenReturn(true);
+            when(typingEventDebouncer.shouldPublish(
+                    TestDataFactory.CHANNEL_ID,
+                    TestDataFactory.USER_ID_1,
+                    true
+            )).thenReturn(false);
+
+            messageUseCase.sendTypingIndicator(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1, true);
+
+            verify(cacheService).setUserTyping(TestDataFactory.CHANNEL_ID, TestDataFactory.USER_ID_1);
+            verify(eventPublisher, never()).publishRealtimeEvent(any(), any(), any());
         }
 
         @Test
@@ -638,7 +683,7 @@ class MessageUseCaseTest {
 
             // Then
             verify(cacheService, never()).setUserTyping(any(), any());
-            verify(eventPublisher, never()).publishTypingIndicator(any(), any(), anyBoolean());
+            verify(eventPublisher, never()).publishRealtimeEvent(any(), any(), any());
         }
     }
 

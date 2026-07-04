@@ -1,10 +1,10 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - First-mile orders route page
+ * Description: Part of Serp Project - First-mile orders redirect route
  */
 
-import { OrderListPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
 export default function FirstMileOrdersRoutePage() {
-  return <OrderListPage />;
+  redirect('/first-mile/orders/list');
 }

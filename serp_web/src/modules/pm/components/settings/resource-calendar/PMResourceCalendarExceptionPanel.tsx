@@ -4,7 +4,15 @@
  */
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, List, Plus, Edit, Trash2 } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  List,
+  Plus,
+  Edit,
+  Trash2,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/shared/components/ui/badge';
@@ -60,7 +68,12 @@ import { normalizeOptionalText } from '../settings-page.types';
 import { PMResourceCalendarUserCombobox } from './PMResourceCalendarUserCombobox';
 
 type ExceptionDialogState =
-  | { mode: 'create'; item?: undefined; defaultStart?: number; defaultEnd?: number }
+  | {
+      mode: 'create';
+      item?: undefined;
+      defaultStart?: number;
+      defaultEnd?: number;
+    }
   | { mode: 'edit'; item: PMResourceCalendarExceptionApi };
 
 export function PMResourceCalendarExceptionPanel({
@@ -88,7 +101,11 @@ export function PMResourceCalendarExceptionPanel({
   const getUserName = (userId: number) => {
     const user = userMap.get(userId);
     if (user) {
-      return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || `User #${userId}`;
+      return (
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        user.email ||
+        `User #${userId}`
+      );
     }
     return `User #${userId}`;
   };
@@ -189,11 +206,25 @@ export function PMResourceCalendarExceptionPanel({
         <div className='flex items-center justify-between gap-3 sm:justify-end'>
           {viewMode === 'calendar' && (
             <div className='flex items-center gap-2'>
-              <Button type='button' variant='outline' size='icon' className='h-8 w-8' onClick={handlePrevMonth}>
+              <Button
+                type='button'
+                variant='outline'
+                size='icon'
+                className='h-8 w-8'
+                onClick={handlePrevMonth}
+              >
                 <ChevronLeft className='h-4 w-4' />
               </Button>
-              <span className='text-sm font-semibold min-w-[120px] text-center'>{monthName}</span>
-              <Button type='button' variant='outline' size='icon' className='h-8 w-8' onClick={handleNextMonth}>
+              <span className='text-sm font-semibold min-w-[120px] text-center'>
+                {monthName}
+              </span>
+              <Button
+                type='button'
+                variant='outline'
+                size='icon'
+                className='h-8 w-8'
+                onClick={handleNextMonth}
+              >
                 <ChevronRight className='h-4 w-4' />
               </Button>
             </div>
@@ -242,12 +273,17 @@ export function PMResourceCalendarExceptionPanel({
                 <TableBody>
                   {exceptions.map((exception) => (
                     <TableRow key={exception.id}>
-                      <TableCell className='font-medium'>{getUserName(exception.userId)}</TableCell>
+                      <TableCell className='font-medium'>
+                        {getUserName(exception.userId)}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant='secondary'>{exception.exceptionType}</Badge>
+                        <Badge variant='secondary'>
+                          {exception.exceptionType}
+                        </Badge>
                       </TableCell>
                       <TableCell className='min-w-[260px] text-muted-foreground'>
-                        {formatDateTime(exception.startAt)} - {formatDateTime(exception.endAt)}
+                        {formatDateTime(exception.startAt)} -{' '}
+                        {formatDateTime(exception.endAt)}
                       </TableCell>
                       <TableCell>{exception.capacityFactor ?? '-'}</TableCell>
                       <TableCell className='max-w-xs text-muted-foreground truncate'>
@@ -260,7 +296,9 @@ export function PMResourceCalendarExceptionPanel({
                             variant='ghost'
                             size='icon'
                             className='h-8 w-8 rounded-full'
-                            onClick={() => setDialog({ mode: 'edit', item: exception })}
+                            onClick={() =>
+                              setDialog({ mode: 'edit', item: exception })
+                            }
                           >
                             <Edit className='h-4 w-4' />
                           </Button>
@@ -342,7 +380,8 @@ export function PMResourceCalendarExceptionPanel({
 
                     <div className='flex flex-col gap-1 mt-1 flex-grow overflow-y-auto max-h-[72px] scrollbar-none'>
                       {dayExceptions.map((exc) => {
-                        const isUnavailable = exc.exceptionType === 'UNAVAILABLE';
+                        const isUnavailable =
+                          exc.exceptionType === 'UNAVAILABLE';
                         return (
                           <Tooltip key={exc.id}>
                             <TooltipTrigger asChild>
@@ -362,16 +401,27 @@ export function PMResourceCalendarExceptionPanel({
                                 {getUserName(exc.userId).split(' ')[0]}
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent side='top' className='space-y-1 p-2 w-56'>
-                              <div className='font-semibold text-xs'>{getUserName(exc.userId)}</div>
+                            <TooltipContent
+                              side='top'
+                              className='space-y-1 p-2 w-56'
+                            >
+                              <div className='font-semibold text-xs'>
+                                {getUserName(exc.userId)}
+                              </div>
                               <div className='flex items-center gap-1.5 text-[10px] opacity-80'>
-                                <Badge variant='outline' className='text-[9px] px-1 py-0 leading-none'>
+                                <Badge
+                                  variant='outline'
+                                  className='text-[9px] px-1 py-0 leading-none'
+                                >
                                   {exc.exceptionType}
                                 </Badge>
-                                {!isUnavailable && <span>Factor: {exc.capacityFactor}</span>}
+                                {!isUnavailable && (
+                                  <span>Factor: {exc.capacityFactor}</span>
+                                )}
                               </div>
                               <div className='text-[10px] text-muted-foreground leading-snug'>
-                                {formatDateTime(exc.startAt)} - {formatDateTime(exc.endAt)}
+                                {formatDateTime(exc.startAt)} -{' '}
+                                {formatDateTime(exc.endAt)}
                               </div>
                               {exc.reason && (
                                 <div className='border-t pt-1 mt-1 text-[10px] italic leading-tight text-muted-foreground'>
@@ -438,7 +488,8 @@ function ExceptionDialog({
 
     setUserId(state.item?.userId ?? null);
     setExceptionType(state.item?.exceptionType ?? 'UNAVAILABLE');
-    const defaultStart = state.mode === 'create' ? state.defaultStart : undefined;
+    const defaultStart =
+      state.mode === 'create' ? state.defaultStart : undefined;
     const defaultEnd = state.mode === 'create' ? state.defaultEnd : undefined;
     setStartAt(state.item?.startAt ?? defaultStart ?? null);
     setEndAt(state.item?.endAt ?? defaultEnd ?? null);
@@ -546,7 +597,9 @@ function ExceptionDialog({
                 <Label>Start</Label>
                 <PMDateTimePicker
                   value={startAt}
-                  onChange={(date?: Date) => setStartAt(date?.getTime() ?? null)}
+                  onChange={(date?: Date) =>
+                    setStartAt(date?.getTime() ?? null)
+                  }
                   placeholder='Start date and time'
                   defaultTime='09:00'
                 />
@@ -563,7 +616,9 @@ function ExceptionDialog({
             </div>
             {exceptionType === 'CAPACITY_OVERRIDE' && (
               <div className='space-y-2'>
-                <Label htmlFor='resource-exception-factor'>Capacity factor</Label>
+                <Label htmlFor='resource-exception-factor'>
+                  Capacity factor
+                </Label>
                 <Input
                   id='resource-exception-factor'
                   type='number'

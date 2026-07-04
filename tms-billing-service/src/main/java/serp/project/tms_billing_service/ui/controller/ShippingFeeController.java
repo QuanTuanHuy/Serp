@@ -22,6 +22,12 @@ import serp.project.tms_billing_service.dto.response.CalculateShippingFeeRespons
 public class ShippingFeeController {
     private final IShippingFeeService shippingFeeService;
 
+    /**
+     * Tính phí vận chuyển cho một kiện hàng theo dịch vụ, tuyến gửi/nhận và kích thước.
+     *
+     * @param request dữ liệu đầu vào đã được validate bằng Bean Validation
+     * @return tổng phí và chi tiết các dòng phí
+     */
     @PostMapping("/calculate")
     public ApiResponse<CalculateShippingFeeResponse> calculate(@RequestBody @Valid CalculateShippingFeeRequest request) {
         return ApiResponse.<CalculateShippingFeeResponse>builder()

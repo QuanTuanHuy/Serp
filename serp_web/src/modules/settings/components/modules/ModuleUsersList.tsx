@@ -130,9 +130,10 @@ export function ModuleUsersList({
             <div className='space-y-2'>
               {users.map((user) => {
                 // Filter module specific roles
-                const matchedRoles = user.roles?.filter((roleName) =>
-                  moduleRoleNamesSet.has(roleName)
-                ) || [];
+                const matchedRoles =
+                  user.roles?.filter((roleName) =>
+                    moduleRoleNamesSet.has(roleName)
+                  ) || [];
 
                 return (
                   <div
@@ -158,7 +159,9 @@ export function ModuleUsersList({
                           {user.status && (
                             <Badge
                               variant={
-                                user.status === 'ACTIVE' ? 'default' : 'secondary'
+                                user.status === 'ACTIVE'
+                                  ? 'default'
+                                  : 'secondary'
                               }
                               className='text-[10px] px-1.5 py-0'
                             >
@@ -202,7 +205,8 @@ export function ModuleUsersList({
         {pagination.totalPages > 1 && (
           <div className='flex items-center justify-between border-t pt-4 mt-4'>
             <span className='text-xs text-muted-foreground'>
-              Showing Page {pagination.currentPage + 1} of {pagination.totalPages || 1} ({pagination.totalItems} users total)
+              Showing Page {pagination.currentPage + 1} of{' '}
+              {pagination.totalPages || 1} ({pagination.totalItems} users total)
             </span>
             <div className='flex items-center gap-2'>
               <Button

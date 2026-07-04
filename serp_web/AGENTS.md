@@ -13,7 +13,7 @@ This guide is for agentic coding tools working inside `serp_web/`; it complement
 ## TMS (First-Mile / Second-Mile)
 
 Transport Management UI lives in `src/modules/first-mile/` (routes under `/first-mile/*`).
-For TMS-specific API wiring, English UI policy, and conventions, read **`src/modules/first-mile/AGENTS.md`** first.
+For TMS-specific API wiring, Vietnamese UI policy, and conventions, read **`src/modules/first-mile/AGENTS.md`** first.
 
 ## Key Directories
 
@@ -160,6 +160,7 @@ Observed import order in this codebase:
 - Follow the Tailwind + Radix + Shadcn patterns already present in the module.
 - Prefer semantic theme tokens from `src/app/globals.css` over ad-hoc colors.
 - Preserve accessibility, keyboard support, focus states, and responsive behavior.
+- Use Vietnamese by default for new or changed user-visible UI copy. Keep technical identifiers and integration strings unchanged when they are part of code or API contracts.
 
 ## Naming Conventions
 

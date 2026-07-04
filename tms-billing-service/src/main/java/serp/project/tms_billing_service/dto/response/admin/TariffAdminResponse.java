@@ -7,7 +7,6 @@ package serp.project.tms_billing_service.dto.response.admin;
 
 import lombok.Builder;
 import lombok.Value;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.RouteType;
 
 import java.time.LocalDate;
@@ -16,7 +15,7 @@ import java.time.LocalDate;
 @Builder
 public class TariffAdminResponse {
     Long id;
-    DeliveryService serviceCode;
+    String serviceCode;
     RouteType routeTypeCode;
     Double baseWeight;
     Double basePrice;

@@ -8,12 +8,14 @@ import type {
   BillingDeliveryService,
   CalculateShippingFeeRequest,
   CalculateShippingFeeResponse,
+  ChargeableWeightConfigAdminResponse,
+  DeliveryServiceConfigAdminResponse,
   SurchargeRuleAdminResponse,
   TariffAdminResponse,
+  UpsertChargeableWeightConfigRequest,
+  UpsertDeliveryServiceConfigRequest,
   UpsertSurchargeRuleRequest,
   UpsertTariffRequest,
-  UpsertVasRuleRequest,
-  VasRuleAdminResponse,
 } from '../types';
 import { unwrapFirstMileResult } from './transforms';
 
@@ -96,35 +98,82 @@ export const billingApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<SurchargeRuleAdminResponse>,
       invalidatesTags: [{ type: 'billing/SurchargeRule', id: 'LIST' }],
     }),
-    listVasRules: builder.query<VasRuleAdminResponse[], void>({
+    listChargeableWeightConfigs: builder.query<
+      ChargeableWeightConfigAdminResponse[],
+      void
+    >({
       query: () => ({
-        url: '/admin/pricing/vas-rules',
+        url: '/admin/pricing/chargeable-weight-configs',
       }),
       extraOptions: BILLING_SERVICE,
-      transformResponse: unwrapFirstMileResult<VasRuleAdminResponse[]>,
+      transformResponse: unwrapFirstMileResult<
+        ChargeableWeightConfigAdminResponse[]
+      >,
       providesTags: (result) =>
         result
           ? [
               ...result.map((item) => ({
-                type: 'billing/VasRule' as const,
+                type: 'billing/ChargeableWeightConfig' as const,
                 id: item.id,
               })),
-              { type: 'billing/VasRule', id: 'LIST' },
+              { type: 'billing/ChargeableWeightConfig', id: 'LIST' },
             ]
-          : [{ type: 'billing/VasRule', id: 'LIST' }],
+          : [{ type: 'billing/ChargeableWeightConfig', id: 'LIST' }],
     }),
-    upsertVasRule: builder.mutation<VasRuleAdminResponse, UpsertVasRuleRequest>(
-      {
-        query: (body) => ({
-          url: '/admin/pricing/vas-rules',
-          method: 'PUT',
-          body,
-        }),
-        extraOptions: BILLING_SERVICE,
-        transformResponse: unwrapFirstMileResult<VasRuleAdminResponse>,
-        invalidatesTags: [{ type: 'billing/VasRule', id: 'LIST' }],
-      }
-    ),
+    upsertChargeableWeightConfig: builder.mutation<
+      ChargeableWeightConfigAdminResponse,
+      UpsertChargeableWeightConfigRequest
+    >({
+      query: (body) => ({
+        url: '/admin/pricing/chargeable-weight-configs',
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: BILLING_SERVICE,
+      transformResponse:
+        unwrapFirstMileResult<ChargeableWeightConfigAdminResponse>,
+      invalidatesTags: [
+        { type: 'billing/ChargeableWeightConfig', id: 'LIST' },
+      ],
+    }),
+    listDeliveryServiceConfigs: builder.query<
+      DeliveryServiceConfigAdminResponse[],
+      { activeOnly?: boolean } | void
+    >({
+      query: (params) => ({
+        url: '/admin/pricing/delivery-services',
+        params: params?.activeOnly
+          ? { activeOnly: params.activeOnly }
+          : undefined,
+      }),
+      extraOptions: BILLING_SERVICE,
+      transformResponse:
+        unwrapFirstMileResult<DeliveryServiceConfigAdminResponse[]>,
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map((item) => ({
+                type: 'billing/DeliveryService' as const,
+                id: item.id,
+              })),
+              { type: 'billing/DeliveryService', id: 'LIST' },
+            ]
+          : [{ type: 'billing/DeliveryService', id: 'LIST' }],
+    }),
+    upsertDeliveryServiceConfig: builder.mutation<
+      DeliveryServiceConfigAdminResponse,
+      UpsertDeliveryServiceConfigRequest
+    >({
+      query: (body) => ({
+        url: '/admin/pricing/delivery-services',
+        method: 'PUT',
+        body,
+      }),
+      extraOptions: BILLING_SERVICE,
+      transformResponse:
+        unwrapFirstMileResult<DeliveryServiceConfigAdminResponse>,
+      invalidatesTags: [{ type: 'billing/DeliveryService', id: 'LIST' }],
+    }),
   }),
   overrideExisting: false,
 });
@@ -135,6 +184,8 @@ export const {
   useUpsertTariffMutation,
   useListSurchargeRulesQuery,
   useUpsertSurchargeRuleMutation,
-  useListVasRulesQuery,
-  useUpsertVasRuleMutation,
+  useListChargeableWeightConfigsQuery,
+  useUpsertChargeableWeightConfigMutation,
+  useListDeliveryServiceConfigsQuery,
+  useUpsertDeliveryServiceConfigMutation,
 } = billingApi;

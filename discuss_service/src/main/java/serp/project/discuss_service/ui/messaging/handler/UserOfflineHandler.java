@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.service.IDeliveryService;
+import serp.project.discuss_service.core.service.IRealtimeDeliveryService;
 import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
@@ -21,6 +22,7 @@ import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 public class UserOfflineHandler implements IPresenceEventHandler {
 
     private final IDeliveryService deliveryService;
+    private final IRealtimeDeliveryService realtimeDeliveryService;
 
     @Override
     public WsEventType getType() {
@@ -35,6 +37,6 @@ public class UserOfflineHandler implements IPresenceEventHandler {
             log.warn("Missing required fields for USER_OFFLINE event");
             return;
         }
-        deliveryService.notifyPresenceChange(userId);
+        realtimeDeliveryService.deliverPresenceChange(userId, event);
     }
 }

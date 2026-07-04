@@ -65,6 +65,21 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of {@link IOptimizationProjectModelBuilder} that aggregates raw project data
+ * from various ports (projects, work items, dependencies, capacities, and skills) into
+ * a unified model representation for the optimization engine.
+ * <p>
+ * This class coordinates the following operations:
+ * <ul>
+ *     <li>Loading work items and their active execution plans.</li>
+ *     <li>Constructing the task dependency graph (including cycle detection and topological sorting).</li>
+ *     <li>Resolving task durations and identifying critical paths.</li>
+ *     <li>Calculating task priority scores based on sequence, deadlines, and blockers.</li>
+ *     <li>Determining eligible assignee candidates and computing their skill-fit profiles.</li>
+ *     <li>Resolving available resource capacity slots for the planning window.</li>
+ * </ul>
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -86,25 +101,25 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         log.info("Building optimization project model: tenantId={}, projectId={}, selectedCount={}, objective={}, changeScope={}",
                 input.tenantId(), input.projectId(), input.selectedWorkItemIds().size(),
                 input.intent().objective(), input.intent().changeScope());
-        // Load project and validate existence
+
         ProjectEntity project = projectReadPort.getProjectById(input.projectId(), input.tenantId())
                 .orElseThrow(() -> new IllegalArgumentException("Project not found: " + input.projectId()));
-        // Load selected work items and their active plans
+
         List<WorkItemEntity> selected = loadSelectedWorkItems(input);
         Map<Long, WorkItemPlanEntity> activePlans = workItemPlanPort
                 .listActivePlansByWorkItemIds(input.tenantId(), idsOf(selected))
                 .stream()
                 .collect(Collectors.toMap(WorkItemPlanEntity::getWorkItemId, plan -> plan, (left, right) -> left));
-        // Build dependency graph and detect cycles
+
         List<OptimizationConstraintViolation> warnings = new ArrayList<>();
         OptimizationDependencyGraph graph = buildDependencyGraph(input.tenantId(), selected, warnings);
-        // Resolve durations, critical path, priority scores, and assignee candidates
+
         Map<Long, OptimizationDuration> durations = resolveDurations(selected, warnings);
         Set<Long> criticalPathIds = resolveCriticalPath(graph, durations);
         Map<Long, OptimizationPriorityScore> scores = resolvePriorityScores(selected, graph, durations, warnings);
         Map<Long, List<OptimizationCandidateAssignee>> candidates = attachSkillFit(input.tenantId(), selected,
                 resolveCandidates(input.tenantId(), selected, project, warnings), warnings);
-        // Assemble work items sorted by priority
+
         List<OptimizationWorkItem> workItems = selected.stream()
                 .map(item -> new OptimizationWorkItem(
                         item,
@@ -116,7 +131,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                         criticalPathIds.contains(item.getId())))
                 .sorted(workItemComparator())
                 .toList();
-        // Build daily capacity slots for all unique candidate assignees
+
         List<Long> candidateIds = candidates.values().stream()
                 .flatMap(Collection::stream)
                 .map(OptimizationCandidateAssignee::candidateId)
@@ -133,7 +148,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
             warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.MISSING_CALENDAR,
                     null, "Calendar data is unavailable", null));
         }
-        // Resolve earliest start times based on external dependency planned ends
+
         Map<Long, Long> earliestStarts = resolveExternalEarliestStarts(input.tenantId(), graph.externalEdges(), warnings);
         log.info("Built optimization project model: tenantId={}, projectId={}, items={}, internalDependencies={}, externalDependencies={}, warnings={}",
                 input.tenantId(), input.projectId(), workItems.size(), graph.internalEdges().size(), graph.externalEdges().size(), warnings.size());
@@ -155,18 +170,15 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                                                             List<WorkItemEntity> selected,
                                                             List<OptimizationConstraintViolation> warnings) {
         Set<Long> selectedIds = new LinkedHashSet<>(idsOf(selected));
-        // Load all link types to determine dependency behavior (blocks, blocked-by, etc.)
         Map<Long, IssueLinkTypeEntity> types = issueLinkTypePort.listByTenantIncludingSystem(tenantId).stream()
                 .collect(Collectors.toMap(IssueLinkTypeEntity::getId, type -> type, (left, right) -> left));
         log.info("Loaded issue link types: tenantId={}, count={}", tenantId, types.size());
-        // Collect all issue links for selected work items, deduplicated by link ID
         Map<Long, IssueLinkDetailEntity> linksById = new LinkedHashMap<>();
         for (Long workItemId : selectedIds) {
             for (IssueLinkDetailEntity link : issueLinkPort.listByWorkItemId(tenantId, workItemId)) {
                 linksById.putIfAbsent(link.getLinkId(), link);
             }
         }
-        // Classify edges as internal (both endpoints selected) or external (one endpoint outside selection)
         List<OptimizationDependencyEdge> internalEdges = new ArrayList<>();
         List<OptimizationDependencyEdge> externalEdges = new ArrayList<>();
         for (IssueLinkDetailEntity link : linksById.values()) {
@@ -176,14 +188,13 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
             if (behavior == IssueLinkDependencyBehavior.NONE) {
                 continue;
             }
-            // Determine predecessor and successor based on dependency direction
             Long predecessor = behavior == IssueLinkDependencyBehavior.SOURCE_BLOCKS_TARGET ? link.getSourceId() : link.getTargetId();
             Long successor = behavior == IssueLinkDependencyBehavior.SOURCE_BLOCKS_TARGET ? link.getTargetId() : link.getSourceId();
             boolean external = !selectedIds.contains(predecessor) || !selectedIds.contains(successor);
             OptimizationDependencyEdge edge = new OptimizationDependencyEdge(predecessor, successor, link.getLinkId(), link.getLinkTypeId(), external);
             if (external) {
                 externalEdges.add(edge);
-                // Warn about external dependencies that may affect scheduling
+                // External dependencies (predecessor or successor outside optimization scope) act as scheduling constraints
                 warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.EXTERNAL_DEPENDENCY,
                         selectedIds.contains(successor) ? successor : predecessor,
                         "External dependency exists", predecessor + " -> " + successor));
@@ -191,7 +202,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                 internalEdges.add(edge);
             }
         }
-        // Build graph adjacency maps and detect cycles using DFS
         GraphState state = buildGraphState(selectedIds, internalEdges);
         List<List<Long>> cycles = findCycles(selectedIds, state.successorsById);
         for (List<Long> cycle : cycles) {
@@ -208,7 +218,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                                                              List<OptimizationConstraintViolation> warnings) {
         Map<Long, OptimizationDuration> result = new HashMap<>();
         for (WorkItemEntity item : items) {
-            // Prefer remaining estimate (highest confidence), fall back to original estimate, then default
             if (positive(item.getTimeRemainingEstimate())) {
                 result.put(item.getId(), new OptimizationDuration(item.getId(), estimateMinutesToMillis(item.getTimeRemainingEstimate()),
                         OptimizationConfidence.HIGH, OptimizationConstants.TIME_REMAINING_ESTIMATE));
@@ -216,7 +225,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                 result.put(item.getId(), new OptimizationDuration(item.getId(), estimateMinutesToMillis(item.getTimeOriginalEstimate()),
                         OptimizationConfidence.MEDIUM, OptimizationConstants.TIME_ORIGINAL_ESTIMATE));
             } else {
-                // Use hierarchy-level-based default and warn about low confidence
+                // Missing estimates fallback to hierarchical defaults, introducing scheduling uncertainty
                 long fallback = defaultDuration(item.getIssueTypeHierarchyLevel());
                 result.put(item.getId(), new OptimizationDuration(
                         item.getId(),
@@ -237,11 +246,11 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     }
 
     private Set<Long> resolveCriticalPath(OptimizationDependencyGraph graph, Map<Long, OptimizationDuration> durations) {
-        // Cannot compute critical path when cycles exist - return empty set
+        // Critical path cannot be computed for cyclic graphs; abort to prevent infinite loops
         if (graph.hasCycles()) {
             return Set.of();
         }
-        // Use longest path algorithm on DAG (topological order) to find critical path
+        // Longest path algorithm on DAG (Directed Acyclic Graph) using topological order
         Map<Long, Long> longest = new HashMap<>();
         Map<Long, Long> previous = new HashMap<>();
         for (Long id : graph.topologicalOrder()) {
@@ -254,7 +263,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                 }
             }
         }
-        // Trace back from the node with the longest cumulative duration
+        // Backtrack from the terminal node with the maximum cumulative duration
         Long end = longest.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
         Set<Long> critical = new HashSet<>();
         while (end != null) {
@@ -268,25 +277,26 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                                                                        OptimizationDependencyGraph graph,
                                                                        Map<Long, OptimizationDuration> durations,
                                                                        List<OptimizationConstraintViolation> warnings) {
-        // Count outgoing edges to identify blockers (items that block many others get higher priority)
+        // Identify blocking items by grouping outgoing internal dependency edges
         Map<Long, Integer> outgoing = graph.internalEdges().stream()
                 .collect(Collectors.groupingBy(OptimizationDependencyEdge::predecessorId, Collectors.collectingAndThen(Collectors.counting(), Long::intValue)));
         Map<Long, OptimizationPriorityScore> result = new HashMap<>();
         for (WorkItemEntity item : items) {
-            // Priority factor: inverse of sequence (lower sequence = higher priority), default 0.5 if missing
+            // Priority Score Components:
+            // 1. Priority Sequence Rank (lower rank sequence = higher priority factor)
             boolean neutralPriority = item.getPrioritySequence() == null;
             double priorityFactor = neutralPriority
                     ? OptimizationConstants.PRIORITY_NEUTRAL_FACTOR
                     : 1D / Math.max(1, item.getPrioritySequence());
-            // Due date factor: closer deadlines increase score, normalized against 14-day window
+            // 2. Due Date Proximity (closer deadlines generate higher scores within the window)
             double dueFactor = item.getDueDate() == null
                     ? 0D
                     : Math.max(0D, 1D - ((double) (item.getDueDate() - System.currentTimeMillis())
                     / (OptimizationConstants.DUE_DATE_WINDOW_DAYS * OptimizationConstants.DAY_MILLIS)));
-            // Blocker factor: each blocked successor adds 0.25 to the score
+            // 3. Blocker Count (bonus score added per directly blocked downstream successor)
             double blockerFactor = outgoing.getOrDefault(item.getId(), 0)
                     * OptimizationConstants.BLOCKER_FACTOR_PER_SUCCESSOR;
-            // Penalty for items using default duration estimates (low confidence)
+            // 4. Estimate Quality Penalty (negative modifier applied for low-confidence duration fallbacks)
             double estimatePenalty = OptimizationConstants.DURATION_SOURCE_DEFAULT.equals(durations.get(item.getId()).source())
                     ? OptimizationConstants.DEFAULT_ESTIMATE_PENALTY
                     : 0D;
@@ -311,7 +321,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
                     null, "No assignable project member pool", null));
         }
         for (WorkItemEntity item : items) {
-            // Collect potential assignees: high-signal fields, component leads, assignable project members.
             Map<Long, CandidateFlags> flagsById = new LinkedHashMap<>();
             addCandidate(flagsById, item.getAssigneeId(), flags -> flags.currentAssignee = true);
             for (Long componentLeadId : componentLeadsByWorkItemId.getOrDefault(item.getId(), List.of())) {
@@ -322,7 +331,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
             for (Long memberId : assignableProjectMembers) {
                 addCandidate(flagsById, memberId, flags -> flags.projectMember = true);
             }
-            // Sort by base cost (lower is preferred) then by candidate ID for determinism
             List<OptimizationCandidateAssignee> candidates = flagsById.entrySet().stream()
                     .map(entry -> new OptimizationCandidateAssignee(item.getId(), entry.getKey(), baseCost(entry.getValue()),
                             entry.getValue().currentAssignee, entry.getValue().componentLead, entry.getValue().projectLead,
@@ -500,7 +508,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     private Map<Long, Long> resolveExternalEarliestStarts(Long tenantId,
                                                           List<OptimizationDependencyEdge> externalEdges,
                                                           List<OptimizationConstraintViolation> warnings) {
-        // Collect unique external predecessor IDs to look up their planned end dates
         List<Long> externalPredecessors = externalEdges.stream()
                 .filter(edge -> !edge.external() || !Objects.equals(edge.predecessorId(), edge.successorId()))
                 .map(OptimizationDependencyEdge::predecessorId)
@@ -512,7 +519,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         for (OptimizationDependencyEdge edge : externalEdges) {
             WorkItemPlanEntity plan = plans.get(edge.predecessorId());
             if (plan != null && plan.getPlannedEnd() != null) {
-                // Successor cannot start before external predecessor's planned end (use max if multiple)
+                // Dependency constraint: successor's earliest start is bounded by the predecessor's planned end date
                 starts.merge(edge.successorId(), plan.getPlannedEnd(), Math::max);
             } else {
                 warnings.add(new OptimizationConstraintViolation(OptimizationWarningCode.EXTERNAL_DEPENDENCY,
@@ -538,7 +545,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     }
 
     private List<Long> topologicalOrder(Set<Long> ids, Map<Long, Set<Long>> predecessors, Map<Long, Set<Long>> successors) {
-        // Kahn's algorithm: process nodes with zero in-degree first
+        // Kahn's algorithm: topological sort by processing nodes with zero in-degrees
         Map<Long, Integer> indegree = ids.stream().collect(Collectors.toMap(id -> id, id -> predecessors.getOrDefault(id, Set.of()).size()));
         Queue<Long> ready = indegree.entrySet().stream()
                 .filter(entry -> entry.getValue() == 0)
@@ -549,7 +556,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         while (!ready.isEmpty()) {
             Long current = ready.poll();
             order.add(current);
-            // Reduce in-degree of successors; add to queue when they become ready
+            // Decrease in-degree of successors and enqueue once they have no remaining predecessors
             successors.getOrDefault(current, Set.of()).stream().sorted().forEach(successor -> {
                 indegree.put(successor, indegree.get(successor) - 1);
                 if (indegree.get(successor) == 0) {
@@ -561,7 +568,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     }
 
     private List<List<Long>> findCycles(Set<Long> ids, Map<Long, Set<Long>> successors) {
-        // DFS-based cycle detection tracking the current recursion path
+        // DFS cycle detection using recursive path tracking to discover dependency cycles
         List<List<Long>> cycles = new ArrayList<>();
         Set<Long> visited = new HashSet<>();
         Set<Long> visiting = new HashSet<>();
@@ -577,7 +584,7 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
         if (visited.contains(id)) {
             return;
         }
-        // If node is already in current path, we found a cycle - extract it
+        // Visited a node currently on the recursion stack, indicating a cycle is present
         if (visiting.contains(id)) {
             List<Long> cycle = new ArrayList<>(path);
             int index = cycle.indexOf(id);
@@ -595,7 +602,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     }
 
     private Comparator<OptimizationWorkItem> workItemComparator() {
-        // Sort by: priority score (desc), due date (asc), rank (asc), ID (asc)
         return Comparator.comparing((OptimizationWorkItem item) -> item.priorityScore().score()).reversed()
                 .thenComparing(item -> item.workItem().getDueDate(), Comparator.nullsLast(Long::compareTo))
                 .thenComparing(item -> item.workItem().getRank(), Comparator.nullsLast(String::compareTo))
@@ -611,7 +617,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     }
 
     private long defaultDuration(Integer hierarchyLevel) {
-        // Sub-tasks get 2h, epics get 3d, stories/tasks get 1d as default estimates
         if (hierarchyLevel != null && hierarchyLevel < 0) {
             return OptimizationConstants.DEFAULT_DURATION_SUBTASK_HOURS * OptimizationConstants.HOUR_MILLIS;
         }
@@ -626,7 +631,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     }
 
     private void addCandidate(Map<Long, CandidateFlags> flagsById, Long candidateId, java.util.function.Consumer<CandidateFlags> marker) {
-        // Register a candidate assignee and apply role-specific flags
         if (candidateId == null) {
             return;
         }
@@ -635,7 +639,6 @@ public class OptimizationProjectModelBuilder implements IOptimizationProjectMode
     }
 
     private double baseCost(CandidateFlags flags) {
-        // Lower cost = more preferred assignee; discounts applied for existing roles
         double cost = OptimizationConstants.BASE_ASSIGNMENT_COST;
         if (flags.currentAssignee) {
             cost -= OptimizationConstants.CURRENT_ASSIGNEE_DISCOUNT;

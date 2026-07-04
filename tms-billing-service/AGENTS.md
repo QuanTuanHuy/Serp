@@ -1,12 +1,12 @@
 # AGENTS.md - TMS Billing Service Guide for Coding Agents
 
-This guide is for coding agents working inside `tms-billing-service/` (shipping fee calculation, tariffs, surcharges, VAS rules).
+This guide is for coding agents working inside `tms-billing-service/` (shipping fee calculation, tariffs, and surcharges).
 Use it together with the repository-root `AGENTS.md`. For TMS UI (billing pages), see `serp_web/src/modules/first-mile/AGENTS.md`.
 
 ## Service Snapshot
 
 - **Module:** `tms-billing-service` — Spring Boot, package `serp.project.tms_billing_service`.
-- **Scope:** Public calculate-shipping-fee API and admin CRUD for pricing rules.
+- **Scope:** Public calculate-shipping-fee API and admin CRUD for tariffs/surcharge rules.
 - **Default port:** `8104` (`SERVER_PORT`).
 - **Gateway path:** `/tms-billing-service/api/v1/...` (proxied by `api_gateway`).
 

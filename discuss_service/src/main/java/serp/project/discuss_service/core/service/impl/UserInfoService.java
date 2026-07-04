@@ -20,6 +20,8 @@ import serp.project.discuss_service.core.port.client.IAccountServiceClient;
 import serp.project.discuss_service.core.port.client.ICachePort;
 import serp.project.discuss_service.core.service.IUserInfoService;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -154,17 +156,22 @@ public class UserInfoService implements IUserInfoService {
         }
     }
 
+    @Override
     public Optional<ChannelMemberResponse.UserInfo> getUserById(Long userId) {
+        if (userId == null) {
+            return Optional.empty();
+        }
+
+        String cacheKey = USER_INFO_CACHE_PREFIX + userId;
+        ChannelMemberResponse.UserInfo cachedInfo =
+                cachePort.getFromCache(cacheKey, ChannelMemberResponse.UserInfo.class);
+        if (cachedInfo != null) {
+            return Optional.of(cachedInfo);
+        }
+
         try {
-            // String cacheKey = USER_INFO_CACHE_PREFIX + userId;
-            // ChannelMemberResponse.UserInfo cachedInfo = cachePort.getFromCache(cacheKey,
-            // ChannelMemberResponse.UserInfo.class);
-            // if (cachedInfo != null) {
-            // return Optional.of(cachedInfo);
-            // }
             Optional<ChannelMemberResponse.UserInfo> userInfo = accountServiceClient.getUserById(userId);
-            // userInfo.ifPresent(info -> cachePort.setToCache(cacheKey, info,
-            // USER_INFO_CACHE_TTL));
+            userInfo.ifPresent(info -> cachePort.setToCache(cacheKey, info, USER_INFO_CACHE_TTL));
             return userInfo;
         } catch (Exception e) {
             log.error("Failed to fetch user info for userId {}: {}", userId, e.getMessage());
@@ -177,12 +184,51 @@ public class UserInfoService implements IUserInfoService {
         if (userIds == null || userIds.isEmpty()) {
             return List.of();
         }
-        try {
-            return accountServiceClient.getUsersByIds(userIds);
-        } catch (Exception e) {
-            log.error("Failed to fetch user infos for userIds {}: {}", userIds, e.getMessage());
+
+        List<Long> distinctIds = userIds.stream()
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        if (distinctIds.isEmpty()) {
             return List.of();
         }
+
+        LinkedHashMap<Long, UserInfo> resultsById = new LinkedHashMap<>();
+        List<Long> missingIds = new ArrayList<>();
+
+        for (Long userId : distinctIds) {
+            String cacheKey = USER_INFO_CACHE_PREFIX + userId;
+            UserInfo cachedInfo = cachePort.getFromCache(cacheKey, UserInfo.class);
+            if (cachedInfo != null) {
+                resultsById.put(userId, cachedInfo);
+            } else {
+                missingIds.add(userId);
+            }
+        }
+
+        if (!missingIds.isEmpty()) {
+            try {
+                List<UserInfo> fetchedUsers = accountServiceClient.getUsersByIds(missingIds);
+                for (UserInfo userInfo : fetchedUsers) {
+                    if (userInfo == null || userInfo.getId() == null) {
+                        continue;
+                    }
+                    resultsById.put(userInfo.getId(), userInfo);
+                    cachePort.setToCache(
+                            USER_INFO_CACHE_PREFIX + userInfo.getId(),
+                            userInfo,
+                            USER_INFO_CACHE_TTL
+                    );
+                }
+            } catch (Exception e) {
+                log.error("Failed to fetch user infos for userIds {}: {}", missingIds, e.getMessage());
+            }
+        }
+
+        return distinctIds.stream()
+                .map(resultsById::get)
+                .filter(userInfo -> userInfo != null)
+                .toList();
     }
 
     // private ChannelMemberResponse buildMemberResponse(

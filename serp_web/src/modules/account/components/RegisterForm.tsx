@@ -146,7 +146,7 @@ export const RegisterForm = ({
         />
       </div>
 
-      <div className='grid gap-4'>
+      <div className='grid gap-4 sm:grid-cols-2'>
         <AuthInputField
           id='register-email'
           type='email'
@@ -171,13 +171,15 @@ export const RegisterForm = ({
             onChange: handleFieldInteraction,
           })}
         />
+      </div>
 
+      <div className='grid gap-4 sm:grid-cols-2'>
         <AuthPasswordField
           id='register-password'
           label='Create password'
           placeholder='Create a strong password'
           autoComplete='new-password'
-          hint='8+ chars, upper/lowercase, number'
+          hint=''
           error={errors.password?.message}
           disabled={isBusy}
           toggleLabel='Toggle password visibility'

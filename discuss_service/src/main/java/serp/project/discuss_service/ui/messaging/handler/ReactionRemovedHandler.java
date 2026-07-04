@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.service.IDeliveryService;
+import serp.project.discuss_service.core.service.IRealtimeDeliveryService;
 import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 @Component
@@ -21,6 +22,7 @@ import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 public class ReactionRemovedHandler implements IReactionEventHandler {
 
     private final IDeliveryService deliveryService;
+    private final IRealtimeDeliveryService realtimeDeliveryService;
 
     @Override
     public WsEventType getType() {
@@ -40,6 +42,6 @@ public class ReactionRemovedHandler implements IReactionEventHandler {
             return;
         }
 
-        deliveryService.notifyReaction(channelId, messageId, userId, emoji, false);
+        realtimeDeliveryService.deliverToChannel(channelId, event);
     }
 }

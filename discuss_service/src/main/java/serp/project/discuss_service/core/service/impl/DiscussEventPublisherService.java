@@ -8,6 +8,7 @@ package serp.project.discuss_service.core.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.domain.entity.ChannelEntity;
 import serp.project.discuss_service.core.domain.entity.ChannelMemberEntity;
@@ -29,6 +30,16 @@ import java.util.Map;
 public class DiscussEventPublisherService implements IDiscussEventPublisher {
 
     private final IKafkaProducerPort kafkaProducer;
+
+    @Override
+    public void publishRealtimeEvent(String key, WsEvent<?> event, String topic) {
+        if (key == null || event == null || topic == null) {
+            log.warn("Cannot publish realtime event: missing key, event, or topic");
+            return;
+        }
+        kafkaProducer.sendMessageAsync(key, event, topic);
+        log.debug("Published ready realtime event {} to topic {} with key {}", event.getType(), topic, key);
+    }
 
     // ==================== MESSAGE EVENTS ====================
 
@@ -213,24 +224,6 @@ public class DiscussEventPublisherService implements IDiscussEventPublisher {
     }
 
     // ==================== PRESENCE EVENTS ====================
-
-    @Override
-    public void publishTypingIndicator(Long channelId, Long userId, boolean isTyping) {
-        if (channelId == null || userId == null) {
-            log.warn("Cannot publish typing indicator event: missing required fields");
-            return;
-        }
-        WsEventType eventType = isTyping ? WsEventType.TYPING_START : WsEventType.TYPING_STOP;
-        Map<String, Object> event = new HashMap<>();
-        event.put("eventType", eventType.name());
-        event.put("channelId", channelId);
-        event.put("userId", userId);
-        event.put("timestamp", System.currentTimeMillis());
-
-        String key = String.valueOf(channelId);
-        kafkaProducer.sendMessageAsync(key, event, TOPIC_PRESENCE_EVENTS);
-        log.debug("Published {} event for user {} in channel {}", eventType, userId, channelId);
-    }
 
     @Override
     public void publishUserOnline(Long userId) {

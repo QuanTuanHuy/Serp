@@ -9,23 +9,26 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import serp.project.tms_billing_service.core.service.IAdminPricingService;
+import serp.project.tms_billing_service.domain.ChargeableWeightConfig;
+import serp.project.tms_billing_service.domain.DeliveryServiceConfig;
 import serp.project.tms_billing_service.domain.SurchargeRule;
 import serp.project.tms_billing_service.domain.Tariff;
-import serp.project.tms_billing_service.domain.VasRule;
+import serp.project.tms_billing_service.dto.request.admin.UpsertChargeableWeightConfigRequest;
+import serp.project.tms_billing_service.dto.request.admin.UpsertDeliveryServiceConfigRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertSurchargeRuleRequest;
 import serp.project.tms_billing_service.dto.request.admin.UpsertTariffRequest;
-import serp.project.tms_billing_service.dto.request.admin.UpsertVasRuleRequest;
+import serp.project.tms_billing_service.dto.response.admin.ChargeableWeightConfigAdminResponse;
+import serp.project.tms_billing_service.dto.response.admin.DeliveryServiceConfigAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.SurchargeRuleAdminResponse;
 import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
-import serp.project.tms_billing_service.dto.response.admin.VasRuleAdminResponse;
-import serp.project.tms_billing_service.enums.DeliveryService;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
-import serp.project.tms_billing_service.enums.VasRuleCode;
 import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.exception.ErrorCode;
+import serp.project.tms_billing_service.mapper.AdminPricingMapper;
+import serp.project.tms_billing_service.repository.ChargeableWeightConfigRepository;
+import serp.project.tms_billing_service.repository.DeliveryServiceConfigRepository;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
 import serp.project.tms_billing_service.repository.TariffRepository;
-import serp.project.tms_billing_service.repository.VasRuleRepository;
 
 import java.util.List;
 import java.util.Objects;
@@ -35,26 +38,33 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AdminPricingServiceImpl implements IAdminPricingService {
     private static final Set<SurchargeRuleEnum> ACTIVE_SURCHARGE_CODES = Set.of(SurchargeRuleEnum.VUNG_XA);
-    private static final Set<VasRuleCode> ACTIVE_VAS_CODES = Set.of(VasRuleCode.COD);
 
     private final TariffRepository tariffRepository;
     private final SurchargeRuleRepository surchargeRuleRepository;
-    private final VasRuleRepository vasRuleRepository;
+    private final ChargeableWeightConfigRepository chargeableWeightConfigRepository;
+    private final DeliveryServiceConfigRepository deliveryServiceConfigRepository;
 
+    /**
+     * Lưu biểu phí theo khóa service, loại tuyến và ngày hiệu lực.
+     *
+     * @param request dữ liệu biểu phí cần tạo hoặc cập nhật
+     * @return biểu phí sau khi lưu
+     */
     @Override
     @Transactional
     public TariffAdminResponse upsertTariff(UpsertTariffRequest request) {
         validateDateRange(request.getEffectiveDate(), request.getExpirationDate());
+        String serviceCode = normalizeServiceCode(request.getServiceCode());
 
         Tariff tariff = tariffRepository
                 .findByServiceCodeAndRouteTypeCodeAndEffectiveDate(
-                        request.getServiceCode(),
+                        serviceCode,
                         request.getRouteTypeCode(),
                         request.getEffectiveDate()
                 )
                 .orElseGet(Tariff::new);
 
-        tariff.setServiceCode(request.getServiceCode());
+        tariff.setServiceCode(serviceCode);
         tariff.setRouteTypeCode(request.getRouteTypeCode());
         tariff.setBaseWeight(request.getBaseWeight());
         tariff.setBasePrice(request.getBasePrice());
@@ -64,9 +74,15 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         tariff.setExpirationDate(request.getExpirationDate());
 
         Tariff saved = tariffRepository.save(tariff);
-        return toTariffResponse(saved);
+        return AdminPricingMapper.toTariffResponse(saved);
     }
 
+    /**
+     * Lưu quy tắc phụ phí nếu mã phụ phí còn nằm trong danh sách hỗ trợ.
+     *
+     * @param request dữ liệu quy tắc phụ phí cần tạo hoặc cập nhật
+     * @return quy tắc phụ phí sau khi lưu
+     */
     @Override
     @Transactional
     public SurchargeRuleAdminResponse upsertSurchargeRule(UpsertSurchargeRuleRequest request) {
@@ -88,52 +104,109 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         rule.setExpirationDate(request.getExpirationDate());
 
         SurchargeRule saved = surchargeRuleRepository.save(rule);
-        return toSurchargeResponse(saved);
+        return AdminPricingMapper.toSurchargeResponse(saved);
     }
 
+    /**
+     * Lưu tham số quy đổi khối lượng tính cước theo từng dịch vụ vận chuyển.
+     */
     @Override
     @Transactional
-    public VasRuleAdminResponse upsertVasRule(UpsertVasRuleRequest request) {
-        validateActiveVasCode(request.getCode());
+    public ChargeableWeightConfigAdminResponse upsertChargeableWeightConfig(
+            UpsertChargeableWeightConfigRequest request
+    ) {
+        validateChargeableWeightConfig(request);
+        String serviceCode = normalizeServiceCode(request.getServiceCode());
 
-        VasRule rule = vasRuleRepository.findByCode(request.getCode()).orElseGet(VasRule::new);
-        rule.setCode(request.getCode());
-        rule.setName(request.getName());
-        rule.setCalculationType(request.getCalculationType());
-        rule.setRatePercent(request.getRatePercent());
-        rule.setFixedAmount(request.getFixedAmount());
-        rule.setMinAmount(request.getMinAmount());
+        ChargeableWeightConfig config = chargeableWeightConfigRepository
+                .findByServiceCode(serviceCode)
+                .orElseGet(ChargeableWeightConfig::new);
+        config.setServiceCode(serviceCode);
+        config.setMinDimensionCm(request.getMinDimensionCm());
+        config.setSmallBulkyThresholdCm(request.getSmallBulkyThresholdCm());
+        config.setBaseWeightGram(request.getBaseWeightGram());
+        config.setStepWeightGram(request.getStepWeightGram());
+        config.setMaxWeightGram(request.getMaxWeightGram());
+        config.setVolumetricDivisor(request.getVolumetricDivisor());
 
-        VasRule saved = vasRuleRepository.save(rule);
-        return toVasResponse(saved);
+        ChargeableWeightConfig saved = chargeableWeightConfigRepository.save(config);
+        return AdminPricingMapper.toChargeableWeightConfigResponse(saved);
     }
 
+    /**
+     * Lưu hình thức vận chuyển để admin có thể bật/tắt và đặt tên hiển thị trên UI.
+     */
     @Override
-    public List<TariffAdminResponse> listTariffs(DeliveryService serviceCode) {
+    @Transactional
+    public DeliveryServiceConfigAdminResponse upsertDeliveryServiceConfig(
+            UpsertDeliveryServiceConfigRequest request
+    ) {
+        String serviceCode = normalizeServiceCode(request.getServiceCode());
+        DeliveryServiceConfig config = deliveryServiceConfigRepository
+                .findByServiceCode(serviceCode)
+                .orElseGet(DeliveryServiceConfig::new);
+        config.setServiceCode(serviceCode);
+        config.setName(request.getName().trim());
+        config.setDescription(normalizeNullableText(request.getDescription()));
+        config.setActive(request.getActive());
+        config.setSortOrder(request.getSortOrder());
+
+        DeliveryServiceConfig saved = deliveryServiceConfigRepository.save(config);
+        return AdminPricingMapper.toDeliveryServiceConfigResponse(saved);
+    }
+
+    /**
+     * Liệt kê biểu phí phục vụ màn hình quản trị, có thể lọc theo service.
+     */
+    @Override
+    public List<TariffAdminResponse> listTariffs(String serviceCode) {
         List<Tariff> tariffs = serviceCode == null
                 ? tariffRepository.findAllByOrderByServiceCodeAscRouteTypeCodeAscEffectiveDateDesc()
-                : tariffRepository.findAllByServiceCodeOrderByRouteTypeCodeAscEffectiveDateDesc(serviceCode);
+                : tariffRepository.findAllByServiceCodeOrderByRouteTypeCodeAscEffectiveDateDesc(
+                        normalizeServiceCode(serviceCode)
+                );
         return tariffs.stream()
-                .map(this::toTariffResponse)
+                .map(AdminPricingMapper::toTariffResponse)
                 .toList();
     }
 
+    /**
+     * Chỉ trả về các mã phụ phí còn được dùng trong tính phí để ẩn cấu hình cũ.
+     */
     @Override
     public List<SurchargeRuleAdminResponse> listSurchargeRules() {
         return surchargeRuleRepository.findAll().stream()
                 .filter(rule -> rule.getCode() != null && ACTIVE_SURCHARGE_CODES.contains(rule.getCode()))
-                .map(this::toSurchargeResponse)
+                .map(AdminPricingMapper::toSurchargeResponse)
                 .toList();
     }
 
+    /**
+     * Liệt kê tham số quy đổi khối lượng tính cước theo dịch vụ.
+     */
     @Override
-    public List<VasRuleAdminResponse> listVasRules() {
-        return vasRuleRepository.findAll().stream()
-                .filter(rule -> rule.getCode() != null && ACTIVE_VAS_CODES.contains(rule.getCode()))
-                .map(this::toVasResponse)
+    public List<ChargeableWeightConfigAdminResponse> listChargeableWeightConfigs() {
+        return chargeableWeightConfigRepository.findAllByOrderByServiceCodeAsc().stream()
+                .map(AdminPricingMapper::toChargeableWeightConfigResponse)
                 .toList();
     }
 
+    /**
+     * Liệt kê danh mục dịch vụ vận chuyển cho màn hình quản trị và dropdown tính phí.
+     */
+    @Override
+    public List<DeliveryServiceConfigAdminResponse> listDeliveryServiceConfigs(boolean activeOnly) {
+        List<DeliveryServiceConfig> configs = activeOnly
+                ? deliveryServiceConfigRepository.findAllByActiveTrueOrderBySortOrderAscServiceCodeAsc()
+                : deliveryServiceConfigRepository.findAllByOrderBySortOrderAscServiceCodeAsc();
+        return configs.stream()
+                .map(AdminPricingMapper::toDeliveryServiceConfigResponse)
+                .toList();
+    }
+
+    /**
+     * Chặn các mã phụ phí cũ không còn tham gia công thức tính phí.
+     */
     private void validateActiveSurchargeCode(SurchargeRuleEnum code) {
         if (code == null || !ACTIVE_SURCHARGE_CODES.contains(code)) {
             throw new AppException(
@@ -143,15 +216,9 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         }
     }
 
-    private void validateActiveVasCode(VasRuleCode code) {
-        if (code == null || !ACTIVE_VAS_CODES.contains(code)) {
-            throw new AppException(
-                    ErrorCode.INVALID_REQUEST,
-                    "VAS rule is no longer supported for shipping fee calculation"
-            );
-        }
-    }
-
+    /**
+     * Đảm bảo khoảng ngày hiệu lực hợp lệ trước khi lưu cấu hình giá.
+     */
     private void validateDateRange(java.time.LocalDate effectiveDate, java.time.LocalDate expirationDate) {
         if (Objects.nonNull(effectiveDate) && Objects.nonNull(expirationDate) && expirationDate.isBefore(effectiveDate)) {
             throw new AppException(
@@ -161,47 +228,26 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
         }
     }
 
-    private TariffAdminResponse toTariffResponse(Tariff tariff) {
-        return TariffAdminResponse.builder()
-                .id(tariff.getId())
-                .serviceCode(tariff.getServiceCode())
-                .routeTypeCode(tariff.getRouteTypeCode())
-                .baseWeight(tariff.getBaseWeight())
-                .basePrice(tariff.getBasePrice())
-                .stepWeight(tariff.getStepWeight())
-                .stepPrice(tariff.getStepPrice())
-                .effectiveDate(tariff.getEffectiveDate())
-                .expirationDate(tariff.getExpirationDate())
-                .build();
+    /**
+     * Kiểm tra các ngưỡng khối lượng có thứ tự hợp lệ trước khi lưu.
+     */
+    private void validateChargeableWeightConfig(UpsertChargeableWeightConfigRequest request) {
+        if (request.getBaseWeightGram() >= request.getMaxWeightGram()) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "baseWeightGram phải nhỏ hơn maxWeightGram"
+            );
+        }
     }
 
-    private SurchargeRuleAdminResponse toSurchargeResponse(SurchargeRule rule) {
-        return SurchargeRuleAdminResponse.builder()
-                .id(rule.getId())
-                .code(rule.getCode())
-                .name(rule.getName())
-                .calculationType(rule.getCalculationType())
-                .ratePercent(rule.getRatePercent())
-                .fixedAmount(rule.getFixedAmount())
-                .minAmount(rule.getMinAmount())
-                .baseWeight(rule.getBaseWeight())
-                .basePrice(rule.getBasePrice())
-                .stepWeight(rule.getStepWeight())
-                .stepPrice(rule.getStepPrice())
-                .effectiveDate(rule.getEffectiveDate())
-                .expirationDate(rule.getExpirationDate())
-                .build();
+    private String normalizeServiceCode(String serviceCode) {
+        return serviceCode.trim().toUpperCase();
     }
 
-    private VasRuleAdminResponse toVasResponse(VasRule rule) {
-        return VasRuleAdminResponse.builder()
-                .id(rule.getId())
-                .code(rule.getCode())
-                .name(rule.getName())
-                .calculationType(rule.getCalculationType())
-                .ratePercent(rule.getRatePercent())
-                .fixedAmount(rule.getFixedAmount())
-                .minAmount(rule.getMinAmount())
-                .build();
+    private String normalizeNullableText(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim();
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEvent;
 import serp.project.discuss_service.core.domain.dto.websocket.WsEventType;
 import serp.project.discuss_service.core.service.IDeliveryService;
+import serp.project.discuss_service.core.service.IRealtimeDeliveryService;
 import serp.project.discuss_service.kernel.utils.KafkaPayloadUtils;
 
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class MessageReadHandler implements IMessageEventHandler {
 
     private final IDeliveryService deliveryService;
+    private final IRealtimeDeliveryService realtimeDeliveryService;
 
     @Override
     public WsEventType getType() {
@@ -33,14 +35,12 @@ public class MessageReadHandler implements IMessageEventHandler {
         Long channelId = event.getChannelId();
         Long messageId = KafkaPayloadUtils.getLong(event.getPayload(), "messageId");
         Long userId = KafkaPayloadUtils.getLong(event.getPayload(), "userId");
-        Integer readCount = KafkaPayloadUtils.getInteger(event.getPayload(), "readCount");
-        List<Long> readBy = KafkaPayloadUtils.getLongList(event.getPayload(), "readBy");
 
         if (channelId == null || messageId == null || userId == null) {
             log.warn("Missing required fields for MESSAGE_READ event");
             return;
         }
 
-        deliveryService.notifyMessageRead(channelId, messageId, userId, readBy, readCount);
+        realtimeDeliveryService.deliverToChannel(channelId, event);
     }
 }
