@@ -16,6 +16,8 @@ import serp.project.account.infrastructure.store.mapper.UserModuleAccessMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -216,6 +218,53 @@ public class UserModuleAccessService implements IUserModuleAccessService {
     @Override
     public Map<Long, Integer> countActiveModulesByUserIds(List<Long> userIds) {
         return userModuleAccessPort.countActiveModulesByUserIds(userIds);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<UserModuleAccessEntity> bulkRegisterUsersToModuleWithExpiration(
+            List<Long> userIds,
+            Long moduleId,
+            Long organizationId,
+            Long grantedBy,
+            Long expiresAt) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        try {
+            var module = validateModuleAvailable(moduleId);
+            String description = "Auto-granted to module: " + module.getModuleName();
+            Map<Long, UserModuleAccessEntity> existingAccessByUserId = userModuleAccessPort
+                    .getUserModuleAccessesByUserIdsAndModuleIdAndOrgId(userIds, moduleId, organizationId)
+                    .stream()
+                    .collect(Collectors.toMap(UserModuleAccessEntity::getUserId, Function.identity()));
+
+            List<UserModuleAccessEntity> accessesToSave = userIds.stream()
+                    .map(userId -> {
+                        var existingAccess = existingAccessByUserId.get(userId);
+                        if (existingAccess != null) {
+                            if (!existingAccess.isActiveAccess()) {
+                                existingAccess.activate(grantedBy);
+                                existingAccess.setExpiresAt(expiresAt);
+                            }
+                            return existingAccess;
+                        }
+                        return userModuleAccessMapper.buildNewAccessWithExpiration(
+                                userId,
+                                moduleId,
+                                organizationId,
+                                grantedBy,
+                                expiresAt,
+                                description);
+                    })
+                    .toList();
+            return userModuleAccessPort.saveAll(accessesToSave);
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error bulk registering users to module with expiration: {}", e.getMessage(), e);
+            throw new AppException(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
     }
 
     private ModuleEntity validateModuleAvailable(Long moduleId) {

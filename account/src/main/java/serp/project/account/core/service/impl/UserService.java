@@ -311,4 +311,14 @@ public class UserService implements IUserService {
     public PasswordResetRequestEntity updatePasswordResetRequest(PasswordResetRequestEntity entity) {
         return passwordResetRequestPort.save(entity);
     }
+
+    @Override
+    public Long countActiveUsersWithoutModuleAccess(Long organizationId, Long moduleId) {
+        return userPort.countActiveUsersWithoutModuleAccess(organizationId, moduleId);
+    }
+
+    @Override
+    public List<UserEntity> getActiveUsersWithoutModuleAccess(Long organizationId, Long moduleId, int limit) {
+        return userPort.getActiveUsersWithoutModuleAccess(organizationId, moduleId, limit);
+    }
 }
