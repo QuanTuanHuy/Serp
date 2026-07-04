@@ -142,6 +142,36 @@ func (m *ModuleAccessClientAdapter) BulkAssignUsersToModule(ctx context.Context,
 	return &result, nil
 }
 
+func (m *ModuleAccessClientAdapter) BulkRevokeUsersFromModule(ctx context.Context, req *request.BulkRevokeUsersRequest) (*response.BaseResponse, error) {
+	headers := utils.BuildHeadersFromContext(ctx)
+
+	path := fmt.Sprintf("/api/v1/organizations/%d/modules/%d/users/bulk-revoke", req.OrganizationId, req.ModuleId)
+	var httpResponse *utils.HTTPResponse
+	err := m.circuitBreaker.ExecuteWithoutTimeout(ctx, func(ctx context.Context) error {
+		var err error
+		httpResponse, err = m.apiClient.POST(ctx, path, req, headers)
+		if err != nil {
+			return fmt.Errorf("failed to call bulk revoke users from module API: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !m.apiClient.IsSuccessStatusCode(httpResponse.StatusCode) {
+		log.Error(ctx, fmt.Sprintf("BulkRevokeUsersFromModule API returned error status: %d", httpResponse.StatusCode))
+	}
+
+	var result response.BaseResponse
+	if err := m.apiClient.UnmarshalResponse(ctx, httpResponse, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal bulk revoke users from module response: %w", err)
+	}
+
+	return &result, nil
+}
+
 func (m *ModuleAccessClientAdapter) RevokeUserAccessToModule(ctx context.Context, organizationId int64, moduleId int64, userId int64) (*response.BaseResponse, error) {
 	headers := utils.BuildHeadersFromContext(ctx)
 
