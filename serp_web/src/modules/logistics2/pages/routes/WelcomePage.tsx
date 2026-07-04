@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 routes welcome page
-*/
-
 'use client';
 
 import Link from 'next/link';

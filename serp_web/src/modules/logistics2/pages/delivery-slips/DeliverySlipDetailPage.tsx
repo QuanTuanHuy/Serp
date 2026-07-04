@@ -1,10 +1,3 @@
-/**
- * Delivery Slip Detail Page - Logistics2 Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Delivery slip details with item management
- */
-
 'use client';
 
 import { useMemo, useState } from 'react';

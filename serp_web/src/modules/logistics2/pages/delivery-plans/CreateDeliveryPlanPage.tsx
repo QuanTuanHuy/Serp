@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics2 create delivery plan page
-*/
-
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';

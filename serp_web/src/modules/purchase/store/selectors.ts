@@ -1,5 +1,3 @@
-// Purchase Store Selectors (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 import { RootState } from '@/lib/store';
 
 export const selectSelectedSupplier = (state: RootState) =>

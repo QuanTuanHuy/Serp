@@ -1,5 +1,3 @@
-// Purchase Create Product Page (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 'use client';
 
 import React, { useState } from 'react';

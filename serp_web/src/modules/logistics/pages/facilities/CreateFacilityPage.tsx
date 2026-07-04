@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Logistics Create New Facility Page
-*/
-
 'use client';
 
 import { useRouter } from 'next/navigation';

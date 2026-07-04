@@ -1,10 +1,3 @@
-/**
- * Order List Page - Logistics Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Purchase order management with modern UI
- */
-
 'use client';
 
 import { useState, useMemo } from 'react';

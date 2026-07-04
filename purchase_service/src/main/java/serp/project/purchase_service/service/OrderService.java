@@ -118,6 +118,9 @@ public class OrderService {
             throw new AppException(AppErrorCode.CANNOT_DELETE_ORDER_IN_CURRENT_STATUS);
         }
 
+        orderItemRepository.deleteByOrderId(orderId);
+        log.info("[OrderService] Deleted order item for order ID {} for tenant {}", orderId, tenantId);
+
         orderRepository.delete(order);
         log.info("[OrderService] Deleted order {} with ID {} for tenant {}", order.getOrderName(), orderId, tenantId);
     }

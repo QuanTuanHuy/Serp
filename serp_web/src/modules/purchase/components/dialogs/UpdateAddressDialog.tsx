@@ -1,5 +1,3 @@
-// Purchase UpdateAddressDialog Component (authors: QuanTuanHuy, Description: Part of Serp Project)
-
 'use client';
 
 import { useEffect, useState } from 'react';

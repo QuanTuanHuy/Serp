@@ -1,10 +1,3 @@
-/**
- * Product List Page
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Product catalog with filters
- */
-
 'use client';
 
 import React from 'react';

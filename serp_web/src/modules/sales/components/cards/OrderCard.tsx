@@ -55,7 +55,7 @@ const statusStyles = {
     accent: '#f43f5e',
   },
   FULLY_DELIVERED: {
-    label: 'Đã giao hàng',
+    label: 'Hoàn thành',
     bg: 'bg-purple-100 dark:bg-purple-900/30',
     text: 'text-purple-700 dark:text-purple-400',
     dot: 'bg-purple-500',

@@ -1,10 +1,3 @@
-/**
- * Order Detail Page - Logistics Module
- *
- * @author QuanTuanHuy
- * @description Part of Serp Project - Purchase order detail with management actions
- */
-
 'use client';
 
 import { useState } from 'react';

@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Purchase Facility Detail Page
-*/
-
 'use client';
 
 import { useState } from 'react';

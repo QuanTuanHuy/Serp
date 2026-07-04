@@ -1,8 +1,3 @@
-/**
- * Author: QuanTuanHuy
- * Description: Part of Serp Project - Purchase main layout with sidebar and header
- */
-
 'use client';
 
 import React from 'react';

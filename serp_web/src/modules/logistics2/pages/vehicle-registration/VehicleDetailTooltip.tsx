@@ -1,10 +1,5 @@
 'use client';
 
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Vehicle detail tooltip
-*/
-
 import { useEffect, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';

@@ -1,8 +1,3 @@
-/*
-Author: QuanTuanHuy
-Description: Part of Serp Project - Order Form Component
-*/
-
 'use client';
 
 import { useState, useEffect } from 'react';
