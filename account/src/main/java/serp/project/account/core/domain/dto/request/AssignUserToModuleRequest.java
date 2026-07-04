@@ -22,7 +22,6 @@ public class AssignUserToModuleRequest {
     @NotNull(message = "User ID is required")
     private Long userId;
 
-    @NotNull(message = "Module ID is required")
     private Long moduleId;
 
     private Long roleId; // Optional: Role ID with MODULE scope

@@ -7,7 +7,6 @@ package serp.project.account.core.domain.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,6 +25,5 @@ public class BulkAssignUsersToDepartmentRequest {
 
     private String jobTitle;
 
-    @NotNull(message = "Department ID must not be null")
     private Long departmentId;
 }
