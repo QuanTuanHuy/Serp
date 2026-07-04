@@ -5,6 +5,7 @@
  * Description: Part of Serp Project - User details drawer
  */
 
+import { useState } from 'react';
 import type React from 'react';
 import {
   Avatar,
@@ -20,6 +21,10 @@ import {
   SheetHeader,
   SheetTitle,
   Skeleton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@/shared/components/ui';
 import { Building2, Mail, UserCircle2 } from 'lucide-react';
 import { useGetUserDetailQuery } from '@/modules/admin/services/users/usersApi';
@@ -60,6 +65,8 @@ export function UserDetailsDrawer({
 
   const targetStatus =
     user?.status === 'SUSPENDED' ? 'ACTIVE' : ('SUSPENDED' as UserStatus);
+
+  const [activeTab, setActiveTab] = useState('overview');
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -114,113 +121,120 @@ export function UserDetailsDrawer({
                 </div>
               </section>
 
-              <Separator />
+              <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
+                <TabsList className='grid w-full grid-cols-2 mb-4'>
+                  <TabsTrigger value='overview'>Overview</TabsTrigger>
+                  <TabsTrigger value='access'>Module access</TabsTrigger>
+                </TabsList>
 
-              <section className='grid gap-3 sm:grid-cols-2'>
-                <InfoTile
-                  icon={<Mail className='h-4 w-4' />}
-                  label='Email'
-                  value={user.email}
-                />
-                <InfoTile
-                  icon={<Building2 className='h-4 w-4' />}
-                  label='Organization'
-                  value={user.organizationName}
-                />
-                <InfoTile
-                  icon={<UserCircle2 className='h-4 w-4' />}
-                  label='Phone'
-                  value={user.phoneNumber}
-                />
-                <InfoTile
-                  icon={<UserCircle2 className='h-4 w-4' />}
-                  label='Timezone'
-                  value={user.timezone}
-                />
-                <InfoTile
-                  icon={<UserCircle2 className='h-4 w-4' />}
-                  label='Last login'
-                  value={formatAdminDate(user.lastLoginAt, 'Never')}
-                />
-                <InfoTile
-                  icon={<UserCircle2 className='h-4 w-4' />}
-                  label='Created'
-                  value={formatAdminDate(user.createdAt)}
-                />
-              </section>
+                <TabsContent value='overview' className='space-y-6 focus-visible:ring-0 focus-visible:ring-offset-0 mt-0'>
+                  <section className='grid gap-3 sm:grid-cols-2'>
+                    <InfoTile
+                      icon={<Mail className='h-4 w-4' />}
+                      label='Email'
+                      value={user.email}
+                    />
+                    <InfoTile
+                      icon={<Building2 className='h-4 w-4' />}
+                      label='Organization'
+                      value={user.organizationName}
+                    />
+                    <InfoTile
+                      icon={<UserCircle2 className='h-4 w-4' />}
+                      label='Phone'
+                      value={user.phoneNumber}
+                    />
+                    <InfoTile
+                      icon={<UserCircle2 className='h-4 w-4' />}
+                      label='Timezone'
+                      value={user.timezone}
+                    />
+                    <InfoTile
+                      icon={<UserCircle2 className='h-4 w-4' />}
+                      label='Last login'
+                      value={formatAdminDate(user.lastLoginAt, 'Never')}
+                    />
+                    <InfoTile
+                      icon={<UserCircle2 className='h-4 w-4' />}
+                      label='Created'
+                      value={formatAdminDate(user.createdAt)}
+                    />
+                  </section>
 
-              <Separator />
+                  <Separator />
 
-              <section className='space-y-3'>
-                <h3 className='text-sm font-semibold'>Roles</h3>
-                <div className='flex flex-wrap gap-2'>
-                  {user.roles.length > 0 ? (
-                    user.roles.map((role) => (
-                      <Badge key={role.id} variant='outline'>
-                        {role.name}
-                      </Badge>
-                    ))
-                  ) : (
-                    <p className='text-sm text-muted-foreground'>
-                      No roles assigned.
-                    </p>
-                  )}
-                </div>
-              </section>
-
-              <section className='space-y-3'>
-                <h3 className='text-sm font-semibold'>Departments</h3>
-                <div className='flex flex-wrap gap-2'>
-                  {user.departments.length > 0 ? (
-                    user.departments.map((department) => (
-                      <Badge key={department.id} variant='secondary'>
-                        {department.name || `Department #${department.id}`}
-                        {department.isPrimary ? ' • Primary' : ''}
-                      </Badge>
-                    ))
-                  ) : (
-                    <p className='text-sm text-muted-foreground'>
-                      No department assignment.
-                    </p>
-                  )}
-                </div>
-              </section>
-
-              <Separator />
-
-              <section className='space-y-3'>
-                <h3 className='text-sm font-semibold'>Module access</h3>
-                <ScrollArea className='max-h-56 rounded-md border'>
-                  <div className='divide-y'>
-                    {user.moduleAccesses.length > 0 ? (
-                      user.moduleAccesses.map((module) => (
-                        <div
-                          key={`${module.moduleId}-${module.moduleCode}`}
-                          className='flex items-center justify-between gap-3 p-3'
-                        >
-                          <div className='min-w-0'>
-                            <p className='text-sm font-medium'>
-                              {module.moduleName || module.moduleCode}
-                            </p>
-                            <p className='text-xs text-muted-foreground'>
-                              {module.moduleCode}
-                            </p>
-                          </div>
-                          <Badge
-                            variant={module.isActive ? 'default' : 'secondary'}
-                          >
-                            {module.isActive ? 'Enabled' : 'Disabled'}
+                  <section className='space-y-3'>
+                    <h3 className='text-sm font-semibold'>Roles</h3>
+                    <div className='flex flex-wrap gap-2'>
+                      {user.roles.length > 0 ? (
+                        user.roles.map((role) => (
+                          <Badge key={role.id} variant='outline'>
+                            {role.name}
                           </Badge>
-                        </div>
-                      ))
-                    ) : (
-                      <div className='p-3 text-sm text-muted-foreground'>
-                        No module access records.
+                        ))
+                      ) : (
+                        <p className='text-sm text-muted-foreground'>
+                          No roles assigned.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+
+                  <section className='space-y-3'>
+                    <h3 className='text-sm font-semibold'>Departments</h3>
+                    <div className='flex flex-wrap gap-2'>
+                      {user.departments.length > 0 ? (
+                        user.departments.map((department) => (
+                          <Badge key={department.id} variant='secondary'>
+                            {department.name || `Department #${department.id}`}
+                            {department.isPrimary ? ' • Primary' : ''}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className='text-sm text-muted-foreground'>
+                          No department assignment.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+                </TabsContent>
+
+                <TabsContent value='access' className='space-y-4 focus-visible:ring-0 focus-visible:ring-offset-0 mt-0'>
+                  <section className='space-y-3'>
+                    <h3 className='text-sm font-semibold'>Module access</h3>
+                    <ScrollArea className='max-h-56 rounded-md border'>
+                      <div className='divide-y'>
+                        {user.moduleAccesses.length > 0 ? (
+                          user.moduleAccesses.map((module) => (
+                            <div
+                              key={`${module.moduleId}-${module.moduleCode}`}
+                              className='flex items-center justify-between gap-3 p-3'
+                            >
+                              <div className='min-w-0'>
+                                <p className='text-sm font-medium'>
+                                  {module.moduleName || module.moduleCode}
+                                </p>
+                                <p className='text-xs text-muted-foreground'>
+                                  {module.moduleCode}
+                                </p>
+                              </div>
+                              <Badge
+                                variant={module.isActive ? 'default' : 'secondary'}
+                              >
+                                {module.isActive ? 'Enabled' : 'Disabled'}
+                              </Badge>
+                            </div>
+                          ))
+                        ) : (
+                          <div className='p-3 text-sm text-muted-foreground'>
+                            No module access records.
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </section>
+                    </ScrollArea>
+                  </section>
+                </TabsContent>
+              </Tabs>
             </div>
 
             {/* Sticky Action Footer */}
