@@ -23,9 +23,13 @@ turn.
 ## Decisions
 
 - Keep the existing bulk assign route.
+- Keep bulk assign and bulk revoke as two separate API commands. Do not merge
+  them into one action-flag endpoint.
 - Change bulk assign from all-or-error quota handling to partial success.
 - Add a new bulk revoke route using `POST`, not `DELETE` with a request body.
 - Use one shared summary response shape for bulk assign and bulk revoke.
+- Use separate request DTOs: assign can carry optional `roleId`; revoke carries
+  only `userIds`.
 - Return counts, affected user IDs, skipped users, and skipped reason counts.
 - Preserve single assign and single revoke behavior.
 - Preserve single revoke role behavior: revoking module access removes that
@@ -48,20 +52,24 @@ Request:
 
 ```json
 {
-  "userIds": [101, 102, 103]
+  "userIds": [101, 102, 103],
+  "roleId": 77
 }
 ```
 
 The controller continues to set `organizationId` and `moduleId` from the path
-onto `BulkAssignUsersRequest`.
+onto `BulkAssignUsersRequest`. `roleId` is optional.
 
 Behavior:
 
 - Validate the authenticated user can access the organization.
 - Validate the module belongs to the organization's active or pending-upgrade
   subscription.
-- Load the module's default roles using `RoleEntity.isAutoAssigned()`.
-- Fail the whole request if the module has no default role.
+- If `roleId` is present, validate that it exists in the target module and
+  assign that single role to every granted or reactivated user.
+- If `roleId` is absent, load the module's default roles using
+  `RoleEntity.isAutoAssigned()`.
+- Fail the whole request if no assignable module role can be resolved.
 - Respect `maxUsersPerModule`.
 - Process requested user IDs in request order.
 - Grant or reactivate only until remaining slots run out.
@@ -83,6 +91,9 @@ Request:
   "userIds": [101, 102, 103]
 }
 ```
+
+The revoke request DTO should contain only `userIds`. `organizationId` and
+`moduleId` come from the route, not from the request body.
 
 Behavior:
 
@@ -165,6 +176,8 @@ validation and orchestration:
 - Save created/reactivated module access records in bulk.
 - Assign default module roles to changed users with
   `ICombineRoleService.assignRolesToUsers(...)`.
+- When `BulkAssignUsersRequest.roleId` is present, assign only that validated
+  module role to changed users.
 - Publish user sync and logout only for users in `grantedUserIds`.
 
 Add `ModuleAccessUseCase.bulkRevokeUsersFromModule(...)`:
@@ -266,6 +279,10 @@ Backend tests should cover:
 - Bulk assign skips active existing access as `ALREADY_HAS_ACCESS`.
 - Bulk assign reactivates inactive access and counts it as granted.
 - Bulk assign skips missing or out-of-organization users as `USER_NOT_FOUND`.
+- Bulk assign uses the explicit `roleId` when it is present and belongs to the
+  module.
+- Bulk assign fails the whole request when `roleId` does not belong to the
+  module.
 - Bulk assign fails the whole request when no default module role exists.
 - Bulk revoke revokes active access and skips missing/inactive access as
   `USER_MODULE_ACCESS_NOT_FOUND`.
@@ -288,5 +305,6 @@ mvnw.cmd test
 - A new audit table.
 - Notification delivery for bulk assign or bulk revoke.
 - Changing single assign or single revoke contracts.
+- Merging assign and revoke into one action-flag endpoint.
 - Tracking whether a role was granted through module access versus another
   source.
