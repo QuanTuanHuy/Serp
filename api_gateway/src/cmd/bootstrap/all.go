@@ -60,6 +60,7 @@ func CoreInfrastructure() fx.Option {
 		// Provide utilities
 		fx.Provide(utils.NewJWTUtils),
 		fx.Provide(utils.NewKeycloakJwksUtils),
+		fx.Provide(utils.NewBaseAPIClientFactory),
 		fx.Provide(middleware.NewJWTMiddleware),
 		fx.Provide(middleware.NewCorsMiddleware),
 		fx.Provide(common.NewGenericProxyController),
