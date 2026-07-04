@@ -28,6 +28,8 @@ public class BulkAssignUsersRequest {
     @NotNull(message = "Module ID is required")
     private Long moduleId;
 
+    private Long roleId;
+
     @NotEmpty(message = "User IDs list cannot be empty")
     private List<Long> userIds;
 }

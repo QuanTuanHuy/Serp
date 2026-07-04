@@ -152,4 +152,12 @@ public class Constants {
         public static final String MANAGER_JOB_TITLE = "Manager";
     }
 
+    @UtilityClass
+    public static class BulkAccessSkipReason {
+        public static final String ALREADY_HAS_ACCESS = "ALREADY_HAS_ACCESS";
+        public static final String MAX_USERS_LIMIT_REACHED = "MAX_USERS_LIMIT_REACHED";
+        public static final String USER_NOT_FOUND = "USER_NOT_FOUND";
+        public static final String USER_MODULE_ACCESS_NOT_FOUND = "USER_MODULE_ACCESS_NOT_FOUND";
+    }
+
 }
