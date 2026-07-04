@@ -35,6 +35,7 @@ accountV1.Any("/*proxyPath", accountJWTGate.Handler(), genericProxyController.Pr
 
 The JWT gate middleware decides per request:
 
+- If `(method, path)` matches an explicit protected override, run gateway JWT validation even if a broader public wildcard would also match.
 - If `(method, path)` matches the Account public route patterns, skip gateway JWT validation and proxy directly.
 - Otherwise, run `JWTMiddleware.AuthenticateJWT()`.
 - After successful JWT validation on protected routes, run `RateLimitMiddleware.UserRateLimit()`.
@@ -49,7 +50,7 @@ Add a small Account proxy security middleware under `api_gateway/src/ui/middlewa
 Responsibilities:
 
 - Normalize the incoming request path to the gateway service path before matching. If `p.App.Path()` is configured, the app path should not be part of the Account public/protected pattern comparison.
-- Match `(method, normalizedPath)` against the explicit Account public route patterns.
+- Match `(method, normalizedPath)` against explicit protected overrides before matching public route patterns.
 - For public routes, call `c.Next()` without JWT validation or user rate limiting.
 - For protected routes, run the existing `JWTMiddleware.AuthenticateJWT()` logic, stop if it aborts the request, then run `RateLimitMiddleware.UserRateLimit()`, and finally continue to the proxy.
 
@@ -107,6 +108,8 @@ The gateway JWT gate should mirror the Account service public URL behavior for A
 - `POST /api/v1/invitations/*/accept`
 
 All other Account routes are protected in the gateway by JWT before being proxied.
+
+Explicit protected overrides must take precedence over public wildcards. For example, `GET /api/v1/modules/**` is public for general module reads, but `GET /api/v1/modules/my-modules` must still pass through gateway JWT because it is user-scoped.
 
 ## Dependency Cleanup
 
