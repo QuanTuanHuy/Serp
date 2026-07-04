@@ -27,6 +27,11 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from '@/shared/components/ui';
 import { Separator } from '@/shared/components/ui/separator';
 import { ScrollArea } from '@/shared/components/ui/scroll-area';
@@ -126,7 +131,7 @@ export function ModuleUsersDialog({
     refetch: refetchActiveUsers,
   } = useModuleUsers(moduleId, {
     page: 0,
-    pageSize: 1000,
+    pageSize: 100,
   });
 
   const activeModuleUsers = useMemo(
@@ -501,18 +506,19 @@ export function ModuleUsersDialog({
                                   <PopoverContent className='w-64 p-3 z-50' align='end'>
                                     <h4 className='text-xs font-semibold mb-2 text-foreground'>Select Role (Optional)</h4>
                                     <div className='space-y-2'>
-                                      <select
-                                        className='w-full text-xs rounded-md border border-input bg-transparent px-3 py-1.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
-                                        value={singleRoleId}
-                                        onChange={(e) => setSingleRoleId(e.target.value)}
-                                      >
-                                        <option value=''>Default Permissions</option>
-                                        {roles.map((r) => (
-                                          <option key={r.id} value={String(r.id)}>
-                                            {r.name}
-                                          </option>
-                                        ))}
-                                      </select>
+                                      <Select value={singleRoleId || 'default'} onValueChange={(val) => setSingleRoleId(val === 'default' ? '' : val)}>
+                                        <SelectTrigger className='w-full h-8 text-xs bg-background border border-input'>
+                                          <SelectValue placeholder='Select role' />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value='default'>Default Permissions</SelectItem>
+                                          {roles.map((r) => (
+                                            <SelectItem key={r.id} value={String(r.id)}>
+                                              {r.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
                                       <Button
                                         size='sm'
                                         className='w-full text-xs bg-purple-600 hover:bg-purple-700 text-white'
@@ -563,18 +569,19 @@ export function ModuleUsersDialog({
                     <PopoverContent className='w-64 p-3 z-50' align='end'>
                       <h4 className='text-xs font-semibold mb-2 text-foreground'>Select Role for Group</h4>
                       <div className='space-y-2'>
-                        <select
-                          className='w-full text-xs rounded-md border border-input bg-transparent px-3 py-1.5 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring'
-                          value={bulkRoleId}
-                          onChange={(e) => setBulkRoleId(e.target.value)}
-                        >
-                          <option value=''>Default Permissions</option>
-                          {roles.map((r) => (
-                            <option key={r.id} value={String(r.id)}>
-                              {r.name}
-                            </option>
-                          ))}
-                        </select>
+                        <Select value={bulkRoleId || 'default'} onValueChange={(val) => setBulkRoleId(val === 'default' ? '' : val)}>
+                          <SelectTrigger className='w-full h-8 text-xs bg-background border border-input'>
+                            <SelectValue placeholder='Select role' />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value='default'>Default Permissions</SelectItem>
+                            {roles.map((r) => (
+                              <SelectItem key={r.id} value={String(r.id)}>
+                                {r.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Button
                           size='sm'
                           className='w-full text-xs bg-purple-600 hover:bg-purple-700 text-white'
