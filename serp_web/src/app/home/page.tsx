@@ -182,7 +182,9 @@ export default function HomePage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const skipOnboarding = localStorage.getItem('serp_skip_pricing_onboarding');
+      const skipOnboarding = localStorage.getItem(
+        'serp_skip_pricing_onboarding'
+      );
       if (skipOnboarding === 'true') {
         setIsDismissed(true);
       }
@@ -331,15 +333,23 @@ export default function HomePage() {
                         Get Started
                       </div>
                       <h1 className='text-3xl font-semibold tracking-tight sm:text-4xl'>
-                        Hi {overview.greetingName}, let&apos;s activate your workspace.
+                        Hi {overview.greetingName}, let&apos;s activate your
+                        workspace.
                       </h1>
                       <p className='mt-3 text-base leading-6 text-muted-foreground max-w-2xl'>
-                        Your organization doesn&apos;t have an active subscription plan yet. Choose a plan now to enable modules like CRM, Sales, Logistics, and Project Management for your team.
+                        Your organization doesn&apos;t have an active
+                        subscription plan yet. Choose a plan now to enable
+                        modules like CRM, Sales, Logistics, and Project
+                        Management for your team.
                       </p>
                     </div>
 
                     <div className='mt-8 flex flex-col gap-3 sm:flex-row'>
-                      <Button asChild size='lg' className='gap-2 bg-slate-950 text-white hover:bg-slate-800 dark:bg-slate-50 dark:text-slate-950 dark:hover:bg-slate-200'>
+                      <Button
+                        asChild
+                        size='lg'
+                        className='gap-2 bg-slate-950 text-white hover:bg-slate-800 dark:bg-slate-50 dark:text-slate-950 dark:hover:bg-slate-200'
+                      >
                         <Link href='/subscription'>
                           View Pricing Plans
                           <ArrowRight className='h-4 w-4' />
@@ -358,14 +368,16 @@ export default function HomePage() {
                       Welcome back
                     </p>
                     <h1 className='mt-2 text-3xl font-semibold tracking-tight sm:text-4xl'>
-                      Hi {overview.greetingName}, your modules are now the center
-                      of the workspace.
+                      Hi {overview.greetingName}, your modules are now the
+                      center of the workspace.
                     </h1>
                   </div>
 
                   <div className='mt-8 flex flex-col gap-3 sm:flex-row'>
                     <Button asChild size='lg' className='gap-2'>
-                      <Link href={overview.firstAvailableModule?.href ?? '/apps'}>
+                      <Link
+                        href={overview.firstAvailableModule?.href ?? '/apps'}
+                      >
                         {overview.firstAvailableModule
                           ? `Open ${overview.firstAvailableModule.name}`
                           : 'Explore applications'}
