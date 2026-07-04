@@ -41,8 +41,12 @@ public interface IUserModuleAccessRepository extends IBaseRepository<UserModuleA
                         "WHERE u.userId IN :userIds AND u.isActive = true GROUP BY u.userId")
         List<Object[]> countActiveModulesByUserIds(@Param("userIds") List<Long> userIds);
 
+        @Query("SELECT u FROM UserModuleAccessModel u " +
+                        "WHERE u.userId IN :userIds " +
+                        "AND u.moduleId = :moduleId " +
+                        "AND u.organizationId = :organizationId")
         List<UserModuleAccessModel> findByUserIdInAndModuleIdAndOrganizationId(
-                        List<Long> userIds,
-                        Long moduleId,
-                        Long organizationId);
+                        @Param("userIds") List<Long> userIds,
+                        @Param("moduleId") Long moduleId,
+                        @Param("organizationId") Long organizationId);
 }
