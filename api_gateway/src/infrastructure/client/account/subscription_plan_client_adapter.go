@@ -313,9 +313,12 @@ func (s *SubscriptionPlanClientAdapter) GetPlanModules(ctx context.Context, plan
 	return &result, nil
 }
 
-func NewSubscriptionPlanClientAdapter(authProps *properties.ExternalServiceProperties) port.ISubscriptionPlanClientPort {
+func NewSubscriptionPlanClientAdapter(
+	authProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.ISubscriptionPlanClientPort {
 	baseUrl := "http://" + authProps.AccountService.Host + ":" + authProps.AccountService.Port + "/account-service"
-	apiClient := utils.NewBaseAPIClient(baseUrl, authProps.AccountService.Timeout)
+	apiClient := clientFactory.New(baseUrl, authProps.AccountService.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

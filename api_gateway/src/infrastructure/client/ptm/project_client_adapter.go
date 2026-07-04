@@ -181,9 +181,12 @@ func (p *ProjectClientAdapter) DeleteProject(ctx context.Context, projectID int6
 	return &result, nil
 }
 
-func NewProjectClientAdapter(taskManagerProps *properties.ExternalServiceProperties) port.IProjectClientPort {
+func NewProjectClientAdapter(
+	taskManagerProps *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IProjectClientPort {
 	baseURL := "http://" + taskManagerProps.PTMTask.Host + ":" + taskManagerProps.PTMTask.Port + "/ptm-task"
-	apiClient := utils.NewBaseAPIClient(baseURL, taskManagerProps.PTMTask.Timeout)
+	apiClient := clientFactory.New(baseURL, taskManagerProps.PTMTask.Timeout)
 
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 

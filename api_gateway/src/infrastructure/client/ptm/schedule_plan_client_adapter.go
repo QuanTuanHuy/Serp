@@ -298,9 +298,12 @@ func (s *SchedulePlanClientAdapter) DiscardProposedPlan(ctx context.Context, pla
 	return &result, nil
 }
 
-func NewSchedulePlanClientAdapter(props *properties.ExternalServiceProperties) port.ISchedulePlanClientPort {
+func NewSchedulePlanClientAdapter(
+	props *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.ISchedulePlanClientPort {
 	baseURL := "http://" + props.PTMSchedule.Host + ":" + props.PTMSchedule.Port + "/ptm-schedule"
-	apiClient := utils.NewBaseAPIClient(baseURL, props.PTMSchedule.Timeout)
+	apiClient := clientFactory.New(baseURL, props.PTMSchedule.Timeout)
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 
 	return &SchedulePlanClientAdapter{

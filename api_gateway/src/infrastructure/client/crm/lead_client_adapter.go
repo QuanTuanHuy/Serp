@@ -231,11 +231,14 @@ func (l *LeadClientAdapter) DeleteLead(ctx context.Context, leadId int64) (*resp
 	return &result, nil
 }
 
-func NewLeadClientAdapter(props *properties.ExternalServiceProperties) port.ILeadClientPort {
+func NewLeadClientAdapter(
+	props *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.ILeadClientPort {
 	baseURL := fmt.Sprintf("http://%s:%s/crm", props.CrmService.Host, props.CrmService.Port)
 
 	return &LeadClientAdapter{
-		apiClient:      utils.NewBaseAPIClient(baseURL, props.CrmService.Timeout),
+		apiClient:      clientFactory.New(baseURL, props.CrmService.Timeout),
 		circuitBreaker: utils.NewDefaultCircuitBreaker(),
 	}
 }

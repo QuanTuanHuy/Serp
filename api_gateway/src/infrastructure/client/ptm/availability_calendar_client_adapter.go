@@ -99,9 +99,12 @@ func (a *AvailabilityCalendarClientAdapter) ReplaceAvailability(ctx context.Cont
 	return &result, nil
 }
 
-func NewAvailabilityCalendarClientAdapter(props *properties.ExternalServiceProperties) port.IAvailabilityCalendarClientPort {
+func NewAvailabilityCalendarClientAdapter(
+	props *properties.ExternalServiceProperties,
+	clientFactory *utils.BaseAPIClientFactory,
+) port.IAvailabilityCalendarClientPort {
 	baseURL := "http://" + props.PTMSchedule.Host + ":" + props.PTMSchedule.Port + "/ptm-schedule"
-	apiClient := utils.NewBaseAPIClient(baseURL, props.PTMSchedule.Timeout)
+	apiClient := clientFactory.New(baseURL, props.PTMSchedule.Timeout)
 	circuitBreaker := utils.NewDefaultCircuitBreaker()
 
 	return &AvailabilityCalendarClientAdapter{
