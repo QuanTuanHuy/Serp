@@ -10,7 +10,6 @@ import serp.project.crm.core.domain.dto.request.ActivityFilterRequest;
 import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.infrastructure.store.model.ActivityModel;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -79,12 +78,12 @@ public final class ActivitySpecification {
         }
 
         if (safeFilter.getActivityDateFrom() != null || safeFilter.getActivityDateTo() != null) {
-            spec = spec.and(BaseSpecification.dateTimeBetween("activityDate",
+            spec = spec.and(BaseSpecification.between("activityDate",
                     safeFilter.getActivityDateFrom(), safeFilter.getActivityDateTo()));
         }
 
         if (safeFilter.getDueDateFrom() != null || safeFilter.getDueDateTo() != null) {
-            spec = spec.and(BaseSpecification.dateTimeBetween("dueDate",
+            spec = spec.and(BaseSpecification.between("dueDate",
                     safeFilter.getDueDateFrom(), safeFilter.getDueDateTo()));
         }
 
@@ -119,7 +118,7 @@ public final class ActivitySpecification {
 
     private static Specification<ActivityModel> overdueSpec() {
         return (root, query, cb) -> cb.and(
-                cb.lessThan(root.get("dueDate"), LocalDateTime.now()),
+                cb.lessThan(root.get("dueDate"), System.currentTimeMillis()),
                 cb.notEqual(root.get("status"), ActivityStatus.COMPLETED.name())
         );
     }

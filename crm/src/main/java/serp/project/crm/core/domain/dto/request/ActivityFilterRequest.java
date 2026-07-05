@@ -14,7 +14,6 @@ import serp.project.crm.core.domain.enums.ActivityStatus;
 import serp.project.crm.core.domain.enums.ActivityType;
 import serp.project.crm.core.domain.enums.TaskPriority;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -36,11 +35,11 @@ public class ActivityFilterRequest extends BaseFilterRequest {
     private Long opportunityId;
     private Long contactId;
 
-    private LocalDateTime activityDateFrom;
-    private LocalDateTime activityDateTo;
+    private Long activityDateFrom;
+    private Long activityDateTo;
 
-    private LocalDateTime dueDateFrom;
-    private LocalDateTime dueDateTo;
+    private Long dueDateFrom;
+    private Long dueDateTo;
 
     private Boolean overdueOnly;
     private Boolean completedOnly;

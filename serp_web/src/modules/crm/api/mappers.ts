@@ -1050,33 +1050,16 @@ export const mapActivityFormToBackendPayload = (
   data: CreateActivityRequest | UpdateActivityRequest
 ): CreateActivityRequest | UpdateActivityRequest => data;
 
-const toEpochMillis = (value?: string) => {
+const toEpochMillis = (value?: string, isEnd = false) => {
   if (!value) {
     return undefined;
   }
-  const parsed = new Date(value).getTime();
-  return Number.isNaN(parsed) ? undefined : parsed;
-};
-
-const toLocalDateTimeString = (value?: string, isEnd = false) => {
-  if (!value) {
-    return undefined;
-  }
-  if (value.includes('T')) {
-    return value;
-  }
+  let dateStr = value;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return isEnd ? `${value}T23:59:59` : `${value}T00:00:00`;
+    dateStr = isEnd ? `${value}T23:59:59.999` : `${value}T00:00:00.000`;
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return undefined;
-  }
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  return `${year}-${month}-${day}T${isEnd ? '23:59:59' : '00:00:00'}`;
+  const parsed = new Date(dateStr).getTime();
+  return Number.isNaN(parsed) ? undefined : parsed;
 };
 
 export const mapActivityFiltersToBackendRequest = (
@@ -1100,10 +1083,10 @@ export const mapActivityFiltersToBackendRequest = (
     ? Number(filters.opportunityId)
     : undefined,
   contactId: filters.contactId ? Number(filters.contactId) : undefined,
-  activityDateFrom: toLocalDateTimeString(filters.activityDateFrom),
-  activityDateTo: toLocalDateTimeString(filters.activityDateTo, true),
-  dueDateFrom: toLocalDateTimeString(filters.dueDateFrom),
-  dueDateTo: toLocalDateTimeString(filters.dueDateTo, true),
+  activityDateFrom: toEpochMillis(filters.activityDateFrom),
+  activityDateTo: toEpochMillis(filters.activityDateTo, true),
+  dueDateFrom: toEpochMillis(filters.dueDateFrom),
+  dueDateTo: toEpochMillis(filters.dueDateTo, true),
   page: pagination.page,
   size: pagination.limit,
   sortBy: pagination.sortBy || undefined,
