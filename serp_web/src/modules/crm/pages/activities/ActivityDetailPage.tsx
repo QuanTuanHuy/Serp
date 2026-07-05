@@ -1,7 +1,7 @@
 /**
  * Activity Detail Page Component
  * Author: QuanTuanHuy
- * Description: Part of Serp Project - Full activity details with edit capabilities
+ * Description: Part of Serp Project - Modernized 2-column activity details
  */
 
 'use client';
@@ -13,10 +13,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Edit,
-  Trash2,
   Clock,
-  MapPin,
-  Users,
   Calendar,
   CheckCircle,
   AlertCircle,
@@ -27,23 +24,12 @@ import {
   ListTodo,
   MessageSquare,
   Presentation,
-  ArrowRight,
-  User,
-  Building2,
-  Target,
-  Timer,
   Flag,
   RefreshCw,
   MoreHorizontal,
-  ExternalLink,
   Bell,
+  Trash2,
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
 import {
@@ -73,9 +59,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
-import { Separator } from '@/shared/components/ui/separator';
-import {
+
+import type {
   Activity,
   ActivityDisplayStatus,
   ActivityType,
@@ -86,16 +71,20 @@ import {
   useCancelActivityMutation,
   useCompleteActivityMutation,
   useDeleteActivityMutation,
-  useGetActivityQuery,
   useRescheduleActivityMutation,
+  useGetActivityQuery,
 } from '../../api/crmApi';
 import { getActivityDisplayStatus } from '../../utils';
+
+// Sub-components
+import { ActivityProfile } from './components/detail/ActivityProfile';
+import { ActivityNotesTab } from './components/detail/ActivityNotesTab';
+import { ActivityMetadataSidebar } from './components/detail/ActivityMetadataSidebar';
 
 interface ActivityDetailPageProps {
   activityId: string;
 }
 
-// Activity type configuration
 const ACTIVITY_TYPE_CONFIG: Record<
   ActivityType,
   { label: string; icon: React.ElementType; color: string; bgColor: string }
@@ -150,7 +139,6 @@ const ACTIVITY_TYPE_CONFIG: Record<
   },
 };
 
-// Activity status configuration
 const ACTIVITY_STATUS_CONFIG: Record<
   ActivityDisplayStatus,
   { label: string; color: string; bgColor: string; icon: React.ElementType }
@@ -181,9 +169,8 @@ const ACTIVITY_STATUS_CONFIG: Record<
   },
 };
 
-const STATUS_UPDATE_OPTIONS: ActivityStatus[] = ['COMPLETED', 'CANCELLED'];
 
-// Priority configuration
+
 const PRIORITY_CONFIG: Record<
   Priority,
   { label: string; color: string; bgColor: string }
@@ -215,57 +202,50 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
   const [cancelActivity] = useCancelActivityMutation();
   const [deleteActivity] = useDeleteActivityMutation();
   const [rescheduleActivity] = useRescheduleActivityMutation();
+  
   const activity = data?.data;
 
   if (isLoading) {
     return (
-      <div className='flex h-[60vh] items-center justify-center text-muted-foreground'>
-        Loading activity...
+      <div className="flex h-[60vh] items-center justify-center text-muted-foreground text-xs">
+        Loading workspace details...
       </div>
     );
   }
 
   if (isError || !activity) {
     return (
-      <div className='flex h-[60vh] flex-col items-center justify-center'>
-        <AlertCircle className='mb-4 h-16 w-16 text-muted-foreground' />
-        <h2 className='mb-2 text-xl font-semibold text-foreground'>
-          Activity not found
-        </h2>
-        <p className='mb-4 text-muted-foreground'>
-          This activity does not exist or has been deleted
-        </p>
+      <div className="flex h-[60vh] flex-col items-center justify-center">
+        <AlertCircle className="mb-4 h-16 w-16 text-muted-foreground" />
+        <h2 className="mb-2 text-xl font-bold text-foreground">Activity not found</h2>
+        <p className="mb-4 text-xs text-muted-foreground">This activity does not exist or has been deleted</p>
         <Button asChild>
-          <Link href='/crm/activities'>
-            <ArrowLeft className='mr-2 h-4 w-4' />
-            Back to list
+          <Link href="/crm/activities">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to activities
           </Link>
         </Button>
       </div>
     );
   }
 
-  const typeConfig = ACTIVITY_TYPE_CONFIG[activity.type];
-  const statusConfig =
-    ACTIVITY_STATUS_CONFIG[getActivityDisplayStatus(activity)];
+  const typeConfig = ACTIVITY_TYPE_CONFIG[activity.type] || ACTIVITY_TYPE_CONFIG.TASK;
+  const statusConfig = ACTIVITY_STATUS_CONFIG[getActivityDisplayStatus(activity)];
   const priorityConfig = PRIORITY_CONFIG[activity.priority];
   const TypeIcon = typeConfig.icon;
   const StatusIcon = statusConfig.icon;
 
-  // Format date helper
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'TBD';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      weekday: 'short',
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
-  // Format duration helper
   const formatDuration = (minutes?: number) => {
     if (!minutes) return 'TBD';
     const hours = Math.floor(minutes / 60);
@@ -276,26 +256,9 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
     return `${mins}m`;
   };
 
-  const relatedTypeLabel = {
-    CUSTOMER: 'Account',
-    LEAD: 'Lead',
-    OPPORTUNITY: 'Opportunity',
-  }[activity.relatedTo.type];
-
-  const relatedName =
-    activity.relatedTo.name ||
-    activity.customFields?.relatedName ||
-    activity.customFields?.relatedToName ||
-    activity.customFields?.accountName ||
-    activity.customFields?.leadName ||
-    activity.customFields?.opportunityName ||
-    'Unknown';
-
   const assigneeDisplayName =
     activity.assignedToName?.trim() ||
-    (activity.assignedTo?.trim()
-      ? `User #${activity.assignedTo}`
-      : 'Unassigned');
+    (activity.assignedTo?.trim() ? `User #${activity.assignedTo}` : 'Unassigned');
 
   const assigneeInitials =
     assigneeDisplayName
@@ -306,37 +269,7 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
       .toUpperCase()
       .slice(0, 2) || '?';
 
-  // Get related entity link
-  const getRelatedLink = () => {
-    switch (activity.relatedTo.type) {
-      case 'CUSTOMER':
-        return `/crm/accounts/${activity.relatedTo.id}`;
-      case 'LEAD':
-        return `/crm/leads/${activity.relatedTo.id}`;
-      case 'OPPORTUNITY':
-        return `/crm/opportunities/${activity.relatedTo.id}`;
-      default:
-        return '#';
-    }
-  };
-
-  const getRelatedIcon = () => {
-    switch (activity.relatedTo.type) {
-      case 'CUSTOMER':
-        return Building2;
-      case 'LEAD':
-        return User;
-      case 'OPPORTUNITY':
-        return Target;
-      default:
-        return User;
-    }
-  };
-
-  const RelatedIcon = getRelatedIcon();
-
-  const relatedActivities: Activity[] = [];
-  const activityNotes = activity.customFields.notes
+  const activityNotes = activity.customFields?.notes
     ? [
         {
           id: activity.id,
@@ -402,35 +335,31 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
   };
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       {/* Header */}
-      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-        <div className='flex items-center gap-4'>
-          <Button variant='ghost' size='icon' asChild>
-            <Link href='/crm/activities'>
-              <ArrowLeft className='h-5 w-5' />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-muted/50">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild className="rounded-full">
+            <Link href="/crm/activities">
+              <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <div className='flex items-center gap-3'>
-            <div className={`rounded-xl p-3 ${typeConfig.bgColor}`}>
-              <TypeIcon className={`h-6 w-6 ${typeConfig.color}`} />
+          <div className="flex items-center gap-3">
+            <div className={`rounded-xl p-2.5 ${typeConfig.bgColor}`}>
+              <TypeIcon className={`h-5.5 w-5.5 ${typeConfig.color}`} />
             </div>
             <div>
-              <h1 className='text-2xl font-bold text-foreground'>
+              <h1 className="text-xl font-extrabold text-foreground tracking-tight">
                 {activity.subject}
               </h1>
-              <div className='mt-1 flex items-center gap-2'>
-                <Badge
-                  className={`${statusConfig.bgColor} ${statusConfig.color}`}
-                >
-                  <StatusIcon className='mr-1 h-3 w-3' />
+              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                <Badge className={`${statusConfig.bgColor} ${statusConfig.color} text-[10px] px-2`}>
+                  <StatusIcon className="mr-1 h-3.5 w-3.5" />
                   {statusConfig.label}
                 </Badge>
-                <Badge variant='outline'>{typeConfig.label}</Badge>
-                <Badge
-                  className={`${priorityConfig.bgColor} ${priorityConfig.color}`}
-                >
-                  <Flag className='mr-1 h-3 w-3' />
+                <Badge variant="outline" className="text-[10px] px-2">{typeConfig.label}</Badge>
+                <Badge className={`${priorityConfig.bgColor} ${priorityConfig.color} text-[10px] px-2`}>
+                  <Flag className="mr-1 h-3 w-3" />
                   {priorityConfig.label}
                 </Badge>
               </div>
@@ -438,523 +367,98 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
           </div>
         </div>
 
-        <div className='flex items-center gap-2'>
-          <Button
-            variant='outline'
-            onClick={() => setShowRescheduleDialog(true)}
-          >
-            <Clock className='mr-2 h-4 w-4' />
-            Reschedule
-          </Button>
-          <Button
-            variant='outline'
-            onClick={() => setShowEditStatusDialog(true)}
-          >
-            <RefreshCw className='mr-2 h-4 w-4' />
-            Update status
-          </Button>
-          <Button variant='outline' asChild>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
             <Link href={`/crm/activities/${activityId}/edit`}>
-              <Edit className='mr-2 h-4 w-4' />
-              Edit
+              <Edit className="mr-1.5 h-4 w-4" /> Edit Details
             </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant='outline' size='icon'>
-                <MoreHorizontal className='h-4 w-4' />
+              <Button variant="outline" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuItem
-                className='text-red-600'
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className='mr-2 h-4 w-4' />
-                Delete activity
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-700" onClick={() => setShowDeleteDialog(true)}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete record
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className='grid gap-6 lg:grid-cols-3'>
-        {/* Left Column - Main Info */}
-        <div className='space-y-6 lg:col-span-2'>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className='w-full justify-start'>
-              <TabsTrigger value='details'>Details</TabsTrigger>
-              <TabsTrigger value='notes'>
-                Notes ({activityNotes.length})
-              </TabsTrigger>
-              <TabsTrigger value='related'>
-                Related ({relatedActivities.length})
-              </TabsTrigger>
+      {/* Main 2-Column Grid */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        {/* Left Column: Workspaces */}
+        <div className="lg:col-span-2 space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details">Activity Details</TabsTrigger>
+              <TabsTrigger value="notes">Notes ({activityNotes.length})</TabsTrigger>
             </TabsList>
 
-            <TabsContent value='details' className='mt-4 space-y-6'>
-              {/* Description */}
-              <Card className='border-none shadow-sm'>
-                <CardHeader className='pb-3'>
-                  <CardTitle className='text-lg font-semibold'>
-                    Description
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className='whitespace-pre-wrap text-foreground/80'>
-                    {activity.description || 'No description'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Schedule Info */}
-              <Card className='border-none shadow-sm'>
-                <CardHeader className='pb-3'>
-                  <CardTitle className='text-lg font-semibold'>
-                    Schedule information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='space-y-4'>
-                  <div className='grid gap-4 sm:grid-cols-2'>
-                    <div className='flex items-start gap-3'>
-                      <div className='rounded-lg bg-blue-100 p-2'>
-                        <Calendar className='h-4 w-4 text-blue-600' />
-                      </div>
-                      <div>
-                        <p className='text-sm text-muted-foreground'>
-                          Scheduled time
-                        </p>
-                        <p className='font-medium text-foreground'>
-                          {formatDate(activity.scheduledDate)}
-                        </p>
-                      </div>
-                    </div>
-                    {activity.actualDate && (
-                      <div className='flex items-start gap-3'>
-                        <div className='rounded-lg bg-green-100 p-2'>
-                          <CheckCircle className='h-4 w-4 text-green-600' />
-                        </div>
-                        <div>
-                          <p className='text-sm text-muted-foreground'>
-                            Actual time
-                          </p>
-                          <p className='font-medium text-foreground'>
-                            {formatDate(activity.actualDate)}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    <div className='flex items-start gap-3'>
-                      <div className='rounded-lg bg-purple-100 p-2'>
-                        <Timer className='h-4 w-4 text-purple-600' />
-                      </div>
-                      <div>
-                        <p className='text-sm text-muted-foreground'>
-                          Duration
-                        </p>
-                        <p className='font-medium text-foreground'>
-                          {formatDuration(activity.duration)}
-                        </p>
-                      </div>
-                    </div>
-                    {activity.location && (
-                      <div className='flex items-start gap-3'>
-                        <div className='rounded-lg bg-orange-100 p-2'>
-                          <MapPin className='h-4 w-4 text-orange-600' />
-                        </div>
-                        <div>
-                          <p className='text-sm text-muted-foreground'>
-                            Location
-                          </p>
-                          <p className='font-medium text-foreground'>
-                            {activity.location}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Participants */}
-              {activity.participants && activity.participants.length > 0 && (
-                <Card className='border-none shadow-sm'>
-                  <CardHeader className='pb-3'>
-                    <CardTitle className='flex items-center text-lg font-semibold'>
-                      <Users className='mr-2 h-5 w-5 text-muted-foreground' />
-                      Participants ({activity.participants.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className='flex flex-wrap gap-2'>
-                      {activity.participants.map((participant, index) => (
-                        <div
-                          key={index}
-                          className='flex items-center gap-2 rounded-full bg-muted px-3 py-1.5'
-                        >
-                          <Avatar className='h-6 w-6'>
-                            <AvatarFallback className='text-xs'>
-                              {participant
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className='text-sm font-medium text-foreground'>
-                            {participant}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Outcome */}
-              {activity.outcome && (
-                <Card className='border-none shadow-sm'>
-                  <CardHeader className='pb-3'>
-                    <CardTitle className='text-lg font-semibold'>
-                      Outcome
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className='whitespace-pre-wrap text-foreground/80'>
-                      {activity.outcome}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Follow-up */}
-              {activity.followUpRequired && (
-                <Card className='border-none bg-amber-50 shadow-sm'>
-                  <CardHeader className='pb-3'>
-                    <CardTitle className='flex items-center text-lg font-semibold text-amber-800'>
-                      <Bell className='mr-2 h-5 w-5' />
-                      Follow-up required
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className='flex items-center justify-between'>
-                      <div>
-                        <p className='text-amber-700'>
-                          Follow-up date: {formatDate(activity.followUpDate)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Tags */}
-              {activity.tags.length > 0 && (
-                <Card className='border-none shadow-sm'>
-                  <CardHeader className='pb-3'>
-                    <CardTitle className='text-lg font-semibold'>
-                      Tags
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className='flex flex-wrap gap-2'>
-                      {activity.tags.map((tag) => (
-                        <Badge key={tag} variant='secondary'>
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+            <TabsContent value="details" className="mt-6">
+              <ActivityProfile activity={activity} formatDate={formatDate} />
             </TabsContent>
 
-            <TabsContent value='notes' className='mt-4 space-y-4'>
-              {activityNotes.length > 0 ? (
-                <div className='space-y-4'>
-                  {activityNotes.map((note) => (
-                    <Card key={note.id} className='border-none shadow-sm'>
-                      <CardContent className='pt-4'>
-                        <div className='flex items-start gap-3'>
-                          <Avatar className='h-8 w-8'>
-                            <AvatarFallback>
-                              {note.author
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className='flex-1'>
-                            <div className='flex items-center justify-between'>
-                              <p className='font-medium text-foreground'>
-                                {note.author}
-                              </p>
-                              <p className='text-sm text-muted-foreground'>
-                                {new Date(note.createdAt).toLocaleDateString(
-                                  'en-US',
-                                  {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  }
-                                )}
-                              </p>
-                            </div>
-                            <p className='mt-2 text-foreground/80'>
-                              {note.content}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <Card className='border-none shadow-sm'>
-                  <CardContent className='flex flex-col items-center justify-center py-12'>
-                    <MessageSquare className='mb-4 h-12 w-12 text-muted-foreground/50' />
-                    <p className='text-muted-foreground'>No notes yet</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value='related' className='mt-4 space-y-4'>
-              {relatedActivities.length > 0 ? (
-                <div className='space-y-3'>
-                  {relatedActivities.map((relatedActivity) => {
-                    const relTypeConfig =
-                      ACTIVITY_TYPE_CONFIG[relatedActivity.type];
-                    const relStatusConfig =
-                      ACTIVITY_STATUS_CONFIG[
-                        getActivityDisplayStatus(relatedActivity)
-                      ];
-                    const RelTypeIcon = relTypeConfig.icon;
-                    return (
-                      <Card
-                        key={relatedActivity.id}
-                        className='cursor-pointer border-none shadow-sm transition-shadow hover:shadow-md'
-                        onClick={() =>
-                          router.push(`/crm/activities/${relatedActivity.id}`)
-                        }
-                      >
-                        <CardContent className='flex items-center gap-4 p-4'>
-                          <div
-                            className={`rounded-lg p-2 ${relTypeConfig.bgColor}`}
-                          >
-                            <RelTypeIcon
-                              className={`h-5 w-5 ${relTypeConfig.color}`}
-                            />
-                          </div>
-                          <div className='flex-1'>
-                            <p className='font-medium text-foreground'>
-                              {relatedActivity.subject}
-                            </p>
-                            <p className='text-sm text-muted-foreground'>
-                              {formatDate(relatedActivity.scheduledDate)}
-                            </p>
-                          </div>
-                          <Badge
-                            className={`${relStatusConfig.bgColor} ${relStatusConfig.color}`}
-                          >
-                            {relStatusConfig.label}
-                          </Badge>
-                          <ArrowRight className='h-4 w-4 text-muted-foreground' />
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ) : (
-                <Card className='border-none shadow-sm'>
-                  <CardContent className='flex flex-col items-center justify-center py-12'>
-                    <Calendar className='mb-4 h-12 w-12 text-muted-foreground/50' />
-                    <p className='text-muted-foreground'>
-                      No related activities
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+            <TabsContent value="notes" className="mt-6">
+              <ActivityNotesTab notes={activityNotes} />
             </TabsContent>
           </Tabs>
         </div>
 
-        {/* Right Column - Sidebar */}
-        <div className='space-y-6'>
-          {/* Related Entity */}
-          <Card className='border-none shadow-sm'>
-            <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>Linked to</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Link href={getRelatedLink()} className='block'>
-                <div className='flex items-center gap-3 rounded-lg bg-muted p-3 transition-colors hover:bg-muted/80'>
-                  <div className='rounded-lg bg-blue-100 dark:bg-blue-900/30 p-2'>
-                    <RelatedIcon className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-                  </div>
-                  <div className='flex-1'>
-                    <p className='text-sm text-muted-foreground'>
-                      {relatedTypeLabel}
-                    </p>
-                    <p className='font-medium text-foreground'>{relatedName}</p>
-                  </div>
-                  <ExternalLink className='h-4 w-4 text-muted-foreground' />
-                </div>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Assigned To */}
-          <Card className='border-none shadow-sm'>
-            <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>Assignee</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className='flex items-center gap-3'>
-                <Avatar className='h-10 w-10'>
-                  <AvatarFallback>{assigneeInitials}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className='font-medium text-foreground'>
-                    {assigneeDisplayName}
-                  </p>
-                  <p className='text-sm text-muted-foreground'>
-                    Sales Representative
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Activity Info */}
-          <Card className='border-none shadow-sm'>
-            <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>
-                Activity info
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  Activity ID
-                </span>
-                <span className='font-mono text-sm text-foreground'>
-                  #{activity.id}
-                </span>
-              </div>
-              <Separator />
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Created</span>
-                <span className='text-sm text-foreground'>
-                  {new Date(activity.createdAt).toLocaleDateString('en-US')}
-                </span>
-              </div>
-              <Separator />
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  Last updated
-                </span>
-                <span className='text-sm text-foreground'>
-                  {new Date(activity.updatedAt).toLocaleDateString('en-US')}
-                </span>
-              </div>
-              <Separator />
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Status</span>
-                <span className={`text-sm font-medium ${statusConfig.color}`}>
-                  {statusConfig.label}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card className='border-none shadow-sm'>
-            <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>
-                Quick actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-2'>
-              {activity.status !== 'COMPLETED' && (
-                <Button
-                  className='w-full justify-start'
-                  variant='outline'
-                  onClick={() => {
-                    setNewStatus('COMPLETED');
-                    setShowEditStatusDialog(true);
-                  }}
-                >
-                  <CheckCircle className='mr-2 h-4 w-4 text-green-600' />
-                  Mark as completed
-                </Button>
-              )}
-              <Button
-                className='w-full justify-start'
-                variant='outline'
-                onClick={() => setShowRescheduleDialog(true)}
-              >
-                <Calendar className='mr-2 h-4 w-4' />
-                Reschedule
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Right Column: Metadata Sidebar */}
+        <div className="lg:col-span-1">
+          <ActivityMetadataSidebar
+            activity={activity}
+            assigneeDisplayName={assigneeDisplayName}
+            assigneeInitials={assigneeInitials}
+            formatDate={formatDate}
+            formatDuration={formatDuration}
+            onOpenReschedule={() => setShowRescheduleDialog(true)}
+            onOpenStatusUpdate={() => {
+              setNewStatus('COMPLETED');
+              setShowEditStatusDialog(true);
+            }}
+            onDeleteActivity={() => setShowDeleteDialog(true)}
+          />
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Dialogs */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm delete activity</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete activity &quot;{activity.subject}
-              &quot;? This action cannot be undone.
+              Are you sure you want to delete activity &quot;{activity.subject}&quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowDeleteDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant='destructive' onClick={handleDelete}>
-              Delete activity
-            </Button>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete record</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Status Dialog */}
-      <Dialog
-        open={showEditStatusDialog}
-        onOpenChange={setShowEditStatusDialog}
-      >
+      <Dialog open={showEditStatusDialog} onOpenChange={setShowEditStatusDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Update status</DialogTitle>
-            <DialogDescription>
-              Select new status for this activity
-            </DialogDescription>
+            <DialogDescription>Select new status for this activity</DialogDescription>
           </DialogHeader>
-          <div className='py-4'>
-            <Select
-              value={newStatus}
-              onValueChange={(value) => setNewStatus(value as ActivityStatus)}
-            >
+          <div className="py-4">
+            <Select value={newStatus} onValueChange={(value) => setNewStatus(value as ActivityStatus)}>
               <SelectTrigger>
-                <SelectValue placeholder='Select status' />
+                <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_UPDATE_OPTIONS.map((status) => {
-                  const config = ACTIVITY_STATUS_CONFIG[status];
-
+                {(['COMPLETED', 'CANCELLED'] as ActivityStatus[]).map((status) => {
+                  const config = ACTIVITY_STATUS_CONFIG[status as ActivityDisplayStatus];
                   return (
                     <SelectItem key={status} value={status}>
-                      <div className='flex items-center gap-2'>
+                      <div className="flex items-center gap-2">
                         <config.icon className={`h-4 w-4 ${config.color}`} />
                         {config.label}
                       </div>
@@ -965,81 +469,44 @@ export function ActivityDetailPage({ activityId }: ActivityDetailPageProps) {
             </Select>
           </div>
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowEditStatusDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleStatusChange} disabled={!newStatus}>
-              Update
-            </Button>
+            <Button variant="outline" onClick={() => setShowEditStatusDialog(false)}>Cancel</Button>
+            <Button onClick={handleStatusChange} disabled={!newStatus}>Update</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Reschedule Dialog */}
-      <Dialog
-        open={showRescheduleDialog}
-        onOpenChange={setShowRescheduleDialog}
-      >
+      <Dialog open={showRescheduleDialog} onOpenChange={setShowRescheduleDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reschedule activity</DialogTitle>
-            <DialogDescription>
-              Update the due date and reminder for this activity
-            </DialogDescription>
+            <DialogDescription>Update the due date and reminder for this activity</DialogDescription>
           </DialogHeader>
-          <div className='space-y-4 py-4'>
+          <div className="space-y-4 py-4">
             <div>
-              <label className='text-sm font-medium mb-1.5 block'>
-                Due Date
-              </label>
+              <label className="text-xs font-semibold mb-1.5 block">Due Date</label>
               <input
-                type='datetime-local'
+                type="datetime-local"
                 value={rescheduleData.dueDate}
-                onChange={(e) =>
-                  setRescheduleData({
-                    ...rescheduleData,
-                    dueDate: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                onChange={(e) => setRescheduleData({ ...rescheduleData, dueDate: e.target.value })}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div>
-              <label className='text-sm font-medium mb-1.5 block'>
-                Reminder Date (Optional)
-              </label>
+              <label className="text-xs font-semibold mb-1.5 block">Reminder Date (Optional)</label>
               <input
-                type='datetime-local'
+                type="datetime-local"
                 value={rescheduleData.reminderDate}
-                onChange={(e) =>
-                  setRescheduleData({
-                    ...rescheduleData,
-                    reminderDate: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring'
+                onChange={(e) => setRescheduleData({ ...rescheduleData, reminderDate: e.target.value })}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => {
-                setShowRescheduleDialog(false);
-                setRescheduleData({ dueDate: '', reminderDate: '' });
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleReschedule}
-              disabled={!rescheduleData.dueDate}
-            >
-              Reschedule
-            </Button>
+            <Button variant="outline" onClick={() => {
+              setShowRescheduleDialog(false);
+              setRescheduleData({ dueDate: '', reminderDate: '' });
+            }}>Cancel</Button>
+            <Button onClick={handleReschedule} disabled={!rescheduleData.dueDate}>Reschedule</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

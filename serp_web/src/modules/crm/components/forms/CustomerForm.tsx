@@ -307,352 +307,226 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
     tierSelectValue.trim() !== '' ? tierSelectValue : TIER_NONE;
 
   return (
-    <Card className={cn('w-full', className)}>
-      <CardHeader className='pb-4'>
-        <CardTitle className='text-xl'>
-          {isEditing ? 'Edit Account' : 'Create Account'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onFormSubmit} className='space-y-6'>
-          {/* Basic Information */}
-          <div className='space-y-4'>
-            <h3 className='text-base font-medium text-foreground'>
-              Basic Information
-            </h3>
+    <div className={cn("grid grid-cols-1 lg:grid-cols-3 gap-6", className)}>
+      <Card className="lg:col-span-2 border border-muted/50 shadow-sm rounded-xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-extrabold tracking-tight">
+            {isEditing ? 'Update Business Account' : 'Register Business Account'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onFormSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Basic Profile</h3>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='name'>Name *</Label>
-                <Input
-                  id='name'
-                  {...register('name')}
-                  className={cn(errors.name && 'border-destructive')}
-                  disabled={isLoading}
-                  placeholder='Enter account name'
-                />
-                {errors.name && (
-                  <p className='text-sm text-destructive'>
-                    {errors.name.message}
-                  </p>
-                )}
+              <div className="space-y-2">
+                <Label htmlFor="name">Account Name *</Label>
+                <Input id="name" {...register('name')} placeholder="e.g. Acme Corporation" className={errors.name ? 'border-destructive' : ''} disabled={isLoading} />
+                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='email'>Email *</Label>
-                <Input
-                  id='email'
-                  type='email'
-                  {...register('email')}
-                  className={cn(errors.email && 'border-destructive')}
-                  disabled={isLoading}
-                  placeholder='email@example.com'
-                />
-                {errors.email && (
-                  <p className='text-sm text-destructive'>
-                    {errors.email.message}
-                  </p>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="taxNumber">Tax Identification Number</Label>
+                  <Input id="taxNumber" {...register('taxNumber')} placeholder="e.g. 0102030405" disabled={isLoading} />
+                </div>
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='phone'>Phone</Label>
-                <Input
-                  id='phone'
-                  {...register('phone')}
-                  disabled={isLoading}
-                  placeholder='+84 xxx xxx xxx'
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Customer Type *</Label>
+                  <Select value={watch('customerType')} onValueChange={(val) => setValue('customerType', val as any)} disabled={isLoading}>
+                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PROSPECT">Prospect</SelectItem>
+                      <SelectItem value="CUSTOMER">Customer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Account Tier</Label>
+                  <Select value={tierForSelect} onValueChange={(val) => setValue('tier', val === TIER_NONE ? '' : (val as AccountTier))} disabled={isLoading}>
+                    <SelectTrigger><SelectValue placeholder="Select tier" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={TIER_NONE}>Not set</SelectItem>
+                      {ACCOUNT_TIERS.map((tier) => (
+                        <SelectItem key={tier.value} value={tier.value}>{tier.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='industry'>Industry</Label>
-                <Input
-                  id='industry'
-                  {...register('industry')}
-                  disabled={isLoading}
-                  placeholder='e.g. Manufacturing'
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="industry">Industry / Sector</Label>
+                  <Input id="industry" {...register('industry')} placeholder="e.g. Logistics" disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companySize">Company Size (Employees)</Label>
+                  <Input id="companySize" {...register('companySize')} placeholder="e.g. 100-500 employees" disabled={isLoading} />
+                </div>
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='customerType'>Account Type *</Label>
-                <Select
-                  value={watch('customerType')}
-                  onValueChange={(value) =>
-                    setValue('customerType', value as CustomerType)
-                  }
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select type' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='PROSPECT'>Prospect</SelectItem>
-                    <SelectItem value='CUSTOMER'>Customer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='status'>Status *</Label>
-                <Select
-                  value={watch('status')}
-                  onValueChange={(value) =>
-                    setValue('status', value as CustomerStatus)
-                  }
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select status' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='ACTIVE'>Active</SelectItem>
-                    <SelectItem value='INACTIVE'>Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Status *</Label>
+                  <Select value={watch('status')} onValueChange={(val) => setValue('status', val as any)} disabled={isLoading}>
+                    <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">Active</SelectItem>
+                      <SelectItem value="INACTIVE">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="creditLimit">Credit Limit (VND)</Label>
+                  <Input id="creditLimit" type="number" {...register('creditLimit', { valueAsNumber: true })} placeholder="100000000" className={errors.creditLimit ? 'border-destructive' : ''} disabled={isLoading} />
+                  {errors.creditLimit && <p className="text-xs text-destructive">{errors.creditLimit.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="paymentTerms">Payment Terms</Label>
+                  <Input id="paymentTerms" {...register('paymentTerms')} placeholder="Net 30, COD, etc." disabled={isLoading} />
+                </div>
               </div>
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='address'>Street</Label>
-                <Input
-                  id='address'
-                  {...register('address')}
-                  disabled={isLoading}
-                  placeholder='Street address'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='city'>City</Label>
-                <Input id='city' {...register('city')} disabled={isLoading} />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='state'>State</Label>
-                <Input id='state' {...register('state')} disabled={isLoading} />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='zipCode'>Zip Code</Label>
-                <Input
-                  id='zipCode'
-                  {...register('zipCode')}
-                  disabled={isLoading}
-                />
-              </div>
-              <div className='space-y-2 md:col-span-2'>
-                <Label htmlFor='country'>Country</Label>
-                <Input
-                  id='country'
-                  {...register('country')}
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-          </div>
+            <div className="space-y-4 pt-4 border-t border-muted/30">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contacts & Locale</h3>
 
-          {/* Tier & contact preferences */}
-          <div className='space-y-4'>
-            <h3 className='text-base font-medium text-foreground'>
-              Tier & contact preferences
-            </h3>
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label>Tier</Label>
-                <Select
-                  value={tierForSelect}
-                  onValueChange={(value) =>
-                    setValue(
-                      'tier',
-                      value === TIER_NONE ? '' : (value as AccountTier)
-                    )
-                  }
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select tier' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={TIER_NONE}>Not set</SelectItem>
-                    {ACCOUNT_TIERS.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Primary Email *</Label>
+                  <Input id="email" type="email" {...register('email')} placeholder="billing@acme.com" className={errors.email ? 'border-destructive' : ''} disabled={isLoading} />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input id="phone" {...register('phone')} placeholder="+84 901234567" disabled={isLoading} />
+                </div>
               </div>
-              <div className='space-y-2'>
-                <Label htmlFor='language'>Language</Label>
-                <Input
-                  id='language'
-                  {...register('language')}
-                  disabled={isLoading}
-                  placeholder='e.g. vi, en'
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website Address</Label>
+                  <Input id="website" type="url" {...register('website')} placeholder="https://acme.com" className={errors.website ? 'border-destructive' : ''} disabled={isLoading} />
+                  {errors.website && <p className="text-xs text-destructive">{errors.website.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Office Timezone</Label>
+                  <Input id="timezone" {...register('timezone')} placeholder="Asia/Ho_Chi_Minh" disabled={isLoading} />
+                </div>
               </div>
-              <div className='space-y-2 md:col-span-2'>
-                <Label htmlFor='timezone'>Timezone</Label>
-                <Input
-                  id='timezone'
-                  {...register('timezone')}
-                  disabled={isLoading}
-                  placeholder='Asia/Ho_Chi_Minh'
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="language">Preferred Language</Label>
+                  <Input id="language" {...register('language')} placeholder="vi" disabled={isLoading} />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="address">Street Address</Label>
+                <Input id="address" {...register('address')} placeholder="123 Tech Park Road" disabled={isLoading} />
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input id="city" {...register('city')} placeholder="Hanoi" disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">State / Province</Label>
+                  <Input id="state" {...register('state')} placeholder="Hanoi" disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="zipCode">Zip Code</Label>
+                  <Input id="zipCode" {...register('zipCode')} placeholder="10000" disabled={isLoading} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Input id="country" {...register('country')} placeholder="Vietnam" disabled={isLoading} />
+                </div>
               </div>
             </div>
 
-            <div className='space-y-2'>
-              <Label>Preferred contact times</Label>
-              <div className='flex flex-wrap gap-2'>
-                {PREFERRED_TIME_SLOTS.map(({ value, label }) => (
+            <div className="space-y-4 pt-4 border-t border-muted/30">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Internal Remarks</h3>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Static Account Notes</Label>
+                <Textarea id="notes" {...register('notes')} rows={3} placeholder="Add specific terms or relationship summaries..." disabled={isLoading} />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-6 border-t border-muted/30">
+              {onCancel && (
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading || isSubmitting}>
+                  Cancel
+                </Button>
+              )}
+              <Button type="submit" disabled={isLoading || isSubmitting}>
+                {isSubmitting ? 'Saving...' : isEditing ? 'Update Account' : 'Register Account'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Widget Column */}
+      <div className="lg:col-span-1 space-y-6">
+        {/* Tag Cloud Selector */}
+        <Card className="border border-muted/50 shadow-sm rounded-xl">
+          <CardHeader>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account Tags</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="flex flex-wrap gap-1.5">
+              {watch('tags').map((tag, index) => (
+                <Badge key={index} variant="secondary" className="gap-1 pr-1 text-[10px] py-0.5">
+                  {tag}
                   <button
-                    key={value}
-                    type='button'
-                    onClick={() => togglePreferredSlot(value)}
+                    type="button"
+                    onClick={() => handleTagRemove(tag)}
+                    className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
                     disabled={isLoading}
-                    className={cn(
-                      'rounded-full border px-3 py-1 text-sm transition-colors',
-                      preferredTimeSlots.includes(value)
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border bg-background hover:bg-muted'
-                    )}
                   >
-                    {label}
+                    <X className="h-2.5 w-2.5" />
                   </button>
-                ))}
-              </div>
+                </Badge>
+              ))}
             </div>
 
-            <div className='space-y-2'>
-              <Label>Preferred days</Label>
-              <div className='flex flex-wrap gap-2'>
-                {PREFERRED_DAYS.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type='button'
-                    onClick={() => togglePreferredDay(value)}
-                    disabled={isLoading}
-                    className={cn(
-                      'rounded-md border px-2.5 py-1 text-sm transition-colors',
-                      preferredDays.includes(value)
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border bg-background hover:bg-muted'
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Account Information */}
-          {customerType === 'CUSTOMER' && (
-            <div className='space-y-4'>
-              <h3 className='text-base font-medium text-foreground'>
-                Account Information
-              </h3>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='companySize'>Company Size</Label>
-                  <Input
-                    id='companySize'
-                    {...register('companySize')}
-                    disabled={isLoading}
-                    placeholder='e.g. 100-500 employees'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='taxNumber'>Tax Number</Label>
-                  <Input
-                    id='taxNumber'
-                    {...register('taxNumber')}
-                    disabled={isLoading}
-                    placeholder='Tax identification number'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='paymentTerms'>Payment Terms</Label>
-                  <Input
-                    id='paymentTerms'
-                    {...register('paymentTerms')}
-                    disabled={isLoading}
-                    placeholder='Net 30, COD, etc.'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='creditLimit'>Credit Limit</Label>
-                  <Input
-                    id='creditLimit'
-                    type='number'
-                    {...register('creditLimit', { valueAsNumber: true })}
-                    className={cn(errors.creditLimit && 'border-destructive')}
-                    disabled={isLoading}
-                    placeholder='0'
-                  />
-                </div>
-
-                <div className='md:col-span-2 space-y-2'>
-                  <Label htmlFor='website'>Website</Label>
-                  <Input
-                    id='website'
-                    type='url'
-                    {...register('website')}
-                    className={cn(errors.website && 'border-destructive')}
-                    disabled={isLoading}
-                    placeholder='https://example.com'
-                  />
-                  {errors.website && (
-                    <p className='text-sm text-destructive'>
-                      {errors.website.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Additional Information */}
-          <div className='space-y-4'>
-            <h3 className='text-base font-medium text-foreground'>
-              Additional Information
-            </h3>
-
-            <div className='space-y-2'>
-              <Label htmlFor='notes'>Notes</Label>
-              <Textarea
-                id='notes'
-                {...register('notes')}
-                rows={3}
-                disabled={isLoading}
-                placeholder='Add any additional notes about this account...'
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label>Tags</Label>
-              <div className='flex flex-wrap gap-2'>
-                {watch('tags').map((tag, index) => (
-                  <Badge key={index} variant='secondary' className='gap-1 pr-1'>
-                    {tag}
-                    <button
-                      type='button'
-                      onClick={() => handleTagRemove(tag)}
-                      className='ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5'
-                      disabled={isLoading}
+            <div className="pt-3 border-t border-muted/20 space-y-3">
+              <div className="text-[10px] text-muted-foreground uppercase font-bold">Preset Options</div>
+              <div className="flex flex-wrap gap-1.5">
+                {['VIP', 'PARTNER', 'TARGET', 'KEY_ACCOUNT', 'PROSPECT', 'INACTIVE'].map((tg) => {
+                  const isSelected = watch('tags')?.includes(tg);
+                  return (
+                    <Badge
+                      key={tg}
+                      variant={isSelected ? 'default' : 'outline'}
+                      className="cursor-pointer text-[10px] px-2 py-0.5 select-none"
+                      onClick={() => {
+                        const cur = watch('tags') || [];
+                        if (cur.includes(tg)) {
+                          handleTagRemove(tg);
+                        } else {
+                          handleTagAdd(tg);
+                        }
+                      }}
                     >
-                      <X className='h-3 w-3' />
-                    </button>
-                  </Badge>
-                ))}
+                      {tg.replace('_', ' ')}
+                    </Badge>
+                  );
+                })}
               </div>
+            </div>
+
+            <div className="pt-3 border-t border-muted/20 space-y-1">
+              <Label className="text-[10px] text-muted-foreground uppercase font-bold">Add Custom Tag</Label>
               <Input
-                placeholder='Type a tag and press Enter'
+                placeholder="Press Enter to add tag"
+                className="h-8 text-xs"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -663,30 +537,53 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({
                 disabled={isLoading}
               />
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className='flex justify-end gap-3 pt-6 border-t'>
-            {onCancel && (
-              <Button
-                type='button'
-                variant='outline'
-                onClick={onCancel}
-                disabled={isLoading || isSubmitting}
-              >
-                Cancel
-              </Button>
-            )}
-            <Button type='submit' disabled={isLoading || isSubmitting}>
-              {isSubmitting
-                ? 'Saving...'
-                : isEditing
-                  ? 'Update Customer'
-                  : 'Create Account'}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        {/* Preferred Communication Badges */}
+        <Card className="border border-muted/50 shadow-sm rounded-xl">
+          <CardHeader>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Best Contact Days</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="flex flex-wrap gap-1.5">
+              {PREFERRED_DAYS.map((day) => {
+                const isSelected = preferredDays.includes(day.value);
+                return (
+                  <Badge
+                    key={day.value}
+                    variant={isSelected ? 'default' : 'secondary'}
+                    className="cursor-pointer text-[10px] px-2 py-1 select-none"
+                    onClick={() => togglePreferredDay(day.value)}
+                  >
+                    {day.label}
+                  </Badge>
+                );
+              })}
+            </div>
+
+            <div className="pt-3 border-t border-muted/20 space-y-2">
+              <div className="text-[10px] text-muted-foreground uppercase font-bold">Best Hours</div>
+              <div className="flex flex-wrap gap-1.5">
+                {PREFERRED_TIME_SLOTS.map((slot) => {
+                  const isSelected = preferredTimeSlots.includes(slot.value);
+                  return (
+                    <Badge
+                      key={slot.value}
+                      variant={isSelected ? 'default' : 'secondary'}
+                      className="cursor-pointer text-[10px] px-2 py-1 select-none"
+                      onClick={() => togglePreferredSlot(slot.value)}
+                    >
+                      {slot.label}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 

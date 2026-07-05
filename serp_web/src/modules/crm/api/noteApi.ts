@@ -1,36 +1,15 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project
+ * Description: Part of Serp Project - CRM Specific Notes API
  */
 
 import { api } from '@/lib/store/api';
-import type { APIResponse, PaginatedResponse } from '../types';
-
-export interface Note {
-  id: string;
-  tenantId: string;
-  entityType: 'LEAD' | 'ACCOUNT' | 'OPPORTUNITY' | 'ACTIVITY';
-  entityId: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-  updatedBy: string;
-}
-
-export interface CreateNoteRequest {
-  entityType: 'LEAD' | 'ACCOUNT' | 'OPPORTUNITY' | 'ACTIVITY';
-  entityId: number;
-  content: string;
-}
-
-export interface UpdateNoteRequest {
-  content: string;
-}
+import { mapNoteListResponse, mapSingleNoteResponse } from './mappers';
+import type { Note, CreateNoteRequest, UpdateNoteRequest, APIResponse, PaginatedResponse } from '../types';
 
 export const noteApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getNotes: builder.query<
+    getCrmNotes: builder.query<
       APIResponse<PaginatedResponse<Note>>,
       { entityType: string; entityId: string; page?: number; size?: number }
     >({
@@ -40,24 +19,26 @@ export const noteApi = api.injectEndpoints({
         params: { entityType, entityId, page, size },
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapNoteListResponse,
       providesTags: (result, error, { entityType, entityId }) => [
         { type: 'Note' as const, id: `${entityType}-${entityId}-LIST` },
       ],
     }),
 
-    createNote: builder.mutation<APIResponse<Note>, CreateNoteRequest>({
+    createCrmNote: builder.mutation<APIResponse<Note>, CreateNoteRequest>({
       query: (data) => ({
         url: '/notes',
         method: 'POST',
         body: data,
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleNoteResponse,
       invalidatesTags: (result, error, { entityType, entityId }) => [
         { type: 'Note', id: `${entityType}-${entityId}-LIST` },
       ],
     }),
 
-    updateNote: builder.mutation<
+    updateCrmNote: builder.mutation<
       APIResponse<Note>,
       {
         id: string;
@@ -72,12 +53,13 @@ export const noteApi = api.injectEndpoints({
         body: data,
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleNoteResponse,
       invalidatesTags: (result, error, { entityType, entityId }) => [
         { type: 'Note', id: `${entityType}-${entityId}-LIST` },
       ],
     }),
 
-    deleteNote: builder.mutation<
+    deleteCrmNote: builder.mutation<
       APIResponse<any>,
       { id: string; entityType: string; entityId: string }
     >({
@@ -94,8 +76,8 @@ export const noteApi = api.injectEndpoints({
 });
 
 export const {
-  useGetNotesQuery,
-  useCreateNoteMutation,
-  useUpdateNoteMutation,
-  useDeleteNoteMutation,
+  useGetCrmNotesQuery,
+  useCreateCrmNoteMutation,
+  useUpdateCrmNoteMutation,
+  useDeleteCrmNoteMutation,
 } = noteApi;
