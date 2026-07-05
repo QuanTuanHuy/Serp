@@ -37,22 +37,21 @@ export function DriverHandoverTripsCard({
       <CardHeader>
         <CardTitle className='flex items-center gap-2'>
           <Truck className='h-5 w-5' />
-          Active trips
+          Chuyến đang xử lý
         </CardTitle>
         <CardDescription>
-          Trips are available after the post office dispatches the handover
-          manifest.
+          Chuyến sẽ xuất hiện sau khi bưu cục xuất phiếu bàn giao.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         {isFetching && manifestCount === 0 ? (
           <div className='flex items-center gap-2 text-sm text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Loading driver handovers...
+            Đang tải chuyến bàn giao của tài xế...
           </div>
         ) : activeTrips.length === 0 ? (
           <div className='rounded-md border border-dashed p-6 text-sm text-muted-foreground'>
-            No dispatched handovers are waiting for driver action.
+            Chưa có phiếu đã xuất nào đang chờ tài xế xử lý.
           </div>
         ) : (
           activeTrips.map((manifest) => (

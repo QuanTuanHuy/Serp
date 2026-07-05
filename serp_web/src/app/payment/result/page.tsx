@@ -21,7 +21,7 @@ const resolvePaymentStatusLabel = (query: Record<string, string>): string => {
     normalizedStatus === 'succeeded' ||
     normalizedStatus === 'true'
   ) {
-    return 'Payment completed';
+    return 'Thanh toán thành công';
   }
 
   if (
@@ -30,10 +30,10 @@ const resolvePaymentStatusLabel = (query: Record<string, string>): string => {
     normalizedStatus === 'failed' ||
     normalizedStatus === 'false'
   ) {
-    return 'Payment was not completed';
+    return 'Thanh toán chưa hoàn tất';
   }
 
-  return 'Payment result received';
+  return 'Đã nhận kết quả thanh toán';
 };
 
 export default function PaymentResultPage() {
@@ -107,21 +107,21 @@ export default function PaymentResultPage() {
   return (
     <main className='flex min-h-screen items-center justify-center bg-background px-4'>
       <section className='w-full max-w-md rounded-lg border bg-card p-6 shadow-sm'>
-        <h1 className='text-lg font-semibold'>Payment result</h1>
+        <h1 className='text-lg font-semibold'>Kết quả thanh toán</h1>
         <p className='mt-2 text-sm text-muted-foreground'>
-          {resolvePaymentStatusLabel(query)}. You can close this window and
-          continue in the payment confirmation dialog.
+          {resolvePaymentStatusLabel(query)}. Bạn có thể đóng cửa sổ này và tiếp
+          tục trong hộp thoại xác nhận thanh toán.
         </p>
 
         {appTransId ? (
           <p className='mt-3 text-xs text-muted-foreground'>
-            Transaction: <span className='font-medium'>{appTransId}</span>
+            Mã giao dịch: <span className='font-medium'>{appTransId}</span>
           </p>
         ) : null}
 
         <div className='mt-5 flex gap-2'>
           <Button type='button' onClick={() => window.close()}>
-            Close window
+            Đóng cửa sổ
           </Button>
           <Button
             type='button'
@@ -134,7 +134,7 @@ export default function PaymentResultPage() {
               )
             }
           >
-            Go to TMS
+            Đi tới TMS
           </Button>
         </div>
       </section>

@@ -28,6 +28,7 @@ import type {
   MeetingRequest,
   MeetingRequestStatus,
   MeetingRequestType,
+  Note,
 } from '../types';
 
 export type BulkActivityRequestPayload = {
@@ -1266,3 +1267,66 @@ export const mapSingleMeetingRequestResponse = (
   timestamp: new Date().toISOString(),
   data: mapBackendMeetingRequest(response.data),
 });
+
+export type BackendNote = {
+  id: number | string;
+  tenantId?: number | string | null;
+  entityType?: string | null;
+  entityId?: number | string | null;
+  content?: string | null;
+  createdAt?: number | string | null;
+  updatedAt?: number | string | null;
+  createdBy?: number | string | null;
+  updatedBy?: number | string | null;
+};
+
+export const mapBackendNoteToNote = (note: BackendNote): Note => ({
+  id: String(note.id),
+  tenantId: note.tenantId ? String(note.tenantId) : '',
+  entityType: (note.entityType as Note['entityType']) || 'LEAD',
+  entityId: note.entityId ? String(note.entityId) : '',
+  content: note.content || '',
+  createdAt: toIsoString(note.createdAt),
+  updatedAt: toIsoString(note.updatedAt),
+  createdBy: note.createdBy ? String(note.createdBy) : '',
+  updatedBy: note.updatedBy ? String(note.updatedBy) : '',
+});
+
+export const mapNoteListResponse = (
+  response: GeneralResponse<PageResponse<BackendNote>>
+): APIResponse<{
+  data: Note[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
+  };
+}> => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: {
+    data: (response.data?.items || []).map(mapBackendNoteToNote),
+    pagination: {
+      page: response.data?.pagination?.page || 1,
+      limit: response.data?.pagination?.size || 20,
+      total: Number(response.data?.pagination?.totalItems || 0),
+      totalPages: response.data?.pagination?.totalPages || 1,
+      hasNext: !!response.data?.pagination?.hasNext,
+      hasPrevious: !!response.data?.pagination?.hasPrevious,
+    },
+  },
+});
+
+export const mapSingleNoteResponse = (
+  response: GeneralResponse<BackendNote>
+): APIResponse<Note> => ({
+  success: response.code >= 200 && response.code < 300,
+  message: response.message,
+  timestamp: new Date().toISOString(),
+  data: mapBackendNoteToNote(response.data),
+});
+

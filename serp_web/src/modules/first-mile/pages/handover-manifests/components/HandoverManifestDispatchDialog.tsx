@@ -84,20 +84,20 @@ export function HandoverManifestDispatchDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>Dispatch manifest to hub</DialogTitle>
+          <DialogTitle>Xuất phiếu bàn giao đi hub</DialogTitle>
           <DialogDescription>
-            Dispatch is allowed only after all orders have been scanned out.
+            Chỉ có thể xuất đi sau khi tất cả đơn hàng đã được quét xuất.
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
           <div className='grid gap-3 sm:grid-cols-2'>
             <DetailItem
-              label='Manifest'
+              label='Phiếu'
               value={dispatchManifest?.manifestCode || '--'}
             />
             <DetailItem
-              label='Scan progress'
+              label='Tiến độ quét'
               value={`${getScannedOutOrders(dispatchManifest)}/${getTotalOrders(
                 dispatchManifest
               )}`}
@@ -106,21 +106,21 @@ export function HandoverManifestDispatchDialog({
 
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='dispatch-route'>Route *</Label>
+              <Label htmlFor='dispatch-route'>Tuyến *</Label>
               <TmsCombobox
                 id='dispatch-route'
                 value={dispatchRouteId}
                 onValueChange={onRouteChange}
                 options={dispatchRouteOptions}
                 placeholder={
-                  isLoadingDispatchRoutes ? 'Loading routes...' : 'Select route'
+                  isLoadingDispatchRoutes ? 'Đang tải tuyến...' : 'Chọn tuyến'
                 }
-                emptyText='No matching hub to post office routes'
+                emptyText='Không tìm thấy tuyến phù hợp từ bưu cục đến hub'
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='dispatch-vehicle'>Vehicle *</Label>
+              <Label htmlFor='dispatch-vehicle'>Phương tiện *</Label>
               <TmsCombobox
                 id='dispatch-vehicle'
                 value={dispatchVehicleId}
@@ -128,15 +128,15 @@ export function HandoverManifestDispatchDialog({
                 options={dispatchVehicleOptions}
                 placeholder={
                   isLoadingDispatchVehicles
-                    ? 'Loading vehicles...'
-                    : 'Select vehicle'
+                    ? 'Đang tải phương tiện...'
+                    : 'Chọn phương tiện'
                 }
-                emptyText='No active vehicles found'
+                emptyText='Không tìm thấy phương tiện đang hoạt động'
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='dispatch-departure'>Planned departure *</Label>
+              <Label htmlFor='dispatch-departure'>Dự kiến đi *</Label>
               <Input
                 id='dispatch-departure'
                 type='datetime-local'
@@ -146,7 +146,7 @@ export function HandoverManifestDispatchDialog({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='dispatch-arrival'>Planned arrival *</Label>
+              <Label htmlFor='dispatch-arrival'>Dự kiến đến *</Label>
               <Input
                 id='dispatch-arrival'
                 type='datetime-local'
@@ -157,32 +157,32 @@ export function HandoverManifestDispatchDialog({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='dispatch-seal'>Seal code</Label>
+            <Label htmlFor='dispatch-seal'>Mã seal</Label>
             <Input
               id='dispatch-seal'
               value={dispatchSealCode}
               onChange={(event) => onSealCodeChange(event.target.value)}
-              placeholder='Optional seal code'
+              placeholder='Mã seal nếu có'
             />
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='dispatch-note'>Dispatch note</Label>
+            <Label htmlFor='dispatch-note'>Ghi chú xuất hàng</Label>
             <Textarea
               id='dispatch-note'
               value={dispatchNote}
               onChange={(event) => onNoteChange(event.target.value)}
-              placeholder='Optional dispatch note'
+              placeholder='Ghi chú xuất hàng nếu có'
             />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
+            Hủy
           </Button>
           <Button disabled={!canSubmit} onClick={onSubmit}>
-            {isDispatching ? 'Dispatching...' : 'Dispatch to hub'}
+            {isDispatching ? 'Đang xuất...' : 'Xuất đi hub'}
           </Button>
         </DialogFooter>
       </DialogContent>

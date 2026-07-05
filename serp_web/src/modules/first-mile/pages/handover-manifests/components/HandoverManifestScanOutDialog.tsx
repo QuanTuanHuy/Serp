@@ -50,26 +50,26 @@ export function HandoverManifestScanOutDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
         <DialogHeader>
-          <DialogTitle>Scan orders out</DialogTitle>
+          <DialogTitle>Quét xuất đơn hàng</DialogTitle>
           <DialogDescription>
-            Scan each order before dispatching the manifest to the hub.
+            Quét từng đơn trước khi xuất phiếu bàn giao đi hub.
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
           <div className='grid gap-3 sm:grid-cols-3'>
             <DetailItem
-              label='Manifest'
+              label='Phiếu'
               value={activeScanManifest?.manifestCode || '--'}
             />
             <DetailItem
-              label='Scanned out'
+              label='Đã quét xuất'
               value={`${getScannedOutOrders(activeScanManifest)}/${getTotalOrders(
                 activeScanManifest
               )}`}
             />
             <DetailItem
-              label='Status'
+              label='Trạng thái'
               value={activeScanManifest?.status || '--'}
             />
           </div>
@@ -84,17 +84,17 @@ export function HandoverManifestScanOutDialog({
                   onScan();
                 }
               }}
-              placeholder='Scan or enter order code'
+              placeholder='Quét hoặc nhập mã đơn hàng'
             />
             <Button disabled={isScanningOut} onClick={() => onScan()}>
               <ScanLine className='mr-2 h-4 w-4' />
-              Scan out
+              Quét xuất
             </Button>
           </div>
 
           {isFetchingScanManifest ? (
             <p className='text-sm text-muted-foreground'>
-              Loading manifest orders...
+              Đang tải đơn trong phiếu...
             </p>
           ) : (
             <ManifestOrdersTable
@@ -108,7 +108,7 @@ export function HandoverManifestScanOutDialog({
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Done
+            Xong
           </Button>
         </DialogFooter>
       </DialogContent>

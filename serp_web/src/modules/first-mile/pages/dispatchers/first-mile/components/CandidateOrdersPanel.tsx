@@ -20,7 +20,7 @@ export const CandidateOrdersPanel: React.FC<CandidateOrdersPanelProps> = ({
   selectedOrderIds = [],
   onOrderToggle,
   maxVisibleOrders = 8,
-  emptyText = 'No candidate orders found.',
+  emptyText = 'Không tìm thấy đơn hàng ứng viên.',
   referenceTime,
 }) => {
   const sortedOrders = React.useMemo(
@@ -46,17 +46,15 @@ export const CandidateOrdersPanel: React.FC<CandidateOrdersPanelProps> = ({
             <h3 className='text-sm font-semibold'>{title}</h3>
           </div>
           <div className='flex flex-wrap gap-2'>
-            <Badge variant='secondary'>
-              {orders.length} candidate order(s)
-            </Badge>
+            <Badge variant='secondary'>{orders.length} đơn ứng viên</Badge>
             <Badge variant={backlogCount > 0 ? 'destructive' : 'outline'}>
-              {backlogCount} backlog
+              {backlogCount} quá hạn
             </Badge>
           </div>
         </div>
 
         {onOrderToggle && selectedOrderIds.length > 0 ? (
-          <Badge variant='outline'>{selectedOrderIds.length} selected</Badge>
+          <Badge variant='outline'>{selectedOrderIds.length} đã chọn</Badge>
         ) : null}
       </div>
 
@@ -64,7 +62,7 @@ export const CandidateOrdersPanel: React.FC<CandidateOrdersPanelProps> = ({
         {loading ? (
           <div className='flex items-center gap-2 text-sm text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Loading candidate orders...
+            Đang tải đơn hàng ứng viên...
           </div>
         ) : visibleOrders.length > 0 ? (
           <div className='grid gap-3 xl:grid-cols-2'>
@@ -85,7 +83,7 @@ export const CandidateOrdersPanel: React.FC<CandidateOrdersPanelProps> = ({
 
       {hiddenOrderCount > 0 ? (
         <p className='mt-3 text-xs text-muted-foreground'>
-          {hiddenOrderCount} more order(s) not shown in this panel.
+          Còn {hiddenOrderCount} đơn hàng chưa hiển thị trong khung này.
         </p>
       ) : null}
     </section>

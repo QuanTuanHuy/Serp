@@ -1,10 +1,10 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Driver handover route page
+ * Description: Part of Serp Project - Redirect driver handover to transit
  */
 
-import { DriverHandoverPage } from '@/modules/first-mile/pages/handover-manifests';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-  return <DriverHandoverPage />;
+  redirect('/first-mile/pickup-and-delivery/transit');
 }

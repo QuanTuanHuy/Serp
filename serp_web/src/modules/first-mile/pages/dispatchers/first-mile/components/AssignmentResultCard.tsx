@@ -12,6 +12,23 @@ import {
   CardTitle,
 } from '@/shared/components/ui';
 import type { AssignmentResultCardProps } from './types';
+import type { PickupShift } from '../../../../types';
+
+const formatShiftLabel = (shift?: PickupShift): string => {
+  if (shift === 'MORNING') {
+    return 'Ca sáng';
+  }
+
+  if (shift === 'AFTERNOON') {
+    return 'Ca chiều';
+  }
+
+  if (shift === 'EVENING') {
+    return 'Ca tối';
+  }
+
+  return shift || '--';
+};
 
 export const AssignmentResultCard: React.FC<AssignmentResultCardProps> = ({
   assignmentResult,
@@ -21,27 +38,28 @@ export const AssignmentResultCard: React.FC<AssignmentResultCardProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Latest Assignment Result</CardTitle>
+        <CardTitle>Kết quả phân công mới nhất</CardTitle>
         <CardDescription>
-          Shift {assignmentResult.shift} on {assignmentResult.tripDate || '--'}
+          {formatShiftLabel(assignmentResult.shift)} ngày{' '}
+          {assignmentResult.tripDate || '--'}
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-3 text-sm'>
         <div className='grid gap-3 md:grid-cols-3'>
           <div>
-            <p className='text-muted-foreground'>Requested orders</p>
+            <p className='text-muted-foreground'>Đơn yêu cầu</p>
             <p className='font-medium'>
               {formatNumber(assignmentResult.totalRequestedOrders)}
             </p>
           </div>
           <div>
-            <p className='text-muted-foreground'>Assigned orders</p>
+            <p className='text-muted-foreground'>Đơn đã phân công</p>
             <p className='font-medium'>
               {formatNumber(assignmentResult.assignedOrders)}
             </p>
           </div>
           <div>
-            <p className='text-muted-foreground'>Unassigned orders</p>
+            <p className='text-muted-foreground'>Đơn chưa phân công</p>
             <p className='font-medium'>
               {formatNumber(assignmentResult.unassignedOrders)}
             </p>
@@ -56,20 +74,20 @@ export const AssignmentResultCard: React.FC<AssignmentResultCardProps> = ({
                 className='rounded-md border p-3'
               >
                 <p className='font-medium'>
-                  Trip: {trip.tripCode || '--'} | Courier:{' '}
+                  Chuyến: {trip.tripCode || '--'} | Nhân viên:{' '}
                   {trip.courierCode || '--'}
                   {trip.courierName ? ` - ${trip.courierName}` : ''}
                 </p>
                 <p className='text-xs text-muted-foreground'>
-                  Planned: {formatDateTime(trip.plannedStartTime)} -{' '}
-                  {formatDateTime(trip.plannedEndTime)} | Stops:{' '}
+                  Kế hoạch: {formatDateTime(trip.plannedStartTime)} -{' '}
+                  {formatDateTime(trip.plannedEndTime)} | Điểm dừng:{' '}
                   {formatNumber(trip.totalStops)}
                 </p>
               </div>
             ))}
           </div>
         ) : (
-          <p className='text-muted-foreground'>No trips created.</p>
+          <p className='text-muted-foreground'>Chưa tạo chuyến nào.</p>
         )}
       </CardContent>
     </Card>

@@ -7,10 +7,10 @@
 
 import React, { useState } from 'react';
 import {
-  useGetNotesQuery,
-  useCreateNoteMutation,
-  useUpdateNoteMutation,
-  useDeleteNoteMutation,
+  useGetCrmNotesQuery,
+  useCreateCrmNoteMutation,
+  useUpdateCrmNoteMutation,
+  useDeleteCrmNoteMutation,
 } from '../../api/crmApi';
 import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
 import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
@@ -46,7 +46,7 @@ export const CRMNotesTab: React.FC<CRMNotesTabProps> = ({
   });
   const crmModuleId = myModules?.find((m) => m.moduleCode === 'CRM')?.moduleId;
 
-  const { data: notesData, isLoading: isNotesLoading } = useGetNotesQuery({
+  const { data: notesData, isLoading: isNotesLoading } = useGetCrmNotesQuery({
     entityType,
     entityId,
   });
@@ -60,9 +60,9 @@ export const CRMNotesTab: React.FC<CRMNotesTabProps> = ({
     { skip: !organizationId }
   );
 
-  const [createNote, { isLoading: isCreating }] = useCreateNoteMutation();
-  const [updateNote, { isLoading: isUpdating }] = useUpdateNoteMutation();
-  const [deleteNote, { isLoading: isDeleting }] = useDeleteNoteMutation();
+  const [createNote, { isLoading: isCreating }] = useCreateCrmNoteMutation();
+  const [updateNote, { isLoading: isUpdating }] = useUpdateCrmNoteMutation();
+  const [deleteNote, { isLoading: isDeleting }] = useDeleteCrmNoteMutation();
 
   const notes = notesData?.data?.data ?? [];
   const users = orgUsersResponse?.data?.items ?? [];

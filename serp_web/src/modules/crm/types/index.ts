@@ -14,3 +14,4 @@ export * from './ui';
 export * from './api';
 export * from './constants';
 export * from './meetingRequest';
+export * from './note';

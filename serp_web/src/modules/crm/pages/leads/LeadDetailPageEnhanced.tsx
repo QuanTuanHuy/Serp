@@ -1,5 +1,5 @@
 /**
- * Lead Detail Page Component - Enhanced Version
+ * Lead Detail Page Component - Enhanced UX/UI 3-Column Version
  * Author: QuanTuanHuy
  * Description: Part of Serp Project - Detailed lead view with conversion flow
  */
@@ -9,47 +9,10 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft,
-  Edit,
-  Trash2,
-  Clock,
-  Mail,
-  Phone,
-  Building2,
-  Briefcase,
-  Calendar,
-  CheckCircle,
-  AlertCircle,
-  User,
-  TrendingUp,
-  Target,
-  Globe,
-  Users,
-  MessageSquare,
-  Activity,
-  MoreHorizontal,
-  UserPlus,
-  DollarSign,
-  FileText,
-  ChevronRight,
-  RefreshCw,
-} from 'lucide-react';
+import { ArrowLeft, Trash2, Edit, MoreHorizontal, AlertCircle, RefreshCw } from 'lucide-react';
 import { getErrorMessage } from '@/lib/store/api';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   Button,
-  Badge,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-  Textarea,
-  Input,
-  Label,
   Progress,
   Dialog,
   DialogContent,
@@ -57,108 +20,59 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  Textarea,
+  Input,
+  Label,
+} from '@/shared/components/ui';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Avatar,
-  AvatarFallback,
-  Separator,
 } from '@/shared/components/ui';
 import { toast } from 'sonner';
-import { cn } from '@/shared/utils';
+
+// Custom API imports
 import {
   useDeleteLeadMutation,
   useGetLeadActivitiesQuery,
   useGetLeadQuery,
   useUpdateLeadStatusMutation,
+  useUpdateLeadMutation,
+  useAssignLeadMutation,
+  useGetCrmNotesQuery,
+  useCreateCrmNoteMutation,
+  useCreateActivityMutation,
 } from '../../api/crmApi';
+
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
+import { selectOrganizationId } from '@/modules/account/store';
+import { useAppSelector } from '@/shared/hooks';
+
+// Sub-components
+import { LeadProfileSidebar } from './components/detail/LeadProfileSidebar';
+import { QuickComposer } from './components/detail/QuickComposer';
+import { UnifiedTimeline } from './components/detail/UnifiedTimeline';
+import { InsightsSidebar } from './components/detail/InsightsSidebar';
 import { RequestMeetingDialog } from '../../components/meeting-requests';
-import { CRMNotesTab } from '../../components/shared/CRMNotesTab';
-import type { LeadSource, LeadStatus } from '../../types';
+import type { LeadStatus, BackendActivityType } from '../../types';
 
 interface LeadDetailPageProps {
   leadId: string;
 }
 
-const LEAD_STATUS_CONFIG: Record<
-  Exclude<LeadStatus, 'LOST'>,
-  {
-    label: string;
-    color: string;
-    bgColor: string;
-    icon: React.ElementType;
-    step: number;
-  }
-> = {
-  NEW: {
-    label: 'New',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-100',
-    icon: RefreshCw,
-    step: 1,
-  },
-  CONTACTED: {
-    label: 'Contacted',
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-100',
-    icon: Phone,
-    step: 2,
-  },
-  NURTURING: {
-    label: 'Nurturing',
-    color: 'text-indigo-700',
-    bgColor: 'bg-indigo-100',
-    icon: Clock,
-    step: 2,
-  },
-  QUALIFIED: {
-    label: 'Qualified',
-    color: 'text-green-700',
-    bgColor: 'bg-green-100',
-    icon: CheckCircle,
-    step: 3,
-  },
-  DISQUALIFIED: {
-    label: 'Disqualified',
-    color: 'text-red-700',
-    bgColor: 'bg-red-100',
-    icon: AlertCircle,
-    step: 0,
-  },
-  CONVERTED: {
-    label: 'Converted',
-    color: 'text-emerald-700',
-    bgColor: 'bg-emerald-100',
-    icon: UserPlus,
-    step: 4,
-  },
-};
-
-const LEAD_SOURCE_CONFIG: Record<
-  LeadSource,
-  { label: string; icon: React.ElementType }
-> = {
-  WEBSITE: { label: 'Website', icon: Globe },
-  SOCIAL_MEDIA: { label: 'Social Media', icon: MessageSquare },
-  REFERRAL: { label: 'Referral', icon: Users },
-  COLD_CALL: { label: 'Cold Call', icon: Phone },
-  EMAIL_CAMPAIGN: { label: 'Email Campaign', icon: Mail },
-  EMAIL: { label: 'Email', icon: Mail },
-  PHONE: { label: 'Phone', icon: Phone },
-  TRADE_SHOW: { label: 'Trade Show', icon: Building2 },
-  OTHER: { label: 'Other', icon: FileText },
-};
-
 export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('overview');
+
+  // Dialog trigger states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showQualifyDialog, setShowQualifyDialog] = useState(false);
   const [showDisqualifyDialog, setShowDisqualifyDialog] = useState(false);
-  const [showMeetingRequestDialog, setShowMeetingRequestDialog] =
-    useState(false);
+  const [showMeetingRequestDialog, setShowMeetingRequestDialog] = useState(false);
+
+  // Dialog note fields
   const [qualifyNotes, setQualifyNotes] = useState('');
   const [disqualifyNotes, setDisqualifyNotes] = useState('');
   const [convertForm, setConvertForm] = useState({
@@ -172,91 +86,139 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
     opportunityNotes: '',
   });
 
-  const { data, isLoading } = useGetLeadQuery(leadId);
-  const { data: activitiesData, isLoading: isActivitiesLoading } =
-    useGetLeadActivitiesQuery({ leadId, page: 1, size: 20 });
+  // API Hooks (RSC Waterfalls eliminated - executing parallel requests via RTK Query)
+  const { data: leadResponse, isLoading: isLoadingLead } = useGetLeadQuery(leadId);
+  const { data: activitiesResponse, isLoading: isLoadingActivities } = useGetLeadActivitiesQuery({ leadId, page: 1, size: 50 });
+  const { data: notesResponse, isLoading: isLoadingNotes } = useGetCrmNotesQuery({ entityType: 'LEAD', entityId: leadId });
+
+  // Organization users fetching logic for real note/activity creator mapping
+  const organizationId = useAppSelector(selectOrganizationId);
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const crmModuleId = myModules?.find((m) => m.moduleCode === 'CRM')?.moduleId;
+
+  const { data: orgUsersResponse } = useGetOrganizationUsersQuery(
+    {
+      organizationId: organizationId as number,
+      page: 0,
+      pageSize: 100,
+      moduleId: crmModuleId,
+    },
+    { skip: !organizationId }
+  );
+
   const [deleteLead] = useDeleteLeadMutation();
   const [updateLeadStatus] = useUpdateLeadStatusMutation();
+  const [updateLead, { isLoading: isUpdatingLead }] = useUpdateLeadMutation();
+  const [assignLead] = useAssignLeadMutation();
+  const [createNote] = useCreateCrmNoteMutation();
+  const [createActivity] = useCreateActivityMutation();
 
-  const lead = data?.data;
-  const activities = activitiesData?.data.data || [];
-  const linkedAccountId =
-    lead?.convertedAccountId?.trim() ||
-    lead?.convertedToCustomerId?.trim() ||
-    undefined;
+  const lead = leadResponse?.data;
+  const activities = activitiesResponse?.data.data || [];
+  const notes = notesResponse?.data.data || [];
+  const users = orgUsersResponse?.data?.items ?? [];
 
-  const leadStatus = (lead?.leadStatus || 'NEW') as Exclude<LeadStatus, 'LOST'>;
-  const leadSource = (lead?.leadSource || 'WEBSITE') as LeadSource;
-  const statusConfig = LEAD_STATUS_CONFIG[leadStatus];
-  const sourceConfig = LEAD_SOURCE_CONFIG[leadSource];
-  const StatusIcon = statusConfig.icon;
-  const SourceIcon = sourceConfig.icon;
+  // Helper to map userId to display name
+  const getUserName = useMemo(() => {
+    return (userId?: string | number) => {
+      if (!userId) return 'System';
+      const user = users.find((u) => String(u.id) === String(userId));
+      if (!user) return `User #${userId}`;
+      const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
+      return name || user.email;
+    };
+  }, [users]);
 
+  // Calculate lead status progress
+  const statusProgress = useMemo(() => {
+    if (!lead) return 0;
+    const statusMap: Record<LeadStatus, number> = {
+      NEW: 25,
+      CONTACTED: 50,
+      NURTURING: 50,
+      QUALIFIED: 75,
+      CONVERTED: 100,
+      DISQUALIFIED: 0,
+      LOST: 0,
+    };
+    return statusMap[lead.leadStatus || 'NEW'] || 0;
+  }, [lead]);
+
+  // Calculate score using Vercel best practices (derived inline from static details)
   const leadScore = useMemo(() => {
-    if (typeof lead?.leadScore === 'number') {
-      return lead.leadScore;
-    }
+    if (!lead) return 0;
+    if (typeof lead.leadScore === 'number') return lead.leadScore;
 
     let score = 0;
-    if (lead?.email) score += 20;
-    if (lead?.phone) score += 15;
-    if (lead?.company) score += 20;
-    if (lead?.estimatedValue && lead.estimatedValue > 0) score += 20;
-    if (leadStatus === 'QUALIFIED') score += 25;
-    else if (leadStatus === 'CONTACTED' || leadStatus === 'NURTURING')
-      score += 15;
-    else if (leadStatus === 'NEW') score += 5;
+    if (lead.email) score += 20;
+    if (lead.phone) score += 15;
+    if (lead.company) score += 20;
+    if (lead.estimatedValue && lead.estimatedValue > 0) score += 20;
+    if (lead.leadStatus === 'QUALIFIED') score += 25;
+    else if (lead.leadStatus === 'CONTACTED' || lead.leadStatus === 'NURTURING') score += 15;
+    else if (lead.leadStatus === 'NEW') score += 5;
+
     return Math.min(score, 100);
-  }, [
-    lead?.company,
-    lead?.email,
-    lead?.estimatedValue,
-    lead?.leadScore,
-    lead?.phone,
-    leadStatus,
-  ]);
+  }, [lead]);
 
-  if (!isLoading && !lead) {
-    return (
-      <div className='flex h-[60vh] flex-col items-center justify-center'>
-        <AlertCircle className='mb-4 h-16 w-16 text-muted-foreground' />
-        <h2 className='mb-2 text-xl font-semibold text-foreground'>
-          Lead not found
-        </h2>
-        <p className='mb-4 text-muted-foreground'>
-          This lead does not exist or has been deleted.
-        </p>
-        <Button asChild>
-          <Link href='/crm/leads'>
-            <ArrowLeft className='mr-2 h-4 w-4' />
-            Back to lead list
-          </Link>
-        </Button>
-      </div>
-    );
-  }
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Not available';
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+  // Mutations wrapper logic
+  const handleUpdateLeadField = async (data: any) => {
+    try {
+      await updateLead({ id: leadId, data }).unwrap();
+      toast.success('Lead updated successfully');
+    } catch (error) {
+      toast.error('Failed to update lead', { description: getErrorMessage(error) });
+      throw error;
+    }
   };
 
-  const formatCurrency = (value?: number) => {
-    if (!value) return 'Not available';
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0,
-    }).format(value);
+  const handleAssignLead = async (assignedToId: number) => {
+    try {
+      await assignLead({ id: leadId, data: { assignedTo: assignedToId } }).unwrap();
+      toast.success('Lead reassigned successfully');
+    } catch (error) {
+      toast.error('Failed to assign lead', { description: getErrorMessage(error) });
+    }
   };
 
-  const statusProgress = () => {
-    if (leadStatus === 'DISQUALIFIED') return 0;
-    return (statusConfig.step / 4) * 100;
+  const handleAddNote = async (content: string) => {
+    console.log("LeadDetailPage: handleAddNote called. LeadId:", leadId, "Number(LeadId):", Number(leadId), "Content:", content);
+    try {
+      console.log("LeadDetailPage: Calling createNote mutation...");
+      const res = await createNote({ entityType: 'LEAD', entityId: Number(leadId), content }).unwrap();
+      console.log("LeadDetailPage: createNote mutation completed. Result:", res);
+      toast.success('Note added successfully');
+    } catch (error) {
+      console.error("LeadDetailPage: createNote mutation failed. Error:", error);
+      toast.error('Failed to create note', { description: getErrorMessage(error) });
+      throw error;
+    }
+  };
+
+  const handleAddActivity = async (data: any) => {
+    try {
+      const typeMap: Record<string, BackendActivityType> = {
+        CALL: 'CALL',
+        EMAIL: 'EMAIL',
+        MEETING: 'MEETING',
+        OTHER: 'TASK',
+      };
+      await createActivity({
+        leadId: Number(leadId),
+        subject: data.subject,
+        activityType: typeMap[data.type] || 'TASK',
+        notes: data.notes,
+        description: data.notes,
+        status: 'COMPLETED',
+        activityDate: Date.now(),
+      }).unwrap();
+      toast.success('Activity logged successfully');
+    } catch (error) {
+      toast.error('Failed to log activity', { description: getErrorMessage(error) });
+      throw error;
+    }
   };
 
   const handleDelete = async () => {
@@ -265,9 +227,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
       toast.success('Delete lead successfully');
       router.push('/crm/leads');
     } catch (error) {
-      toast.error('Failed to delete lead', {
-        description: getErrorMessage(error),
-      });
+      toast.error('Failed to delete lead', { description: getErrorMessage(error) });
     }
   };
 
@@ -276,7 +236,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
       const result = await updateLeadStatus({
         id: leadId,
         data: {
-          fromStatus: leadStatus,
+          fromStatus: lead?.leadStatus,
           toStatus: 'QUALIFIED',
           notes: qualifyNotes.trim(),
         },
@@ -285,9 +245,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
       setShowQualifyDialog(false);
       setQualifyNotes('');
     } catch (error) {
-      toast.error('Failed to qualify lead', {
-        description: getErrorMessage(error),
-      });
+      toast.error('Failed to qualify lead', { description: getErrorMessage(error) });
     }
   };
 
@@ -296,7 +254,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
       const result = await updateLeadStatus({
         id: leadId,
         data: {
-          fromStatus: leadStatus,
+          fromStatus: lead?.leadStatus,
           toStatus: 'DISQUALIFIED',
           notes: disqualifyNotes.trim(),
         },
@@ -305,9 +263,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
       setShowDisqualifyDialog(false);
       setDisqualifyNotes('');
     } catch (error) {
-      toast.error('Failed to disqualify lead', {
-        description: getErrorMessage(error),
-      });
+      toast.error('Failed to disqualify lead', { description: getErrorMessage(error) });
     }
   };
 
@@ -316,31 +272,21 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
       const result = await updateLeadStatus({
         id: leadId,
         data: {
-          fromStatus: leadStatus,
+          fromStatus: lead?.leadStatus,
           toStatus: 'CONVERTED',
           conversion: {
             createAccount: convertForm.createAccount,
             createOpportunity: convertForm.createOpportunity,
-            existingAccountId: convertForm.existingAccountId
-              ? Number(convertForm.existingAccountId)
-              : undefined,
-            accountData: convertForm.createAccount
-              ? {
-                  name: convertForm.accountName || lead?.company || lead?.name,
-                  notes: convertForm.accountNotes || lead?.notes,
-                }
-              : undefined,
-            opportunityData: convertForm.createOpportunity
-              ? {
-                  name:
-                    convertForm.opportunityName ||
-                    `Opportunity from ${lead?.name}`,
-                  amount: convertForm.opportunityAmount
-                    ? Number(convertForm.opportunityAmount)
-                    : lead?.estimatedValue,
-                  notes: convertForm.opportunityNotes || lead?.notes,
-                }
-              : undefined,
+            existingAccountId: convertForm.existingAccountId ? Number(convertForm.existingAccountId) : undefined,
+            accountData: convertForm.createAccount ? {
+              name: convertForm.accountName || lead?.company || lead?.name,
+              notes: convertForm.accountNotes || lead?.notes,
+            } : undefined,
+            opportunityData: convertForm.createOpportunity ? {
+              name: convertForm.opportunityName || `Opportunity from ${lead?.name}`,
+              amount: convertForm.opportunityAmount ? Number(convertForm.opportunityAmount) : lead?.estimatedValue,
+              notes: convertForm.opportunityNotes || lead?.notes,
+            } : undefined,
           },
         },
       }).unwrap();
@@ -350,671 +296,234 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
         router.push(`/crm/accounts/${result.data.accountId}`);
       }
     } catch (error) {
-      toast.error('Failed to convert lead', {
-        description: getErrorMessage(error),
-      });
+      toast.error('Failed to convert lead', { description: getErrorMessage(error) });
     }
   };
 
+  if (isLoadingLead) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center gap-2">
+        <RefreshCw className="h-6 w-6 animate-spin text-primary" /> Loading lead details...
+      </div>
+    );
+  }
+
+  if (!lead) {
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center">
+        <AlertCircle className="mb-4 h-16 w-16 text-muted-foreground" />
+        <h2 className="mb-2 text-xl font-semibold text-foreground">Lead not found</h2>
+        <p className="mb-4 text-muted-foreground">This lead does not exist or has been deleted.</p>
+        <Button asChild>
+          <Link href="/crm/leads">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to lead list
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const linkedAccountId = lead.convertedAccountId?.trim() || lead.convertedToCustomerId?.trim() || undefined;
+
   return (
-    <div className='space-y-6'>
-      <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-        <div className='flex items-center gap-4'>
-          <Button variant='ghost' size='icon' asChild>
-            <Link href='/crm/leads'>
-              <ArrowLeft className='h-5 w-5' />
+    <div className="space-y-6">
+      {/* Header Action Bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-muted/50">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild className="rounded-full">
+            <Link href="/crm/leads">
+              <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
           <div>
-            <h1 className='text-2xl font-bold text-foreground'>{lead?.name}</h1>
-            <div className='mt-1 flex flex-wrap items-center gap-2'>
-              <Badge
-                className={`${statusConfig.bgColor} ${statusConfig.color}`}
-              >
-                <StatusIcon className='mr-1 h-3 w-3' />
-                {statusConfig.label}
-              </Badge>
-              <Badge variant='outline' className='flex items-center gap-1'>
-                <SourceIcon className='h-3 w-3' />
-                {sourceConfig.label}
-              </Badge>
-            </div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">CRM Lead Workspace</div>
+            <h1 className="text-2xl font-extrabold text-foreground tracking-tight">{lead.name}</h1>
           </div>
         </div>
 
-        <div className='flex flex-wrap items-center gap-2'>
-          {leadStatus === 'QUALIFIED' && (
-            <Button
-              onClick={() => setShowConvertDialog(true)}
-              className='bg-green-600 hover:bg-green-700'
-            >
-              <UserPlus className='mr-2 h-4 w-4' />
-              Convert
-            </Button>
-          )}
-          <Button variant='outline' onClick={() => setShowQualifyDialog(true)}>
-            <CheckCircle className='mr-2 h-4 w-4' />
-            Qualify
-          </Button>
-          <Button
-            variant='outline'
-            onClick={() => setShowDisqualifyDialog(true)}
-          >
-            <AlertCircle className='mr-2 h-4 w-4' />
-            Disqualify
-          </Button>
-          <Button variant='outline' asChild>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
             <Link href={`/crm/leads/${leadId}/edit`}>
-              <Edit className='mr-2 h-4 w-4' />
-              Edit
+              <Edit className="mr-1.5 h-4 w-4" /> Edit
             </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant='outline' size='icon'>
-                <MoreHorizontal className='h-4 w-4' />
+              <Button variant="outline" size="icon" className="h-9 w-9">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuItem
-                className='text-red-600'
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className='mr-2 h-4 w-4' />
-                Delete Lead
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem className="text-rose-600 focus:text-rose-600 focus:bg-rose-50" onClick={() => setShowDeleteDialog(true)}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Lead
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      <Card className='border-none shadow-sm'>
-        <CardContent className='py-4'>
-          <div className='mb-2 flex items-center justify-between'>
-            <span className='text-sm font-medium text-foreground'>
-              Conversion Progress
-            </span>
-            <span className='text-sm text-muted-foreground'>
-              {statusConfig.label}
-            </span>
-          </div>
-          <Progress value={statusProgress()} className='h-2' />
-          <div className='mt-3 flex justify-between'>
-            {['NEW', 'CONTACTED', 'QUALIFIED', 'CONVERTED'].map(
-              (status, index) => {
-                const config =
-                  LEAD_STATUS_CONFIG[status as Exclude<LeadStatus, 'LOST'>];
-                const Icon = config.icon;
-                const isActive = statusConfig.step >= index + 1;
-                const isCurrent = statusConfig.step === index + 1;
-                return (
-                  <div
-                    key={status}
-                    className={cn(
-                      'flex flex-col items-center',
-                      isActive
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : 'text-muted-foreground',
-                      isCurrent && 'font-semibold'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'rounded-full p-2',
-                        isActive
-                          ? 'bg-blue-100 dark:bg-blue-900/30'
-                          : 'bg-muted'
-                      )}
-                    >
-                      <Icon className='h-4 w-4' />
-                    </div>
-                    <span className='mt-1 hidden text-xs sm:block'>
-                      {config.label}
-                    </span>
-                  </div>
-                );
-              }
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Minimal flat pipeline progress bar */}
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs text-muted-foreground font-semibold">
+          <span>Pipeline Progression</span>
+          <span>{lead.leadStatus} ({statusProgress}%)</span>
+        </div>
+        <Progress value={statusProgress} className="h-1.5 bg-muted/60" />
+      </div>
 
-      <div className='grid gap-6 lg:grid-cols-3'>
-        <div className='space-y-6 lg:col-span-2'>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className='w-full justify-start'>
-              <TabsTrigger value='overview'>Overview</TabsTrigger>
-              <TabsTrigger value='activities'>
-                Activities ({activities.length})
-              </TabsTrigger>
-              <TabsTrigger value='notes'>Notes</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value='overview' className='mt-4 space-y-6'>
-              <Card className='border-none shadow-sm'>
-                <CardHeader className='pb-3'>
-                  <CardTitle className='flex items-center text-lg font-semibold'>
-                    <User className='mr-2 h-5 w-5 text-muted-foreground' />
-                    Contact Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='grid gap-4 sm:grid-cols-2'>
-                  <div className='flex items-center gap-3'>
-                    <div className='rounded-lg bg-blue-100 p-2'>
-                      <Mail className='h-4 w-4 text-blue-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Email</p>
-                      <p className='font-medium text-foreground'>
-                        {lead?.email || 'Not available'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className='flex items-center gap-3'>
-                    <div className='rounded-lg bg-green-100 p-2'>
-                      <Phone className='h-4 w-4 text-green-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Phone</p>
-                      <p className='font-medium text-foreground'>
-                        {lead?.phone || 'Not available'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className='flex items-center gap-3'>
-                    <div className='rounded-lg bg-purple-100 p-2'>
-                      <Building2 className='h-4 w-4 text-purple-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Company</p>
-                      <p className='font-medium text-foreground'>
-                        {lead?.company || 'Not available'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className='flex items-center gap-3'>
-                    <div className='rounded-lg bg-orange-100 p-2'>
-                      <Briefcase className='h-4 w-4 text-orange-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Job Title</p>
-                      <p className='font-medium text-foreground'>
-                        {lead?.jobTitle || 'Not available'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className='border-none shadow-sm'>
-                <CardHeader className='pb-3'>
-                  <CardTitle className='flex items-center text-lg font-semibold'>
-                    <Target className='mr-2 h-5 w-5 text-muted-foreground' />
-                    Lead Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='grid gap-4 sm:grid-cols-2'>
-                  <div className='flex items-center gap-3'>
-                    <div className='rounded-lg bg-emerald-100 p-2'>
-                      <DollarSign className='h-4 w-4 text-emerald-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>
-                        Estimated Value
-                      </p>
-                      <p className='font-medium text-foreground'>
-                        {formatCurrency(lead?.estimatedValue)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className='flex items-center gap-3'>
-                    <div className='rounded-lg bg-pink-100 p-2'>
-                      <Calendar className='h-4 w-4 text-pink-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>
-                        Follow Up Date
-                      </p>
-                      <p className='font-medium text-foreground'>
-                        {formatDate(lead?.followUpDate)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className='flex items-center gap-3'>
-                    <div className='rounded-lg bg-cyan-100 p-2'>
-                      <SourceIcon className='h-4 w-4 text-cyan-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Source</p>
-                      <p className='font-medium text-foreground'>
-                        {sourceConfig.label}
-                      </p>
-                    </div>
-                  </div>
-                  <div className='flex items-center gap-3'>
-                    <div className='rounded-lg bg-amber-100 p-2'>
-                      <Clock className='h-4 w-4 text-amber-600' />
-                    </div>
-                    <div>
-                      <p className='text-sm text-muted-foreground'>Updated</p>
-                      <p className='font-medium text-foreground'>
-                        {formatDate(lead?.updatedAt)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className='border-none shadow-sm'>
-                <CardHeader className='pb-3'>
-                  <CardTitle className='text-lg font-semibold'>
-                    Primary Notes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className='whitespace-pre-wrap text-foreground/80'>
-                    {lead?.notes || 'No notes available.'}
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value='activities' className='mt-4 space-y-4'>
-              {isActivitiesLoading ? (
-                <Card className='border-none shadow-sm'>
-                  <CardContent className='py-12 text-center text-muted-foreground'>
-                    Loading activities...
-                  </CardContent>
-                </Card>
-              ) : activities.length > 0 ? (
-                <div className='space-y-3'>
-                  {activities.map((activity) => (
-                    <Card
-                      key={activity.id}
-                      className='cursor-pointer border-none shadow-sm transition-shadow hover:shadow-md'
-                      onClick={() =>
-                        router.push(`/crm/activities/${activity.id}`)
-                      }
-                    >
-                      <CardContent className='flex items-center gap-4 p-4'>
-                        <div className='rounded-lg bg-blue-100 p-2'>
-                          <Activity className='h-5 w-5 text-blue-600' />
-                        </div>
-                        <div className='flex-1'>
-                          <p className='font-medium text-foreground'>
-                            {activity.subject}
-                          </p>
-                          <p className='text-sm text-muted-foreground'>
-                            {formatDate(activity.scheduledDate)} •{' '}
-                            {activity.type}
-                          </p>
-                        </div>
-                        <Badge variant='outline'>{activity.status}</Badge>
-                        <ChevronRight className='h-4 w-4 text-muted-foreground' />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <Card className='border-none shadow-sm'>
-                  <CardContent className='flex flex-col items-center justify-center py-12'>
-                    <Activity className='mb-4 h-12 w-12 text-muted-foreground/50' />
-                    <p className='text-muted-foreground'>
-                      No activities available.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value='notes' className='mt-4'>
-              <CRMNotesTab entityType='LEAD' entityId={leadId} />
-            </TabsContent>
-          </Tabs>
+      {/* Main 3-Column Responsive Grid */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-4">
+        {/* Column 1: Profile Sidebar */}
+        <div className="lg:col-span-1 border border-muted/50 bg-card rounded-2xl p-5 shadow-sm self-start">
+          <LeadProfileSidebar lead={lead} isUpdating={isUpdatingLead} onUpdateLead={handleUpdateLeadField} />
         </div>
 
-        <div className='space-y-6'>
-          <Card className='border-none shadow-sm'>
-            <CardHeader className='pb-3'>
-              <CardTitle className='flex items-center text-lg font-semibold'>
-                <TrendingUp className='mr-2 h-5 w-5 text-muted-foreground' />
-                Lead Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className='flex items-center justify-center'>
-                <div className='relative'>
-                  <svg className='h-32 w-32 -rotate-90'>
-                    <circle
-                      cx='64'
-                      cy='64'
-                      r='56'
-                      fill='none'
-                      className='stroke-muted'
-                      strokeWidth='12'
-                    />
-                    <circle
-                      cx='64'
-                      cy='64'
-                      r='56'
-                      fill='none'
-                      stroke={
-                        leadScore >= 75
-                          ? '#22c55e'
-                          : leadScore >= 50
-                            ? '#f59e0b'
-                            : '#ef4444'
-                      }
-                      strokeWidth='12'
-                      strokeDasharray={`${(leadScore / 100) * 352} 352`}
-                      strokeLinecap='round'
-                    />
-                  </svg>
-                  <div className='absolute inset-0 flex flex-col items-center justify-center'>
-                    <span className='text-3xl font-bold text-foreground'>
-                      {leadScore}
-                    </span>
-                    <span className='text-sm text-muted-foreground'>/100</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Column 2 & 3: Interaction Timeline Hub */}
+        <div className="lg:col-span-2 space-y-6">
+          <QuickComposer leadId={leadId} onAddNote={handleAddNote} onAddActivity={handleAddActivity} />
+          <UnifiedTimeline activities={activities} notes={notes} isLoading={isLoadingActivities || isLoadingNotes} getUserName={getUserName} />
+        </div>
 
-          <Card className='border-none shadow-sm'>
-            <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>
-                Assigned To
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {lead?.assignedTo ? (
-                <div className='flex items-center gap-3'>
-                  <Avatar className='h-10 w-10'>
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className='font-medium text-foreground'>
-                      User #{lead.assignedTo}
-                    </p>
-                    <p className='text-sm text-muted-foreground'>
-                      Assigned user
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className='text-center'>
-                  <p className='text-muted-foreground'>Not assigned</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className='border-none shadow-sm'>
-            <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>
-                Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Lead ID</span>
-                <span className='font-mono text-sm text-foreground'>
-                  #{lead?.id}
-                </span>
-              </div>
-              <Separator />
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  Created Date
-                </span>
-                <span className='text-sm text-foreground'>
-                  {formatDate(lead?.createdAt)}
-                </span>
-              </div>
-              <Separator />
-              <div className='flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>Updated</span>
-                <span className='text-sm text-foreground'>
-                  {formatDate(lead?.updatedAt)}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className='border-none shadow-sm'>
-            <CardHeader className='pb-3'>
-              <CardTitle className='text-lg font-semibold'>
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-2'>
-              <Button
-                className='w-full justify-start'
-                variant='outline'
-                disabled={!linkedAccountId}
-                title={
-                  linkedAccountId
-                    ? undefined
-                    : 'Convert this lead to an account before requesting a meeting'
-                }
-                onClick={() =>
-                  linkedAccountId && setShowMeetingRequestDialog(true)
-                }
-              >
-                <Calendar className='mr-2 h-4 w-4 text-purple-600' />
-                Request meeting
-              </Button>
-              {leadStatus === 'QUALIFIED' && (
-                <Button
-                  className='w-full justify-start bg-green-600 text-white hover:bg-green-700'
-                  onClick={() => setShowConvertDialog(true)}
-                >
-                  <UserPlus className='mr-2 h-4 w-4' />
-                  Convert to Account
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+        {/* Column 4: Insights & Conversion Hub */}
+        <div className="lg:col-span-1 space-y-6">
+          <InsightsSidebar
+            lead={lead}
+            leadScore={leadScore}
+            onAssignLead={handleAssignLead}
+            onOpenConvert={() => setShowConvertDialog(true)}
+            onOpenQualify={() => setShowQualifyDialog(true)}
+            onOpenDisqualify={() => setShowDisqualifyDialog(true)}
+            onOpenMeetingRequest={() => setShowMeetingRequestDialog(true)}
+            users={users}
+            getUserName={getUserName}
+          />
         </div>
       </div>
 
+      {/* Dialog: Delete */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Lead Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete lead &quot;{lead?.name}&quot;?
-              This action cannot be undone.
+              Are you sure you want to delete lead &quot;{lead.name}&quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowDeleteDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant='destructive' onClick={handleDelete}>
-              Delete lead
-            </Button>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete lead</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Dialog: Qualify */}
+      <Dialog open={showQualifyDialog} onOpenChange={setShowQualifyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Qualify lead</DialogTitle>
+            <DialogDescription>Add qualification notes for this lead.</DialogDescription>
+          </DialogHeader>
+          <Textarea rows={4} value={qualifyNotes} onChange={(e) => setQualifyNotes(e.target.value)} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowQualifyDialog(false)}>Cancel</Button>
+            <Button onClick={handleQualify} disabled={!qualifyNotes.trim()}>Qualify</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Disqualify */}
+      <Dialog open={showDisqualifyDialog} onOpenChange={setShowDisqualifyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Disqualify lead</DialogTitle>
+            <DialogDescription>Add disqualification notes for this lead.</DialogDescription>
+          </DialogHeader>
+          <Textarea rows={4} value={disqualifyNotes} onChange={(e) => setDisqualifyNotes(e.target.value)} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDisqualifyDialog(false)}>Cancel</Button>
+            <Button onClick={handleDisqualify} disabled={!disqualifyNotes.trim()}>Disqualify</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Convert */}
+      <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+        <DialogContent className="w-[95vw] max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Convert lead</DialogTitle>
+            <DialogDescription>Create account/opportunity from this lead.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="accountName">Account Name</Label>
+                <Input
+                  id="accountName"
+                  value={convertForm.accountName}
+                  onChange={(e) => setConvertForm((prev) => ({ ...prev, accountName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="existingAccountId">Existing Account ID</Label>
+                <Input
+                  id="existingAccountId"
+                  value={convertForm.existingAccountId}
+                  onChange={(e) => setConvertForm((prev) => ({ ...prev, existingAccountId: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="opportunityName">Opportunity Name</Label>
+                <Input
+                  id="opportunityName"
+                  value={convertForm.opportunityName}
+                  onChange={(e) => setConvertForm((prev) => ({ ...prev, opportunityName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="opportunityAmount">Opportunity Amount</Label>
+                <Input
+                  id="opportunityAmount"
+                  type="number"
+                  value={convertForm.opportunityAmount}
+                  onChange={(e) => setConvertForm((prev) => ({ ...prev, opportunityAmount: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="accountNotes">Account Notes</Label>
+              <Textarea
+                id="accountNotes"
+                rows={3}
+                value={convertForm.accountNotes}
+                onChange={(e) => setConvertForm((prev) => ({ ...prev, accountNotes: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="opportunityNotes">Opportunity Notes</Label>
+              <Textarea
+                id="opportunityNotes"
+                rows={3}
+                value={convertForm.opportunityNotes}
+                onChange={(e) => setConvertForm((prev) => ({ ...prev, opportunityNotes: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConvertDialog(false)}>Cancel</Button>
+            <Button onClick={handleConvert}>Convert</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Local Meeting Request */}
       {linkedAccountId && (
         <RequestMeetingDialog
           open={showMeetingRequestDialog}
           onOpenChange={setShowMeetingRequestDialog}
           accountId={linkedAccountId}
-          accountName={lead?.company || lead?.name}
+          accountName={lead.company || lead.name}
         />
       )}
-
-      <Dialog open={showQualifyDialog} onOpenChange={setShowQualifyDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Qualify lead</DialogTitle>
-            <DialogDescription>
-              Add qualification notes for this lead.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            rows={4}
-            value={qualifyNotes}
-            onChange={(e) => setQualifyNotes(e.target.value)}
-          />
-          <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowQualifyDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleQualify} disabled={!qualifyNotes.trim()}>
-              Qualify
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={showDisqualifyDialog}
-        onOpenChange={setShowDisqualifyDialog}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Disqualify lead</DialogTitle>
-            <DialogDescription>
-              Add disqualification notes for this lead.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            rows={4}
-            value={disqualifyNotes}
-            onChange={(e) => setDisqualifyNotes(e.target.value)}
-          />
-          <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowDisqualifyDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDisqualify}
-              disabled={!disqualifyNotes.trim()}
-            >
-              Disqualify
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
-        <DialogContent className='w-[95vw] max-w-2xl'>
-          <DialogHeader>
-            <DialogTitle>Convert lead</DialogTitle>
-            <DialogDescription>
-              Create account/opportunity from this lead.
-            </DialogDescription>
-          </DialogHeader>
-          <div className='space-y-4'>
-            <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-              <div className='space-y-2'>
-                <Label htmlFor='accountName'>Account Name</Label>
-                <Input
-                  id='accountName'
-                  value={convertForm.accountName}
-                  onChange={(e) =>
-                    setConvertForm((prev) => ({
-                      ...prev,
-                      accountName: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='existingAccountId'>Existing Account ID</Label>
-                <Input
-                  id='existingAccountId'
-                  value={convertForm.existingAccountId}
-                  onChange={(e) =>
-                    setConvertForm((prev) => ({
-                      ...prev,
-                      existingAccountId: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='opportunityName'>Opportunity Name</Label>
-                <Input
-                  id='opportunityName'
-                  value={convertForm.opportunityName}
-                  onChange={(e) =>
-                    setConvertForm((prev) => ({
-                      ...prev,
-                      opportunityName: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='opportunityAmount'>Opportunity Amount</Label>
-                <Input
-                  id='opportunityAmount'
-                  type='number'
-                  value={convertForm.opportunityAmount}
-                  onChange={(e) =>
-                    setConvertForm((prev) => ({
-                      ...prev,
-                      opportunityAmount: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='accountNotes'>Account Notes</Label>
-              <Textarea
-                id='accountNotes'
-                rows={3}
-                value={convertForm.accountNotes}
-                onChange={(e) =>
-                  setConvertForm((prev) => ({
-                    ...prev,
-                    accountNotes: e.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='opportunityNotes'>Opportunity Notes</Label>
-              <Textarea
-                id='opportunityNotes'
-                rows={3}
-                value={convertForm.opportunityNotes}
-                onChange={(e) =>
-                  setConvertForm((prev) => ({
-                    ...prev,
-                    opportunityNotes: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant='outline'
-              onClick={() => setShowConvertDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleConvert}>Convert</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

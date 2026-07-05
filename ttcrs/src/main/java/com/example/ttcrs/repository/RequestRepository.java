@@ -23,7 +23,7 @@ import java.util.List;
 public interface RequestRepository
         extends JpaRepository<RequestEntity, Long>,
                 JpaSpecificationExecutor<RequestEntity> {
-
+    // Tự parse method name → Spring Data JPA sẽ tự generate query                   
     List<RequestEntity> findAllByTransportPlanId(Long transportPlanId);
 
     // =========================================================================
