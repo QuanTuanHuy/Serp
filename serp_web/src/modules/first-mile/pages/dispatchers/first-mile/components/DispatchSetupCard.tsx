@@ -25,31 +25,31 @@ import type {
 } from './types';
 
 const SHIFT_OPTIONS: Array<{ value: PickupShift; label: string }> = [
-  { value: 'MORNING', label: 'Morning (07:30 - 12:00)' },
-  { value: 'AFTERNOON', label: 'Afternoon (13:30 - 18:00)' },
-  { value: 'EVENING', label: 'Evening (18:30 - 22:00)' },
+  { value: 'MORNING', label: 'Ca sáng (07:30 - 12:00)' },
+  { value: 'AFTERNOON', label: 'Ca chiều (13:30 - 18:00)' },
+  { value: 'EVENING', label: 'Ca tối (18:30 - 22:00)' },
 ];
 
 const ROUTING_VEHICLE_OPTIONS: Array<{
   value: RoutingVehicleOption;
   label: string;
 }> = [
-  { value: 'DEFAULT', label: 'Use backend default' },
-  { value: 'CAR', label: 'Car' },
-  { value: 'BIKE', label: 'Bike' },
+  { value: 'DEFAULT', label: 'Dùng mặc định từ backend' },
+  { value: 'CAR', label: 'Ô tô' },
+  { value: 'BIKE', label: 'Xe máy' },
   { value: 'TAXI', label: 'Taxi' },
-  { value: 'TRUCK', label: 'Truck' },
-  { value: 'HD', label: 'Heavy-duty' },
+  { value: 'TRUCK', label: 'Xe tải' },
+  { value: 'HD', label: 'Xe tải nặng' },
 ];
 
 const OPTIMIZATION_GOAL_OPTIONS: Array<{
   value: DispatchOptimizationGoalOption;
   label: string;
 }> = [
-  { value: 'BALANCED', label: 'Balanced' },
-  { value: 'ON_TIME_PRIORITY', label: 'Prioritize on-time pickup' },
-  { value: 'COST_EFFICIENCY', label: 'Reduce travel cost' },
-  { value: 'MAX_ASSIGNMENT', label: 'Maximize assigned orders' },
+  { value: 'BALANCED', label: 'Cân bằng' },
+  { value: 'ON_TIME_PRIORITY', label: 'Ưu tiên lấy đúng giờ' },
+  { value: 'COST_EFFICIENCY', label: 'Giảm chi phí di chuyển' },
+  { value: 'MAX_ASSIGNMENT', label: 'Tối đa số đơn được phân công' },
 ];
 
 export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
@@ -85,42 +85,41 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Dispatch Setup</CardTitle>
+        <CardTitle>Thiết lập điều phối</CardTitle>
         <CardDescription>
-          Configure post office, shift, and business strategy before
-          dispatching.
+          Cấu hình bưu cục, ca làm và chiến lược nghiệp vụ trước khi điều phối.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-4'>
           <div className='space-y-2'>
-            <Label htmlFor='dispatch-post-office'>Post office</Label>
+            <Label htmlFor='dispatch-post-office'>Bưu cục</Label>
             <TmsCombobox
               id='dispatch-post-office'
               value={selectedPostOfficeId}
               onValueChange={onPostOfficeChange}
               options={postOfficeComboboxOptions}
-              placeholder='Select post office'
-              emptyText='No post offices found'
+              placeholder='Chọn bưu cục'
+              emptyText='Không tìm thấy bưu cục'
               disabled={isLoadingPostOffices}
               loading={isLoadingPostOffices}
             />
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='dispatch-shift'>Shift</Label>
+            <Label htmlFor='dispatch-shift'>Ca làm</Label>
             <TmsCombobox
               id='dispatch-shift'
               value={shift}
               onValueChange={(value) => onShiftChange(value as PickupShift)}
               options={SHIFT_OPTIONS}
-              placeholder='Select shift'
-              emptyText='No shifts found'
+              placeholder='Chọn ca làm'
+              emptyText='Không tìm thấy ca làm'
             />
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='dispatch-trip-date'>Trip date</Label>
+            <Label htmlFor='dispatch-trip-date'>Ngày chuyến</Label>
             <Input
               id='dispatch-trip-date'
               type='date'
@@ -130,18 +129,18 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='dispatch-order-limit'>Order limit</Label>
+            <Label htmlFor='dispatch-order-limit'>Giới hạn đơn hàng</Label>
             <Input
               id='dispatch-order-limit'
               value={orderLimitInput}
               onChange={(event) => onOrderLimitInputChange(event.target.value)}
-              placeholder='Optional, e.g. 100'
+              placeholder='Tùy chọn, ví dụ 100'
             />
           </div>
 
           <div className='space-y-2 md:col-span-2 xl:col-span-4'>
             <div className='flex items-center justify-between gap-2'>
-              <Label>Couriers for optimizer (optional)</Label>
+              <Label>Nhân viên cho bộ tối ưu (tùy chọn)</Label>
               {selectedAutoCourierIds.length > 0 ? (
                 <Button
                   type='button'
@@ -149,14 +148,14 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                   variant='outline'
                   onClick={onClearAutoCourierSelection}
                 >
-                  Clear courier filter
+                  Xóa lọc nhân viên
                 </Button>
               ) : null}
             </div>
 
             {isLoadingCouriers ? (
               <p className='text-xs text-muted-foreground'>
-                Loading couriers for selected post office...
+                Đang tải nhân viên của bưu cục đã chọn...
               </p>
             ) : courierOptions.length > 0 ? (
               <div className='grid gap-2 md:grid-cols-2 xl:grid-cols-3'>
@@ -173,7 +172,7 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                         onCheckedChange={(value) =>
                           onToggleAutoCourier(courier.id, Boolean(value))
                         }
-                        aria-label={`Select courier ${courier.code}`}
+                        aria-label={`Chọn nhân viên ${courier.code}`}
                       />
                       <span className='leading-5'>
                         {courier.code} - {courier.fullName}
@@ -184,28 +183,28 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
               </div>
             ) : (
               <p className='text-xs text-muted-foreground'>
-                No active courier found for this post office.
+                Không có nhân viên đang hoạt động tại bưu cục này.
               </p>
             )}
 
             <p className='text-xs text-muted-foreground'>
-              Leave all unchecked to let backend use all eligible couriers.
+              Bỏ trống để backend dùng toàn bộ nhân viên đủ điều kiện.
             </p>
           </div>
 
           <div className='space-y-3 rounded-md border p-4 md:col-span-2 xl:col-span-4'>
             <div className='space-y-1'>
-              <p className='text-sm font-semibold'>Dispatch strategy</p>
+              <p className='text-sm font-semibold'>Chiến lược điều phối</p>
               <p className='text-xs text-muted-foreground'>
-                Backend handles all algorithm parameters. Choose only business
-                intent here.
+                Backend xử lý toàn bộ tham số thuật toán. Tại đây chỉ cần chọn
+                mục tiêu nghiệp vụ.
               </p>
             </div>
 
             <div className='grid gap-3 md:grid-cols-2'>
               <div className='space-y-2'>
                 <Label htmlFor='dispatch-vehicle-profile'>
-                  Vehicle profile
+                  Hồ sơ phương tiện
                 </Label>
                 <TmsCombobox
                   id='dispatch-vehicle-profile'
@@ -216,17 +215,17 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                     )
                   }
                   options={ROUTING_VEHICLE_OPTIONS}
-                  placeholder='Select vehicle profile'
-                  emptyText='No vehicle profiles found'
+                  placeholder='Chọn hồ sơ phương tiện'
+                  emptyText='Không tìm thấy hồ sơ phương tiện'
                 />
                 <p className='text-xs text-muted-foreground'>
-                  Optional. Leave as backend default in most scenarios.
+                  Tùy chọn. Hầu hết trường hợp nên giữ mặc định từ backend.
                 </p>
               </div>
 
               <div className='space-y-2'>
                 <Label htmlFor='dispatch-optimization-goal'>
-                  Planning objective
+                  Mục tiêu lập kế hoạch
                 </Label>
                 <TmsCombobox
                   id='dispatch-optimization-goal'
@@ -237,11 +236,12 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                     )
                   }
                   options={OPTIMIZATION_GOAL_OPTIONS}
-                  placeholder='Select planning objective'
-                  emptyText='No objectives found'
+                  placeholder='Chọn mục tiêu lập kế hoạch'
+                  emptyText='Không tìm thấy mục tiêu'
                 />
                 <p className='text-xs text-muted-foreground'>
-                  Define business priority: on-time, cost, or assignment rate.
+                  Xác định ưu tiên nghiệp vụ: đúng giờ, chi phí hoặc tỷ lệ phân
+                  công.
                 </p>
               </div>
             </div>
@@ -258,7 +258,7 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
             {activeAction === 'preview' ? (
               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
             ) : null}
-            Preview plan
+            Xem trước kế hoạch
           </Button>
           <Button
             type='button'
@@ -270,14 +270,14 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
             ) : (
               <CheckCircle2 className='mr-2 h-4 w-4' />
             )}
-            Auto assign
+            Phân công tự động
           </Button>
         </div>
 
         {!isTmsAdmin ? (
           <p className='text-xs text-muted-foreground'>
-            Manager scope is enforced by backend. You can dispatch only for post
-            offices assigned to you.
+            Backend sẽ áp dụng phạm vi quản lý. Bạn chỉ có thể điều phối cho các
+            bưu cục được gán cho mình.
           </p>
         ) : null}
       </CardContent>

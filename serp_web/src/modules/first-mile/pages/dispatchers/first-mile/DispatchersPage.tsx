@@ -90,26 +90,26 @@ const resolveDispatcherAccessScope = (
 
 const getScopeBadgeLabel = (scope: DispatcherAccessScope): string => {
   if (scope === 'ADMIN_ALL') {
-    return 'TMS admin';
+    return 'Quản trị TMS';
   }
 
   if (scope === 'MANAGER_SCOPED') {
-    return 'Post office manager';
+    return 'Quản lý bưu cục';
   }
 
-  return 'No access';
+  return 'Không có quyền';
 };
 
 const getScopeDescription = (scope: DispatcherAccessScope): string => {
   if (scope === 'ADMIN_ALL') {
-    return 'You can dispatch first-mile orders for every post office.';
+    return 'Bạn có thể điều phối đơn lấy hàng đầu chặng cho mọi bưu cục.';
   }
 
   if (scope === 'MANAGER_SCOPED') {
-    return 'You can dispatch first-mile orders for post offices you manage.';
+    return 'Bạn có thể điều phối đơn lấy hàng đầu chặng cho các bưu cục mình quản lý.';
   }
 
-  return 'Your account does not have permission to dispatch first-mile orders.';
+  return 'Tài khoản hiện tại không có quyền điều phối đơn lấy hàng đầu chặng.';
 };
 
 const formatDateTime = (value?: string): string => {
@@ -122,7 +122,7 @@ const formatDateTime = (value?: string): string => {
     return value;
   }
 
-  return parsedDate.toLocaleString('en-US');
+  return parsedDate.toLocaleString('vi-VN');
 };
 
 const formatNumber = (value?: number): string => {
@@ -458,7 +458,7 @@ export const DispatchersPage: React.FC = () => {
       )
       .map((courier) => {
         const code = courier.code?.trim() || `COURIER-${courier.id}`;
-        const fullName = courier.fullName?.trim() || 'Unknown courier';
+        const fullName = courier.fullName?.trim() || 'Chưa rõ nhân viên';
 
         return {
           id: courier.id,
@@ -467,7 +467,7 @@ export const DispatchersPage: React.FC = () => {
         };
       })
       .sort((a, b) => {
-        const nameCompare = a.fullName.localeCompare(b.fullName, 'en-US', {
+        const nameCompare = a.fullName.localeCompare(b.fullName, 'vi-VN', {
           sensitivity: 'base',
         });
 
@@ -492,7 +492,7 @@ export const DispatchersPage: React.FC = () => {
       )
       .map((courier) => {
         const code = courier.code?.trim() || `COURIER-${courier.id}`;
-        const fullName = courier.fullName?.trim() || 'Unknown courier';
+        const fullName = courier.fullName?.trim() || 'Chưa rõ nhân viên';
 
         return {
           id: courier.id,
@@ -501,7 +501,7 @@ export const DispatchersPage: React.FC = () => {
         };
       })
       .sort((a, b) => {
-        const nameCompare = a.fullName.localeCompare(b.fullName, 'en-US', {
+        const nameCompare = a.fullName.localeCompare(b.fullName, 'vi-VN', {
           sensitivity: 'base',
         });
 
@@ -654,7 +654,7 @@ export const DispatchersPage: React.FC = () => {
   const buildSetupDispatchContext = React.useCallback(() => {
     if (!canDispatch) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can dispatch first-mile orders.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được điều phối đơn đầu chặng.'
       );
       return null;
     }
@@ -663,12 +663,12 @@ export const DispatchersPage: React.FC = () => {
       setupSelectedPostOfficeId
     );
     if (!postOfficeId) {
-      notification.error('Please select a post office for dispatch setup.');
+      notification.error('Vui lòng chọn bưu cục để thiết lập điều phối.');
       return null;
     }
 
     if (!setupTripDate) {
-      notification.error('Please select trip date for dispatch setup.');
+      notification.error('Vui lòng chọn ngày chuyến cho thiết lập điều phối.');
       return null;
     }
 
@@ -689,7 +689,7 @@ export const DispatchersPage: React.FC = () => {
   const buildManualDispatchContext = React.useCallback(() => {
     if (!canDispatch) {
       notification.error(
-        'Only TMS_ADMIN or TMS_POSTOFFICER_MANAGER can dispatch first-mile orders.'
+        'Chỉ TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER được điều phối đơn đầu chặng.'
       );
       return null;
     }
@@ -698,12 +698,12 @@ export const DispatchersPage: React.FC = () => {
       manualSelectedPostOfficeId
     );
     if (!postOfficeId) {
-      notification.error('Please select a post office for manual dispatch.');
+      notification.error('Vui lòng chọn bưu cục để điều phối thủ công.');
       return null;
     }
 
     if (!manualTripDate) {
-      notification.error('Please select trip date for manual dispatch.');
+      notification.error('Vui lòng chọn ngày chuyến cho điều phối thủ công.');
       return null;
     }
 
@@ -730,7 +730,7 @@ export const DispatchersPage: React.FC = () => {
     const parsedOrderLimit = parseOptionalPositiveInteger(orderLimitInput);
 
     if (orderLimitInput.trim() && parsedOrderLimit === undefined) {
-      notification.error('Order limit must be a positive integer.');
+      notification.error('Giới hạn đơn hàng phải là số nguyên dương.');
       return null;
     }
 
@@ -807,11 +807,11 @@ export const DispatchersPage: React.FC = () => {
       const result = await optimizePickupPlan(payload).unwrap();
       setOptimizationResult(result);
 
-      notification.success('Pickup plan optimized successfully.', {
-        description: `Assigned ${result.assignedOrders ?? 0}/${result.totalOrders ?? 0} order(s).`,
+      notification.success('Đã tối ưu kế hoạch lấy hàng.', {
+        description: `Đã phân công ${result.assignedOrders ?? 0}/${result.totalOrders ?? 0} đơn hàng.`,
       });
     } catch (error) {
-      notification.error('Failed to optimize pickup plan.', {
+      notification.error('Không thể tối ưu kế hoạch lấy hàng.', {
         description: getErrorMessage(error),
       });
     } finally {
@@ -854,8 +854,8 @@ export const DispatchersPage: React.FC = () => {
       setAssignmentResultSource('automatic');
       setSelectedOrderIds([]);
 
-      notification.success('Auto dispatch completed.', {
-        description: `Assigned ${result.assignedOrders ?? 0}/${result.totalRequestedOrders ?? 0} order(s).`,
+      notification.success('Đã hoàn tất điều phối tự động.', {
+        description: `Đã phân công ${result.assignedOrders ?? 0}/${result.totalRequestedOrders ?? 0} đơn hàng.`,
       });
 
       if (setupSelectedPostOfficeCode) {
@@ -866,7 +866,7 @@ export const DispatchersPage: React.FC = () => {
         void refetchManualOrders();
       }
     } catch (error) {
-      notification.error('Failed to auto assign pickup orders.', {
+      notification.error('Không thể tự động phân công đơn lấy hàng.', {
         description: getErrorMessage(error),
       });
     } finally {
@@ -899,7 +899,7 @@ export const DispatchersPage: React.FC = () => {
             const optimizerRisks: ManualAssignRisk[] = unassignedDetails.map(
               (item, index) => ({
                 id: `optimizer-unassigned-${item.orderId ?? index}`,
-                message: `The optimizer could not place this order (${item.reason ?? 'NO_FEASIBLE_INSERTION'}).`,
+                message: `Bộ tối ưu không thể xếp đơn hàng này (${item.reason ?? 'NO_FEASIBLE_INSERTION'}).`,
                 orderCodes: [
                   item.orderCode ??
                     item.customerOrderCode ??
@@ -912,8 +912,8 @@ export const DispatchersPage: React.FC = () => {
             setManualAssignRisks(optimizerRisks);
             setIsManualConfirmOpen(true);
 
-            notification.warning('Force assignment needs confirmation.', {
-              description: `Only ${assignedCount}/${requestedCount} order(s) fit the optimized route constraints.`,
+            notification.warning('Cần xác nhận phân công bắt buộc.', {
+              description: `Chỉ ${assignedCount}/${requestedCount} đơn hàng phù hợp với ràng buộc tuyến tối ưu.`,
             });
             return;
           }
@@ -926,18 +926,18 @@ export const DispatchersPage: React.FC = () => {
             )
             .join(' | ');
 
-          notification.warning('Manual assignment is incomplete.', {
-            description: `Assigned ${assignedCount}/${requestedCount} order(s).${reasonSummary ? ` ${reasonSummary}` : ''}`,
+          notification.warning('Phân công thủ công chưa hoàn tất.', {
+            description: `Đã phân công ${assignedCount}/${requestedCount} đơn hàng.${reasonSummary ? ` ${reasonSummary}` : ''}`,
           });
         } else {
-          notification.success('Manual assignment completed.', {
-            description: `Assigned ${assignedCount}/${requestedCount} order(s).`,
+          notification.success('Đã hoàn tất phân công thủ công.', {
+            description: `Đã phân công ${assignedCount}/${requestedCount} đơn hàng.`,
           });
         }
 
         void refetchManualOrders();
       } catch (error) {
-        notification.error('Manual assignment failed.', {
+        notification.error('Phân công thủ công thất bại.', {
           description: getErrorMessage(error),
         });
       } finally {
@@ -955,7 +955,7 @@ export const DispatchersPage: React.FC = () => {
 
     if (selectedOrderIds.length === 0) {
       notification.error(
-        'Please select at least one order to assign manually.'
+        'Vui lòng chọn ít nhất một đơn hàng để phân công thủ công.'
       );
       return;
     }
@@ -964,7 +964,9 @@ export const DispatchersPage: React.FC = () => {
       selectedManualCourierId
     );
     if (!courierStaffId) {
-      notification.error('Please select a courier for manual assignment.');
+      notification.error(
+        'Vui lòng chọn nhân viên giao nhận để phân công thủ công.'
+      );
       return;
     }
 
@@ -1045,9 +1047,11 @@ export const DispatchersPage: React.FC = () => {
   return (
     <div className='space-y-6'>
       <div className='flex flex-col gap-2'>
-        <h1 className='text-2xl font-bold tracking-tight'>Dispatchers</h1>
+        <h1 className='text-2xl font-bold tracking-tight'>
+          Điều phối lấy hàng đầu chặng
+        </h1>
         <p className='text-muted-foreground'>
-          Dispatch first-mile pickup orders by post office and courier scope.
+          Điều phối đơn lấy hàng theo phạm vi bưu cục và nhân viên giao nhận.
         </p>
       </div>
 
@@ -1058,7 +1062,7 @@ export const DispatchersPage: React.FC = () => {
       />
 
       {!canDispatch ? (
-        <DispatchNoAccessCard message='You do not have permission to access dispatch operations.' />
+        <DispatchNoAccessCard message='Bạn không có quyền truy cập thao tác điều phối.' />
       ) : (
         <>
           <Tabs
@@ -1069,8 +1073,8 @@ export const DispatchersPage: React.FC = () => {
             className='space-y-4'
           >
             <TabsList className='grid w-full grid-cols-2 lg:w-auto'>
-              <TabsTrigger value='automatic'>Automatic dispatch</TabsTrigger>
-              <TabsTrigger value='manual'>Manual dispatch</TabsTrigger>
+              <TabsTrigger value='automatic'>Điều phối tự động</TabsTrigger>
+              <TabsTrigger value='manual'>Điều phối thủ công</TabsTrigger>
             </TabsList>
 
             <TabsContent value='automatic' className='mt-0 space-y-4'>
@@ -1103,10 +1107,10 @@ export const DispatchersPage: React.FC = () => {
               />
 
               <CandidateOrdersPanel
-                title='Automatic dispatch candidates'
+                title='Đơn chờ điều phối tự động'
                 orders={setupCandidateOrders}
                 loading={isLoadingSetupOrders}
-                emptyText='No dispatchable orders for this post office.'
+                emptyText='Không có đơn có thể điều phối cho bưu cục này.'
                 referenceTime={candidateReferenceTime}
               />
 
@@ -1153,7 +1157,7 @@ export const DispatchersPage: React.FC = () => {
                 onQuickPickCourier={(courierId) => {
                   if (!manualCourierIdSet.has(courierId)) {
                     notification.error(
-                      'Suggested courier is not active for the selected post office.'
+                      'Nhân viên được gợi ý không còn hoạt động tại bưu cục đã chọn.'
                     );
                     return;
                   }
@@ -1183,26 +1187,25 @@ export const DispatchersPage: React.FC = () => {
           <ConfirmDialog
             open={isManualConfirmOpen}
             onOpenChange={setIsManualConfirmOpen}
-            title='Review risks before assignment'
+            title='Kiểm tra rủi ro trước khi phân công'
             description={
               <div className='space-y-3 text-left'>
                 <p>
-                  The system found {manualAssignRisks.length} risk group(s). If
-                  you confirm, the selected orders will still be assigned
-                  directly to the courier and may bypass optimized route
-                  constraints.
+                  Hệ thống phát hiện {manualAssignRisks.length} nhóm rủi ro. Nếu
+                  xác nhận, các đơn đã chọn vẫn sẽ được gán trực tiếp cho nhân
+                  viên giao nhận và có thể bỏ qua ràng buộc tuyến tối ưu.
                 </p>
                 <div className='rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground'>
                   <p>
-                    Post office: {manualSelectedPostOffice?.code ?? '--'} -{' '}
+                    Bưu cục: {manualSelectedPostOffice?.code ?? '--'} -{' '}
                     {manualSelectedPostOffice?.name ?? '--'}
                   </p>
-                  <p>Courier: {pendingCourierLabel}</p>
+                  <p>Nhân viên giao nhận: {pendingCourierLabel}</p>
                   <p>
-                    Shift: {getManualShiftLabel(manualShift)} | Date:{' '}
+                    Ca: {getManualShiftLabel(manualShift)} | Ngày:{' '}
                     {manualTripDate}
                   </p>
-                  <p>Selected orders: {selectedOrderIds.length}</p>
+                  <p>Đơn đã chọn: {selectedOrderIds.length}</p>
                 </div>
                 <ul className='list-disc space-y-2 pl-5 text-sm'>
                   {manualAssignRiskLines.map((warning, index) => (
@@ -1211,8 +1214,8 @@ export const DispatchersPage: React.FC = () => {
                 </ul>
               </div>
             }
-            confirmText='Assign anyway'
-            cancelText='Cancel'
+            confirmText='Vẫn phân công'
+            cancelText='Hủy'
             onConfirm={() => void handleConfirmManualAssign()}
             onCancel={() => {
               setIsManualConfirmOpen(false);

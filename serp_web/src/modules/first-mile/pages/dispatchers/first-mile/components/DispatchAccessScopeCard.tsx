@@ -25,10 +25,10 @@ export const DispatchAccessScopeCard: React.FC<AccessScopeCardProps> = ({
       <CardHeader>
         <CardTitle className='flex items-center gap-2'>
           <Route className='h-5 w-5' />
-          Access Scope
+          Phạm vi truy cập
         </CardTitle>
         <CardDescription>
-          Dispatch permissions are validated by your role and backend scope.
+          Quyền điều phối được kiểm tra theo vai trò và phạm vi từ backend.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-2'>

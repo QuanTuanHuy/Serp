@@ -22,6 +22,7 @@ import {
   PopoverTrigger,
 } from '@/shared/components/ui/popover';
 import type { FirstMileOrderDetail } from '../../../../types';
+import type { FirstMileOrderStatus } from '../../../../types';
 import {
   formatPickupBacklogDuration,
   formatPickupWindow,
@@ -60,13 +61,38 @@ const buildOrderLabel = (order: FirstMileOrderDetail): string => {
   return `${order.orderCode}${customerCode}`;
 };
 
+const formatOrderStatusLabel = (status: FirstMileOrderStatus): string => {
+  switch (status) {
+    case 'CREATED':
+      return 'Mới tạo';
+    case 'ASSIGNED_TO_PICKUP':
+      return 'Đã phân công lấy hàng';
+    case 'PICKING_UP':
+      return 'Đang lấy hàng';
+    case 'PICKUP_FAILED':
+      return 'Lấy hàng thất bại';
+    case 'PICKED_UP':
+      return 'Đã lấy hàng';
+    case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
+      return 'Chờ nhập bưu cục gốc';
+    case 'AT_ORIGIN_POST_OFFICE':
+      return 'Tại bưu cục gốc';
+    case 'CANCELLED':
+      return 'Đã hủy';
+    case 'LOST_OR_DAMAGED':
+      return 'Thất lạc / hư hỏng';
+    default:
+      return status.replaceAll('_', ' ');
+  }
+};
+
 export const OrderMultiSelect: React.FC<OrderMultiSelectProps> = ({
   orders,
   selectedOrderIds,
   onSelectionChange,
   disabled = false,
   loading = false,
-  placeholder = 'Select orders...',
+  placeholder = 'Chọn đơn hàng...',
 }) => {
   const [open, setOpen] = React.useState(false);
 
@@ -111,13 +137,13 @@ export const OrderMultiSelect: React.FC<OrderMultiSelectProps> = ({
           {loading ? (
             <span className='flex items-center gap-2 text-muted-foreground'>
               <Loader2 className='h-4 w-4 animate-spin' />
-              Loading orders...
+              Đang tải đơn hàng...
             </span>
           ) : selectedOrderIds.length > 0 ? (
             <div className='flex flex-wrap items-center gap-1'>
               {selectedOrderIds.length > 3 ? (
                 <Badge variant='secondary'>
-                  {selectedOrderIds.length} orders selected
+                  {selectedOrderIds.length} đơn đã chọn
                 </Badge>
               ) : (
                 selectedOrderIds.map((orderId) => {
@@ -151,10 +177,10 @@ export const OrderMultiSelect: React.FC<OrderMultiSelectProps> = ({
         align='start'
       >
         <Command>
-          <CommandInput placeholder='Search by order code, customer code...' />
+          <CommandInput placeholder='Tìm theo mã đơn, mã đơn khách hàng...' />
           <CommandList>
-            <CommandEmpty>No candidate orders found.</CommandEmpty>
-            <CommandGroup heading='Candidate orders'>
+            <CommandEmpty>Không tìm thấy đơn hàng ứng viên.</CommandEmpty>
+            <CommandGroup heading='Đơn hàng ứng viên'>
               {sortedOrders.map((order) => {
                 const isSelected = selectedOrderIds.includes(order.id);
                 const isBacklog = isPickupBacklogOrder(order);
@@ -173,17 +199,18 @@ export const OrderMultiSelect: React.FC<OrderMultiSelectProps> = ({
                       <div className='flex min-w-0 flex-1 flex-col'>
                         <span className='font-medium'>{order.orderCode}</span>
                         <span className='text-xs text-muted-foreground'>
-                          {order.customerOrderCode || '--'} | {order.status} |{' '}
+                          {order.customerOrderCode || '--'} |{' '}
+                          {formatOrderStatusLabel(order.status)} |{' '}
                           {order.senderName || '--'}
                         </span>
                         <span className='text-xs text-muted-foreground'>
-                          Pickup window: {formatPickupWindow(order)}
+                          Khung giờ lấy hàng: {formatPickupWindow(order)}
                           {backlogDuration ? ` | ${backlogDuration}` : ''}
                         </span>
                       </div>
                       {isBacklog ? (
                         <Badge variant='destructive' className='mt-0.5'>
-                          Backlog
+                          Quá hạn
                         </Badge>
                       ) : null}
                       {isSelected ? (

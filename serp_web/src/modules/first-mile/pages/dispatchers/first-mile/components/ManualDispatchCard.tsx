@@ -23,9 +23,9 @@ import { OrderMultiSelect } from './OrderMultiSelect';
 import type { ManualDispatchCardProps } from './types';
 
 const MANUAL_SHIFT_OPTIONS: Array<{ value: PickupShift; label: string }> = [
-  { value: 'MORNING', label: 'Morning (07:30 - 12:00)' },
-  { value: 'AFTERNOON', label: 'Afternoon (13:30 - 18:00)' },
-  { value: 'EVENING', label: 'Evening (18:30 - 22:00)' },
+  { value: 'MORNING', label: 'Ca sáng (07:30 - 12:00)' },
+  { value: 'AFTERNOON', label: 'Ca chiều (13:30 - 18:00)' },
+  { value: 'EVENING', label: 'Ca tối (18:30 - 22:00)' },
 ];
 
 export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
@@ -73,7 +73,7 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
         : []
   );
   const wardComboboxOptions = [
-    { value: 'ALL', label: 'All wards in province' },
+    { value: 'ALL', label: 'Tất cả phường/xã trong tỉnh' },
     ...wardOptions.flatMap((ward: Ward) =>
       ward.wardCode
         ? [
@@ -97,31 +97,31 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Manual Dispatch</CardTitle>
+        <CardTitle>Điều phối thủ công</CardTitle>
         <CardDescription>
-          Filter post office by location, then select orders and assign them to
-          a courier. This section uses its own post office scope, separate from
-          Dispatch Setup.
+          Lọc bưu cục theo địa bàn, sau đó chọn đơn hàng và gán cho nhân viên
+          giao nhận. Khu vực này dùng phạm vi bưu cục riêng, tách biệt với phần
+          thiết lập điều phối.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
           <div className='space-y-2'>
-            <Label htmlFor='manual-province'>Province</Label>
+            <Label htmlFor='manual-province'>Tỉnh/Thành phố</Label>
             <TmsCombobox
               id='manual-province'
               value={selectedProvinceCode}
               onValueChange={onProvinceChange}
               options={provinceComboboxOptions}
-              placeholder='Select province'
-              emptyText='No provinces found'
+              placeholder='Chọn tỉnh/thành phố'
+              emptyText='Không tìm thấy tỉnh/thành phố'
               disabled={isLoadingProvinces}
               loading={isLoadingProvinces}
             />
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='manual-ward'>Ward</Label>
+            <Label htmlFor='manual-ward'>Phường/Xã</Label>
             <TmsCombobox
               id='manual-ward'
               value={selectedWardCode}
@@ -129,48 +129,52 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
               options={wardComboboxOptions}
               placeholder={
                 selectedProvinceCode
-                  ? 'Select ward (optional)'
-                  : 'Select province first'
+                  ? 'Chọn phường/xã (tùy chọn)'
+                  : 'Chọn tỉnh/thành phố trước'
               }
-              emptyText={isLoadingWards ? 'Loading wards...' : 'No wards found'}
+              emptyText={
+                isLoadingWards
+                  ? 'Đang tải phường/xã...'
+                  : 'Không tìm thấy phường/xã'
+              }
               disabled={!selectedProvinceCode || isLoadingWards}
               loading={isLoadingWards}
             />
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='manual-post-office'>Post office</Label>
+            <Label htmlFor='manual-post-office'>Bưu cục</Label>
             <TmsCombobox
               id='manual-post-office'
               value={selectedPostOfficeId}
               onValueChange={onPostOfficeChange}
               options={postOfficeComboboxOptions}
-              placeholder='Select post office'
-              emptyText='No post offices found'
+              placeholder='Chọn bưu cục'
+              emptyText='Không tìm thấy bưu cục'
               disabled={!canSelectPostOffice || isLoadingPostOffices}
               loading={isLoadingPostOffices}
             />
             {isLoadingPostOffices ? (
               <p className='text-xs text-muted-foreground'>
-                Loading post offices...
+                Đang tải bưu cục...
               </p>
             ) : null}
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='manual-shift'>Shift</Label>
+            <Label htmlFor='manual-shift'>Ca làm</Label>
             <TmsCombobox
               id='manual-shift'
               value={shift}
               onValueChange={(value) => onShiftChange(value as PickupShift)}
               options={MANUAL_SHIFT_OPTIONS}
-              placeholder='Select shift'
-              emptyText='No shifts found'
+              placeholder='Chọn ca làm'
+              emptyText='Không tìm thấy ca làm'
             />
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='manual-trip-date'>Trip date</Label>
+            <Label htmlFor='manual-trip-date'>Ngày chuyến</Label>
             <Input
               id='manual-trip-date'
               type='date'
@@ -182,26 +186,26 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
 
         <div className='grid gap-3 md:grid-cols-2'>
           <div className='space-y-2'>
-            <Label htmlFor='manual-courier-select'>Courier</Label>
+            <Label htmlFor='manual-courier-select'>Nhân viên giao nhận</Label>
             <TmsCombobox
               id='manual-courier-select'
               value={selectedManualCourierId}
               onValueChange={onManualCourierIdChange}
               options={courierComboboxOptions}
-              placeholder='Select courier for manual assignment'
-              emptyText='No couriers found'
+              placeholder='Chọn nhân viên để phân công thủ công'
+              emptyText='Không tìm thấy nhân viên'
               disabled={!selectedPostOfficeId || isLoadingCouriers}
               loading={isLoadingCouriers}
             />
             {isLoadingCouriers ? (
               <p className='text-xs text-muted-foreground'>
-                Loading couriers...
+                Đang tải nhân viên...
               </p>
             ) : null}
           </div>
 
           <div className='space-y-2'>
-            <Label>Quick pick courier</Label>
+            <Label>Chọn nhanh nhân viên</Label>
             {suggestedCouriers.length > 0 ? (
               <div className='flex flex-wrap gap-2'>
                 {suggestedCouriers.map((courier) => (
@@ -218,8 +222,8 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
               </div>
             ) : (
               <p className='text-xs text-muted-foreground'>
-                Run preview or auto assign in Dispatch Setup to get courier
-                suggestions.
+                Chạy xem trước hoặc phân công tự động trong phần thiết lập để
+                nhận gợi ý nhân viên.
               </p>
             )}
           </div>
@@ -227,10 +231,10 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
 
         <div className='space-y-2'>
           <div className='flex flex-wrap items-center justify-between gap-2'>
-            <Label htmlFor='manual-orders-select'>Orders</Label>
+            <Label htmlFor='manual-orders-select'>Đơn hàng</Label>
             <div className='flex items-center gap-2'>
               <Badge variant='secondary'>
-                Selected: {selectedOrderIds.length}
+                Đã chọn: {selectedOrderIds.length}
               </Badge>
               {selectedOrderIds.length > 0 ? (
                 <Button
@@ -239,7 +243,7 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
                   size='sm'
                   onClick={onClearSelectedOrders}
                 >
-                  Clear selection
+                  Xóa lựa chọn
                 </Button>
               ) : null}
             </div>
@@ -252,20 +256,20 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
             loading={isLoadingOrders}
             placeholder={
               selectedPostOfficeId
-                ? 'Select orders to assign...'
-                : 'Select post office first'
+                ? 'Chọn đơn hàng để phân công...'
+                : 'Chọn bưu cục trước'
             }
           />
           {!isLoadingOrders && selectedPostOfficeId ? (
             <p className='text-xs text-muted-foreground'>
-              {candidateOrders.length} candidate order(s) with CREATED or
-              PICKUP_FAILED status.
+              {candidateOrders.length} đơn hàng ứng viên ở trạng thái Mới tạo
+              hoặc Lấy hàng thất bại.
             </p>
           ) : null}
         </div>
 
         <CandidateOrdersPanel
-          title='Manual dispatch candidates'
+          title='Đơn chờ điều phối thủ công'
           orders={candidateOrders}
           loading={isLoadingOrders}
           selectedOrderIds={selectedOrderIds}
@@ -283,7 +287,7 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
               selectedOrderIds.filter((selectedId) => selectedId !== orderId)
             );
           }}
-          emptyText='No dispatchable orders for this post office.'
+          emptyText='Không có đơn có thể điều phối cho bưu cục này.'
         />
 
         <div className='pt-1'>
@@ -301,7 +305,7 @@ export const ManualDispatchCard: React.FC<ManualDispatchCardProps> = ({
             ) : (
               <CheckCircle2 className='mr-2 h-4 w-4' />
             )}
-            Manual assign selected orders
+            Phân công các đơn đã chọn
           </Button>
         </div>
       </CardContent>
