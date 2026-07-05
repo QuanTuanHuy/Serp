@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package middleware
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -59,18 +60,18 @@ func (m *JWTMiddleware) AuthenticateJWTContext(c *gin.Context) bool {
 		return false
 	}
 
-	claims, err := m.jwtUtils.ValidateToken(token)
+	validated, err := m.jwtUtils.ValidateAccessToken(token)
 	if err != nil {
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid or expired token")
+		message := "Invalid or expired token"
+		if errors.Is(err, utils.ErrInvalidTokenType) {
+			message = "Invalid token type"
+		}
+		utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, message)
 		c.Abort()
 		return false
 	}
 
-	if !m.jwtUtils.IsAccessToken(token) {
-		utils.AbortErrorHandleCustomMessage(c, constant.GeneralUnauthorized, "Invalid token type")
-		c.Abort()
-		return false
-	}
+	claims := validated.Claims
 
 	// Set user information in context
 	c.Set("userID", claims.UserID)
@@ -79,13 +80,7 @@ func (m *JWTMiddleware) AuthenticateJWTContext(c *gin.Context) bool {
 	c.Set("preferredUsername", claims.PreferredUsername)
 	c.Set("emailVerified", claims.EmailVerified)
 	c.Set("token", token)
-
-	roles, err := m.jwtUtils.ExtractRoles(token)
-	if err != nil {
-		log.Warn(c, "Failed to extract roles: ", err)
-		roles = []string{}
-	}
-	c.Set("roles", roles)
+	c.Set("roles", validated.Roles)
 
 	log.Debugc(c, "JWT authentication successful for user: ", claims.UserID, " (", claims.Email, ")")
 	return true

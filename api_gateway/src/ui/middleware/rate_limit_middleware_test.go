@@ -18,8 +18,11 @@ import (
 )
 
 type testRateLimiter struct {
-	called  bool
-	allowed bool
+	called     bool
+	allowed    bool
+	key        string
+	limit      int
+	windowSecs int
 }
 
 func (t *testRateLimiter) CheckRateLimit(
@@ -29,6 +32,9 @@ func (t *testRateLimiter) CheckRateLimit(
 	windowSecs int,
 ) (*port.RateLimitResult, error) {
 	t.called = true
+	t.key = key
+	t.limit = limit
+	t.windowSecs = windowSecs
 	return &port.RateLimitResult{
 		Allowed:    t.allowed,
 		Limit:      limit,
@@ -96,5 +102,47 @@ func TestRateLimitMiddleware_UserRateLimit_BlockedDoesNotCallNext(t *testing.T) 
 	}
 	if called {
 		t.Fatalf("expected next handler not to be called")
+	}
+}
+
+func TestRateLimitMiddleware_ApplyUserRateLimit_RouteOverrideUsesNormalizedPath(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	limiter := &testRateLimiter{allowed: true}
+	overrideRule := properties.RateLimitRule{Limit: 3, WindowSecs: 30}
+	m := NewRateLimitMiddleware(limiter, &properties.RateLimitProperties{
+		Enabled:     true,
+		DefaultUser: properties.RateLimitRule{Limit: 10, WindowSecs: 60},
+		RouteOverrides: map[string]properties.RouteOverride{
+			"protected": {
+				Method: http.MethodGet,
+				Path:   "/protected",
+				User:   &overrideRule,
+			},
+		},
+	})
+
+	r := gin.New()
+	r.GET("/protected/", func(c *gin.Context) {
+		c.Set("userID", int64(123))
+		if m.ApplyUserRateLimit(c) {
+			c.String(http.StatusOK, "ok")
+		}
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/protected/", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+	if limiter.limit != 3 {
+		t.Fatalf("expected override limit 3, got %d", limiter.limit)
+	}
+	if limiter.windowSecs != 30 {
+		t.Fatalf("expected override window 30, got %d", limiter.windowSecs)
+	}
+	if limiter.key != "user:123:GET:/protected" {
+		t.Fatalf("expected override key user:123:GET:/protected, got %s", limiter.key)
 	}
 }
