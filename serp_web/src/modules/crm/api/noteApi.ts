@@ -4,29 +4,8 @@
  */
 
 import { api } from '@/lib/store/api';
-import type { APIResponse, PaginatedResponse } from '../types';
-
-export interface Note {
-  id: string;
-  tenantId: string;
-  entityType: 'LEAD' | 'ACCOUNT' | 'OPPORTUNITY' | 'ACTIVITY';
-  entityId: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-  updatedBy: string;
-}
-
-export interface CreateNoteRequest {
-  entityType: 'LEAD' | 'ACCOUNT' | 'OPPORTUNITY' | 'ACTIVITY';
-  entityId: number;
-  content: string;
-}
-
-export interface UpdateNoteRequest {
-  content: string;
-}
+import { mapNoteListResponse, mapSingleNoteResponse } from './mappers';
+import type { Note, CreateNoteRequest, UpdateNoteRequest, APIResponse, PaginatedResponse } from '../types';
 
 export const noteApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -40,6 +19,7 @@ export const noteApi = api.injectEndpoints({
         params: { entityType, entityId, page, size },
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapNoteListResponse,
       providesTags: (result, error, { entityType, entityId }) => [
         { type: 'Note' as const, id: `${entityType}-${entityId}-LIST` },
       ],
@@ -52,6 +32,7 @@ export const noteApi = api.injectEndpoints({
         body: data,
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleNoteResponse,
       invalidatesTags: (result, error, { entityType, entityId }) => [
         { type: 'Note', id: `${entityType}-${entityId}-LIST` },
       ],
@@ -72,6 +53,7 @@ export const noteApi = api.injectEndpoints({
         body: data,
       }),
       extraOptions: { service: 'crm' },
+      transformResponse: mapSingleNoteResponse,
       invalidatesTags: (result, error, { entityType, entityId }) => [
         { type: 'Note', id: `${entityType}-${entityId}-LIST` },
       ],

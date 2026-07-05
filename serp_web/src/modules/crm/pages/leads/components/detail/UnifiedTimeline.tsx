@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { MessageSquare, Phone, Mail, Calendar } from 'lucide-react';
-import type { Activity } from '../../../../types';
-import type { Note } from '../../../../api/noteApi';
+import type { Activity, Note } from '../../../../types';
 import { Avatar, AvatarFallback } from '@/shared/components/ui';
 
 interface UnifiedTimelineProps {
