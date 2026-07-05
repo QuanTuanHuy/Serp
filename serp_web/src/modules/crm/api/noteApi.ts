@@ -1,6 +1,6 @@
 /**
  * Author: QuanTuanHuy
- * Description: Part of Serp Project
+ * Description: Part of Serp Project - CRM Specific Notes API
  */
 
 import { api } from '@/lib/store/api';
@@ -30,7 +30,7 @@ export interface UpdateNoteRequest {
 
 export const noteApi = api.injectEndpoints({
   endpoints: (builder) => ({
-    getNotes: builder.query<
+    getCrmNotes: builder.query<
       APIResponse<PaginatedResponse<Note>>,
       { entityType: string; entityId: string; page?: number; size?: number }
     >({
@@ -45,7 +45,7 @@ export const noteApi = api.injectEndpoints({
       ],
     }),
 
-    createNote: builder.mutation<APIResponse<Note>, CreateNoteRequest>({
+    createCrmNote: builder.mutation<APIResponse<Note>, CreateNoteRequest>({
       query: (data) => ({
         url: '/notes',
         method: 'POST',
@@ -57,7 +57,7 @@ export const noteApi = api.injectEndpoints({
       ],
     }),
 
-    updateNote: builder.mutation<
+    updateCrmNote: builder.mutation<
       APIResponse<Note>,
       {
         id: string;
@@ -77,7 +77,7 @@ export const noteApi = api.injectEndpoints({
       ],
     }),
 
-    deleteNote: builder.mutation<
+    deleteCrmNote: builder.mutation<
       APIResponse<any>,
       { id: string; entityType: string; entityId: string }
     >({
@@ -94,8 +94,8 @@ export const noteApi = api.injectEndpoints({
 });
 
 export const {
-  useGetNotesQuery,
-  useCreateNoteMutation,
-  useUpdateNoteMutation,
-  useDeleteNoteMutation,
+  useGetCrmNotesQuery,
+  useCreateCrmNoteMutation,
+  useUpdateCrmNoteMutation,
+  useDeleteCrmNoteMutation,
 } = noteApi;

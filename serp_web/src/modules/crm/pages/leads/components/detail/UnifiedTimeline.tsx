@@ -8,13 +8,14 @@ interface UnifiedTimelineProps {
   activities: Activity[];
   notes: Note[];
   isLoading: boolean;
+  getUserName?: (userId?: string | number) => string;
 }
 
 type TimelineItem =
   | { type: 'note'; id: string; timestamp: string; user: string; content: string }
   | { type: 'activity'; id: string; timestamp: string; user: string; subject: string; subtype: string; status: string; content?: string };
 
-export function UnifiedTimeline({ activities, notes, isLoading }: UnifiedTimelineProps) {
+export function UnifiedTimeline({ activities, notes, isLoading, getUserName }: UnifiedTimelineProps) {
   const timelineItems = useMemo(() => {
     const items: TimelineItem[] = [];
 
@@ -23,7 +24,7 @@ export function UnifiedTimeline({ activities, notes, isLoading }: UnifiedTimelin
         type: 'note',
         id: n.id,
         timestamp: n.createdAt,
-        user: n.createdBy || 'User',
+        user: getUserName ? getUserName(n.createdBy) : (n.createdBy || 'User'),
         content: n.content,
       });
     });
@@ -33,7 +34,7 @@ export function UnifiedTimeline({ activities, notes, isLoading }: UnifiedTimelin
         type: 'activity',
         id: String(a.id),
         timestamp: a.scheduledDate || a.createdAt || '',
-        user: a.assignedToName || (a.assignedTo ? `User #${a.assignedTo}` : 'System'),
+        user: a.assignedToName || (getUserName ? getUserName(a.assignedTo) : (a.assignedTo ? `User #${a.assignedTo}` : 'System')),
         subject: a.subject || 'Activity log',
         subtype: a.type || 'CALL',
         status: a.status || 'PLANNED',
@@ -43,7 +44,7 @@ export function UnifiedTimeline({ activities, notes, isLoading }: UnifiedTimelin
 
     // Sort chronological descending
     return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [activities, notes]);
+  }, [activities, notes, getUserName]);
 
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '';

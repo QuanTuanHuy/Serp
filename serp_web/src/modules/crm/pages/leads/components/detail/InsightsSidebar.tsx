@@ -12,6 +12,8 @@ interface InsightsSidebarProps {
   onOpenQualify: () => void;
   onOpenDisqualify: () => void;
   onOpenMeetingRequest: () => void;
+  users: any[];
+  getUserName?: (userId?: string | number) => string;
 }
 
 export function InsightsSidebar({
@@ -22,6 +24,8 @@ export function InsightsSidebar({
   onOpenQualify,
   onOpenDisqualify,
   onOpenMeetingRequest,
+  users,
+  getUserName,
 }: InsightsSidebarProps) {
   const scoreColor = leadScore >= 75 ? 'stroke-emerald-500' : leadScore >= 50 ? 'stroke-amber-500' : 'stroke-rose-500';
 
@@ -94,16 +98,26 @@ export function InsightsSidebar({
                     <AvatarFallback className="text-[10px] bg-muted">R</AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium text-foreground">
-                    {lead.assignedTo ? `User #${lead.assignedTo}` : 'Unassigned'}
+                    {lead.assignedTo ? (getUserName ? getUserName(lead.assignedTo) : `User #${lead.assignedTo}`) : 'Unassigned'}
                   </span>
                 </div>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuItem onClick={() => onAssignLead(1)}>User #1 (Admin)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAssignLead(2)}>User #2 (Sales Rep)</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAssignLead(3)}>User #3 (Manager)</DropdownMenuItem>
+            <DropdownMenuContent className="max-h-60 overflow-y-auto w-56" align="end">
+              {users.length > 0 ? (
+                users.map((user) => (
+                  <DropdownMenuItem key={user.id} onClick={() => onAssignLead(Number(user.id))}>
+                    {[user.firstName, user.lastName].filter(Boolean).join(' ') || user.email}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={() => onAssignLead(1)}>User #1 (Admin)</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onAssignLead(2)}>User #2 (Sales Rep)</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onAssignLead(3)}>User #3 (Manager)</DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </CardContent>

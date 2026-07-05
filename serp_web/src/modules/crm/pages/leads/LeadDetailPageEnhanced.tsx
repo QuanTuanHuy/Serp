@@ -40,10 +40,15 @@ import {
   useUpdateLeadStatusMutation,
   useUpdateLeadMutation,
   useAssignLeadMutation,
-  useGetNotesQuery,
-  useCreateNoteMutation,
+  useGetCrmNotesQuery,
+  useCreateCrmNoteMutation,
   useCreateActivityMutation,
 } from '../../api/crmApi';
+
+import { useGetOrganizationUsersQuery } from '@/modules/settings/services/users/usersApi';
+import { useGetMyModulesQuery } from '@/modules/account/services/moduleApi';
+import { selectOrganizationId } from '@/modules/account/store';
+import { useAppSelector } from '@/shared/hooks';
 
 // Sub-components
 import { LeadProfileSidebar } from './components/detail/LeadProfileSidebar';
@@ -84,18 +89,47 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
   // API Hooks (RSC Waterfalls eliminated - executing parallel requests via RTK Query)
   const { data: leadResponse, isLoading: isLoadingLead } = useGetLeadQuery(leadId);
   const { data: activitiesResponse, isLoading: isLoadingActivities } = useGetLeadActivitiesQuery({ leadId, page: 1, size: 50 });
-  const { data: notesResponse, isLoading: isLoadingNotes } = useGetNotesQuery({ entityType: 'LEAD', entityId: leadId });
+  const { data: notesResponse, isLoading: isLoadingNotes } = useGetCrmNotesQuery({ entityType: 'LEAD', entityId: leadId });
+
+  // Organization users fetching logic for real note/activity creator mapping
+  const organizationId = useAppSelector(selectOrganizationId);
+  const { data: myModules } = useGetMyModulesQuery(undefined, {
+    skip: !organizationId,
+  });
+  const crmModuleId = myModules?.find((m) => m.moduleCode === 'CRM')?.moduleId;
+
+  const { data: orgUsersResponse } = useGetOrganizationUsersQuery(
+    {
+      organizationId: organizationId as number,
+      page: 0,
+      pageSize: 100,
+      moduleId: crmModuleId,
+    },
+    { skip: !organizationId }
+  );
 
   const [deleteLead] = useDeleteLeadMutation();
   const [updateLeadStatus] = useUpdateLeadStatusMutation();
   const [updateLead, { isLoading: isUpdatingLead }] = useUpdateLeadMutation();
   const [assignLead] = useAssignLeadMutation();
-  const [createNote] = useCreateNoteMutation();
+  const [createNote] = useCreateCrmNoteMutation();
   const [createActivity] = useCreateActivityMutation();
 
   const lead = leadResponse?.data;
   const activities = activitiesResponse?.data.data || [];
   const notes = notesResponse?.data.data || [];
+  const users = orgUsersResponse?.data?.items ?? [];
+
+  // Helper to map userId to display name
+  const getUserName = useMemo(() => {
+    return (userId?: string | number) => {
+      if (!userId) return 'System';
+      const user = users.find((u) => String(u.id) === String(userId));
+      if (!user) return `User #${userId}`;
+      const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
+      return name || user.email;
+    };
+  }, [users]);
 
   // Calculate lead status progress
   const statusProgress = useMemo(() => {
@@ -150,10 +184,14 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
   };
 
   const handleAddNote = async (content: string) => {
+    console.log("LeadDetailPage: handleAddNote called. LeadId:", leadId, "Number(LeadId):", Number(leadId), "Content:", content);
     try {
-      await createNote({ entityType: 'LEAD', entityId: Number(leadId), content }).unwrap();
+      console.log("LeadDetailPage: Calling createNote mutation...");
+      const res = await createNote({ entityType: 'LEAD', entityId: Number(leadId), content }).unwrap();
+      console.log("LeadDetailPage: createNote mutation completed. Result:", res);
       toast.success('Note added successfully');
     } catch (error) {
+      console.error("LeadDetailPage: createNote mutation failed. Error:", error);
       toast.error('Failed to create note', { description: getErrorMessage(error) });
       throw error;
     }
@@ -343,7 +381,7 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
         {/* Column 2 & 3: Interaction Timeline Hub */}
         <div className="lg:col-span-2 space-y-6">
           <QuickComposer leadId={leadId} onAddNote={handleAddNote} onAddActivity={handleAddActivity} />
-          <UnifiedTimeline activities={activities} notes={notes} isLoading={isLoadingActivities || isLoadingNotes} />
+          <UnifiedTimeline activities={activities} notes={notes} isLoading={isLoadingActivities || isLoadingNotes} getUserName={getUserName} />
         </div>
 
         {/* Column 4: Insights & Conversion Hub */}
@@ -356,6 +394,8 @@ export function LeadDetailPage({ leadId }: LeadDetailPageProps) {
             onOpenQualify={() => setShowQualifyDialog(true)}
             onOpenDisqualify={() => setShowDisqualifyDialog(true)}
             onOpenMeetingRequest={() => setShowMeetingRequestDialog(true)}
+            users={users}
+            getUserName={getUserName}
           />
         </div>
       </div>
