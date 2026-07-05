@@ -1058,6 +1058,27 @@ const toEpochMillis = (value?: string) => {
   return Number.isNaN(parsed) ? undefined : parsed;
 };
 
+const toLocalDateTimeString = (value?: string, isEnd = false) => {
+  if (!value) {
+    return undefined;
+  }
+  if (value.includes('T')) {
+    return value;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return isEnd ? `${value}T23:59:59` : `${value}T00:00:00`;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  return `${year}-${month}-${day}T${isEnd ? '23:59:59' : '00:00:00'}`;
+};
+
 export const mapActivityFiltersToBackendRequest = (
   filters: ActivityFilters,
   pagination: PaginationParams
@@ -1079,10 +1100,10 @@ export const mapActivityFiltersToBackendRequest = (
     ? Number(filters.opportunityId)
     : undefined,
   contactId: filters.contactId ? Number(filters.contactId) : undefined,
-  activityDateFrom: toEpochMillis(filters.activityDateFrom),
-  activityDateTo: toEpochMillis(filters.activityDateTo),
-  dueDateFrom: toEpochMillis(filters.dueDateFrom),
-  dueDateTo: toEpochMillis(filters.dueDateTo),
+  activityDateFrom: toLocalDateTimeString(filters.activityDateFrom),
+  activityDateTo: toLocalDateTimeString(filters.activityDateTo, true),
+  dueDateFrom: toLocalDateTimeString(filters.dueDateFrom),
+  dueDateTo: toLocalDateTimeString(filters.dueDateTo, true),
   page: pagination.page,
   size: pagination.limit,
   sortBy: pagination.sortBy || undefined,
