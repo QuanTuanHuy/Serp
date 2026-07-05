@@ -227,7 +227,27 @@ export function DispatcherDashboardPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [sortBy, setSortBy] = useState<SortableRequestField>('id');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
+  // const EmptyStateNoti = (activeTab : String) => {
+  //   switch (activeTab) {
+  //     case 'PENDING':
+  //       return 'Great! All requests have been processed.';
+  //     case 'PLANNED':
+  //       return 'No planned requests. Generate a transport plan to get started.';
+  //       break;
+  //     case 'IN_PROGRESS':
+  //       return 'No active routes. Drivers may be idle.';
+  //       break;
+  //     case 'COMPLETED':
+  //       return 'No completed requests yet.';
+  //       break;
+  //     case 'CANCELLED':
+  //       return 'No cancelled requests.';
+  //       break;
+  //     default:
+  //       break;
+  //   }
+      
+  // }
   // Multi-select for status revert actions
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [updateStatus, { isLoading: isReverting }] =
@@ -262,11 +282,15 @@ export function DispatcherDashboardPage() {
     { organizationId: organizationId!, pageSize: 100, page: 0 },
     { skip: !isDispatcher || !organizationId }
   );
-
+  // const { data: fulldata } = useGetDispatcherRequestsQuery({size: 100000});
+  // const fullItems: TtcrsRequest[] = fulldata?.data?.items ?? [];
   const items: TtcrsRequest[] = data?.data?.items ?? [];
   const totalPages = data?.data?.totalPages ?? 0;
   const totalElements = data?.data?.totalElements ?? 0;
 
+  // const getNumberRequestByStatus = (status : RequestStatus | 'ALL') => {
+  //   return status == 'ALL' ? fullItems.length : fullItems.filter((rq) => rq.status === status).length;
+  // }
   const customerMap = useMemo(() => {
     const map = new Map<number, string>();
     const users = usersData?.data?.items ?? [];
@@ -511,6 +535,7 @@ export function DispatcherDashboardPage() {
                   className='flex-1 text-center rounded-t-md hover:bg-gray-100 dark:hover:bg-gray-800 rounded-b-none border border-b-0 border-transparent transition-colors px-4 py-2.5 text-sm data-[state=active]:border-border data-[state=active]:bg-gray-200 dark:data-[state=active]:bg-gray-700 data-[state=active]:shadow-none'
                 >
                   {tab.label}
+                  {/* {`${}`} */}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -645,6 +670,10 @@ export function DispatcherDashboardPage() {
                         <TableCell
                           className='px-4 py-3'
                           onClick={(e) => {
+                            if (e.target !== e.currentTarget) {
+                              e.stopPropagation();
+                              return;
+                            }
                             e.stopPropagation();
                             toggleRow(req.id);
                           }}

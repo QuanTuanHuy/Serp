@@ -88,6 +88,7 @@ public class AlgorithmService {
      * @param tenantId resolved tenant (already validated in RequestService)
      * @return Gson-serialised {@link TruckMoocContainerOutputJson}
      */
+    // Phải để synchronized vì TruckContainerSolver dùng static fields (nVehicle, nRequest) → không thread-safe. Nếu 1 dispatcher khác gọi executeAlgorithm() cùng lúc thì sẽ bị xung đột, ghi đè lên nVehicle/nRequest → kết quả sai. Nếu muốn cho phép nhiều dispatcher cùng lúc thì phải sửa TruckContainerSolver để không dùng static fields nữa.
     public synchronized String executeAlgorithm(CreateTransportPlanInputDTO dto, Long tenantId) {
 
         // ------------------------------------------------------------------ //
@@ -338,7 +339,7 @@ public class AlgorithmService {
                     }
 
                     LocalDateTime startTime = minEarlyAtSrc.minusSeconds(backwardSeconds);
-                    log.debug("Truck {} startWorkingTime = {} (minEarlyAtSrc={}, backwardSec={})",
+                    log.debug("Truck {}  = {} (minEarlyAtSrc={}, backwardSec={})",
                             t.getCode(), startTime.format(DT_FMT), minEarlyAtSrc.format(DT_FMT), backwardSeconds);
 
                     return new Truck(0, t.getCode(), 0.0, 0, "", "", depot, depot,
