@@ -1,11 +1,11 @@
 /**
- * CRM Calendar Page Route
+ * CRM Calendar Page Route Redirect
  * Author: QuanTuanHuy
  * Description: Part of Serp Project
  */
 
-import { CalendarPage } from '@/modules/crm/pages/calendar';
+import { redirect } from 'next/navigation';
 
 export default function CRMCalendarPage() {
-  return <CalendarPage />;
+  redirect('/crm/activities?view=calendar');
 }
