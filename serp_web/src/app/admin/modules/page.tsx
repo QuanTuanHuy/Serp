@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   AdminFilterChips,
   AdminFilterDialog,
@@ -21,6 +21,8 @@ import { ModuleFormDialog } from '@/modules/admin/components/modules/ModuleFormD
 import { Card, Button, Input } from '@/shared/components';
 import { DataTable } from '@/shared/components';
 import type { ColumnDef } from '@/shared/types';
+import { useDebounce } from '@/shared/hooks';
+import { AdminConfirmStatusDialog } from '@/modules/admin/components/shared/AdminConfirmStatusDialog';
 import {
   Puzzle,
   Plus,
@@ -77,11 +79,40 @@ export default function ModulesPage() {
     handleFilterChange,
   } = useModules();
 
+  const [searchInput, setSearchInput] = useState(filters.search || '');
+  const debouncedSearch = useDebounce(searchInput, 400);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedModuleForToggle, setSelectedModuleForToggle] = useState<{ id: string; status: string } | null>(null);
+
+  useEffect(() => {
+    setSearchInput(filters.search || '');
+  }, [filters.search]);
+
+  useEffect(() => {
+    if (debouncedSearch !== (filters.search || '')) {
+      handleSearch(debouncedSearch);
+    }
+  }, [debouncedSearch, handleSearch, filters.search]);
+
   const handleToggleStatus = async (
     moduleId: string,
     currentStatus: string
   ) => {
-    await toggleStatus(moduleId, currentStatus);
+    if (currentStatus === 'ACTIVE') {
+      setSelectedModuleForToggle({ id: moduleId, status: currentStatus });
+      setConfirmOpen(true);
+    } else {
+      await toggleStatus(moduleId, currentStatus);
+    }
+  };
+
+  const handleConfirmToggle = async () => {
+    if (selectedModuleForToggle) {
+      await toggleStatus(selectedModuleForToggle.id, selectedModuleForToggle.status);
+      setConfirmOpen(false);
+      setSelectedModuleForToggle(null);
+    }
   };
 
   const filterCriteria = [
@@ -281,8 +312,8 @@ export default function ModulesPage() {
             <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
             <Input
               placeholder='Search by name, code, description...'
-              value={filters.search || ''}
-              onChange={(event) => handleSearch(event.target.value)}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
               className='pl-10'
             />
           </div>
@@ -603,6 +634,17 @@ export default function ModulesPage() {
           </FilterPane>
         ) : null}
       </AdminFilterDialog>
+
+      <AdminConfirmStatusDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={handleConfirmToggle}
+        title="Disable Module?"
+        description="Are you sure you want to disable this module? Users will lose access to all its features and associated roles."
+        impactText="This action will take effect immediately."
+        confirmLabel="Disable"
+        confirmVariant="destructive"
+      />
     </div>
   );
 }

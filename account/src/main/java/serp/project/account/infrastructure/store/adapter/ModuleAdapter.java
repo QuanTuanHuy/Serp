@@ -81,8 +81,9 @@ public class ModuleAdapter implements IModulePort {
     @Override
     public Pair<List<ModuleEntity>, Long> searchModules(String search, int limit) {
         var pageable = PageRequest.of(0, limit);
-        var modules = moduleMapper.toEntityList(moduleRepository.searchModules(search, pageable));
-        Long total = moduleRepository.countSearchModules(search);
+        String formattedSearch = (search == null || search.trim().isEmpty()) ? "" : "%" + search.trim().toLowerCase() + "%";
+        var modules = moduleMapper.toEntityList(moduleRepository.searchModules(formattedSearch, pageable));
+        Long total = moduleRepository.countSearchModules(formattedSearch);
         return Pair.of(modules, total != null ? total : 0L);
     }
 
@@ -92,7 +93,8 @@ public class ModuleAdapter implements IModulePort {
             ModuleStatus status,
             ModuleType moduleType,
             Pageable pageable) {
-        var page = moduleRepository.findAllPaginated(search, status, moduleType, pageable);
+        String formattedSearch = (search == null || search.trim().isEmpty()) ? null : "%" + search.trim().toLowerCase() + "%";
+        var page = moduleRepository.findAllPaginated(formattedSearch, status, moduleType, pageable);
         return Pair.of(moduleMapper.toEntityList(page.getContent()), page.getTotalElements());
     }
 }

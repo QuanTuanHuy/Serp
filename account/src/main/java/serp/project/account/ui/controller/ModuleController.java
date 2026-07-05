@@ -60,4 +60,10 @@ public class ModuleController {
         var response = moduleUseCase.getUserModules(userId, tenantId);
         return ResponseEntity.status(response.getCode()).body(response);
     }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getModuleStats() {
+        var response = moduleUseCase.getModuleStats();
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
 }

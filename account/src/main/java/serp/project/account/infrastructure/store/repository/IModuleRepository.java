@@ -32,26 +32,26 @@ public interface IModuleRepository extends IBaseRepository<ModuleModel> {
 
     @Query("""
             SELECT m FROM ModuleModel m
-            WHERE LOWER(m.moduleName) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(m.code) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(COALESCE(m.description, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+            WHERE LOWER(m.moduleName) LIKE :search
+               OR LOWER(m.code) LIKE :search
+               OR LOWER(m.description) LIKE :search
             ORDER BY m.moduleName ASC
             """)
     List<ModuleModel> searchModules(@Param("search") String search, Pageable pageable);
 
     @Query("""
             SELECT COUNT(m) FROM ModuleModel m
-            WHERE LOWER(m.moduleName) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(m.code) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(COALESCE(m.description, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+            WHERE LOWER(m.moduleName) LIKE :search
+               OR LOWER(m.code) LIKE :search
+               OR LOWER(m.description) LIKE :search
             """)
     Long countSearchModules(@Param("search") String search);
 
     @Query("""
             SELECT m FROM ModuleModel m
-            WHERE (:search IS NULL OR LOWER(m.moduleName) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(m.code) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(COALESCE(m.description, '')) LIKE LOWER(CONCAT('%', :search, '%')))
+            WHERE (:search IS NULL OR LOWER(m.moduleName) LIKE :search
+               OR LOWER(m.code) LIKE :search
+               OR LOWER(m.description) LIKE :search)
               AND (:status IS NULL OR m.status = :status)
               AND (:moduleType IS NULL OR m.moduleType = :moduleType)
             """)

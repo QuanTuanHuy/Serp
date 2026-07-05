@@ -24,6 +24,12 @@ export interface PaginatedModulesResponse {
   currentPage: number;
 }
 
+export interface ModuleStats {
+  total: number;
+  enabled: number;
+  disabled: number;
+}
+
 export const modulesApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getModules: builder.query<Module[], void>({
@@ -46,10 +52,11 @@ export const modulesApi = api.injectEndpoints({
 
     getModulesV2: builder.query<PaginatedModulesResponse, ModuleQueryParams>({
       query: (params) => ({
-        url: '/modules/v2',
+        url: '/modules',
         method: 'GET',
         params,
       }),
+      extraOptions: { version: 'v2' },
       transformResponse: createDataTransform<PaginatedModulesResponse>(),
       providesTags: (result) =>
         result?.items
@@ -72,6 +79,15 @@ export const modulesApi = api.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: 'admin/Module', id }],
     }),
 
+    getModuleStats: builder.query<ModuleStats, void>({
+      query: () => ({
+        url: '/modules/stats',
+        method: 'GET',
+      }),
+      transformResponse: createDataTransform<ModuleStats>(),
+      providesTags: [{ type: 'admin/Module', id: 'STATS' }],
+    }),
+
     createModule: builder.mutation<
       Module,
       Omit<Module, 'id' | 'createdAt' | 'updatedAt'>
@@ -82,7 +98,10 @@ export const modulesApi = api.injectEndpoints({
         body: moduleData,
       }),
       transformResponse: createDataTransform<Module>(),
-      invalidatesTags: [{ type: 'admin/Module', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'admin/Module', id: 'LIST' },
+        { type: 'admin/Module', id: 'STATS' },
+      ],
     }),
 
     updateModule: builder.mutation<
@@ -98,6 +117,7 @@ export const modulesApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'admin/Module', id },
         { type: 'admin/Module', id: 'LIST' },
+        { type: 'admin/Module', id: 'STATS' },
       ],
     }),
   }),
@@ -108,6 +128,7 @@ export const {
   useGetModulesQuery,
   useGetModulesV2Query,
   useGetModuleByIdQuery,
+  useGetModuleStatsQuery,
   useCreateModuleMutation,
   useUpdateModuleMutation,
 } = modulesApi;

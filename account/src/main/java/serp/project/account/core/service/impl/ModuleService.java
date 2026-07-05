@@ -189,6 +189,7 @@ public class ModuleService implements IModuleService {
     private void clearCacheAllModules() {
         asyncTaskExecutor.execute(() -> {
             cachePort.deleteFromCache(CacheConstants.ALL_MODULES);
+            cachePort.deleteFromCache(CacheConstants.MODULES_STATS);
             cachePort.deleteAllByPattern(CacheConstants.PAGINATED_MODULES_PATTERN);
         });
     }

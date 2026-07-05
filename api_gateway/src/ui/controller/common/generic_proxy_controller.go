@@ -78,6 +78,12 @@ func buildServiceRoutes(props *properties.ExternalServiceProperties) []ServiceRo
 			Target:       props.AccountService.BaseURL(),
 		},
 		{
+			Name:         "accountV2",
+			SourcePrefix: "/api/v2",
+			TargetPrefix: "/account-service/api/v2",
+			Target:       props.AccountService.BaseURL(),
+		},
+		{
 			Name:         "crm",
 			SourcePrefix: "/crm/api/v1",
 			TargetPrefix: "/crm/api/v1",

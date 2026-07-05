@@ -8,7 +8,7 @@
 import { useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
-  useGetModulesQuery,
+  useGetModuleStatsQuery,
   useGetModulesV2Query,
   useCreateModuleMutation,
   useUpdateModuleMutation,
@@ -45,8 +45,8 @@ export function useModules() {
   const isDialogOpen = useAppSelector(selectModulesDialogOpen);
   const selectedModuleId = useAppSelector(selectSelectedModuleId);
 
-  // Fetch all modules only for calculating stats (leveraging RTK Query cache)
-  const { data: allModules = [] } = useGetModulesQuery();
+  // Fetch module stats for counter display
+  const { data: statsData } = useGetModuleStatsQuery();
 
   // Fetch paginated modules for current page/search/filters
   const {
@@ -77,17 +77,13 @@ export function useModules() {
   };
 
   const selectedModule = useMemo(
-    () => allModules.find((m) => m.id === selectedModuleId),
-    [allModules, selectedModuleId]
+    () => modules.find((m) => m.id === selectedModuleId),
+    [modules, selectedModuleId]
   );
 
   const stats = useMemo(
-    () => ({
-      total: allModules.length,
-      enabled: allModules.filter((m) => m.status === 'ACTIVE').length,
-      disabled: allModules.filter((m) => m.status === 'DISABLED').length,
-    }),
-    [allModules]
+    () => statsData || { total: 0, enabled: 0, disabled: 0 },
+    [statsData]
   );
 
   const updateUrl = useCallback(
@@ -197,7 +193,6 @@ export function useModules() {
 
   return {
     modules,
-    rawModules: allModules,
     stats,
     pageInfo,
     selectedModule,
