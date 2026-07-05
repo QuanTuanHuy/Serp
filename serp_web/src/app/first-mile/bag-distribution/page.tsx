@@ -1,10 +1,10 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Bag distribution route page
+ * Description: Part of Serp Project - Redirect bag distribution to second-mile dispatchers
  */
 
-import { BagDistributionListPage } from '@/modules/first-mile';
+import { redirect } from 'next/navigation';
 
 export default function FirstMileBagDistributionPage() {
-  return <BagDistributionListPage />;
+  redirect('/first-mile/dispatchers/second-mile');
 }

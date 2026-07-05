@@ -87,12 +87,6 @@ export interface DispatchSetupCardProps {
   isTmsAdmin: boolean;
 }
 
-export interface AccessScopeCardProps {
-  canDispatch: boolean;
-  scopeBadgeLabel: string;
-  scopeDescription: string;
-}
-
 export interface NoAccessCardProps {
   message: string;
 }

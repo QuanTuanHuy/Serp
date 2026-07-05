@@ -11,23 +11,56 @@ export const DRIVER_PAGE_SIZE = 50;
 
 export type ManifestMode = 'POST_OFFICE' | 'HUB';
 
+export type HandoverManagementDomain =
+  | 'POST_OFFICE_HUB'
+  | 'HUB_TRANSFER';
+
 export type DriverHandoverAction = 'START' | 'END';
 
 export const MANIFEST_STATUS_OPTIONS: Array<{
   value: HandoverManifestStatus;
   label: string;
 }> = [
-  { value: 'CREATED', label: 'Created' },
-  { value: 'OUTBOUND_CONFIRMED', label: 'Dispatched to hub' },
-  { value: 'INBOUND_CONFIRMED', label: 'Received at hub' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'CREATED', label: 'Mới tạo' },
+  { value: 'OUTBOUND_CONFIRMED', label: 'Đã xuất đi hub' },
+  { value: 'INBOUND_CONFIRMED', label: 'Hub đã nhận' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
 ];
 
 export const MANIFEST_STATUS_LABELS: Record<HandoverManifestStatus, string> = {
-  CREATED: 'Created',
-  OUTBOUND_CONFIRMED: 'Dispatched to hub',
-  INBOUND_CONFIRMED: 'Received at hub',
-  CANCELLED: 'Cancelled',
+  CREATED: 'Mới tạo',
+  OUTBOUND_CONFIRMED: 'Đã xuất đi hub',
+  INBOUND_CONFIRMED: 'Hub đã nhận',
+  CANCELLED: 'Đã hủy',
+};
+
+export const formatHandoverOrderStatusLabel = (status?: string): string => {
+  switch (status) {
+    case 'CREATED':
+      return 'Mới tạo';
+    case 'ASSIGNED_TO_PICKUP':
+      return 'Đã phân công lấy hàng';
+    case 'PICKING_UP':
+      return 'Đang lấy hàng';
+    case 'PICKUP_FAILED':
+      return 'Lấy hàng thất bại';
+    case 'PICKED_UP':
+      return 'Đã lấy hàng';
+    case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
+      return 'Chờ nhập bưu cục gửi';
+    case 'AT_ORIGIN_POST_OFFICE':
+      return 'Tại bưu cục gửi';
+    case 'IN_TRANSIT_TO_HUB':
+      return 'Đang vận chuyển đến hub';
+    case 'AT_HUB':
+      return 'Đã đến hub';
+    case 'CANCELLED':
+      return 'Đã hủy';
+    case 'LOST_OR_DAMAGED':
+      return 'Thất lạc / hư hỏng';
+    default:
+      return status ? status.replaceAll('_', ' ') : '--';
+  }
 };
 
 export const canManagePostOfficeHandover = (roles: string[]): boolean =>
@@ -76,7 +109,7 @@ export const formatDateTime = (value?: string): string => {
     return value;
   }
 
-  return parsedDate.toLocaleString('en-US');
+  return parsedDate.toLocaleString('vi-VN');
 };
 
 export const getTotalOrders = (manifest?: HandoverManifest | null): number =>
@@ -136,7 +169,7 @@ export const getBrowserLocation = (): Promise<{
 }> =>
   new Promise((resolve, reject) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      reject(new Error('Geolocation is not available in this browser.'));
+      reject(new Error('Trình duyệt không hỗ trợ lấy vị trí hiện tại.'));
       return;
     }
 
@@ -172,16 +205,16 @@ export const getTripStep = (
 
 export const getStepLabel = (manifest: HandoverManifest): string => {
   const step = getTripStep(manifest);
-  if (step === 'RECEIVED') return 'Received at hub';
-  if (step === 'ARRIVED') return 'Arrival checked in';
-  if (step === 'IN_TRANSIT') return 'In transit';
-  return 'Ready for departure';
+  if (step === 'RECEIVED') return 'Hub đã nhận';
+  if (step === 'ARRIVED') return 'Đã check-in điểm đến';
+  if (step === 'IN_TRANSIT') return 'Đang vận chuyển';
+  return 'Sẵn sàng xuất phát';
 };
 
 export const getActionLabel = (manifest: HandoverManifest): string => {
-  if (!manifest.driverStartCheckinAt) return 'Departure check-in';
-  if (!manifest.driverEndCheckinAt) return 'Arrival check-in';
-  return 'Awaiting hub inbound';
+  if (!manifest.driverStartCheckinAt) return 'Check-in xuất phát';
+  if (!manifest.driverEndCheckinAt) return 'Check-in điểm đến';
+  return 'Chờ hub xác nhận nhập';
 };
 
 export const buildCheckinFormData = (

@@ -31,16 +31,16 @@ import {
   TableRow,
 } from '@/shared/components/ui/table';
 
-import type { SecondMileBag } from '../../../types';
+import type { SecondMileBag } from '../../../../types';
 import type {
   DestinationFilter,
   SelectedBagSummary,
-} from '../bagDistributionModels';
+} from '../secondMileDispatchModels';
 import {
   destinationLabel,
   formatDateTime,
   formatNumber,
-} from '../bagDistributionModels';
+} from '../secondMileDispatchModels';
 
 interface ReadyBagsTabProps {
   bags: SecondMileBag[];
@@ -76,10 +76,10 @@ export function ReadyBagsTab({
       <CardHeader>
         <div className='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
           <div>
-            <CardTitle>Ready bags</CardTitle>
+            <CardTitle>Túi hàng sẵn sàng</CardTitle>
             <CardDescription>
-              Select sealed bags first, then use their shared destination for
-              planning or create a manual manifest from the Planning tab.
+              Chọn các túi đã niêm phong, dùng cùng điểm đến để lập kế hoạch
+              hoặc tạo biên bản điều phối thủ công.
             </CardDescription>
           </div>
           <Button
@@ -88,7 +88,7 @@ export function ReadyBagsTab({
             onClick={onUseBagDestination}
           >
             <MapPinned className='h-4 w-4' />
-            Use selected destination
+            Dùng điểm đến đã chọn
           </Button>
         </div>
       </CardHeader>
@@ -99,7 +99,7 @@ export function ReadyBagsTab({
             <Input
               value={readySearch}
               onChange={(event) => onReadySearchChange(event.target.value)}
-              placeholder='Search by bag code'
+              placeholder='Tìm theo mã túi'
               className='pl-9'
             />
           </div>
@@ -110,12 +110,12 @@ export function ReadyBagsTab({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder='Destination type' />
+              <SelectValue placeholder='Loại điểm đến' />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='ALL'>All destinations</SelectItem>
+              <SelectItem value='ALL'>Tất cả điểm đến</SelectItem>
               <SelectItem value='HUB'>Hub</SelectItem>
-              <SelectItem value='POST_OFFICE'>Post office</SelectItem>
+              <SelectItem value='POST_OFFICE'>Bưu cục</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -124,8 +124,8 @@ export function ReadyBagsTab({
           !selectedDestinationSummary.sameDestination && (
             <div className='flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive'>
               <AlertCircle className='mt-0.5 h-4 w-4' />
-              Selected bags do not share the same origin and destination. Select
-              one destination group before creating a manifest.
+              Các túi đã chọn không cùng hub xuất phát và điểm đến. Hãy chọn
+              một nhóm điểm đến trước khi tạo biên bản.
             </div>
           )}
 
@@ -137,15 +137,15 @@ export function ReadyBagsTab({
                   <Checkbox
                     checked={allSelected}
                     onCheckedChange={(checked) => onSelectAll(Boolean(checked))}
-                    aria-label='Select all ready bags'
+                    aria-label='Chọn tất cả túi sẵn sàng'
                   />
                 </TableHead>
-                <TableHead>Bag code</TableHead>
-                <TableHead>Destination</TableHead>
-                <TableHead>Orders</TableHead>
-                <TableHead>Weight</TableHead>
-                <TableHead>Volume</TableHead>
-                <TableHead>Sealed at</TableHead>
+                <TableHead>Mã túi</TableHead>
+                <TableHead>Điểm đến</TableHead>
+                <TableHead>Đơn hàng</TableHead>
+                <TableHead>Khối lượng</TableHead>
+                <TableHead>Thể tích</TableHead>
+                <TableHead>Niêm phong lúc</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -155,11 +155,11 @@ export function ReadyBagsTab({
                     {isFetching ? (
                       <span className='inline-flex items-center gap-2 text-muted-foreground'>
                         <Loader2 className='h-4 w-4 animate-spin' />
-                        Loading ready bags...
+                        Đang tải túi sẵn sàng...
                       </span>
                     ) : (
                       <span className='text-muted-foreground'>
-                        No sealed bags match the current filters.
+                        Không có túi đã niêm phong phù hợp bộ lọc.
                       </span>
                     )}
                   </TableCell>
@@ -173,11 +173,11 @@ export function ReadyBagsTab({
                         onCheckedChange={(checked) =>
                           onToggleBag(bag, Boolean(checked))
                         }
-                        aria-label={`Select ${bag.bagCode ?? `bag ${bag.id}`}`}
+                        aria-label={`Chọn ${bag.bagCode ?? `túi ${bag.id}`}`}
                       />
                     </TableCell>
                     <TableCell className='font-medium'>
-                      {bag.bagCode ?? `Bag #${bag.id}`}
+                      {bag.bagCode ?? `Túi #${bag.id}`}
                     </TableCell>
                     <TableCell>
                       {destinationLabel(

@@ -20,10 +20,10 @@ export function DriverHandoverStats({
 }: DriverHandoverStatsProps) {
   return (
     <div className='grid gap-4 md:grid-cols-4'>
-      <MetricItem label='Ready' value={readyCount} />
-      <MetricItem label='In transit' value={inTransitCount} />
-      <MetricItem label='Arrived' value={arrivedCount} />
-      <MetricItem label='Completed' value={completedCount} />
+      <MetricItem label='Sẵn sàng' value={readyCount} />
+      <MetricItem label='Đang vận chuyển' value={inTransitCount} />
+      <MetricItem label='Đã đến' value={arrivedCount} />
+      <MetricItem label='Hoàn tất' value={completedCount} />
     </div>
   );
 }

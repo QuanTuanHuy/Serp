@@ -17,9 +17,9 @@ import {
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 
-import type { BagDistributionManifest } from '../../../types';
-import type { CheckinMode, CheckinState } from '../bagDistributionModels';
-import { destinationLabel } from '../bagDistributionModels';
+import type { BagDistributionManifest } from '../../../../types';
+import type { CheckinMode, CheckinState } from '../transitModels';
+import { destinationLabel } from '../transitModels';
 
 interface CheckinDialogProps {
   target: { manifest: BagDistributionManifest; mode: CheckinMode } | null;
@@ -45,22 +45,22 @@ export function CheckinDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isStart ? 'Start check-in' : 'End check-in'}
+            {isStart ? 'Check-in lúc xuất phát' : 'Check-in lúc đến nơi'}
           </DialogTitle>
           <DialogDescription>
-            Enter the captured location and upload a photo from the driver
-            checkpoint.
+            Nhập vị trí ghi nhận và tải lên ảnh xác minh tại điểm check-in của
+            tài xế.
           </DialogDescription>
         </DialogHeader>
         <div className='space-y-4'>
           <div className='rounded-md border bg-muted/30 p-3 text-sm'>
             <p className='font-medium'>
               {target?.manifest.manifestCode ??
-                `Manifest #${target?.manifest.id ?? '-'}`}
+                `Biên bản #${target?.manifest.id ?? '-'}`}
             </p>
             <p className='text-muted-foreground'>
               {target
-                ? `${target.manifest.originHubCode ?? target.manifest.originHubId} to ${destinationLabel(
+                ? `${target.manifest.originHubCode ?? target.manifest.originHubId} đến ${destinationLabel(
                     target.manifest.destinationType,
                     target.manifest.destinationHubId,
                     target.manifest.destinationHubCode,
@@ -71,7 +71,7 @@ export function CheckinDialog({
           </div>
           <div className='grid gap-3 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='checkin-latitude'>Latitude *</Label>
+              <Label htmlFor='checkin-latitude'>Vĩ độ *</Label>
               <Input
                 id='checkin-latitude'
                 value={state.latitude}
@@ -82,7 +82,7 @@ export function CheckinDialog({
               />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='checkin-longitude'>Longitude *</Label>
+              <Label htmlFor='checkin-longitude'>Kinh độ *</Label>
               <Input
                 id='checkin-longitude'
                 value={state.longitude}
@@ -94,18 +94,18 @@ export function CheckinDialog({
             </div>
           </div>
           <div className='space-y-2'>
-            <Label htmlFor='checkin-label'>Location label</Label>
+            <Label htmlFor='checkin-label'>Tên vị trí</Label>
             <Input
               id='checkin-label'
               value={state.locationLabel}
               onChange={(event) =>
                 onStateChange({ ...state, locationLabel: event.target.value })
               }
-              placeholder='Origin hub gate'
+              placeholder='Cổng hub xuất phát'
             />
           </div>
           <div className='space-y-2'>
-            <Label htmlFor='checkin-photo'>Photo *</Label>
+            <Label htmlFor='checkin-photo'>Ảnh xác minh *</Label>
             <Input
               id='checkin-photo'
               type='file'
@@ -121,7 +121,7 @@ export function CheckinDialog({
         </div>
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
+            Hủy
           </Button>
           <Button disabled={isLoading} onClick={onSubmit}>
             {isLoading ? (
@@ -129,7 +129,7 @@ export function CheckinDialog({
             ) : (
               <CheckCircle2 className='h-4 w-4' />
             )}
-            Submit check-in
+            Gửi check-in
           </Button>
         </DialogFooter>
       </DialogContent>

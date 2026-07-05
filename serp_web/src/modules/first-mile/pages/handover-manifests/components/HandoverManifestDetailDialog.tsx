@@ -53,9 +53,9 @@ export function HandoverManifestDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
         <DialogHeader>
-          <DialogTitle>Handover manifest detail</DialogTitle>
+          <DialogTitle>Chi tiết phiếu bàn giao</DialogTitle>
           <DialogDescription>
-            Manifest summary, timestamps, and order scan history.
+            Tổng quan phiếu, mốc thời gian và lịch sử quét đơn hàng.
           </DialogDescription>
         </DialogHeader>
 
@@ -63,11 +63,11 @@ export function HandoverManifestDetailDialog({
           <div className='space-y-4'>
             <div className='grid gap-3 sm:grid-cols-3'>
               <DetailItem
-                label='Manifest'
+                label='Phiếu'
                 value={detailManifest.manifestCode || `#${detailManifest.id}`}
               />
               <DetailItem
-                label='Status'
+                label='Trạng thái'
                 value={
                   detailManifest.status ? (
                     <Badge
@@ -81,38 +81,38 @@ export function HandoverManifestDetailDialog({
                 }
               />
               <DetailItem
-                label='Target hub'
+                label='Hub nhận'
                 value={resolveHubLabel(detailManifest.targetHubId)}
               />
               <DetailItem
-                label='Route'
+                label='Tuyến'
                 value={resolveRouteLabel(
                   detailManifest.routeId,
                   detailManifest.routeCode
                 )}
               />
               <DetailItem
-                label='Vehicle'
+                label='Phương tiện'
                 value={resolveVehicleLabel(
                   detailManifest.vehicleId,
                   detailManifest.vehicleLicensePlate
                 )}
               />
               <DetailItem
-                label='Origin post office'
+                label='Bưu cục gửi'
                 value={resolvePostOfficeLabel(
                   detailManifest.originPostOfficeId,
                   detailManifest.originPostOfficeCode
                 )}
               />
               <DetailItem
-                label='Scan out'
+                label='Quét xuất'
                 value={`${getScannedOutOrders(detailManifest)}/${getTotalOrders(
                   detailManifest
                 )}`}
               />
               <DetailItem
-                label='Scan in'
+                label='Quét nhập'
                 value={`${getScannedInOrders(detailManifest)}/${getTotalOrders(
                   detailManifest
                 )}`}
@@ -122,23 +122,23 @@ export function HandoverManifestDetailDialog({
                 value={detailManifest.sealCode || '--'}
               />
               <DetailItem
-                label='Dispatched'
+                label='Đã xuất đi'
                 value={formatDateTime(detailManifest.dispatchedAt)}
               />
               <DetailItem
-                label='Planned departure'
+                label='Dự kiến đi'
                 value={formatDateTime(detailManifest.plannedDepartureAt)}
               />
               <DetailItem
-                label='Planned arrival'
+                label='Dự kiến đến'
                 value={formatDateTime(detailManifest.plannedArrivalAt)}
               />
               <DetailItem
-                label='Inbound confirmed'
+                label='Đã xác nhận nhập'
                 value={formatDateTime(detailManifest.inboundConfirmedAt)}
               />
               <DetailItem
-                label='Departure check-in'
+                label='Check-in xuất phát'
                 value={
                   detailManifest.driverStartCheckinAt
                     ? `${formatDateTime(
@@ -150,7 +150,7 @@ export function HandoverManifestDetailDialog({
                 }
               />
               <DetailItem
-                label='Arrival check-in'
+                label='Check-in điểm đến'
                 value={
                   detailManifest.driverEndCheckinAt
                     ? `${formatDateTime(
@@ -164,14 +164,16 @@ export function HandoverManifestDetailDialog({
             {detailManifest.note ? (
               <div className='space-y-1 rounded-md border p-3'>
                 <p className='text-xs font-medium uppercase text-muted-foreground'>
-                  Note
+                  Ghi chú
                 </p>
                 <p className='text-sm'>{detailManifest.note}</p>
               </div>
             ) : null}
 
             {isFetchingDetail ? (
-              <p className='text-sm text-muted-foreground'>Loading detail...</p>
+              <p className='text-sm text-muted-foreground'>
+                Đang tải chi tiết...
+              </p>
             ) : (
               <ManifestOrdersTable orders={detailManifest.orders ?? []} />
             )}
@@ -180,7 +182,7 @@ export function HandoverManifestDetailDialog({
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Close
+            Đóng
           </Button>
         </DialogFooter>
       </DialogContent>

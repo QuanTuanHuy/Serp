@@ -85,7 +85,7 @@ export function DriverHandoverPage() {
   const checkinAction: DriverHandoverAction =
     checkinManifest?.driverStartCheckinAt ? 'END' : 'START';
   const checkinTitle =
-    checkinAction === 'START' ? 'Departure check-in' : 'Arrival check-out';
+    checkinAction === 'START' ? 'Check-in xuất phát' : 'Check-in điểm đến';
 
   const applyValidCheckinCoordinates = React.useCallback(
     (manifest: HandoverManifest) => {
@@ -94,7 +94,7 @@ export function DriverHandoverPage() {
           typeof manifest.targetHubLatitude !== 'number' ||
           typeof manifest.targetHubLongitude !== 'number'
         ) {
-          notification.error('Target hub coordinates are missing.');
+          notification.error('Thiếu tọa độ hub nhận.');
           return;
         }
         setCheckinLatitude(manifest.targetHubLatitude.toFixed(6));
@@ -105,7 +105,7 @@ export function DriverHandoverPage() {
         typeof manifest.originPostOfficeLatitude !== 'number' ||
         typeof manifest.originPostOfficeLongitude !== 'number'
       ) {
-        notification.error('Origin post office coordinates are missing.');
+        notification.error('Thiếu tọa độ bưu cục gửi.');
         return;
       }
       setCheckinLatitude(manifest.originPostOfficeLatitude.toFixed(6));
@@ -146,7 +146,7 @@ export function DriverHandoverPage() {
       setCheckinLatitude(location.latitude.toFixed(6));
       setCheckinLongitude(location.longitude.toFixed(6));
     } catch (error) {
-      notification.error('Unable to read current location.', {
+      notification.error('Không thể đọc vị trí hiện tại.', {
         description: getErrorMessage(error),
       });
     }
@@ -154,18 +154,18 @@ export function DriverHandoverPage() {
 
   const handleSubmitDriverAction = async () => {
     if (!checkinManifest?.id) {
-      notification.error('Please select a handover manifest.');
+      notification.error('Vui lòng chọn phiếu bàn giao.');
       return;
     }
     if (!checkinPhoto) {
-      notification.error('Please select a check-in photo.');
+      notification.error('Vui lòng chọn ảnh check-in.');
       return;
     }
 
     const latitude = Number(checkinLatitude);
     const longitude = Number(checkinLongitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      notification.error('Please provide a valid GPS location.');
+      notification.error('Vui lòng nhập tọa độ GPS hợp lệ.');
       return;
     }
 
@@ -177,18 +177,18 @@ export function DriverHandoverPage() {
           manifestId: checkinManifest.id,
           formData,
         }).unwrap();
-        notification.success('Departure check-in recorded.');
+        notification.success('Đã ghi nhận check-in xuất phát.');
       } else {
         await driverCheckinEnd({
           manifestId: checkinManifest.id,
           formData,
         }).unwrap();
-        notification.success('Arrival check-out recorded.');
+        notification.success('Đã ghi nhận check-in điểm đến.');
       }
       resetCheckinDialog();
       void refetch();
     } catch (error) {
-      notification.error('Driver handover action failed.', {
+      notification.error('Không thể cập nhật bàn giao của tài xế.', {
         description: getErrorMessage(error),
       });
     } finally {
@@ -202,10 +202,11 @@ export function DriverHandoverPage() {
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
             <ShieldAlert className='h-5 w-5' />
-            Access denied
+            Không có quyền truy cập
           </CardTitle>
           <CardDescription>
-            Driver handover requires TMS hub driver or hub operation access.
+            Chỉ tài xế hub hoặc nhân sự vận hành hub TMS có thể dùng chức năng
+            bàn giao này.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -216,16 +217,18 @@ export function DriverHandoverPage() {
     <div className='space-y-6'>
       <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Driver Handover</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>
+            Bàn giao tài xế
+          </h1>
           <p className='text-muted-foreground'>
-            Check trips out from the origin post office and into the target hub.
+            Check-in chuyến rời bưu cục gửi và đến hub nhận.
           </p>
         </div>
         <Button variant='outline' onClick={() => void refetch()}>
           <RefreshCw
             className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')}
           />
-          Refresh
+          Làm mới
         </Button>
       </div>
 

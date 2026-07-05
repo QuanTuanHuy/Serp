@@ -18,7 +18,6 @@ import { useNotification } from '@/shared/hooks';
 import {
   AssignmentResultCard,
   CandidateOrdersPanel,
-  DispatchAccessScopeCard,
   DispatchNoAccessCard,
   DispatchSetupCard,
   ManualDispatchCard,
@@ -86,30 +85,6 @@ const resolveDispatcherAccessScope = (
   }
 
   return 'NO_ACCESS';
-};
-
-const getScopeBadgeLabel = (scope: DispatcherAccessScope): string => {
-  if (scope === 'ADMIN_ALL') {
-    return 'Quản trị TMS';
-  }
-
-  if (scope === 'MANAGER_SCOPED') {
-    return 'Quản lý bưu cục';
-  }
-
-  return 'Không có quyền';
-};
-
-const getScopeDescription = (scope: DispatcherAccessScope): string => {
-  if (scope === 'ADMIN_ALL') {
-    return 'Bạn có thể điều phối đơn lấy hàng đầu chặng cho mọi bưu cục.';
-  }
-
-  if (scope === 'MANAGER_SCOPED') {
-    return 'Bạn có thể điều phối đơn lấy hàng đầu chặng cho các bưu cục mình quản lý.';
-  }
-
-  return 'Tài khoản hiện tại không có quyền điều phối đơn lấy hàng đầu chặng.';
 };
 
 const formatDateTime = (value?: string): string => {
@@ -1054,12 +1029,6 @@ export const DispatchersPage: React.FC = () => {
           Điều phối đơn lấy hàng theo phạm vi bưu cục và nhân viên giao nhận.
         </p>
       </div>
-
-      <DispatchAccessScopeCard
-        canDispatch={canDispatch}
-        scopeBadgeLabel={getScopeBadgeLabel(accessScope)}
-        scopeDescription={getScopeDescription(accessScope)}
-      />
 
       {!canDispatch ? (
         <DispatchNoAccessCard message='Bạn không có quyền truy cập thao tác điều phối.' />

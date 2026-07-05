@@ -51,21 +51,21 @@ export function DriverHandoverTripCard({
           <div className='grid gap-2 text-sm text-muted-foreground sm:grid-cols-2'>
             <div className='flex items-center gap-2'>
               <PackageCheck className='h-4 w-4' />
-              {manifest.originPostOfficeCode || '--'} to hub #
+              {manifest.originPostOfficeCode || '--'} đến hub #
               {manifest.targetHubId ?? '--'}
             </div>
             <div className='flex items-center gap-2'>
               <Route className='h-4 w-4' />
-              {manifest.routeCode || `Route #${manifest.routeId ?? '--'}`}
+              {manifest.routeCode || `Tuyến #${manifest.routeId ?? '--'}`}
             </div>
             <div className='flex items-center gap-2'>
               <Truck className='h-4 w-4' />
               {manifest.vehicleLicensePlate ||
-                `Vehicle #${manifest.vehicleId ?? '--'}`}
+                `Phương tiện #${manifest.vehicleId ?? '--'}`}
             </div>
             <div className='flex items-center gap-2'>
               <Clock className='h-4 w-4' />
-              {formatDateTime(manifest.plannedDepartureAt)} to{' '}
+              {formatDateTime(manifest.plannedDepartureAt)} đến{' '}
               {formatDateTime(manifest.plannedArrivalAt)}
             </div>
           </div>
@@ -87,19 +87,19 @@ export function DriverHandoverTripCard({
       <Separator />
 
       <div className='grid gap-3 md:grid-cols-4'>
-        <DriverWorkflowStep label='Dispatched' done active={step === 'READY'} />
+        <DriverWorkflowStep label='Đã xuất đi' done active={step === 'READY'} />
         <DriverWorkflowStep
-          label='Departure check-in'
+          label='Check-in xuất phát'
           done={Boolean(manifest.driverStartCheckinAt)}
           active={step === 'IN_TRANSIT'}
         />
         <DriverWorkflowStep
-          label='Arrival check-in'
+          label='Check-in điểm đến'
           done={Boolean(manifest.driverEndCheckinAt)}
           active={step === 'ARRIVED'}
         />
         <DriverWorkflowStep
-          label='Hub inbound'
+          label='Hub nhập hàng'
           done={manifest.status === 'INBOUND_CONFIRMED'}
           active={step === 'RECEIVED'}
         />
@@ -107,23 +107,23 @@ export function DriverHandoverTripCard({
 
       <div className='grid gap-3 sm:grid-cols-2'>
         <MetricItem
-          label='Departure GPS'
+          label='GPS xuất phát'
           value={
             manifest.driverStartCheckinAt
               ? `${formatDateTime(manifest.driverStartCheckinAt)} (${Math.round(
                   manifest.driverStartDistanceM ?? 0
                 )}m)`
-              : 'Pending'
+              : 'Chờ xử lý'
           }
         />
         <MetricItem
-          label='Arrival GPS'
+          label='GPS điểm đến'
           value={
             manifest.driverEndCheckinAt
               ? `${formatDateTime(manifest.driverEndCheckinAt)} (${Math.round(
                   manifest.driverEndDistanceM ?? 0
                 )}m)`
-              : 'Pending'
+              : 'Chờ xử lý'
           }
         />
       </div>

@@ -14,7 +14,10 @@ import {
   TableRow,
 } from '@/shared/components/ui';
 import type { HandoverManifestOrderItem } from '../../../types';
-import { formatDateTime } from '../handoverManifestModels';
+import {
+  formatDateTime,
+  formatHandoverOrderStatusLabel,
+} from '../handoverManifestModels';
 
 interface ManifestOrdersTableProps {
   actionMode?: 'SCAN_OUT' | 'RECEIVE';
@@ -36,12 +39,12 @@ export function ManifestOrdersTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Order</TableHead>
-            <TableHead>Customer order</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Scan out</TableHead>
-            <TableHead>Scan in</TableHead>
-            {actionMode ? <TableHead>Action</TableHead> : null}
+            <TableHead>Đơn hàng</TableHead>
+            <TableHead>Đơn khách hàng</TableHead>
+            <TableHead>Trạng thái</TableHead>
+            <TableHead>Quét xuất</TableHead>
+            <TableHead>Quét nhập</TableHead>
+            {actionMode ? <TableHead>Thao tác</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -51,7 +54,7 @@ export function ManifestOrdersTable({
                 colSpan={actionMode ? 6 : 5}
                 className='py-8 text-center text-muted-foreground'
               >
-                No orders in this manifest.
+                Chưa có đơn trong phiếu này.
               </TableCell>
             </TableRow>
           ) : (
@@ -65,7 +68,7 @@ export function ManifestOrdersTable({
                         (orderCode && scannedOrderCodes.includes(orderCode))
                     );
               const scannedLabel =
-                actionMode === 'SCAN_OUT' ? 'Scanned out' : 'Scanned in';
+                actionMode === 'SCAN_OUT' ? 'Đã quét xuất' : 'Đã quét nhập';
 
               return (
                 <TableRow key={order.id ?? order.orderCode}>
@@ -75,7 +78,9 @@ export function ManifestOrdersTable({
                   <TableCell>{order.customerOrderCode || '--'}</TableCell>
                   <TableCell>
                     {order.status ? (
-                      <Badge variant='outline'>{order.status}</Badge>
+                      <Badge variant='outline'>
+                        {formatHandoverOrderStatusLabel(order.status)}
+                      </Badge>
                     ) : (
                       '--'
                     )}
@@ -93,7 +98,7 @@ export function ManifestOrdersTable({
                           disabled={!orderCode || isActionLoading}
                           onClick={() => onScan?.(orderCode)}
                         >
-                          Scan
+                          Quét
                         </Button>
                       )}
                     </TableCell>

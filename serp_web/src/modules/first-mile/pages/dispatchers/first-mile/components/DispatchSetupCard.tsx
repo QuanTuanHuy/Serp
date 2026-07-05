@@ -34,7 +34,7 @@ const ROUTING_VEHICLE_OPTIONS: Array<{
   value: RoutingVehicleOption;
   label: string;
 }> = [
-  { value: 'DEFAULT', label: 'Dùng mặc định từ backend' },
+  { value: 'DEFAULT', label: 'Dùng thiết lập mặc định' },
   { value: 'CAR', label: 'Ô tô' },
   { value: 'BIKE', label: 'Xe máy' },
   { value: 'TAXI', label: 'Taxi' },
@@ -188,7 +188,7 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
             )}
 
             <p className='text-xs text-muted-foreground'>
-              Bỏ trống để backend dùng toàn bộ nhân viên đủ điều kiện.
+              Bỏ trống để hệ thống tự chọn toàn bộ nhân viên đủ điều kiện.
             </p>
           </div>
 
@@ -196,8 +196,8 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
             <div className='space-y-1'>
               <p className='text-sm font-semibold'>Chiến lược điều phối</p>
               <p className='text-xs text-muted-foreground'>
-                Backend xử lý toàn bộ tham số thuật toán. Tại đây chỉ cần chọn
-                mục tiêu nghiệp vụ.
+                Hệ thống sẽ tự tính toán lộ trình phù hợp. Tại đây chỉ cần chọn
+                mục tiêu điều phối.
               </p>
             </div>
 
@@ -219,7 +219,7 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
                   emptyText='Không tìm thấy hồ sơ phương tiện'
                 />
                 <p className='text-xs text-muted-foreground'>
-                  Tùy chọn. Hầu hết trường hợp nên giữ mặc định từ backend.
+                  Tùy chọn. Hầu hết trường hợp nên giữ theo thiết lập mặc định.
                 </p>
               </div>
 
@@ -276,7 +276,7 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
 
         {!isTmsAdmin ? (
           <p className='text-xs text-muted-foreground'>
-            Backend sẽ áp dụng phạm vi quản lý. Bạn chỉ có thể điều phối cho các
+            Hệ thống sẽ áp dụng phạm vi quản lý. Bạn chỉ có thể điều phối cho các
             bưu cục được gán cho mình.
           </p>
         ) : null}

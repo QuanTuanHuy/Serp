@@ -18,6 +18,7 @@ import {
 } from '@/shared/components/ui';
 import { TmsCombobox, type TmsComboboxOption } from '../../../components';
 import type { FirstMileOrderDetail, PostOffice } from '../../../types';
+import { formatHandoverOrderStatusLabel } from '../handoverManifestModels';
 import { DetailItem } from './DetailItem';
 
 interface HandoverManifestCreateDialogProps {
@@ -65,43 +66,43 @@ export function HandoverManifestCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-3xl'>
         <DialogHeader>
-          <DialogTitle>New post office handover</DialogTitle>
+          <DialogTitle>Tạo phiếu bàn giao từ bưu cục</DialogTitle>
           <DialogDescription>
-            Select orders waiting at the post office. The target hub is read
-            from the post office mapping.
+            Chọn các đơn đang chờ tại bưu cục. Hub nhận được lấy theo cấu hình
+            liên kết của bưu cục.
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='create-post-office'>Origin post office *</Label>
+              <Label htmlFor='create-post-office'>Bưu cục gửi *</Label>
               <TmsCombobox
                 id='create-post-office'
                 value={createPostOfficeId}
                 onValueChange={onCreatePostOfficeChange}
                 options={createPostOfficeOptions}
-                placeholder='Select post office'
-                emptyText='No post offices found'
+                placeholder='Chọn bưu cục'
+                emptyText='Không tìm thấy bưu cục'
               />
             </div>
 
-            <DetailItem label='Target hub' value={targetHubLabel} />
+            <DetailItem label='Hub nhận' value={targetHubLabel} />
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='create-note'>Note</Label>
+            <Label htmlFor='create-note'>Ghi chú</Label>
             <Textarea
               id='create-note'
               value={createNote}
               onChange={(event) => onCreateNoteChange(event.target.value)}
-              placeholder='Optional handover note'
+              placeholder='Ghi chú bàn giao nếu có'
             />
           </div>
 
           <div className='space-y-2'>
             <div className='flex flex-wrap items-center justify-between gap-2'>
-              <Label>Orders ready at post office *</Label>
+              <Label>Đơn sẵn sàng tại bưu cục *</Label>
               {readyOrderCodes.length > 0 ? (
                 <label className='flex items-center gap-2 text-sm'>
                   <Checkbox
@@ -110,22 +111,22 @@ export function HandoverManifestCreateDialog({
                       onToggleAllReadyOrders(Boolean(value))
                     }
                   />
-                  Select all
+                  Chọn tất cả
                 </label>
               ) : null}
             </div>
 
             {!selectedCreatePostOffice ? (
               <p className='text-sm text-muted-foreground'>
-                Select a post office to load ready orders.
+                Chọn bưu cục để tải danh sách đơn sẵn sàng.
               </p>
             ) : isLoadingReadyOrders ? (
               <p className='text-sm text-muted-foreground'>
-                Loading ready orders...
+                Đang tải đơn sẵn sàng...
               </p>
             ) : readyOrders.length === 0 ? (
               <p className='text-sm text-muted-foreground'>
-                No orders with status AT_ORIGIN_POST_OFFICE at this post office.
+                Chưa có đơn sẵn sàng bàn giao tại bưu cục này.
               </p>
             ) : (
               <div className='max-h-72 space-y-2 overflow-y-auto rounded-md border p-3'>
@@ -145,18 +146,20 @@ export function HandoverManifestCreateDialog({
                         onCheckedChange={(value) =>
                           onToggleOrder(orderCode, Boolean(value))
                         }
-                        aria-label={`Select order ${orderCode}`}
+                        aria-label={`Chọn đơn ${orderCode}`}
                       />
                       <div className='min-w-0 flex-1 space-y-1 text-sm'>
                         <div className='flex flex-wrap items-center gap-2'>
                           <span className='font-medium'>{orderCode}</span>
-                          <Badge variant='outline'>{order.status}</Badge>
+                          <Badge variant='outline'>
+                            {formatHandoverOrderStatusLabel(order.status)}
+                          </Badge>
                         </div>
                         <p className='text-xs text-muted-foreground'>
-                          Customer order: {order.customerOrderCode || '--'}
+                          Đơn khách hàng: {order.customerOrderCode || '--'}
                         </p>
                         <p className='text-xs text-muted-foreground'>
-                          Receiver: {order.receiverName || '--'} (
+                          Người nhận: {order.receiverName || '--'} (
                           {order.receiverPhone || '--'})
                         </p>
                       </div>
@@ -170,10 +173,10 @@ export function HandoverManifestCreateDialog({
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
+            Hủy
           </Button>
           <Button disabled={isCreating} onClick={onSubmit}>
-            {isCreating ? 'Creating...' : 'Create manifest'}
+            {isCreating ? 'Đang tạo...' : 'Tạo phiếu'}
           </Button>
         </DialogFooter>
       </DialogContent>

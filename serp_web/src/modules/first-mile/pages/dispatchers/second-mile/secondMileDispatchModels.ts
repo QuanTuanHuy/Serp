@@ -1,9 +1,9 @@
 /**
  * Author: Nguyen The Anh
- * Description: Part of Serp Project - Bag distribution page models
+ * Description: Part of Serp Project - Second-mile dispatcher page models
  */
 
-import type { TmsComboboxOption } from '../../components';
+import type { TmsComboboxOption } from '../../../components';
 import type {
   BagDistributionManifest,
   BagDistributionManifestStatus,
@@ -12,11 +12,10 @@ import type {
   SecondMileBagDestinationType,
   SecondMileRoute,
   SecondMileVehicle,
-} from '../../types';
+} from '../../../types';
 
-export type TabValue = 'ready' | 'planning' | 'manifests' | 'driver';
+export type TabValue = 'ready' | 'planning';
 export type DestinationFilter = 'ALL' | SecondMileBagDestinationType;
-export type StatusFilter = 'ALL' | BagDistributionManifestStatus;
 export type CheckinMode = 'start' | 'end';
 
 export interface PlanningState {
@@ -50,34 +49,20 @@ export interface SelectedBagSummary {
   totalOrders: number;
 }
 
-export const STATUS_OPTIONS: BagDistributionManifestStatus[] = [
-  'CREATED',
-  'OUTBOUND_CONFIRMED',
-  'INBOUND_CONFIRMED',
-  'CANCELLED',
-];
-
 export const STATUS_LABELS: Record<BagDistributionManifestStatus, string> = {
-  CREATED: 'Created',
-  OUTBOUND_CONFIRMED: 'Outbound confirmed',
-  INBOUND_CONFIRMED: 'Inbound confirmed',
-  CANCELLED: 'Cancelled',
-};
-
-export const STATUS_HELP: Record<BagDistributionManifestStatus, string> = {
-  CREATED: 'Ready to dispatch',
-  OUTBOUND_CONFIRMED: 'Bags are in transit',
-  INBOUND_CONFIRMED: 'Bags arrived at destination',
-  CANCELLED: 'Manifest is closed without dispatch',
+  CREATED: 'Đã tạo',
+  OUTBOUND_CONFIRMED: 'Đã xuất khỏi hub',
+  INBOUND_CONFIRMED: 'Đã nhập tại điểm đến',
+  CANCELLED: 'Đã hủy',
 };
 
 export const HINT_LABELS: Record<string, string> = {
-  HIGH_PRIORITY: 'High priority',
-  CAPACITY_RISK: 'Capacity risk',
-  LOW_UTILIZATION: 'Low utilization',
-  NO_ROUTE: 'No route',
-  NO_DRIVER: 'No driver',
-  SCHEDULE_CONFLICT: 'Schedule conflict',
+  HIGH_PRIORITY: 'Ưu tiên cao',
+  CAPACITY_RISK: 'Rủi ro tải trọng',
+  LOW_UTILIZATION: 'Chưa tối ưu tải',
+  NO_ROUTE: 'Chưa có tuyến',
+  NO_DRIVER: 'Chưa có tài xế',
+  SCHEDULE_CONFLICT: 'Trùng lịch',
 };
 
 export const destinationOptions: Array<{
@@ -85,7 +70,7 @@ export const destinationOptions: Array<{
   label: string;
 }> = [
   { value: 'HUB', label: 'Hub' },
-  { value: 'POST_OFFICE', label: 'Post office' },
+  { value: 'POST_OFFICE', label: 'Bưu cục' },
 ];
 
 export const makeDefaultPlanningState = (): PlanningState => {
@@ -128,16 +113,17 @@ export function formatDateTime(value?: string): string {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
+  return date.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   });
 }
 
 export function formatNumber(value?: number, digits = 1): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('vi-VN', {
     maximumFractionDigits: digits,
   }).format(value ?? 0);
 }
@@ -169,7 +155,7 @@ export function destinationLabel(
   }
 
   if (destinationType === 'POST_OFFICE') {
-    return destinationPostOfficeCode || 'Post office';
+    return destinationPostOfficeCode || 'Bưu cục';
   }
 
   return '-';
@@ -208,10 +194,10 @@ export function buildVehicleOptions(
     label: [
       vehicle.licensePlate,
       vehicle.assignedStaffFullName
-        ? `Driver: ${vehicle.assignedStaffFullName}`
+        ? `Tài xế: ${vehicle.assignedStaffFullName}`
         : vehicle.assignedStaffId
-          ? `Driver #${vehicle.assignedStaffId}`
-          : 'No driver',
+          ? `Tài xế #${vehicle.assignedStaffId}`
+          : 'Chưa phân công tài xế',
     ].join(' - '),
   }));
 }
