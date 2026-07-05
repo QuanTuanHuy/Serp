@@ -47,22 +47,22 @@ export const formatPickupBacklogDuration = (minutes: number | null): string => {
   }
 
   if (minutes < 60) {
-    return `${minutes} min overdue`;
+    return `Quá hạn ${minutes} phút`;
   }
 
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
   if (hours < 24) {
     return remainingMinutes > 0
-      ? `${hours} h ${remainingMinutes} min overdue`
-      : `${hours} h overdue`;
+      ? `Quá hạn ${hours} giờ ${remainingMinutes} phút`
+      : `Quá hạn ${hours} giờ`;
   }
 
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
   return remainingHours > 0
-    ? `${days} d ${remainingHours} h overdue`
-    : `${days} d overdue`;
+    ? `Quá hạn ${days} ngày ${remainingHours} giờ`
+    : `Quá hạn ${days} ngày`;
 };
 
 export const formatPickupWindow = (
@@ -75,7 +75,7 @@ export const formatPickupWindow = (
     return '--';
   }
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
+  const formatter = new Intl.DateTimeFormat('vi-VN', {
     month: 'short',
     day: '2-digit',
     hour: '2-digit',
@@ -87,10 +87,10 @@ export const formatPickupWindow = (
   }
 
   if (start) {
-    return `From ${formatter.format(start)}`;
+    return `Từ ${formatter.format(start)}`;
   }
 
-  return `Until ${formatter.format(end as Date)}`;
+  return `Đến ${formatter.format(end as Date)}`;
 };
 
 export const countPickupBacklogOrders = (

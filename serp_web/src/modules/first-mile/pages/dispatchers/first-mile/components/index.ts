@@ -4,7 +4,6 @@
  */
 
 export * from './types';
-export * from './DispatchAccessScopeCard';
 export * from './DispatchNoAccessCard';
 export * from './DispatchSetupCard';
 export * from './ManualDispatchCard';

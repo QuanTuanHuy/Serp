@@ -7,15 +7,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { MapPin, PackageCheck, Plus, RefreshCw, Truck } from 'lucide-react';
+import { ArrowRight, PackageCheck, Plus, RefreshCw, Truck } from 'lucide-react';
 import { getErrorMessage, useAppSelector } from '@/lib/store';
 import {
   Button,
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
 import {
@@ -23,6 +26,7 @@ import {
   useConfirmHandoverManifestInboundMutation,
   useCreatePostOfficeHandoverManifestMutation,
   useDispatchPostOfficeHandoverManifestMutation,
+  useGetBagDistributionManifestsQuery,
   useGetFirstMileOrdersQuery,
   useGetHandoverManifestByIdQuery,
   useGetHandoverManifestsQuery,
@@ -35,6 +39,7 @@ import {
   useScanOutPostOfficeHandoverOrderMutation,
 } from '../../api';
 import type {
+  BagDistributionManifestStatus,
   HandoverManifest,
   HandoverManifestStatus,
   Hub,
@@ -42,7 +47,6 @@ import type {
   SecondMileRoute,
   SecondMileVehicle,
 } from '../../types';
-import { DriverHandoverPage } from './DriverHandoverPage';
 import {
   HandoverManifestCreateDialog,
   HandoverManifestDetailDialog,
@@ -50,12 +54,14 @@ import {
   HandoverManifestReceiveDialog,
   HandoverManifestScanOutDialog,
   HandoverManifestTableCard,
+  HubTransferManifestTableCard,
 } from './components';
 import {
   canManagePostOfficeHandover,
   canReceiveHubHandover,
   getDefaultArrivalTime,
   getDefaultDepartureTime,
+  type HandoverManagementDomain,
   isHandoverDriverOnly,
   isReadyForDispatch,
   MANIFEST_STATUS_OPTIONS,
@@ -74,6 +80,8 @@ function HandoverManifestManagementPage() {
   const canHubMode = canReceiveHubHandover(roles);
   const canAccess = canPostOfficeMode || canHubMode;
 
+  const [activeDomain, setActiveDomain] =
+    React.useState<HandoverManagementDomain>('POST_OFFICE_HUB');
   const [mode, setMode] = React.useState<ManifestMode>('POST_OFFICE');
   const effectiveMode = React.useMemo<ManifestMode>(() => {
     if (mode === 'POST_OFFICE' && canPostOfficeMode) {
@@ -90,6 +98,10 @@ function HandoverManifestManagementPage() {
   const [filterPostOfficeId, setFilterPostOfficeId] = React.useState('');
   const [filterStatus, setFilterStatus] = React.useState<
     'ALL' | HandoverManifestStatus
+  >('ALL');
+  const [hubTransferPage, setHubTransferPage] = React.useState(0);
+  const [hubTransferStatus, setHubTransferStatus] = React.useState<
+    'ALL' | BagDistributionManifestStatus
   >('ALL');
 
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
@@ -142,7 +154,7 @@ function HandoverManifestManagementPage() {
   const postOfficeOptions = postOfficesData?.items ?? [];
   const hubOptions = hubsData?.items ?? [];
   const postOfficeFilterOptions = [
-    { value: 'ALL', label: 'All post offices' },
+    { value: 'ALL', label: 'Tất cả bưu cục' },
     ...postOfficeOptions.map((postOffice) => ({
       value: String(postOffice.id),
       label: `${postOffice.code} - ${postOffice.name}`,
@@ -153,14 +165,14 @@ function HandoverManifestManagementPage() {
     label: `${postOffice.code} - ${postOffice.name}`,
   }));
   const hubFilterOptions = [
-    { value: 'ALL', label: 'All hubs' },
+    { value: 'ALL', label: 'Tất cả hub' },
     ...hubOptions.map((hub) => ({
       value: String(hub.id),
       label: `${hub.code} - ${hub.name}`,
     })),
   ];
   const statusFilterOptions = [
-    { value: 'ALL', label: 'All statuses' },
+    { value: 'ALL', label: 'Tất cả trạng thái' },
     ...MANIFEST_STATUS_OPTIONS,
   ];
 
@@ -200,6 +212,19 @@ function HandoverManifestManagementPage() {
       ...(filterStatus !== 'ALL' ? { status: filterStatus } : {}),
     },
     { skip: !canHubMode || effectiveMode !== 'HUB' }
+  );
+
+  const {
+    data: hubTransferManifestsData,
+    isFetching: isFetchingHubTransferManifests,
+    refetch: refetchHubTransferManifests,
+  } = useGetBagDistributionManifestsQuery(
+    {
+      page: hubTransferPage,
+      size: PAGE_SIZE,
+      ...(hubTransferStatus !== 'ALL' ? { status: hubTransferStatus } : {}),
+    },
+    { skip: !canHubMode || activeDomain !== 'HUB_TRANSFER' }
   );
 
   const selectedCreatePostOffice = postOfficeOptions.find(
@@ -302,6 +327,7 @@ function HandoverManifestManagementPage() {
       ? isFetchingPostOfficeManifests
       : isFetchingHubManifests;
   const manifests = manifestsData?.items ?? [];
+  const hubTransferManifests = hubTransferManifestsData?.items ?? [];
   const readyOrders = readyOrdersData?.items ?? [];
   const dispatchRoutes = dispatchRoutesData?.items ?? [];
   const dispatchVehicles = dispatchVehiclesData?.items ?? [];
@@ -356,6 +382,10 @@ function HandoverManifestManagementPage() {
   }, [effectiveMode]);
 
   React.useEffect(() => {
+    setHubTransferPage(0);
+  }, [hubTransferStatus]);
+
+  React.useEffect(() => {
     setSelectedOrderCodes([]);
   }, [createPostOfficeId]);
 
@@ -366,6 +396,11 @@ function HandoverManifestManagementPage() {
   }, [selectedDispatchRoute?.vehicleId]);
 
   const refetchActiveManifests = () => {
+    if (activeDomain === 'HUB_TRANSFER') {
+      void refetchHubTransferManifests();
+      return;
+    }
+
     if (effectiveMode === 'POST_OFFICE') {
       void refetchPostOfficeManifests();
       return;
@@ -468,11 +503,11 @@ function HandoverManifestManagementPage() {
   const handleCreateManifest = async () => {
     const postOfficeId = Number(createPostOfficeId);
     if (!postOfficeId || !selectedCreatePostOffice) {
-      notification.error('Origin post office is required.');
+      notification.error('Vui lòng chọn bưu cục gửi.');
       return;
     }
     if (selectedOrderCodes.length === 0) {
-      notification.error('Select at least one order to hand over.');
+      notification.error('Vui lòng chọn ít nhất một đơn để bàn giao.');
       return;
     }
 
@@ -485,12 +520,12 @@ function HandoverManifestManagementPage() {
         order_codes: selectedOrderCodes,
         ...(createNote.trim() ? { note: createNote.trim() } : {}),
       }).unwrap();
-      notification.success('Handover manifest created successfully.');
+      notification.success('Đã tạo phiếu bàn giao.');
       setIsCreateOpen(false);
       resetCreateForm();
       void refetchPostOfficeManifests();
     } catch (error) {
-      notification.error('Failed to create handover manifest.', {
+      notification.error('Không thể tạo phiếu bàn giao.', {
         description: getErrorMessage(error),
       });
     }
@@ -520,7 +555,7 @@ function HandoverManifestManagementPage() {
     }
     const orderCode = normalizeScanCode(orderCodeValue ?? scanOrderCode);
     if (!orderCode) {
-      notification.error('Order code is required.');
+      notification.error('Vui lòng nhập mã đơn hàng.');
       return;
     }
 
@@ -528,11 +563,11 @@ function HandoverManifestManagementPage() {
       (order) => order.orderCode === orderCode
     );
     if (scanOrders.length > 0 && !matchedOrder) {
-      notification.error('This order is not in the selected manifest.');
+      notification.error('Đơn hàng này không có trong phiếu đã chọn.');
       return;
     }
     if (matchedOrder?.scanOutTime) {
-      notification.error('This order has already been scanned out.');
+      notification.error('Đơn hàng này đã được quét xuất.');
       return;
     }
 
@@ -541,10 +576,10 @@ function HandoverManifestManagementPage() {
         manifestId: activeScanManifest.id,
         body: { order_code: orderCode },
       }).unwrap();
-      notification.success('Order scanned out successfully.');
+      notification.success('Đã quét xuất đơn hàng.');
       setScanOrderCode('');
     } catch (error) {
-      notification.error('Failed to scan order out.', {
+      notification.error('Không thể quét xuất đơn hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -555,25 +590,25 @@ function HandoverManifestManagementPage() {
       return;
     }
     if (!isReadyForDispatch(dispatchManifest)) {
-      notification.error('All orders must be scanned out before dispatch.');
+      notification.error('Cần quét xuất tất cả đơn hàng trước khi xuất đi.');
       return;
     }
     const routeId = Number(dispatchRouteId);
     const vehicleId = Number(dispatchVehicleId);
     if (!routeId) {
-      notification.error('Select a post office to hub route.');
+      notification.error('Vui lòng chọn tuyến từ bưu cục đến hub.');
       return;
     }
     if (!vehicleId) {
-      notification.error('Select the route vehicle.');
+      notification.error('Vui lòng chọn phương tiện vận chuyển.');
       return;
     }
     if (!dispatchDepartureAt || !dispatchArrivalAt) {
-      notification.error('Planned departure and arrival times are required.');
+      notification.error('Vui lòng nhập thời gian đi và thời gian đến dự kiến.');
       return;
     }
     if (new Date(dispatchArrivalAt) <= new Date(dispatchDepartureAt)) {
-      notification.error('Planned arrival must be after departure.');
+      notification.error('Thời gian đến dự kiến phải sau thời gian đi.');
       return;
     }
 
@@ -591,11 +626,11 @@ function HandoverManifestManagementPage() {
           ...(dispatchNote.trim() ? { note: dispatchNote.trim() } : {}),
         },
       }).unwrap();
-      notification.success('Manifest dispatched to hub successfully.');
+      notification.success('Đã xuất phiếu bàn giao đi hub.');
       resetDispatchForm();
       void refetchPostOfficeManifests();
     } catch (error) {
-      notification.error('Failed to dispatch manifest.', {
+      notification.error('Không thể xuất phiếu bàn giao.', {
         description: getErrorMessage(error),
       });
     }
@@ -606,7 +641,7 @@ function HandoverManifestManagementPage() {
       return;
     }
     const confirmed = window.confirm(
-      `Cancel manifest ${manifest.manifestCode || `#${manifest.id}`}?`
+      `Hủy phiếu bàn giao ${manifest.manifestCode || `#${manifest.id}`}?`
     );
     if (!confirmed) {
       return;
@@ -614,10 +649,10 @@ function HandoverManifestManagementPage() {
 
     try {
       await cancelManifestRun(manifest.id).unwrap();
-      notification.success('Manifest cancelled successfully.');
+      notification.success('Đã hủy phiếu bàn giao.');
       void refetchPostOfficeManifests();
     } catch (error) {
-      notification.error('Failed to cancel manifest.', {
+      notification.error('Không thể hủy phiếu bàn giao.', {
         description: getErrorMessage(error),
       });
     }
@@ -632,7 +667,7 @@ function HandoverManifestManagementPage() {
   const handleScanInboundOrder = (orderCodeValue?: string) => {
     const orderCode = normalizeScanCode(orderCodeValue ?? receiveOrderCode);
     if (!orderCode) {
-      notification.error('Order code is required.');
+      notification.error('Vui lòng nhập mã đơn hàng.');
       return;
     }
 
@@ -640,11 +675,11 @@ function HandoverManifestManagementPage() {
       (order) => order.orderCode === orderCode
     );
     if (receiveOrders.length > 0 && !matchedOrder) {
-      notification.error('This order is not in the selected manifest.');
+      notification.error('Đơn hàng này không có trong phiếu đã chọn.');
       return;
     }
     if (matchedOrder?.scanInTime || receivedOrderCodes.includes(orderCode)) {
-      notification.error('This order has already been scanned in.');
+      notification.error('Đơn hàng này đã được quét nhập.');
       return;
     }
 
@@ -657,7 +692,7 @@ function HandoverManifestManagementPage() {
       return;
     }
     if (receivedOrderCodes.length === 0) {
-      notification.error('Scan at least one order before confirming inbound.');
+      notification.error('Vui lòng quét ít nhất một đơn trước khi xác nhận nhập.');
       return;
     }
 
@@ -666,24 +701,75 @@ function HandoverManifestManagementPage() {
         manifestId: activeReceiveManifest.id,
         orderCodes: receivedOrderCodes,
       }).unwrap();
-      notification.success('Inbound receiving confirmed successfully.');
+      notification.success('Đã xác nhận nhập hàng tại hub.');
       resetReceiveForm();
       void refetchHubManifests();
     } catch (error) {
-      notification.error('Failed to confirm inbound receiving.', {
+      notification.error('Không thể xác nhận nhập hàng tại hub.', {
         description: getErrorMessage(error),
       });
     }
   };
 
+  const postOfficeHubManifestTable = (
+    <HandoverManifestTableCard
+      effectiveMode={effectiveMode}
+      filterHubId={filterHubId}
+      filterPostOfficeId={filterPostOfficeId}
+      filterStatus={filterStatus}
+      hubFilterOptions={hubFilterOptions}
+      isCancelling={isCancelling}
+      isDispatching={isDispatching}
+      isFetching={isFetching}
+      manifests={manifests}
+      manifestsData={manifestsData}
+      page={page}
+      postOfficeFilterOptions={postOfficeFilterOptions}
+      resolveHubLabel={resolveHubLabel}
+      resolvePostOfficeLabel={resolvePostOfficeLabel}
+      resolveRouteLabel={resolveRouteLabel}
+      resolveVehicleLabel={resolveVehicleLabel}
+      showHubFilter={hubOptions.length > 0}
+      showPostOfficeFilter={postOfficeOptions.length > 0}
+      statusFilterOptions={statusFilterOptions}
+      onCancelManifest={(manifest) => void handleCancelManifest(manifest)}
+      onFilterHubChange={(value) => {
+        setFilterHubId(value);
+        setPage(0);
+      }}
+      onFilterPostOfficeChange={(value) => {
+        setFilterPostOfficeId(value);
+        setPage(0);
+      }}
+      onFilterStatusChange={(value) => {
+        setFilterStatus(value);
+        setPage(0);
+      }}
+      onNextPage={() => setPage((current) => current + 1)}
+      onOpenDetail={(manifest) =>
+        setDetailTarget({
+          manifest,
+          mode: effectiveMode,
+        })
+      }
+      onOpenDispatch={handleOpenDispatch}
+      onOpenReceive={handleOpenReceive}
+      onOpenScanOut={(manifest) => {
+        setScanManifest(manifest);
+        setScanOrderCode('');
+      }}
+      onPreviousPage={() => setPage((current) => Math.max(current - 1, 0))}
+    />
+  );
+
   if (!canAccess) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Access denied</CardTitle>
+          <CardTitle>Không có quyền truy cập</CardTitle>
           <CardDescription>
-            Only post office managers, hub staff, or TMS admin can manage post
-            office to hub handover.
+            Chỉ quản lý bưu cục, nhân sự hub hoặc quản trị TMS có thể quản lý
+            bàn giao từ bưu cục đến hub.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -695,104 +781,91 @@ function HandoverManifestManagementPage() {
       <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>
-            Post Office to Hub Handover
+            Quản lý biên bản bàn giao
           </h1>
           <p className='text-muted-foreground'>
-            Create manifests at post offices, scan orders out, dispatch them,
-            and receive them at hubs.
+            Theo dõi tập trung các biên bản nhập/xuất hàng tại bưu cục, hub và
+            các chặng vận chuyển liên quan.
           </p>
         </div>
         <div className='flex flex-wrap gap-2'>
-          <Button variant='outline' onClick={refetchActiveManifests}>
+          <Button
+            variant='outline'
+            onClick={refetchActiveManifests}
+          >
             <RefreshCw className='mr-2 h-4 w-4' />
-            Refresh
+            Làm mới
           </Button>
-          {canHubMode ? (
-            <Button variant='outline' asChild>
-              <Link href='/first-mile/handover-manifests/driver'>
-                <MapPin className='mr-2 h-4 w-4' />
-                Driver handover
-              </Link>
-            </Button>
-          ) : null}
-          {effectiveMode === 'POST_OFFICE' ? (
+          {activeDomain === 'POST_OFFICE_HUB' &&
+          effectiveMode === 'POST_OFFICE' ? (
             <Button onClick={() => setIsCreateOpen(true)}>
               <Plus className='mr-2 h-4 w-4' />
-              New handover
+              Tạo phiếu bàn giao
             </Button>
           ) : null}
         </div>
       </div>
 
-      {canPostOfficeMode && canHubMode ? (
-        <Card>
-          <CardContent className='flex flex-col gap-3 pt-6 sm:flex-row'>
-            <Button
-              variant={effectiveMode === 'POST_OFFICE' ? 'default' : 'outline'}
-              onClick={() => setMode('POST_OFFICE')}
-            >
-              <Truck className='mr-2 h-4 w-4' />
-              Post office dispatch
-            </Button>
-            <Button
-              variant={effectiveMode === 'HUB' ? 'default' : 'outline'}
-              onClick={() => setMode('HUB')}
-            >
-              <PackageCheck className='mr-2 h-4 w-4' />
-              Hub receiving
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <HandoverManifestTableCard
-        effectiveMode={effectiveMode}
-        filterHubId={filterHubId}
-        filterPostOfficeId={filterPostOfficeId}
-        filterStatus={filterStatus}
-        hubFilterOptions={hubFilterOptions}
-        isCancelling={isCancelling}
-        isDispatching={isDispatching}
-        isFetching={isFetching}
-        manifests={manifests}
-        manifestsData={manifestsData}
-        page={page}
-        postOfficeFilterOptions={postOfficeFilterOptions}
-        resolveHubLabel={resolveHubLabel}
-        resolvePostOfficeLabel={resolvePostOfficeLabel}
-        resolveRouteLabel={resolveRouteLabel}
-        resolveVehicleLabel={resolveVehicleLabel}
-        showHubFilter={hubOptions.length > 0}
-        showPostOfficeFilter={postOfficeOptions.length > 0}
-        statusFilterOptions={statusFilterOptions}
-        onCancelManifest={(manifest) => void handleCancelManifest(manifest)}
-        onFilterHubChange={(value) => {
-          setFilterHubId(value);
-          setPage(0);
-        }}
-        onFilterPostOfficeChange={(value) => {
-          setFilterPostOfficeId(value);
-          setPage(0);
-        }}
-        onFilterStatusChange={(value) => {
-          setFilterStatus(value);
-          setPage(0);
-        }}
-        onNextPage={() => setPage((current) => current + 1)}
-        onOpenDetail={(manifest) =>
-          setDetailTarget({
-            manifest,
-            mode: effectiveMode,
-          })
+      <Tabs
+        value={activeDomain}
+        onValueChange={(value) =>
+          setActiveDomain(value as HandoverManagementDomain)
         }
-        onOpenDispatch={handleOpenDispatch}
-        onOpenReceive={handleOpenReceive}
-        onOpenScanOut={(manifest) => {
-          setScanManifest(manifest);
-          setScanOrderCode('');
-        }}
-        onPreviousPage={() => setPage((current) => Math.max(current - 1, 0))}
-      />
+        className='space-y-4'
+      >
+        <TabsList className='grid w-full grid-cols-2'>
+          <TabsTrigger value='POST_OFFICE_HUB'>
+            <Truck className='mr-2 h-4 w-4' />
+            Bưu cục ↔ Hub
+          </TabsTrigger>
+          <TabsTrigger value='HUB_TRANSFER' disabled={!canHubMode}>
+            <PackageCheck className='mr-2 h-4 w-4' />
+            Hub ↔ Hub
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value='POST_OFFICE_HUB' className='mt-0 space-y-4'>
+          {canPostOfficeMode && canHubMode ? (
+            <Tabs
+              value={effectiveMode}
+              onValueChange={(value) => setMode(value as ManifestMode)}
+              className='space-y-4'
+            >
+              <TabsList className='grid w-full grid-cols-2 lg:w-auto'>
+                <TabsTrigger value='POST_OFFICE'>
+                  Bưu cục xuất hàng
+                </TabsTrigger>
+                <TabsTrigger value='HUB'>Hub nhận hàng</TabsTrigger>
+              </TabsList>
+              <TabsContent value='POST_OFFICE' className='mt-0'>
+                {postOfficeHubManifestTable}
+              </TabsContent>
+              <TabsContent value='HUB' className='mt-0'>
+                {postOfficeHubManifestTable}
+              </TabsContent>
+            </Tabs>
+          ) : (
+            postOfficeHubManifestTable
+          )}
+        </TabsContent>
+
+        <TabsContent value='HUB_TRANSFER' className='mt-0'>
+          <HubTransferManifestTableCard
+            filterStatus={hubTransferStatus}
+            isFetching={isFetchingHubTransferManifests}
+            manifests={hubTransferManifests}
+            manifestsData={hubTransferManifestsData}
+            page={hubTransferPage}
+            statusFilterOptions={statusFilterOptions}
+            onFilterStatusChange={setHubTransferStatus}
+            onNextPage={() => setHubTransferPage((current) => current + 1)}
+            onPreviousPage={() =>
+              setHubTransferPage((current) => Math.max(current - 1, 0))
+            }
+          />
+        </TabsContent>
+
+      </Tabs>
 
       <HandoverManifestCreateDialog
         allReadyOrdersSelected={allReadyOrdersSelected}
@@ -809,7 +882,7 @@ function HandoverManifestManagementPage() {
         targetHubLabel={
           selectedCreatePostOffice?.hubId
             ? resolveHubLabel(selectedCreatePostOffice.hubId)
-            : 'No mapped hub'
+            : 'Chưa gán hub'
         }
         onCreateNoteChange={setCreateNote}
         onCreatePostOfficeChange={setCreatePostOfficeId}
@@ -911,7 +984,25 @@ export function HandoverManifestListPage() {
   );
 
   if (isHandoverDriverOnly(roles)) {
-    return <DriverHandoverPage />;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Check-in tài xế đã chuyển sang trang Trung chuyển</CardTitle>
+          <CardDescription>
+            Vui lòng thực hiện check-in các chặng trung chuyển tại trang Trung
+            chuyển để tập trung cùng các chuyến hub.
+          </CardDescription>
+          <div className='pt-2'>
+            <Button asChild>
+              <Link href='/first-mile/pickup-and-delivery/transit'>
+                Mở trang Trung chuyển
+                <ArrowRight className='h-4 w-4' />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return <HandoverManifestManagementPage />;

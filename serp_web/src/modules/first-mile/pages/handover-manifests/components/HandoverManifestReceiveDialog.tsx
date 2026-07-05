@@ -54,21 +54,20 @@ export function HandoverManifestReceiveDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
         <DialogHeader>
-          <DialogTitle>Receive manifest at hub</DialogTitle>
+          <DialogTitle>Nhận phiếu tại hub</DialogTitle>
           <DialogDescription>
-            Scan received order codes, then confirm inbound for the scanned
-            orders.
+            Quét mã đơn đã nhận, sau đó xác nhận nhập hàng cho các đơn đã quét.
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
           <div className='grid gap-3 sm:grid-cols-4'>
             <DetailItem
-              label='Manifest'
+              label='Phiếu'
               value={activeReceiveManifest?.manifestCode || '--'}
             />
             <DetailItem
-              label='Post office'
+              label='Bưu cục'
               value={activeReceiveManifest?.originPostOfficeCode || '--'}
             />
             <DetailItem
@@ -76,7 +75,7 @@ export function HandoverManifestReceiveDialog({
               value={activeReceiveManifest?.sealCode || '--'}
             />
             <DetailItem
-              label='Scanned in'
+              label='Đã quét nhập'
               value={`${receivedOrderCodes.length}/${getTotalOrders(
                 activeReceiveManifest
               )}`}
@@ -93,17 +92,17 @@ export function HandoverManifestReceiveDialog({
                   onScanInboundOrder();
                 }
               }}
-              placeholder='Scan or enter received order code'
+              placeholder='Quét hoặc nhập mã đơn đã nhận'
             />
             <Button variant='outline' onClick={() => onScanInboundOrder()}>
               <ScanLine className='mr-2 h-4 w-4' />
-              Scan received
+              Quét nhập
             </Button>
           </div>
 
           {isFetchingReceiveManifest ? (
             <p className='text-sm text-muted-foreground'>
-              Loading manifest orders...
+              Đang tải đơn trong phiếu...
             </p>
           ) : (
             <ManifestOrdersTable
@@ -118,13 +117,13 @@ export function HandoverManifestReceiveDialog({
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Cancel
+            Hủy
           </Button>
           <Button
             disabled={receivedOrderCodes.length === 0 || isConfirmingInbound}
             onClick={onConfirm}
           >
-            {isConfirmingInbound ? 'Confirming...' : 'Confirm inbound'}
+            {isConfirmingInbound ? 'Đang xác nhận...' : 'Xác nhận nhập'}
           </Button>
         </DialogFooter>
       </DialogContent>

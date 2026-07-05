@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - Bag distribution driver tab
  */
 
-import { ArrowDownToLine, ArrowUpFromLine, Eye } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -15,15 +15,15 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 
-import type { BagDistributionManifest } from '../../../types';
-import type { CheckinMode } from '../bagDistributionModels';
+import type { BagDistributionManifest } from '../../../../types';
+import type { CheckinMode } from '../transitModels';
 import {
   destinationLabel,
   formatNumber,
   getManifestBagStats,
   STATUS_LABELS,
   statusVariant,
-} from '../bagDistributionModels';
+} from '../transitModels';
 import { SummaryItem } from './SummaryItem';
 
 interface DriverTabProps {
@@ -31,7 +31,6 @@ interface DriverTabProps {
   isFetching: boolean;
   canCheckin: boolean;
   onOpenCheckin: (manifest: BagDistributionManifest, mode: CheckinMode) => void;
-  onViewManifest: (id: number) => void;
 }
 
 export function DriverTab({
@@ -39,29 +38,28 @@ export function DriverTab({
   isFetching,
   canCheckin,
   onOpenCheckin,
-  onViewManifest,
 }: DriverTabProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Driver check-in</CardTitle>
+        <CardTitle>Check-in tài xế</CardTitle>
         <CardDescription>
-          Submit location and photo when leaving the origin hub and when
-          arriving at the destination.
+          Gửi vị trí và ảnh xác minh khi rời hub xuất phát và khi đến điểm
+          nhận.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {!canCheckin && (
           <div className='mb-4 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground'>
-            You need hub operation or driver access to submit check-ins.
+            Bạn cần quyền vận hành hub hoặc quyền tài xế để gửi check-in.
           </div>
         )}
         <div className='grid gap-3 lg:grid-cols-2'>
           {manifests.length === 0 ? (
             <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground lg:col-span-2'>
               {isFetching
-                ? 'Loading assigned manifests...'
-                : 'No outbound manifests are currently waiting for driver check-in.'}
+                ? 'Đang tải biên bản được phân công...'
+                : 'Hiện không có biên bản xuất hàng đang chờ tài xế check-in.'}
             </div>
           ) : (
             manifests.map((manifest) => {
@@ -74,10 +72,10 @@ export function DriverTab({
                   <div className='flex items-start justify-between gap-3'>
                     <div>
                       <p className='font-medium'>
-                        {manifest.manifestCode ?? `Manifest #${manifest.id}`}
+                        {manifest.manifestCode ?? `Biên bản #${manifest.id}`}
                       </p>
                       <p className='text-sm text-muted-foreground'>
-                        {manifest.originHubCode ?? manifest.originHubId} to{' '}
+                        {manifest.originHubCode ?? manifest.originHubId} đến{' '}
                         {destinationLabel(
                           manifest.destinationType,
                           manifest.destinationHubId,
@@ -89,17 +87,17 @@ export function DriverTab({
                     <Badge variant={statusVariant(manifest.status)}>
                       {manifest.status
                         ? STATUS_LABELS[manifest.status]
-                        : 'Unknown'}
+                        : 'Chưa rõ'}
                     </Badge>
                   </div>
                   <div className='grid gap-2 text-sm md:grid-cols-2'>
                     <SummaryItem
-                      label='Vehicle'
+                      label='Xe'
                       value={manifest.vehicleLicensePlate ?? '-'}
                     />
                     <SummaryItem
-                      label='Bags'
-                      value={`${formatNumber(stats.totalBags, 0)} bags`}
+                      label='Túi hàng'
+                      value={`${formatNumber(stats.totalBags, 0)} túi`}
                     />
                   </div>
                   <div className='flex flex-wrap gap-2'>
@@ -110,7 +108,7 @@ export function DriverTab({
                       onClick={() => onOpenCheckin(manifest, 'start')}
                     >
                       <ArrowUpFromLine className='h-4 w-4' />
-                      Start check-in
+                      Check-in xuất phát
                     </Button>
                     <Button
                       variant='secondary'
@@ -120,14 +118,7 @@ export function DriverTab({
                       onClick={() => onOpenCheckin(manifest, 'end')}
                     >
                       <ArrowDownToLine className='h-4 w-4' />
-                      End check-in
-                    </Button>
-                    <Button
-                      variant='outline'
-                      onClick={() => onViewManifest(manifest.id)}
-                    >
-                      <Eye className='h-4 w-4' />
-                      Detail
+                      Check-in đến nơi
                     </Button>
                   </div>
                 </div>

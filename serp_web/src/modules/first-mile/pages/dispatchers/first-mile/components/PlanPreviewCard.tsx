@@ -64,7 +64,7 @@ const formatStopTime = (value?: string): string => {
     return value;
   }
 
-  return parsedDate.toLocaleTimeString('en-US', {
+  return parsedDate.toLocaleTimeString('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -73,7 +73,9 @@ const formatStopTime = (value?: string): string => {
 const getCourierLabel = (routeItem: PickupOptimizationRoute): string => {
   const courierCode =
     routeItem.courierCode ||
-    (routeItem.courierStaffId ? `Staff #${routeItem.courierStaffId}` : '--');
+    (routeItem.courierStaffId
+      ? `Nhân viên #${routeItem.courierStaffId}`
+      : '--');
 
   return routeItem.courierName
     ? `${courierCode} - ${routeItem.courierName}`
@@ -81,15 +83,13 @@ const getCourierLabel = (routeItem: PickupOptimizationRoute): string => {
 };
 
 const getOrderLabel = (stop: PickupOptimizationStop): string => {
-  return stop.orderCode || stop.customerOrderCode || `Order #${stop.orderId}`;
+  return stop.orderCode || stop.customerOrderCode || `Đơn #${stop.orderId}`;
 };
 
 const getUnassignedOrderLabel = (
   order: PickupOptimizationUnassignedOrder
 ): string => {
-  return (
-    order.orderCode || order.customerOrderCode || `Order #${order.orderId}`
-  );
+  return order.orderCode || order.customerOrderCode || `Đơn #${order.orderId}`;
 };
 
 interface RouteStatProps {
@@ -125,23 +125,23 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
 
   const summaryItems = [
     {
-      label: 'Assigned orders',
+      label: 'Đơn đã phân công',
       value: `${formatNumber(
         optimizationResult.assignedOrders
       )} / ${formatNumber(optimizationResult.totalOrders)}`,
-      helper: `${assignmentRate}% of candidate orders`,
+      helper: `${assignmentRate}% đơn ứng viên`,
       icon: PackageCheck,
     },
     {
-      label: 'Route usage',
+      label: 'Tuyến được dùng',
       value: `${formatNumber(
         optimizationResult.usedRoutes
       )} / ${formatNumber(optimizationResult.totalRoutes)}`,
-      helper: 'Couriers used by the optimizer',
+      helper: 'Nhân viên được bộ tối ưu sử dụng',
       icon: RouteIcon,
     },
     {
-      label: 'Total distance',
+      label: 'Tổng quãng đường',
       value: formatMetric(
         optimizationResult.totalDistanceKm,
         'km',
@@ -149,19 +149,19 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
       ),
       helper: formatMetric(
         optimizationResult.totalTravelMinutes,
-        'travel min',
+        'phút di chuyển',
         formatNumber
       ),
       icon: MapPin,
     },
     {
-      label: 'Lateness',
+      label: 'Trễ hạn',
       value: formatMetric(
         optimizationResult.totalLatenessMinutes,
         'min',
         formatNumber
       ),
-      helper: `Objective score ${formatNumber(
+      helper: `Điểm mục tiêu ${formatNumber(
         optimizationResult.objectiveScore
       )}`,
       icon: Timer,
@@ -173,15 +173,15 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
       <CardHeader className='space-y-4'>
         <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
           <div className='space-y-1'>
-            <CardTitle>Pickup Plan Preview</CardTitle>
+            <CardTitle>Xem trước kế hoạch lấy hàng</CardTitle>
             <CardDescription>
-              Post office {optimizationResult.postOfficeCode || '--'} -{' '}
+              Bưu cục {optimizationResult.postOfficeCode || '--'} -{' '}
               {optimizationResult.postOfficeName || '--'}
             </CardDescription>
           </div>
           <div className='flex flex-wrap gap-2'>
             <Badge variant={hasPlanRisks ? 'destructive' : 'secondary'}>
-              {hasPlanRisks ? 'Needs review' : 'Ready to assign'}
+              {hasPlanRisks ? 'Cần kiểm tra' : 'Sẵn sàng phân công'}
             </Badge>
             <Badge variant='outline'>
               {formatDateTime(optimizationResult.planningStartTime)} -{' '}
@@ -191,7 +191,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
         </div>
         <div className='space-y-2'>
           <div className='flex items-center justify-between gap-3 text-xs text-muted-foreground'>
-            <span>Assignment coverage</span>
+            <span>Tỷ lệ phân công</span>
             <span>{assignmentRate}%</span>
           </div>
           <div className='h-2 overflow-hidden rounded-full bg-muted'>
@@ -225,7 +225,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
         <div className='grid gap-3 md:grid-cols-3'>
           <div className='rounded-md border bg-muted/30 p-3'>
             <p className='text-xs font-medium text-muted-foreground'>
-              Unassigned orders
+              Đơn chưa phân công
             </p>
             <p className='mt-1 text-lg font-semibold'>
               {formatNumber(optimizationResult.unassignedOrders)}
@@ -233,7 +233,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
           </div>
           <div className='rounded-md border bg-muted/30 p-3'>
             <p className='text-xs font-medium text-muted-foreground'>
-              Service time
+              Thời gian phục vụ
             </p>
             <p className='mt-1 text-lg font-semibold'>
               {formatMetric(
@@ -245,7 +245,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
           </div>
           <div className='rounded-md border bg-muted/30 p-3'>
             <p className='text-xs font-medium text-muted-foreground'>
-              Candidate orders
+              Đơn ứng viên
             </p>
             <p className='mt-1 text-lg font-semibold'>
               {formatNumber(optimizationResult.totalOrders)}
@@ -256,10 +256,10 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
         {routeItems.length > 0 ? (
           <div className='space-y-3'>
             <div>
-              <h3 className='font-semibold'>Courier routes</h3>
+              <h3 className='font-semibold'>Tuyến của nhân viên giao nhận</h3>
               <p className='text-xs text-muted-foreground'>
-                {formatNumber(routeItems.length)} route(s) generated in this
-                preview.
+                {formatNumber(routeItems.length)} tuyến được tạo trong bản xem
+                trước này.
               </p>
             </div>
             <div className='grid gap-3'>
@@ -278,13 +278,13 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                       <div className='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
                         <div className='min-w-0 space-y-2'>
                           <div className='flex flex-wrap items-center gap-2'>
-                            <Badge variant='outline'>Route {index + 1}</Badge>
+                            <Badge variant='outline'>Tuyến {index + 1}</Badge>
                             <Badge
                               variant={
                                 routeHasLateness ? 'destructive' : 'secondary'
                               }
                             >
-                              {routeHasLateness ? 'Late stops' : 'On time'}
+                              {routeHasLateness ? 'Có điểm trễ' : 'Đúng giờ'}
                             </Badge>
                           </div>
                           <div className='flex items-start gap-2'>
@@ -294,9 +294,9 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                                 {getCourierLabel(routeItem)}
                               </p>
                               <p className='text-xs text-muted-foreground'>
-                                Staff ID {routeItem.courierStaffId ?? '--'}
+                                ID nhân viên {routeItem.courierStaffId ?? '--'}
                                 {routeItem.vehicleLicensePlate
-                                  ? ` | Vehicle ${routeItem.vehicleLicensePlate}`
+                                  ? ` | Xe ${routeItem.vehicleLicensePlate}`
                                   : ''}
                               </p>
                             </div>
@@ -304,11 +304,11 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                         </div>
                         <div className='grid gap-2 text-xs sm:grid-cols-2 lg:min-w-[24rem]'>
                           <RouteStat
-                            label='Stops'
+                            label='Điểm dừng'
                             value={formatNumber(routeItem.totalStops)}
                           />
                           <RouteStat
-                            label='Distance'
+                            label='Quãng đường'
                             value={formatMetric(
                               routeItem.totalDistanceKm,
                               'km',
@@ -316,7 +316,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                             )}
                           />
                           <RouteStat
-                            label='Travel'
+                            label='Di chuyển'
                             value={formatMetric(
                               routeItem.totalTravelMinutes,
                               'min',
@@ -324,7 +324,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                             )}
                           />
                           <RouteStat
-                            label='Service'
+                            label='Phục vụ'
                             value={formatMetric(
                               routeItem.totalServiceMinutes,
                               'min',
@@ -335,15 +335,15 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                       </div>
                       <div className='mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-3'>
                         <span>
-                          Window {formatDateTime(routeItem.startTime)} -{' '}
+                          Khung giờ {formatDateTime(routeItem.startTime)} -{' '}
                           {formatDateTime(routeItem.endTime)}
                         </span>
                         <span>
-                          Load {formatNumber(routeItem.totalWeight)} weight /{' '}
-                          {formatNumber(routeItem.totalVolume)} volume
+                          Tải {formatNumber(routeItem.totalWeight)} khối lượng /{' '}
+                          {formatNumber(routeItem.totalVolume)} thể tích
                         </span>
                         <span>
-                          Lateness{' '}
+                          Trễ hạn{' '}
                           {formatMetric(
                             routeItem.totalLatenessMinutes,
                             'min',
@@ -375,7 +375,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                                     {getOrderLabel(stop)}
                                   </p>
                                   {isBacklog ? (
-                                    <Badge variant='destructive'>Backlog</Badge>
+                                    <Badge variant='destructive'>Quá hạn</Badge>
                                   ) : null}
                                   {stop.customerOrderCode ? (
                                     <Badge variant='outline'>
@@ -384,7 +384,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                                   ) : null}
                                   {toSafeNumber(stop.latenessMinutes) > 0 ? (
                                     <Badge variant='destructive'>
-                                      Late{' '}
+                                      Trễ{' '}
                                       {formatMetric(
                                         stop.latenessMinutes,
                                         'min',
@@ -392,17 +392,17 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                                       )}
                                     </Badge>
                                   ) : (
-                                    <Badge variant='secondary'>On time</Badge>
+                                    <Badge variant='secondary'>Đúng giờ</Badge>
                                   )}
                                 </div>
                                 <p className='text-xs text-muted-foreground'>
-                                  Sender {stop.senderName || '--'}
+                                  Người gửi {stop.senderName || '--'}
                                   {stop.senderPhone
                                     ? ` | ${stop.senderPhone}`
                                     : ''}
                                 </p>
                                 <p className='text-xs text-muted-foreground'>
-                                  Pickup window{' '}
+                                  Khung giờ lấy hàng{' '}
                                   {formatStopTime(stop.pickupTimeStart)} -{' '}
                                   {formatStopTime(stop.pickupTimeEnd)}
                                   {backlogDuration
@@ -413,11 +413,11 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                               <div className='space-y-1 text-xs text-muted-foreground'>
                                 <p className='flex items-center gap-1'>
                                   <Clock3 className='h-3.5 w-3.5' />
-                                  Arrive {formatStopTime(stop.arrivalTime)}
+                                  Đến {formatStopTime(stop.arrivalTime)}
                                 </p>
                                 <p>
-                                  Depart {formatStopTime(stop.departureTime)} |
-                                  Travel{' '}
+                                  Rời {formatStopTime(stop.departureTime)} | Di
+                                  chuyển{' '}
                                   {formatMetric(
                                     stop.travelMinutes,
                                     'min',
@@ -425,7 +425,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                                   )}
                                 </p>
                                 <p>
-                                  From previous{' '}
+                                  Từ điểm trước{' '}
                                   {formatMetric(
                                     stop.distanceFromPreviousKm,
                                     'km',
@@ -439,7 +439,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                       </div>
                     ) : (
                       <div className='p-4 text-sm text-muted-foreground'>
-                        No stops were placed on this route.
+                        Chưa có điểm dừng nào trên tuyến này.
                       </div>
                     )}
                   </div>
@@ -450,7 +450,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
         ) : (
           <div className='rounded-md border border-dashed p-6 text-center text-muted-foreground'>
             <RouteIcon className='mx-auto mb-2 h-5 w-5' />
-            No courier routes in this preview.
+            Không có tuyến nhân viên nào trong bản xem trước này.
           </div>
         )}
 
@@ -459,10 +459,10 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
             <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
               <div className='flex items-center gap-2 font-medium text-destructive'>
                 <AlertTriangle className='h-4 w-4' />
-                Orders needing review
+                Đơn cần kiểm tra
               </div>
               <Badge variant='destructive'>
-                {formatNumber(unassignedDetails.length)} unassigned
+                {formatNumber(unassignedDetails.length)} chưa phân công
               </Badge>
             </div>
             <div className='mt-3 grid gap-2 md:grid-cols-2'>
@@ -475,7 +475,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                     {getUnassignedOrderLabel(order)}
                   </p>
                   <p className='text-xs text-muted-foreground'>
-                    {order.reason || 'No optimizer reason provided.'}
+                    {order.reason || 'Bộ tối ưu chưa cung cấp lý do.'}
                   </p>
                 </div>
               ))}
@@ -484,7 +484,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
         ) : (
           <div className='flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm'>
             <CheckCircle2 className='h-4 w-4 text-primary' />
-            All candidate orders are assigned in this preview.
+            Tất cả đơn ứng viên đã được phân công trong bản xem trước này.
           </div>
         )}
       </CardContent>

@@ -13,5 +13,6 @@ export { HandoverManifestDispatchDialog } from './HandoverManifestDispatchDialog
 export { HandoverManifestReceiveDialog } from './HandoverManifestReceiveDialog';
 export { HandoverManifestScanOutDialog } from './HandoverManifestScanOutDialog';
 export { HandoverManifestTableCard } from './HandoverManifestTableCard';
+export { HubTransferManifestTableCard } from './HubTransferManifestTableCard';
 export { ManifestOrdersTable } from './ManifestOrdersTable';
 export { MetricItem } from './MetricItem';

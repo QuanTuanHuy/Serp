@@ -122,20 +122,20 @@ export function HandoverManifestTableCard({
             <PackageCheck className='h-5 w-5' />
           )}
           {effectiveMode === 'POST_OFFICE'
-            ? 'Post office manifests'
-            : 'Hub inbound manifests'}
+            ? 'Phiếu bàn giao tại bưu cục'
+            : 'Phiếu nhập tại hub'}
         </CardTitle>
         <CardDescription>
           {effectiveMode === 'POST_OFFICE'
-            ? 'Build a handover manifest, scan every order out, then dispatch it to the mapped hub.'
-            : 'Receive dispatched manifests from post offices and confirm inbound orders at the hub.'}
+            ? 'Tạo phiếu bàn giao, quét xuất từng đơn rồi xuất hàng đến hub được gán.'
+            : 'Nhận phiếu đã xuất từ bưu cục và xác nhận các đơn nhập tại hub.'}
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         <div className='grid gap-4 md:grid-cols-3'>
           {showPostOfficeFilter ? (
             <div className='space-y-2'>
-              <Label htmlFor='filter-post-office'>Origin post office</Label>
+              <Label htmlFor='filter-post-office'>Bưu cục gửi</Label>
               <TmsCombobox
                 id='filter-post-office'
                 value={filterPostOfficeId || 'ALL'}
@@ -143,15 +143,15 @@ export function HandoverManifestTableCard({
                   onFilterPostOfficeChange(value === 'ALL' ? '' : value)
                 }
                 options={postOfficeFilterOptions}
-                placeholder='All post offices'
-                emptyText='No post offices found'
+                placeholder='Tất cả bưu cục'
+                emptyText='Không tìm thấy bưu cục'
               />
             </div>
           ) : null}
 
           {showHubFilter ? (
             <div className='space-y-2'>
-              <Label htmlFor='filter-hub'>Target hub</Label>
+              <Label htmlFor='filter-hub'>Hub nhận</Label>
               <TmsCombobox
                 id='filter-hub'
                 value={filterHubId || 'ALL'}
@@ -159,14 +159,14 @@ export function HandoverManifestTableCard({
                   onFilterHubChange(value === 'ALL' ? '' : value)
                 }
                 options={hubFilterOptions}
-                placeholder='All hubs'
-                emptyText='No hubs found'
+                placeholder='Tất cả hub'
+                emptyText='Không tìm thấy hub'
               />
             </div>
           ) : null}
 
           <div className='space-y-2'>
-            <Label htmlFor='filter-status'>Status</Label>
+            <Label htmlFor='filter-status'>Trạng thái</Label>
             <TmsCombobox
               id='filter-status'
               value={filterStatus}
@@ -174,8 +174,8 @@ export function HandoverManifestTableCard({
                 onFilterStatusChange(value as 'ALL' | HandoverManifestStatus)
               }
               options={statusFilterOptions}
-              placeholder='All statuses'
-              emptyText='No statuses found'
+              placeholder='Tất cả trạng thái'
+              emptyText='Không tìm thấy trạng thái'
             />
           </div>
         </div>
@@ -184,17 +184,17 @@ export function HandoverManifestTableCard({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Manifest</TableHead>
-                <TableHead>Post office</TableHead>
+                <TableHead>Phiếu</TableHead>
+                <TableHead>Bưu cục</TableHead>
                 <TableHead>Hub</TableHead>
-                <TableHead>Transport</TableHead>
-                <TableHead>Planned</TableHead>
-                <TableHead>Orders</TableHead>
-                <TableHead>Progress</TableHead>
+                <TableHead>Vận chuyển</TableHead>
+                <TableHead>Kế hoạch</TableHead>
+                <TableHead>Đơn</TableHead>
+                <TableHead>Tiến độ</TableHead>
                 <TableHead>Seal</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Updated</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead>Cập nhật</TableHead>
+                <TableHead>Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,8 +205,8 @@ export function HandoverManifestTableCard({
                     className='py-8 text-center text-muted-foreground'
                   >
                     {isFetching
-                      ? 'Loading handover manifests...'
-                      : 'No handover manifests found.'}
+                      ? 'Đang tải phiếu bàn giao...'
+                      : 'Chưa có phiếu bàn giao.'}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -232,14 +232,14 @@ export function HandoverManifestTableCard({
                       <TableCell>
                         <div className='space-y-1 text-xs'>
                           <div>
-                            Route:{' '}
+                            Tuyến:{' '}
                             {resolveRouteLabel(
                               manifest.routeId,
                               manifest.routeCode
                             )}
                           </div>
                           <div>
-                            Vehicle:{' '}
+                            Phương tiện:{' '}
                             {resolveVehicleLabel(
                               manifest.vehicleId,
                               manifest.vehicleLicensePlate
@@ -250,18 +250,18 @@ export function HandoverManifestTableCard({
                       <TableCell>
                         <div className='space-y-1 text-xs'>
                           <div>
-                            Depart {formatDateTime(manifest.plannedDepartureAt)}
+                            Đi {formatDateTime(manifest.plannedDepartureAt)}
                           </div>
                           <div>
-                            Arrive {formatDateTime(manifest.plannedArrivalAt)}
+                            Đến {formatDateTime(manifest.plannedArrivalAt)}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>{totalOrders}</TableCell>
                       <TableCell>
                         {effectiveMode === 'POST_OFFICE'
-                          ? `${scannedOutOrders}/${totalOrders} out`
-                          : `${scannedInOrders}/${totalOrders} in`}
+                          ? `${scannedOutOrders}/${totalOrders} xuất`
+                          : `${scannedInOrders}/${totalOrders} nhập`}
                       </TableCell>
                       <TableCell>{manifest.sealCode || '--'}</TableCell>
                       <TableCell>
@@ -286,7 +286,7 @@ export function HandoverManifestTableCard({
                             onClick={() => onOpenDetail(manifest)}
                           >
                             <Eye className='mr-1 h-3.5 w-3.5' />
-                            View
+                            Xem
                           </Button>
 
                           {effectiveMode === 'POST_OFFICE' &&
@@ -298,7 +298,7 @@ export function HandoverManifestTableCard({
                                 onClick={() => onOpenScanOut(manifest)}
                               >
                                 <ScanLine className='mr-1 h-3.5 w-3.5' />
-                                Scan out
+                                Quét xuất
                               </Button>
                               <Button
                                 size='sm'
@@ -308,7 +308,7 @@ export function HandoverManifestTableCard({
                                 onClick={() => onOpenDispatch(manifest)}
                               >
                                 <Send className='mr-1 h-3.5 w-3.5' />
-                                Dispatch
+                                Xuất đi
                               </Button>
                               <Button
                                 size='sm'
@@ -317,7 +317,7 @@ export function HandoverManifestTableCard({
                                 onClick={() => onCancelManifest(manifest)}
                               >
                                 <XCircle className='mr-1 h-3.5 w-3.5' />
-                                Cancel
+                                Hủy
                               </Button>
                             </>
                           ) : null}
@@ -329,7 +329,7 @@ export function HandoverManifestTableCard({
                               onClick={() => onOpenReceive(manifest)}
                             >
                               <CheckCircle2 className='mr-1 h-3.5 w-3.5' />
-                              Receive
+                              Nhận hàng
                             </Button>
                           ) : null}
                         </div>
@@ -344,9 +344,9 @@ export function HandoverManifestTableCard({
 
         <div className='flex items-center justify-between'>
           <p className='text-sm text-muted-foreground'>
-            Page {(manifestsData?.currentPage ?? 0) + 1} of{' '}
+            Trang {(manifestsData?.currentPage ?? 0) + 1} /{' '}
             {Math.max(manifestsData?.totalPages ?? 1, 1)} -{' '}
-            {manifestsData?.totalItems ?? 0} manifest(s)
+            {manifestsData?.totalItems ?? 0} phiếu
           </p>
           <div className='flex gap-2'>
             <Button
@@ -355,7 +355,7 @@ export function HandoverManifestTableCard({
               disabled={page <= 0 || isFetching}
               onClick={onPreviousPage}
             >
-              Previous
+              Trước
             </Button>
             <Button
               variant='outline'
@@ -365,7 +365,7 @@ export function HandoverManifestTableCard({
               }
               onClick={onNextPage}
             >
-              Next
+              Sau
             </Button>
           </div>
         </div>

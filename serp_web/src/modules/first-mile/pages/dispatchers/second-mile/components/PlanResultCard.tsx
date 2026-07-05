@@ -23,8 +23,8 @@ import {
 import type {
   BagDistributionPlan,
   BagDistributionPlanItem,
-} from '../../../types';
-import { formatNumber, HINT_LABELS } from '../bagDistributionModels';
+} from '../../../../types';
+import { formatNumber, HINT_LABELS } from '../secondMileDispatchModels';
 
 interface PlanResultCardProps {
   plan: BagDistributionPlan | null;
@@ -34,43 +34,44 @@ export function PlanResultCard({ plan }: PlanResultCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Auto-plan preview</CardTitle>
+        <CardTitle>Xem trước kế hoạch tự động</CardTitle>
         <CardDescription>
-          Suggestions are grouped by lane and scored by route match, vehicle
-          capacity, and driver availability.
+          Gợi ý được gom theo chặng và chấm điểm theo tuyến, tải trọng xe và
+          tình trạng tài xế.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {!plan ? (
           <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
-            Run Preview auto plan to see suggested manifests before execution.
+            Chạy xem trước kế hoạch để kiểm tra các biên bản gợi ý trước khi
+            thực thi.
           </div>
         ) : plan.items.length === 0 ? (
           <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
-            No eligible sealed bags were found for this lane and time window.
+            Không tìm thấy túi đã niêm phong phù hợp chặng và khung thời gian
+            này.
           </div>
         ) : (
           <div className='space-y-3'>
             <div className='flex flex-wrap items-center gap-2 text-sm'>
               <Badge variant={plan.executed ? 'default' : 'outline'}>
-                {plan.executed ? 'Executed' : 'Preview'}
+                {plan.executed ? 'Đã thực thi' : 'Bản xem trước'}
               </Badge>
               <span className='text-muted-foreground'>
-                {plan.manifestCount} manifest
-                {plan.manifestCount === 1 ? '' : 's'}
+                {plan.manifestCount} biên bản
               </span>
             </div>
             <div className='overflow-x-auto rounded-md border'>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Route</TableHead>
-                    <TableHead>Vehicle</TableHead>
-                    <TableHead>Bags</TableHead>
-                    <TableHead>Load</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Hints</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead>Tuyến</TableHead>
+                    <TableHead>Xe</TableHead>
+                    <TableHead>Túi hàng</TableHead>
+                    <TableHead>Tải</TableHead>
+                    <TableHead>Điểm</TableHead>
+                    <TableHead>Gợi ý</TableHead>
+                    <TableHead>Đã tạo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -99,7 +100,7 @@ function PlanItemRow({ item }: { item: BagDistributionPlanItem }) {
         </div>
       </TableCell>
       <TableCell>
-        {formatNumber(item.totalOrders, 0)} orders
+        {formatNumber(item.totalOrders, 0)} đơn
         <div className='text-xs text-muted-foreground'>
           {formatNumber(item.totalWeight)} kg | {formatNumber(item.totalVolume)}{' '}
           m3
@@ -109,7 +110,7 @@ function PlanItemRow({ item }: { item: BagDistributionPlanItem }) {
       <TableCell>
         <div className='flex max-w-[260px] flex-wrap gap-1'>
           {item.hints.length === 0 ? (
-            <Badge variant='outline'>No hints</Badge>
+            <Badge variant='outline'>Không có gợi ý</Badge>
           ) : (
             item.hints.map((hint) => (
               <Badge

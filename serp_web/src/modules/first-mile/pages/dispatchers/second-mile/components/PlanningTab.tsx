@@ -36,16 +36,16 @@ import type {
   SecondMileBagDestinationType,
   SecondMileRoute,
   SecondMileVehicle,
-} from '../../../types';
+} from '../../../../types';
 import type {
   PlanningState,
   SelectedBagSummary,
-} from '../bagDistributionModels';
+} from '../secondMileDispatchModels';
 import {
   destinationOptions,
   formatNumber,
   parseNumber,
-} from '../bagDistributionModels';
+} from '../secondMileDispatchModels';
 import { PlanResultCard } from './PlanResultCard';
 import { SummaryItem } from './SummaryItem';
 
@@ -115,37 +115,37 @@ export function PlanningTab({
     <div className='grid gap-4 xl:grid-cols-[minmax(0,430px)_1fr]'>
       <Card>
         <CardHeader>
-          <CardTitle>Plan setup</CardTitle>
+          <CardTitle>Thiết lập kế hoạch</CardTitle>
           <CardDescription>
-            Choose one origin, one destination, and a time window. Auto-plan can
-            suggest route runs; manual creation uses selected ready bags.
+            Chọn hub xuất phát, điểm đến và khung thời gian. Kế hoạch tự động
+            sẽ gợi ý lượt tuyến; tạo thủ công sẽ dùng các túi đã chọn.
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
           {!canManage && (
             <div className='rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground'>
-              You can review manifests, but creating plans requires TMS_ADMIN or
-              TMS_HUB_MANAGER.
+              Bạn có thể xem biên bản, nhưng cần quyền TMS_ADMIN hoặc
+              TMS_HUB_MANAGER để tạo kế hoạch.
             </div>
           )}
 
           <div className='space-y-2'>
-            <Label>Origin hub *</Label>
+            <Label>Hub xuất phát *</Label>
             <TmsCombobox
               value={planning.originHubId ? String(planning.originHubId) : ''}
               onValueChange={(value) =>
                 onUpdatePlanning('originHubId', parseNumber(value))
               }
               options={hubOptions}
-              placeholder={isFetchingHubs ? 'Loading hubs...' : 'Select hub'}
-              emptyText='No active hubs found'
+              placeholder={isFetchingHubs ? 'Đang tải hub...' : 'Chọn hub'}
+              emptyText='Không tìm thấy hub đang hoạt động'
               loading={isFetchingHubs}
               clearable
             />
           </div>
 
           <div className='space-y-2'>
-            <Label>Destination type *</Label>
+            <Label>Loại điểm đến *</Label>
             <Select
               value={planning.destinationType}
               onValueChange={(value) =>
@@ -170,7 +170,7 @@ export function PlanningTab({
 
           {planning.destinationType === 'HUB' ? (
             <div className='space-y-2'>
-              <Label>Destination hub *</Label>
+              <Label>Hub đích *</Label>
               <TmsCombobox
                 value={
                   planning.destinationHubId
@@ -181,15 +181,15 @@ export function PlanningTab({
                   onUpdatePlanning('destinationHubId', parseNumber(value))
                 }
                 options={hubOptions}
-                placeholder='Select destination hub'
-                emptyText='No active hubs found'
+                placeholder='Chọn hub đích'
+                emptyText='Không tìm thấy hub đang hoạt động'
                 loading={isFetchingHubs}
                 clearable
               />
             </div>
           ) : (
             <div className='space-y-2'>
-              <Label>Destination post office *</Label>
+              <Label>Bưu cục đích *</Label>
               <TmsCombobox
                 value={planning.destinationPostOfficeCode ?? ''}
                 onValueChange={(value) =>
@@ -201,10 +201,10 @@ export function PlanningTab({
                 options={postOfficeOptions}
                 placeholder={
                   isFetchingPostOffices
-                    ? 'Loading post offices...'
-                    : 'Select post office'
+                    ? 'Đang tải bưu cục...'
+                    : 'Chọn bưu cục'
                 }
-                emptyText='No active post offices found'
+                emptyText='Không tìm thấy bưu cục đang hoạt động'
                 loading={isFetchingPostOffices}
                 clearable
               />
@@ -213,7 +213,7 @@ export function PlanningTab({
 
           <div className='grid gap-3 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='distribution-departure'>Departure *</Label>
+              <Label htmlFor='distribution-departure'>Thời gian xuất phát *</Label>
               <Input
                 id='distribution-departure'
                 type='datetime-local'
@@ -224,7 +224,7 @@ export function PlanningTab({
               />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='distribution-arrival'>Arrival *</Label>
+              <Label htmlFor='distribution-arrival'>Thời gian đến *</Label>
               <Input
                 id='distribution-arrival'
                 type='datetime-local'
@@ -238,7 +238,7 @@ export function PlanningTab({
 
           <div className='grid gap-3 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label>Route</Label>
+              <Label>Tuyến</Label>
               <TmsCombobox
                 value={planning.routeId ? String(planning.routeId) : ''}
                 onValueChange={(value) =>
@@ -246,15 +246,15 @@ export function PlanningTab({
                 }
                 options={routeOptions}
                 placeholder={
-                  isFetchingRoutes ? 'Loading routes...' : 'Select route'
+                  isFetchingRoutes ? 'Đang tải tuyến...' : 'Chọn tuyến'
                 }
-                emptyText='No active route for this lane'
+                emptyText='Không có tuyến đang hoạt động cho chặng này'
                 loading={isFetchingRoutes}
                 clearable
               />
             </div>
             <div className='space-y-2'>
-              <Label>Vehicle</Label>
+              <Label>Xe</Label>
               <TmsCombobox
                 value={planning.vehicleId ? String(planning.vehicleId) : ''}
                 onValueChange={(value) =>
@@ -262,9 +262,9 @@ export function PlanningTab({
                 }
                 options={vehicleOptions}
                 placeholder={
-                  isFetchingVehicles ? 'Loading vehicles...' : 'Select vehicle'
+                  isFetchingVehicles ? 'Đang tải xe...' : 'Chọn xe'
                 }
-                emptyText='No active vehicles at origin hub'
+                emptyText='Không có xe đang hoạt động tại hub xuất phát'
                 loading={isFetchingVehicles}
                 clearable
               />
@@ -272,7 +272,7 @@ export function PlanningTab({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='sealed-sla-hours'>Sealed SLA hours</Label>
+            <Label htmlFor='sealed-sla-hours'>SLA túi đã niêm phong (giờ)</Label>
             <Input
               id='sealed-sla-hours'
               type='number'
@@ -285,12 +285,12 @@ export function PlanningTab({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='distribution-note'>Note</Label>
+            <Label htmlFor='distribution-note'>Ghi chú</Label>
             <Textarea
               id='distribution-note'
               value={planning.note}
               onChange={(event) => onUpdatePlanning('note', event.target.value)}
-              placeholder='Optional instruction for driver or destination staff'
+              placeholder='Chỉ dẫn thêm cho tài xế hoặc nhân sự điểm đến'
               rows={3}
             />
           </div>
@@ -305,7 +305,7 @@ export function PlanningTab({
               ) : (
                 <Sparkles className='h-4 w-4' />
               )}
-              Preview auto plan
+              Xem trước kế hoạch
             </Button>
             <Button
               variant='secondary'
@@ -313,7 +313,7 @@ export function PlanningTab({
               onClick={() => onAutoPlan(true)}
             >
               <Play className='h-4 w-4' />
-              Execute auto plan
+              Chạy kế hoạch tự động
             </Button>
             <Button
               variant='outline'
@@ -325,7 +325,7 @@ export function PlanningTab({
               ) : (
                 <ClipboardList className='h-4 w-4' />
               )}
-              Create manual manifest
+              Tạo biên bản thủ công
             </Button>
           </div>
         </CardContent>
@@ -334,38 +334,38 @@ export function PlanningTab({
       <div className='space-y-4'>
         <Card>
           <CardHeader>
-            <CardTitle>Plan summary</CardTitle>
+            <CardTitle>Tóm tắt kế hoạch</CardTitle>
             <CardDescription>
-              Review lane, resource, and selected-bag totals before creating a
-              manifest.
+              Kiểm tra chặng, phương tiện và số túi đã chọn trước khi tạo biên
+              bản.
             </CardDescription>
           </CardHeader>
           <CardContent className='grid gap-3 md:grid-cols-2'>
-            <SummaryItem label='Origin' value={originHub?.code ?? '-'} />
+            <SummaryItem label='Điểm xuất phát' value={originHub?.code ?? '-'} />
             <SummaryItem
-              label='Destination'
+              label='Điểm đến'
               value={
                 planning.destinationType === 'HUB'
                   ? (destinationHub?.code ?? '-')
                   : (destinationPostOffice?.code ?? '-')
               }
             />
-            <SummaryItem label='Route' value={route?.routeCode ?? '-'} />
-            <SummaryItem label='Vehicle' value={vehicle?.licensePlate ?? '-'} />
+            <SummaryItem label='Tuyến' value={route?.routeCode ?? '-'} />
+            <SummaryItem label='Xe' value={vehicle?.licensePlate ?? '-'} />
             <SummaryItem
-              label='Selected bags'
+              label='Túi đã chọn'
               value={formatNumber(selectedBags.length, 0)}
             />
             <SummaryItem
-              label='Selected orders'
+              label='Đơn hàng đã chọn'
               value={formatNumber(selectedDestinationSummary?.totalOrders, 0)}
             />
             <SummaryItem
-              label='Total weight'
+              label='Tổng khối lượng'
               value={`${formatNumber(selectedDestinationSummary?.totalWeight)} kg`}
             />
             <SummaryItem
-              label='Total volume'
+              label='Tổng thể tích'
               value={`${formatNumber(selectedDestinationSummary?.totalVolume)} m3`}
             />
           </CardContent>

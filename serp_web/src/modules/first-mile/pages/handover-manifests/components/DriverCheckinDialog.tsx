@@ -58,17 +58,16 @@ export function DriverCheckinDialog({
         <DialogHeader>
           <DialogTitle>{checkinTitle}</DialogTitle>
           <DialogDescription>
-            Upload a handover photo and provide the GPS location for this driver
-            checkpoint.
+            Tải ảnh bàn giao và cung cấp tọa độ GPS cho điểm check-in này.
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
           <div className='flex items-center justify-between rounded-md border p-3'>
             <div className='space-y-1'>
-              <Label htmlFor='handover-dev-mode'>Development mode</Label>
+              <Label htmlFor='handover-dev-mode'>Chế độ phát triển</Label>
               <p className='text-xs text-muted-foreground'>
-                Fill valid checkpoint coordinates from the manifest.
+                Tự điền tọa độ hợp lệ theo thông tin trong phiếu.
               </p>
             </div>
             <Switch
@@ -79,7 +78,7 @@ export function DriverCheckinDialog({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='handover-photo'>Photo</Label>
+            <Label htmlFor='handover-photo'>Ảnh</Label>
             <Input
               id='handover-photo'
               type='file'
@@ -93,7 +92,7 @@ export function DriverCheckinDialog({
 
           <div className='grid gap-3 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='handover-latitude'>Latitude</Label>
+              <Label htmlFor='handover-latitude'>Vĩ độ</Label>
               <Input
                 id='handover-latitude'
                 inputMode='decimal'
@@ -102,7 +101,7 @@ export function DriverCheckinDialog({
               />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='handover-longitude'>Longitude</Label>
+              <Label htmlFor='handover-longitude'>Kinh độ</Label>
               <Input
                 id='handover-longitude'
                 inputMode='decimal'
@@ -118,13 +117,13 @@ export function DriverCheckinDialog({
             onClick={onUseCurrentLocation}
           >
             <MapPin className='mr-2 h-4 w-4' />
-            Use current location
+            Dùng vị trí hiện tại
           </Button>
         </div>
 
         <DialogFooter>
           <Button type='button' variant='outline' onClick={onCancel}>
-            Cancel
+            Hủy
           </Button>
           <Button type='button' disabled={isSubmitting} onClick={onSubmit}>
             {isSubmitting ? (
@@ -132,7 +131,7 @@ export function DriverCheckinDialog({
             ) : (
               <Camera className='mr-2 h-4 w-4' />
             )}
-            Submit
+            Gửi
           </Button>
         </DialogFooter>
       </DialogContent>
