@@ -59,7 +59,19 @@ public class BagController {
             @RequestParam(name = "destination_hub_id", required = false) Long destinationHubId,
             @RequestParam(name = "destination_post_office_code", required = false) String destinationPostOfficeCode,
             @RequestParam(name = "vehicle_id", required = false) Long vehicleId,
-            @RequestParam(required = false) BagStatus status
+            @RequestParam(required = false) BagStatus status,
+            @RequestParam(name = "min_orders", required = false) Integer minOrders,
+            @RequestParam(name = "max_orders", required = false) Integer maxOrders,
+            @RequestParam(name = "min_weight", required = false) Double minWeight,
+            @RequestParam(name = "max_weight", required = false) Double maxWeight,
+            @RequestParam(name = "min_volume", required = false) Double minVolume,
+            @RequestParam(name = "max_volume", required = false) Double maxVolume,
+            @RequestParam(name = "sealed_from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime sealedFrom,
+            @RequestParam(name = "sealed_to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime sealedTo,
+            @RequestParam(name = "sort_by", required = false) String sortBy,
+            @RequestParam(name = "sort_direction", required = false) String sortDirection
     ) {
         BagFilterRequest filterRequest = BagFilterRequest.builder()
                 .keyword(keyword)
@@ -70,6 +82,16 @@ public class BagController {
                 .destinationPostOfficeCode(destinationPostOfficeCode)
                 .vehicleId(vehicleId)
                 .status(status)
+                .minOrders(minOrders)
+                .maxOrders(maxOrders)
+                .minWeight(minWeight)
+                .maxWeight(maxWeight)
+                .minVolume(minVolume)
+                .maxVolume(maxVolume)
+                .sealedFrom(sealedFrom)
+                .sealedTo(sealedTo)
+                .sortBy(sortBy)
+                .sortDirection(sortDirection)
                 .build();
 
         return ApiResponse.<PageResponse<BagResponse>>builder()

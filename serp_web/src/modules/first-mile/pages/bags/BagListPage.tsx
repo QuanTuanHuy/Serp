@@ -10,12 +10,10 @@ import {
   Boxes,
   CheckCircle2,
   Clock3,
-  FilterX,
   Loader2,
   PackageCheck,
   Plus,
   RefreshCcw,
-  Search,
   ShieldAlert,
   SlidersHorizontal,
   WandSparkles,
@@ -129,7 +127,6 @@ export function BagListPage() {
 
   const [page, setPage] = React.useState(0);
   const [filters, setFilters] = React.useState<SecondMileBagListFilters>({});
-  const [advancedFiltersOpen, setAdvancedFiltersOpen] = React.useState(false);
   const [kpiFrom, setKpiFrom] = React.useState(() => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
@@ -301,17 +298,17 @@ export function BagListPage() {
   const bagPageItems = bagsData?.items ?? [];
   const bagStats = [
     {
-      label: 'Total results',
+      label: 'Tổng kết quả',
       value: formatNumber(bagsData?.totalItems, 0),
       icon: Boxes,
     },
     {
-      label: 'Current page',
+      label: 'Trang hiện tại',
       value: formatNumber(bagPageItems.length, 0),
       icon: Clock3,
     },
     {
-      label: 'Open bags',
+      label: 'Túi đang mở',
       value: formatNumber(
         bagPageItems.filter((bag) => bag.status === 'CREATED').length,
         0
@@ -319,7 +316,7 @@ export function BagListPage() {
       icon: PackageCheck,
     },
     {
-      label: 'Sealed bags',
+      label: 'Túi đã niêm phong',
       value: formatNumber(
         bagPageItems.filter((bag) => bag.status === 'SEALED').length,
         0
@@ -476,42 +473,34 @@ export function BagListPage() {
   }, [scanBag, scanCandidateOrders, scanOrderCodes]);
 
   const hubOptions = [
-    { value: ALL_VALUE, label: 'All hubs' },
+    { value: ALL_VALUE, label: 'Tất cả hub' },
     ...hubs.map((hub) => ({
       value: String(hub.id),
       label: `${hub.code} - ${hub.name}`,
     })),
   ];
   const vehicleOptions = [
-    { value: ALL_VALUE, label: 'All vehicles' },
+    { value: ALL_VALUE, label: 'Tất cả xe' },
     ...vehicles.map((vehicle) => ({
       value: String(vehicle.id),
       label: vehicle.licensePlate,
     })),
   ];
   const postOfficeFilterOptions = [
-    { value: ALL_VALUE, label: 'All post offices' },
+    { value: ALL_VALUE, label: 'Tất cả bưu cục' },
     ...postOffices.map((postOffice) => ({
       value: postOffice.code,
       label: `${postOffice.code} - ${postOffice.name}`,
     })),
   ];
   const destinationTypeOptions = [
-    { value: ALL_VALUE, label: 'All destinations' },
+    { value: ALL_VALUE, label: 'Tất cả điểm đến' },
     ...BAG_DESTINATION_TYPE_OPTIONS,
   ];
   const statusOptions = [
-    { value: ALL_VALUE, label: 'All statuses' },
+    { value: ALL_VALUE, label: 'Tất cả trạng thái' },
     ...BAG_STATUS_OPTIONS,
   ];
-  const advancedFilterCount = [
-    filters.bagCode,
-    filters.destinationType,
-    filters.destinationHubId,
-    filters.destinationPostOfficeCode,
-    filters.vehicleId,
-  ].filter(Boolean).length;
-
   const updateFilter = <K extends keyof SecondMileBagListFilters>(
     field: K,
     value: SecondMileBagListFilters[K] | undefined
@@ -527,7 +516,7 @@ export function BagListPage() {
 
   const handleCreate = () => {
     if (!canManage) {
-      notification.error('Bag creation requires hub manager access.');
+      notification.error('Cần quyền quản lý hub để tạo túi.');
       return;
     }
     setFormMode('create');
@@ -538,7 +527,7 @@ export function BagListPage() {
 
   const openSettingsDialog = () => {
     if (!canManage) {
-      notification.error('Bag settings require hub manager access.');
+      notification.error('Cần quyền quản lý hub để cấu hình túi.');
       return;
     }
 
@@ -558,7 +547,7 @@ export function BagListPage() {
 
   const handleEdit = (bag: SecondMileBag) => {
     if (!canManage || bag.status !== 'CREATED') {
-      notification.error('Only open bags can be edited.');
+      notification.error('Chỉ có thể sửa túi đang mở.');
       return;
     }
     setFormMode('edit');
@@ -579,19 +568,19 @@ export function BagListPage() {
     try {
       if (formMode === 'create') {
         await createBag(request).unwrap();
-        notification.success('Bag created successfully.');
+        notification.success('Đã tạo túi thành công.');
       } else if (editingId !== null) {
         await updateBag({
           id: editingId,
           body: { ...request, status: 'CREATED' } as UpdateSecondMileBagRequest,
         }).unwrap();
-        notification.success('Bag updated successfully.');
+        notification.success('Đã cập nhật túi thành công.');
       }
       setFormOpen(false);
       setEditingId(null);
       void refetch();
     } catch (err) {
-      notification.error('Failed to save bag.', {
+      notification.error('Không thể lưu túi.', {
         description: getErrorMessage(err),
       });
     }
@@ -604,15 +593,15 @@ export function BagListPage() {
     const maxOrders = Number(settingsValues.maxOrders);
 
     if (!Number.isFinite(maxWeight) || maxWeight <= 0) {
-      notification.error('Max weight must be greater than 0.');
+      notification.error('Khối lượng tối đa phải lớn hơn 0.');
       return;
     }
     if (!Number.isFinite(maxVolume) || maxVolume <= 0) {
-      notification.error('Max volume must be greater than 0.');
+      notification.error('Thể tích tối đa phải lớn hơn 0.');
       return;
     }
     if (!Number.isInteger(maxOrders) || maxOrders <= 0) {
-      notification.error('Max orders must be a positive whole number.');
+      notification.error('Số đơn tối đa phải là số nguyên dương.');
       return;
     }
 
@@ -622,12 +611,12 @@ export function BagListPage() {
         max_volume: maxVolume,
         max_orders: maxOrders,
       }).unwrap();
-      notification.success('Bag defaults updated successfully.');
+      notification.success('Đã cập nhật mặc định túi.');
       setSettingsOpen(false);
       void refetchBagCapacitySettings();
       void refetch();
     } catch (err) {
-      notification.error('Failed to update bag defaults.', {
+      notification.error('Không thể cập nhật mặc định túi.', {
         description: getErrorMessage(err),
       });
     }
@@ -643,7 +632,7 @@ export function BagListPage() {
       )
     );
     if (orderCodes.length === 0) {
-      notification.error('Select at least one order.');
+      notification.error('Vui lòng chọn ít nhất một đơn hàng.');
       return;
     }
 
@@ -654,10 +643,10 @@ export function BagListPage() {
       }).unwrap();
       setValidationResult(result);
       notification.success(
-        `Validated ${result.acceptedCount} accepted and ${result.rejectedCount} rejected order(s).`
+        `Đã kiểm tra: ${result.acceptedCount} đơn hợp lệ và ${result.rejectedCount} đơn bị từ chối.`
       );
     } catch (err) {
-      notification.error('Failed to validate bagging.', {
+      notification.error('Không thể kiểm tra đóng túi.', {
         description: getErrorMessage(err),
       });
     }
@@ -681,7 +670,7 @@ export function BagListPage() {
           body: { order_code: orderCode },
         }).unwrap();
       }
-      notification.success('Order added to bag.');
+      notification.success('Đã thêm đơn hàng vào túi.');
       setScanOrderCodes([]);
       setValidationResult(null);
       setScanBag(null);
@@ -690,7 +679,7 @@ export function BagListPage() {
         void refetchDetail();
       }
     } catch (err) {
-      notification.error('Failed to add order to bag.', {
+      notification.error('Không thể thêm đơn hàng vào túi.', {
         description: getErrorMessage(err),
       });
     }
@@ -718,8 +707,8 @@ export function BagListPage() {
       setAutoPlan(result);
       notification.success(
         execute
-          ? 'Auto bagging executed successfully.'
-          : 'Auto bagging plan created.'
+          ? 'Đã thực hiện đóng túi tự động.'
+          : 'Đã tạo phương án đóng túi.'
       );
       if (execute) {
         setAutoOpen(false);
@@ -727,7 +716,7 @@ export function BagListPage() {
         void refetch();
       }
     } catch (err) {
-      notification.error('Failed to auto plan bags.', {
+      notification.error('Không thể lập túi tự động.', {
         description: getErrorMessage(err),
       });
     }
@@ -739,11 +728,11 @@ export function BagListPage() {
     }
     try {
       await removeBagOrder({ id: detailBag.id, orderCode }).unwrap();
-      notification.success('Order removed from bag.');
+      notification.success('Đã xóa đơn hàng khỏi túi.');
       void refetch();
       void refetchDetail();
     } catch (err) {
-      notification.error('Failed to remove order from bag.', {
+      notification.error('Không thể xóa đơn hàng khỏi túi.', {
         description: getErrorMessage(err),
       });
     }
@@ -755,11 +744,11 @@ export function BagListPage() {
     }
     try {
       await deleteBag(deleteTarget.id).unwrap();
-      notification.success('Bag deleted successfully.');
+      notification.success('Đã xóa túi thành công.');
       setDeleteTarget(null);
       void refetch();
     } catch (err) {
-      notification.error('Failed to delete bag.', {
+      notification.error('Không thể xóa túi.', {
         description: getErrorMessage(err),
       });
     }
@@ -771,11 +760,11 @@ export function BagListPage() {
     }
     try {
       await sealBag(sealTarget.id).unwrap();
-      notification.success('Bag sealed successfully.');
+      notification.success('Đã niêm phong túi thành công.');
       setSealTarget(null);
       void refetch();
     } catch (err) {
-      notification.error('Failed to seal bag.', {
+      notification.error('Không thể niêm phong túi.', {
         description: getErrorMessage(err),
       });
     }
@@ -786,7 +775,7 @@ export function BagListPage() {
       return;
     }
     if (!reopenReason.trim()) {
-      notification.error('Reopen reason is required.');
+      notification.error('Vui lòng nhập lý do mở lại túi.');
       return;
     }
     try {
@@ -794,12 +783,12 @@ export function BagListPage() {
         id: reopenTarget.id,
         body: { reason: reopenReason.trim() },
       }).unwrap();
-      notification.success('Bag reopened successfully.');
+      notification.success('Đã mở lại túi thành công.');
       setReopenTarget(null);
       setReopenReason('');
       void refetch();
     } catch (err) {
-      notification.error('Failed to reopen bag.', {
+      notification.error('Không thể mở lại túi.', {
         description: getErrorMessage(err),
       });
     }
@@ -809,9 +798,9 @@ export function BagListPage() {
     return (
       <Alert>
         <ShieldAlert className='h-4 w-4' />
-        <AlertTitle>Access denied</AlertTitle>
+        <AlertTitle>Không có quyền truy cập</AlertTitle>
         <AlertDescription>
-          Bagging requires hub operation access.
+          Chức năng túi hàng yêu cầu quyền vận hành hub.
         </AlertDescription>
       </Alert>
     );
@@ -821,10 +810,10 @@ export function BagListPage() {
     <div className='space-y-6'>
       <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
         <div>
-          <h1 className='text-2xl font-semibold tracking-tight'>Bags</h1>
+          <h1 className='text-2xl font-semibold tracking-tight'>Túi hàng</h1>
           <p className='text-sm text-muted-foreground'>
-            Create open bags, scan inbound orders, seal bags, and review fill
-            metrics.
+            Tạo túi, quét đơn đã về hub, niêm phong túi và theo dõi tỷ lệ lấp
+            đầy.
           </p>
         </div>
         <div className='flex flex-wrap gap-2'>
@@ -838,7 +827,7 @@ export function BagListPage() {
               }}
             >
               <WandSparkles className='h-4 w-4' />
-              Auto plan
+              Tự động lập túi
             </Button>
           )}
           {canManage && (
@@ -848,26 +837,27 @@ export function BagListPage() {
               onClick={openSettingsDialog}
             >
               <SlidersHorizontal className='h-4 w-4' />
-              Bag defaults
+              Mặc định túi
             </Button>
           )}
           <Button variant='outline' onClick={() => void refetch()}>
             <RefreshCcw className='h-4 w-4' />
-            Refresh
+            Làm mới
           </Button>
           {canManage && (
             <Button onClick={handleCreate}>
               <Plus className='h-4 w-4' />
-              New bag
+              Tạo túi
             </Button>
           )}
         </div>
       </div>
 
-      <Card className='gap-3 py-5'>
+      {/*
+        <Card className='gap-3 py-5'>
         <CardHeader className='px-5 py-0'>
           <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-            <CardTitle className='text-base'>Search & filters</CardTitle>
+            <CardTitle className='text-base'>Tìm kiếm và bộ lọc</CardTitle>
             <Button
               type='button'
               variant='outline'
@@ -876,7 +866,7 @@ export function BagListPage() {
               className='w-full justify-center sm:w-auto'
             >
               <SlidersHorizontal className='h-4 w-4' />
-              Advanced
+              Nâng cao
               {advancedFilterCount > 0 ? (
                 <Badge variant='secondary' className='ml-1.5 h-5 px-1.5'>
                   {advancedFilterCount}
@@ -887,7 +877,7 @@ export function BagListPage() {
         </CardHeader>
         <CardContent className='grid gap-3 px-5 py-0 md:grid-cols-[minmax(260px,1fr)_220px_220px_auto]'>
           <div className='space-y-2'>
-            <Label htmlFor='bag-keyword'>Keyword</Label>
+            <Label htmlFor='bag-keyword'>Từ khóa</Label>
             <div className='relative'>
               <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
               <Input
@@ -897,12 +887,12 @@ export function BagListPage() {
                 onChange={(event) =>
                   updateFilter('keyword', event.target.value || undefined)
                 }
-                placeholder='Search bags'
+                placeholder='Tìm túi hàng'
               />
             </div>
           </div>
           <div className='space-y-2'>
-            <Label htmlFor='bag-origin-filter'>Origin hub</Label>
+            <Label htmlFor='bag-origin-filter'>Hub gốc</Label>
             <TmsCombobox
               id='bag-origin-filter'
               value={
@@ -915,12 +905,12 @@ export function BagListPage() {
                 )
               }
               options={hubOptions}
-              placeholder='All hubs'
-              emptyText='No hubs found'
+              placeholder='Tất cả hub'
+              emptyText='Không tìm thấy hub'
             />
           </div>
           <div className='space-y-2'>
-            <Label htmlFor='bag-status-filter'>Status</Label>
+            <Label htmlFor='bag-status-filter'>Trạng thái</Label>
             <TmsCombobox
               id='bag-status-filter'
               value={filters.status ?? ALL_VALUE}
@@ -933,8 +923,8 @@ export function BagListPage() {
                 )
               }
               options={statusOptions}
-              placeholder='All statuses'
-              emptyText='No statuses found'
+              placeholder='Tất cả trạng thái'
+              emptyText='Không tìm thấy trạng thái'
             />
           </div>
           <div className='flex items-end'>
@@ -946,7 +936,7 @@ export function BagListPage() {
               className='w-full md:w-auto'
             >
               <FilterX className='h-4 w-4' />
-              Clear
+              Xóa
             </Button>
           </div>
         </CardContent>
@@ -955,16 +945,15 @@ export function BagListPage() {
       <Dialog open={advancedFiltersOpen} onOpenChange={setAdvancedFiltersOpen}>
         <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
           <DialogHeader>
-            <DialogTitle>Advanced filters</DialogTitle>
+            <DialogTitle>Bộ lọc nâng cao</DialogTitle>
             <DialogDescription>
-              Narrow bags by destination, vehicle, exact bag code, and KPI time
-              window.
+              Lọc túi theo điểm đến, xe, mã túi chính xác và khung thời gian KPI.
             </DialogDescription>
           </DialogHeader>
 
           <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
             <div className='space-y-2'>
-              <Label htmlFor='bag-code-filter'>Bag code</Label>
+              <Label htmlFor='bag-code-filter'>Mã túi</Label>
               <Input
                 id='bag-code-filter'
                 value={filters.bagCode ?? ''}
@@ -976,7 +965,7 @@ export function BagListPage() {
             </div>
             <div className='space-y-2'>
               <Label htmlFor='bag-destination-type-filter'>
-                Destination type
+                Loại điểm đến
               </Label>
               <TmsCombobox
                 id='bag-destination-type-filter'
@@ -992,14 +981,14 @@ export function BagListPage() {
                   updateFilter('destinationPostOfficeCode', undefined);
                 }}
                 options={destinationTypeOptions}
-                placeholder='All destinations'
-                emptyText='No destination types found'
+                placeholder='Tất cả điểm đến'
+                emptyText='Không tìm thấy loại điểm đến'
               />
             </div>
             {filters.destinationType === 'HUB' && (
               <div className='space-y-2'>
                 <Label htmlFor='bag-destination-hub-filter'>
-                  Destination hub
+                  Hub đích
                 </Label>
                 <TmsCombobox
                   id='bag-destination-hub-filter'
@@ -1015,15 +1004,15 @@ export function BagListPage() {
                     )
                   }
                   options={hubOptions}
-                  placeholder='All destination hubs'
-                  emptyText='No hubs found'
+                  placeholder='Tất cả hub đích'
+                  emptyText='Không tìm thấy hub'
                 />
               </div>
             )}
             {filters.destinationType === 'POST_OFFICE' && (
               <div className='space-y-2'>
                 <Label htmlFor='bag-destination-post-office-filter'>
-                  Destination post office
+                  Bưu cục đích
                 </Label>
                 <TmsCombobox
                   id='bag-destination-post-office-filter'
@@ -1035,14 +1024,14 @@ export function BagListPage() {
                     )
                   }
                   options={postOfficeFilterOptions}
-                  placeholder='All post offices'
-                  emptyText='No post offices found'
+                  placeholder='Tất cả bưu cục'
+                  emptyText='Không tìm thấy bưu cục'
                   loading={isFetchingPostOffices}
                 />
               </div>
             )}
             <div className='space-y-2'>
-              <Label htmlFor='bag-vehicle-filter'>Vehicle</Label>
+              <Label htmlFor='bag-vehicle-filter'>Xe</Label>
               <TmsCombobox
                 id='bag-vehicle-filter'
                 value={
@@ -1055,12 +1044,12 @@ export function BagListPage() {
                   )
                 }
                 options={vehicleOptions}
-                placeholder='All vehicles'
-                emptyText='No vehicles found'
+                placeholder='Tất cả xe'
+                emptyText='Không tìm thấy xe'
               />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='bag-kpi-from'>KPI from</Label>
+              <Label htmlFor='bag-kpi-from'>KPI từ</Label>
               <Input
                 id='bag-kpi-from'
                 type='datetime-local'
@@ -1069,7 +1058,7 @@ export function BagListPage() {
               />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='bag-kpi-to'>KPI to</Label>
+              <Label htmlFor='bag-kpi-to'>KPI đến</Label>
               <Input
                 id='bag-kpi-to'
                 type='datetime-local'
@@ -1081,14 +1070,15 @@ export function BagListPage() {
 
           <DialogFooter className='gap-2 sm:gap-0'>
             <Button type='button' variant='outline' onClick={resetFilters}>
-              Clear all
+              Xóa tất cả
             </Button>
             <Button type='button' onClick={() => setAdvancedFiltersOpen(false)}>
-              Done
+              Xong
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      */}
 
       <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
         {bagStats.map((stat) => {
@@ -1120,11 +1110,20 @@ export function BagListPage() {
         data={bagsData}
         hubs={hubs}
         vehicles={vehicles}
+        filters={filters}
+        hubOptions={hubOptions}
+        vehicleOptions={vehicleOptions}
+        destinationTypeOptions={destinationTypeOptions}
+        postOfficeOptions={postOfficeFilterOptions}
+        statusOptions={statusOptions}
+        isLoadingPostOffices={isFetchingPostOffices}
         isFetching={isFetchingBags}
         canManage={canManage}
         canOperate={canOperate}
         page={page}
         onPageChange={setPage}
+        onFilterChange={updateFilter}
+        onClearFilters={resetFilters}
         onView={(bag) => setSelectedDetailId(bag.id)}
         onEdit={handleEdit}
         onDelete={setDeleteTarget}
@@ -1231,15 +1230,18 @@ export function BagListPage() {
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent className='sm:max-w-lg'>
           <DialogHeader>
-            <DialogTitle>Bag defaults</DialogTitle>
+            <DialogTitle>Mặc định túi</DialogTitle>
             <DialogDescription>
-              Set the default capacity used for new bags and auto planning.
+              Thiết lập sức chứa mặc định dùng khi tạo túi mới và lập túi tự
+              động.
             </DialogDescription>
           </DialogHeader>
           <form className='space-y-4' onSubmit={handleSubmitSettings}>
             <div className='grid gap-3 sm:grid-cols-3'>
               <div className='space-y-2'>
-                <Label htmlFor='bag-default-max-weight'>Max weight (kg)</Label>
+                <Label htmlFor='bag-default-max-weight'>
+                  Khối lượng tối đa (kg)
+                </Label>
                 <Input
                   id='bag-default-max-weight'
                   type='number'
@@ -1255,7 +1257,9 @@ export function BagListPage() {
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='bag-default-max-volume'>Max volume (m3)</Label>
+                <Label htmlFor='bag-default-max-volume'>
+                  Thể tích tối đa (m3)
+                </Label>
                 <Input
                   id='bag-default-max-volume'
                   type='number'
@@ -1271,7 +1275,7 @@ export function BagListPage() {
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='bag-default-max-orders'>Max orders</Label>
+                <Label htmlFor='bag-default-max-orders'>Số đơn tối đa</Label>
                 <Input
                   id='bag-default-max-orders'
                   type='number'
@@ -1294,13 +1298,13 @@ export function BagListPage() {
                 disabled={isUpdatingBagCapacitySettings}
                 onClick={() => setSettingsOpen(false)}
               >
-                Cancel
+                Hủy
               </Button>
               <Button type='submit' disabled={isUpdatingBagCapacitySettings}>
                 {isUpdatingBagCapacitySettings && (
                   <Loader2 className='h-4 w-4 animate-spin' />
                 )}
-                Save defaults
+                Lưu mặc định
               </Button>
             </DialogFooter>
           </form>
@@ -1314,9 +1318,9 @@ export function BagListPage() {
             setDeleteTarget(null);
           }
         }}
-        title='Delete bag'
-        description={`Delete ${deleteTarget?.bagCode ?? 'this bag'}?`}
-        confirmText='Delete'
+        title='Xóa túi'
+        description={`Xóa ${deleteTarget?.bagCode ?? 'túi này'}?`}
+        confirmText='Xóa'
         variant='destructive'
         isLoading={isDeleting}
         onConfirm={handleDelete}
@@ -1329,9 +1333,9 @@ export function BagListPage() {
             setSealTarget(null);
           }
         }}
-        title='Seal bag'
-        description={`Seal ${sealTarget?.bagCode ?? 'this bag'}?`}
-        confirmText='Seal'
+        title='Niêm phong túi'
+        description={`Niêm phong ${sealTarget?.bagCode ?? 'túi này'}?`}
+        confirmText='Niêm phong'
         isLoading={isSealing}
         onConfirm={handleSeal}
       />
@@ -1347,19 +1351,20 @@ export function BagListPage() {
       >
         <DialogContent className='sm:max-w-lg'>
           <DialogHeader>
-            <DialogTitle>Reopen bag</DialogTitle>
+            <DialogTitle>Mở lại túi</DialogTitle>
             <DialogDescription>
-              Reopen {reopenTarget?.bagCode ?? 'this bag'} for order changes.
+              Mở lại {reopenTarget?.bagCode ?? 'túi này'} để điều chỉnh đơn
+              hàng.
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-2'>
-            <Label htmlFor='reopen-reason'>Reason *</Label>
+            <Label htmlFor='reopen-reason'>Lý do *</Label>
             <Textarea
               id='reopen-reason'
               value={reopenReason}
               onChange={(event) => setReopenReason(event.target.value)}
               rows={4}
-              placeholder='Reason for reopening'
+              placeholder='Nhập lý do mở lại'
             />
           </div>
           <DialogFooter>
@@ -1371,11 +1376,11 @@ export function BagListPage() {
                 setReopenReason('');
               }}
             >
-              Cancel
+              Hủy
             </Button>
             <Button disabled={isReopening} onClick={handleReopen}>
               {isReopening && <Loader2 className='h-4 w-4 animate-spin' />}
-              Reopen
+              Mở lại
             </Button>
           </DialogFooter>
         </DialogContent>

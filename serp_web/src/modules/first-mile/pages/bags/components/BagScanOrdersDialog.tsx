@@ -64,11 +64,11 @@ export function BagScanOrdersDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-3xl'>
         <DialogHeader>
-          <DialogTitle>Add orders</DialogTitle>
+          <DialogTitle>Thêm đơn hàng</DialogTitle>
           <DialogDescription>
             {bag?.bagCode
-              ? `Select eligible orders for ${bag.bagCode}.`
-              : 'Select an open bag before adding orders.'}
+              ? `Chọn các đơn đủ điều kiện cho ${bag.bagCode}.`
+              : 'Chọn một túi đang mở trước khi thêm đơn hàng.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -80,7 +80,7 @@ export function BagScanOrdersDialog({
             onSelectionChange={onOrderCodesChange}
             disabled={!bag || isValidating || isAdding}
             loading={isOrdersLoading}
-            placeholder='Select eligible orders'
+            placeholder='Chọn đơn đủ điều kiện'
           />
 
           {validation && (
@@ -88,9 +88,9 @@ export function BagScanOrdersDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order code</TableHead>
-                    <TableHead>Result</TableHead>
-                    <TableHead>Reason</TableHead>
+                    <TableHead>Mã đơn hàng</TableHead>
+                    <TableHead>Kết quả</TableHead>
+                    <TableHead>Lý do</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -103,12 +103,12 @@ export function BagScanOrdersDialog({
                         {item.accepted ? (
                           <Badge className='gap-1'>
                             <CheckCircle2 className='h-3 w-3' />
-                            Accepted
+                            Chấp nhận
                           </Badge>
                         ) : (
                           <Badge variant='destructive' className='gap-1'>
                             <XCircle className='h-3 w-3' />
-                            Rejected
+                            Từ chối
                           </Badge>
                         )}
                       </TableCell>
@@ -130,7 +130,7 @@ export function BagScanOrdersDialog({
             disabled={isValidating || isAdding}
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            Hủy
           </Button>
           <Button
             type='button'
@@ -145,7 +145,7 @@ export function BagScanOrdersDialog({
             onClick={onValidate}
           >
             {isValidating && <Loader2 className='h-4 w-4 animate-spin' />}
-            Validate
+            Kiểm tra
           </Button>
           <Button
             type='button'
@@ -155,7 +155,7 @@ export function BagScanOrdersDialog({
             onClick={onAddAccepted}
           >
             {isAdding && <Loader2 className='h-4 w-4 animate-spin' />}
-            Add accepted
+            Thêm đơn hợp lệ
           </Button>
         </DialogFooter>
       </DialogContent>

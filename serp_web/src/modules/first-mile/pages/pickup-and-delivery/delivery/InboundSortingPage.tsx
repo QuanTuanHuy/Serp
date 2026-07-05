@@ -20,13 +20,13 @@ import { Button } from '@/shared/components/ui/button';
 import { Card } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Badge } from '@/shared/components/ui/badge';
-import { TmsCombobox } from '../../components/TmsCombobox';
-import { useGetPostOfficesQuery } from '../../api/firstMileApi';
+import { TmsCombobox } from '../../../components/TmsCombobox';
+import { useGetPostOfficesQuery } from '../../../api/firstMileApi';
 import {
   useGetInboundOrdersQuery,
   useConfirmInboundOrdersMutation,
-} from '../../api/lastMileApi';
-import type { InboundOrderResponse } from '../../types';
+} from '../../../api/lastMileApi';
+import type { InboundOrderResponse } from '../../../types';
 
 export const InboundSortingPage: React.FC = () => {
   const [postOfficeCode, setPostOfficeCode] = useState('');

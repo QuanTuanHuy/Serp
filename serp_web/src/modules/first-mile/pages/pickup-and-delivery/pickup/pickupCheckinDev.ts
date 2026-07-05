@@ -3,7 +3,7 @@
  * Description: Part of Serp Project - Dev helpers for pickup check-in
  */
 
-import type { PickupTrackingOrder } from '../../types';
+import type { PickupTrackingOrder } from '../../../types';
 
 const DEV_CHECKIN_STORAGE_KEY = 'serp.first-mile.pickup-dev-checkin';
 

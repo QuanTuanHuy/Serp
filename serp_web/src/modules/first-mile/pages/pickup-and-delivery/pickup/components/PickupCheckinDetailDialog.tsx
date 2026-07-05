@@ -16,8 +16,8 @@ import {
   DialogTitle,
 } from '@/shared/components';
 import { Loader2 } from 'lucide-react';
-import { useLazyGetPickupCheckinDetailQuery } from '../../../api';
-import type { PickupCheckinDetailResponse } from '../../../types';
+import { useLazyGetPickupCheckinDetailQuery } from '../../../../api';
+import type { PickupCheckinDetailResponse } from '../../../../types';
 import { PickupCheckinLocationMap } from './PickupCheckinLocationMap';
 
 interface PickupCheckinDetailDialogProps {

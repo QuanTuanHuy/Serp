@@ -65,17 +65,17 @@ export function BagFormDialog({
       <DialogContent className='sm:max-w-3xl'>
         <DialogHeader>
           <DialogTitle>
-            {mode === 'create' ? 'New bag' : 'Edit bag'}
+            {mode === 'create' ? 'Tạo túi mới' : 'Sửa túi'}
           </DialogTitle>
           <DialogDescription>
-            Configure the bag destination and capacity before scanning orders.
+            Cấu hình điểm đến và sức chứa trước khi quét đơn vào túi.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className='space-y-4'>
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='bag-code'>Bag code *</Label>
+              <Label htmlFor='bag-code'>Mã túi *</Label>
               <Input
                 id='bag-code'
                 value={values.bagCode}
@@ -88,7 +88,7 @@ export function BagFormDialog({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='bag-origin-hub'>Origin hub *</Label>
+              <Label htmlFor='bag-origin-hub'>Hub gốc *</Label>
               <TmsCombobox
                 id='bag-origin-hub'
                 value={values.originHubId}
@@ -100,14 +100,14 @@ export function BagFormDialog({
                   onUpdateField('destinationPostOfficeCode', '');
                 }}
                 options={hubOptions}
-                placeholder='Select origin hub'
-                emptyText='No hubs found'
+                placeholder='Chọn hub gốc'
+                emptyText='Không tìm thấy hub'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='bag-destination-type'>Destination type *</Label>
+              <Label htmlFor='bag-destination-type'>Loại điểm đến *</Label>
               <TmsCombobox
                 id='bag-destination-type'
                 value={values.destinationType}
@@ -120,15 +120,15 @@ export function BagFormDialog({
                   onUpdateField('destinationPostOfficeCode', '');
                 }}
                 options={BAG_DESTINATION_TYPE_OPTIONS}
-                placeholder='Select destination type'
-                emptyText='No destination types found'
+                placeholder='Chọn loại điểm đến'
+                emptyText='Không tìm thấy loại điểm đến'
                 disabled={isSaving}
               />
             </div>
 
             {values.destinationType === 'HUB' ? (
               <div className='space-y-2'>
-                <Label htmlFor='bag-destination-hub'>Destination hub *</Label>
+                <Label htmlFor='bag-destination-hub'>Hub đích *</Label>
                 <TmsCombobox
                   id='bag-destination-hub'
                   value={values.destinationHubId}
@@ -138,15 +138,15 @@ export function BagFormDialog({
                   options={hubOptions.filter(
                     (hub) => hub.value !== values.originHubId
                   )}
-                  placeholder='Select destination hub'
-                  emptyText='No destination hubs found'
+                  placeholder='Chọn hub đích'
+                  emptyText='Không tìm thấy hub đích'
                   disabled={isSaving}
                 />
               </div>
             ) : (
               <div className='space-y-2'>
                 <Label htmlFor='bag-destination-post-office'>
-                  Destination post office *
+                  Bưu cục đích *
                 </Label>
                 <TmsCombobox
                   id='bag-destination-post-office'
@@ -159,17 +159,17 @@ export function BagFormDialog({
                   loading={isLoadingDestinationPostOffices}
                   placeholder={
                     values.originHubId
-                      ? 'Select destination post office'
-                      : 'Select origin hub first'
+                      ? 'Chọn bưu cục đích'
+                      : 'Chọn hub gốc trước'
                   }
-                  emptyText='No mapped post offices found'
+                  emptyText='Không tìm thấy bưu cục được liên kết'
                 />
               </div>
             )}
 
             <div className='grid grid-cols-3 gap-3 sm:col-span-2'>
               <div className='space-y-2'>
-                <Label htmlFor='bag-max-weight'>Max kg</Label>
+                <Label htmlFor='bag-max-weight'>Khối lượng tối đa (kg)</Label>
                 <Input
                   id='bag-max-weight'
                   type='number'
@@ -183,7 +183,7 @@ export function BagFormDialog({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='bag-max-volume'>Max m3</Label>
+                <Label htmlFor='bag-max-volume'>Thể tích tối đa (m3)</Label>
                 <Input
                   id='bag-max-volume'
                   type='number'
@@ -197,7 +197,7 @@ export function BagFormDialog({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='bag-max-orders'>Max orders</Label>
+                <Label htmlFor='bag-max-orders'>Số đơn tối đa</Label>
                 <Input
                   id='bag-max-orders'
                   type='number'
@@ -213,14 +213,14 @@ export function BagFormDialog({
             </div>
 
             <div className='space-y-2 sm:col-span-2'>
-              <Label htmlFor='bag-note'>Note</Label>
+              <Label htmlFor='bag-note'>Ghi chú</Label>
               <Textarea
                 id='bag-note'
                 value={values.note}
                 onChange={(event) => onUpdateField('note', event.target.value)}
                 disabled={isSaving}
                 rows={3}
-                placeholder='Operational note'
+                placeholder='Ghi chú vận hành'
               />
             </div>
           </div>
@@ -232,11 +232,11 @@ export function BagFormDialog({
               disabled={isSaving}
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' disabled={isSaving}>
               {isSaving && <Loader2 className='h-4 w-4 animate-spin' />}
-              {mode === 'create' ? 'Create bag' : 'Save changes'}
+              {mode === 'create' ? 'Tạo túi' : 'Lưu thay đổi'}
             </Button>
           </DialogFooter>
         </form>

@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { cn } from '@/shared/utils';
-import type { PickupTrackingOrder } from '../../../types';
+import type { PickupTrackingOrder } from '../../../../types';
 
 type LeafletModule = typeof import('leaflet');
 type LeafletMap = import('leaflet').Map;

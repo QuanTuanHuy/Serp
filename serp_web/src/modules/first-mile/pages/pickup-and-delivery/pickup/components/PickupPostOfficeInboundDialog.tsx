@@ -19,7 +19,7 @@ import {
   DialogTitle,
   Input,
 } from '@/shared/components';
-import type { PickupTrackingOrder, PickupTrackingTrip } from '../../../types';
+import type { PickupTrackingOrder, PickupTrackingTrip } from '../../../../types';
 
 const normalizeScanCode = (value: string): string => value.trim().toUpperCase();
 

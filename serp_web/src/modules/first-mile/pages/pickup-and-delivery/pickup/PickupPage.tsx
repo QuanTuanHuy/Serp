@@ -37,7 +37,7 @@ import {
   useReturnPickupTripToPostOfficeMutation,
   useGetWardsByProvinceCodeQuery,
   usePickupCheckinOrderMutation,
-} from '../../api';
+} from '../../../api';
 import type {
   FirstMileOrderStatus,
   PickupTrackingOrder,
@@ -47,7 +47,7 @@ import type {
   PostOfficeStaff,
   Province,
   Ward,
-} from '../../types';
+} from '../../../types';
 import { PickupCheckinDetailDialog } from './components/PickupCheckinDetailDialog';
 import { PickupOrdersMap } from './components/PickupOrdersMap';
 import { PickupPostOfficeInboundDialog } from './components/PickupPostOfficeInboundDialog';
