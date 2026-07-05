@@ -24,7 +24,6 @@ public final class HubMapper {
         Hub hub = new Hub();
         hub.setCode(request.getCode());
         hub.setName(request.getName());
-        hub.setHubType(request.getHubType());
         hub.setProvinceCode(request.getProvinceCode());
         hub.setWardCode(request.getWardCode());
         hub.setAddressDetail(request.getAddressDetail());
@@ -45,7 +44,6 @@ public final class HubMapper {
     public static void mapForUpdate(UpdateHubRequest request, Hub hub) {
         hub.setCode(request.getCode());
         hub.setName(request.getName());
-        hub.setHubType(request.getHubType());
         hub.setProvinceCode(request.getProvinceCode());
         hub.setWardCode(request.getWardCode());
         hub.setAddressDetail(request.getAddressDetail());
@@ -63,7 +61,6 @@ public final class HubMapper {
                 hub.getId(),
                 hub.getCode(),
                 hub.getName(),
-                hub.getHubType(),
                 hub.getProvinceCode(),
                 hub.getWardCode(),
                 hub.getAddressDetail(),

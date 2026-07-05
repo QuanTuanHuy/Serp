@@ -16,7 +16,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.second_mile.enums.HubStatus;
-import serp.project.second_mile.enums.HubType;
 
 import java.time.LocalDateTime;
 
@@ -31,10 +30,6 @@ public class UpdateHubRequest {
     @JsonProperty("name")
     @NotBlank
     private String name;
-
-    @JsonProperty("hub_type")
-    @NotNull
-    private HubType hubType;
 
     @JsonProperty("province_code")
     @NotBlank

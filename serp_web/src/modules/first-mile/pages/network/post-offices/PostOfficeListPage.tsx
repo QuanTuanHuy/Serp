@@ -15,10 +15,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@/shared/components/ui';
 import { useNotification } from '@/shared/hooks';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
@@ -26,7 +22,6 @@ import { Plus, ShieldAlert } from 'lucide-react';
 import {
   useCreatePostOfficeMutation,
   useDeletePostOfficeMutation,
-  useGetOrdersQuery,
   useGetPostOfficesQuery,
   useGetWardsByProvinceCodeQuery,
   useImportPostOfficesMutation,
@@ -38,12 +33,10 @@ import {
 import {
   CoordinatePickerMap,
   TmsEntityLocationMap,
-  TmsEntityOrdersTab,
   type TmsLocationMapPoint,
   type TmsMapBounds,
 } from '../../../components';
 import type {
-  FirstMileOrderStatus,
   ImportHistory,
   PostOffice,
   PostOfficeImportItem,
@@ -76,10 +69,6 @@ import { usePostOfficeLocations } from './usePostOfficeLocations';
 const DEFAULT_PAGE_SIZE = 20;
 const MAP_PAGE_SIZE = 500;
 const IMPORT_PREVIEW_LIMIT = 5;
-const POST_OFFICE_ORDER_PAGE_SIZE = 10;
-const POST_OFFICE_STOCK_ORDER_STATUSES: FirstMileOrderStatus[] = [
-  'AT_ORIGIN_POST_OFFICE',
-];
 
 function areMapBoundsEqual(
   current: TmsMapBounds | null,
@@ -115,10 +104,6 @@ export const PostOfficeListPage: React.FC = () => {
   const [detailTarget, setDetailTarget] = React.useState<PostOffice | null>(
     null
   );
-  const [detailTab, setDetailTab] = React.useState<'details' | 'orders'>(
-    'details'
-  );
-  const [detailOrdersPage, setDetailOrdersPage] = React.useState(0);
   const [deleteTarget, setDeleteTarget] = React.useState<PostOffice | null>(
     null
   );
@@ -152,17 +137,6 @@ export const PostOfficeListPage: React.FC = () => {
     },
     { skip: !mapBounds }
   );
-  const { data: detailOrdersData, isFetching: isFetchingDetailOrders } =
-    useGetOrdersQuery(
-      {
-        page: detailOrdersPage,
-        size: POST_OFFICE_ORDER_PAGE_SIZE,
-        originPostOfficeCode: detailTarget?.code,
-        statuses: POST_OFFICE_STOCK_ORDER_STATUSES,
-      },
-      { skip: !detailTarget }
-    );
-
   const mapPostOfficePoints = React.useMemo(
     () =>
       (mapPostOfficeData?.items ?? []).flatMap((postOffice) => {
@@ -553,8 +527,6 @@ export const PostOfficeListPage: React.FC = () => {
 
   const handleOpenDetail = (postOffice: PostOffice) => {
     setDetailTarget(postOffice);
-    setDetailTab('details');
-    setDetailOrdersPage(0);
   };
 
   const handleMapPostOfficeClick = React.useCallback(
@@ -565,8 +537,6 @@ export const PostOfficeListPage: React.FC = () => {
 
       if (postOffice) {
         setDetailTarget(postOffice);
-        setDetailTab('details');
-        setDetailOrdersPage(0);
       }
     },
     [data?.items, mapPostOfficeData?.items]
@@ -727,8 +697,6 @@ export const PostOfficeListPage: React.FC = () => {
         onOpenChange={(open) => {
           if (!open) {
             setDetailTarget(null);
-            setDetailTab('details');
-            setDetailOrdersPage(0);
           }
         }}
       >
@@ -741,144 +709,107 @@ export const PostOfficeListPage: React.FC = () => {
           </DialogHeader>
 
           {detailTarget ? (
-            <Tabs
-              value={detailTab}
-              onValueChange={(value) => setDetailTab(value as typeof detailTab)}
-            >
-              <TabsList>
-                <TabsTrigger value='details'>Chi tiết</TabsTrigger>
-                <TabsTrigger value='orders'>Đơn hàng</TabsTrigger>
-              </TabsList>
-              <TabsContent value='details' className='mt-4'>
-                <div className='space-y-4'>
-                  <div className='grid gap-3 md:grid-cols-2 text-sm'>
-                    <div>
-                      <p className='text-muted-foreground'>Mã bưu cục</p>
-                      <p className='font-medium'>{detailTarget.code}</p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>Tên bưu cục</p>
-                      <p className='font-medium'>{detailTarget.name}</p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>Trạng thái</p>
-                      <Badge
-                        variant={getStatusBadgeVariant(detailTarget.status)}
-                      >
-                        {formatPostOfficeStatusLabel(detailTarget.status)}
-                      </Badge>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>Số điện thoại</p>
-                      <p className='font-medium'>
-                        {detailTarget.phoneNumber || '--'}
-                      </p>
-                    </div>
-                    <div className='md:col-span-2'>
-                      <p className='text-muted-foreground'>Địa chỉ</p>
-                      <p className='font-medium'>
-                        {detailTarget.addressDetail}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>Tỉnh/Phường xã</p>
-                      <p className='font-medium'>
-                        {getProvinceLabel(detailTarget.provinceCode)} /{' '}
-                        {getWardLabel(
-                          detailTarget.provinceCode,
-                          detailTarget.wardCode
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>
-                        Bán kính phục vụ (m)
-                      </p>
-                      <p className='font-medium'>
-                        {detailTarget.serviceRadiusM}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>Sức chứa lấy hàng</p>
-                      <p className='font-medium'>
-                        {detailTarget.dailyCapacity ?? '--'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>
-                        Tải lấy hàng hiện tại
-                      </p>
-                      <p className='font-medium'>
-                        {detailTarget.currentLoad ?? '--'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>
-                        Sức chứa giao hàng
-                      </p>
-                      <p className='font-medium'>
-                        {detailTarget.deliveryCapacity ?? '--'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>
-                        Tải giao hàng hiện tại
-                      </p>
-                      <p className='font-medium'>
-                        {detailTarget.currentDeliveryLoad ?? '--'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>Độ ưu tiên</p>
-                      <p className='font-medium'>
-                        {detailTarget.priority ?? '--'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>Tọa độ</p>
-                      <p className='font-medium'>
-                        {detailTarget.latitude ?? '--'},{' '}
-                        {detailTarget.longitude ?? '--'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className='space-y-2'>
-                    <p className='text-sm font-medium'>Bản đồ</p>
-                    {detailTarget.latitude !== undefined &&
-                    detailTarget.latitude !== null &&
-                    detailTarget.longitude !== undefined &&
-                    detailTarget.longitude !== null ? (
-                      <CoordinatePickerMap
-                        latitude={detailTarget.latitude}
-                        longitude={detailTarget.longitude}
-                        disabled
-                        className='h-72'
-                        onChange={() => {
-                          // Read-only map in detail mode.
-                        }}
-                      />
-                    ) : (
-                      <p className='text-sm text-muted-foreground'>
-                        Bưu cục này chưa có tọa độ định vị.
-                      </p>
-                    )}
-                  </div>
+            <div className='mt-4 space-y-4'>
+              <div className='grid gap-3 md:grid-cols-2 text-sm'>
+                <div>
+                  <p className='text-muted-foreground'>Mã bưu cục</p>
+                  <p className='font-medium'>{detailTarget.code}</p>
                 </div>
-              </TabsContent>
-              <TabsContent value='orders' className='mt-4'>
-                <TmsEntityOrdersTab
-                  data={detailOrdersData}
-                  isFetching={isFetchingDetailOrders}
-                  page={detailOrdersPage}
-                  emptyText='Hiện không có đơn hàng tại bưu cục này.'
-                  onPreviousPage={() =>
-                    setDetailOrdersPage((prev) => Math.max(prev - 1, 0))
-                  }
-                  onNextPage={() => setDetailOrdersPage((prev) => prev + 1)}
-                />
-              </TabsContent>
-            </Tabs>
+                <div>
+                  <p className='text-muted-foreground'>Tên bưu cục</p>
+                  <p className='font-medium'>{detailTarget.name}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Trạng thái</p>
+                  <Badge variant={getStatusBadgeVariant(detailTarget.status)}>
+                    {formatPostOfficeStatusLabel(detailTarget.status)}
+                  </Badge>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Số điện thoại</p>
+                  <p className='font-medium'>
+                    {detailTarget.phoneNumber || '--'}
+                  </p>
+                </div>
+                <div className='md:col-span-2'>
+                  <p className='text-muted-foreground'>Địa chỉ</p>
+                  <p className='font-medium'>{detailTarget.addressDetail}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Tỉnh/Phường xã</p>
+                  <p className='font-medium'>
+                    {getProvinceLabel(detailTarget.provinceCode)} /{' '}
+                    {getWardLabel(
+                      detailTarget.provinceCode,
+                      detailTarget.wardCode
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Bán kính phục vụ (m)</p>
+                  <p className='font-medium'>{detailTarget.serviceRadiusM}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Sức chứa lấy hàng</p>
+                  <p className='font-medium'>
+                    {detailTarget.dailyCapacity ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Tải lấy hàng hiện tại</p>
+                  <p className='font-medium'>
+                    {detailTarget.currentLoad ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Sức chứa giao hàng</p>
+                  <p className='font-medium'>
+                    {detailTarget.deliveryCapacity ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>
+                    Tải giao hàng hiện tại
+                  </p>
+                  <p className='font-medium'>
+                    {detailTarget.currentDeliveryLoad ?? '--'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Độ ưu tiên</p>
+                  <p className='font-medium'>{detailTarget.priority ?? '--'}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Tọa độ</p>
+                  <p className='font-medium'>
+                    {detailTarget.latitude ?? '--'},{' '}
+                    {detailTarget.longitude ?? '--'}
+                  </p>
+                </div>
+              </div>
+
+              <div className='space-y-2'>
+                <p className='text-sm font-medium'>Bản đồ</p>
+                {detailTarget.latitude !== undefined &&
+                detailTarget.latitude !== null &&
+                detailTarget.longitude !== undefined &&
+                detailTarget.longitude !== null ? (
+                  <CoordinatePickerMap
+                    latitude={detailTarget.latitude}
+                    longitude={detailTarget.longitude}
+                    disabled
+                    className='h-72'
+                    onChange={() => {
+                      // Read-only map in detail mode.
+                    }}
+                  />
+                ) : (
+                  <p className='text-sm text-muted-foreground'>
+                    Bưu cục này chưa có tọa độ định vị.
+                  </p>
+                )}
+              </div>
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>

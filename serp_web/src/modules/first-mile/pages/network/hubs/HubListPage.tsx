@@ -20,11 +20,9 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Label,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Table,
   TableBody,
   TableCell,
@@ -45,20 +43,19 @@ import {
   Eye,
   ImageUp,
   RefreshCw,
+  Search,
   ShieldAlert,
+  X,
 } from 'lucide-react';
-import type { TmsFilterMode } from '../../../components/list';
 import {
+  CoordinatePickerMap,
   TmsCombobox,
   TmsEntityLocationMap,
-  TmsEntityOrdersTab,
   type TmsLocationMapPoint,
   type TmsMapBounds,
 } from '../../../components';
 import {
   useGetHubsQuery,
-  useGetHubPostOfficesQuery,
-  useGetOrdersQuery,
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
   useGeocodeAddressMutation,
@@ -71,7 +68,6 @@ import {
   useImportHubsMutation,
 } from '../../../api';
 import type {
-  FirstMileOrderStatus,
   Hub,
   HubStatus,
   HubImportItem,
@@ -80,10 +76,9 @@ import type {
   ValidateImportFileResponse,
   Ward,
 } from '../../../types';
-import { HubFiltersCard, HubFormDialog, HubImportCard } from './components';
+import { HubFormDialog, HubImportCard } from './components';
 import {
   buildHubListFilters,
-  countActiveHubAdvancedFilters,
   DEFAULT_HUB_FILTER_FORM,
   type HubFilterFormState,
 } from './hubFilterModels';
@@ -91,7 +86,8 @@ import {
   buildCreateHubRequest,
   buildUpdateHubRequest,
   DEFAULT_HUB_FORM,
-  getHubTypeLabel,
+  getHubStatusLabel,
+  HUB_STATUS_OPTIONS,
   mapHubToFormState,
   validateHubForm,
   type HubFormMode,
@@ -100,13 +96,6 @@ import {
 
 const PAGE_SIZE = 20;
 const MAP_PAGE_SIZE = 500;
-const HUB_ORDER_PAGE_SIZE = 10;
-const HUB_STOCK_ORDER_STATUSES: FirstMileOrderStatus[] = [
-  'INBOUND_AT_ORIGIN_HUB',
-  'BAGGING_IN_PROGRESS',
-  'BAGGED',
-  'BAG_SEALED',
-];
 
 function areMapBoundsEqual(
   current: TmsMapBounds | null,
@@ -146,7 +135,6 @@ export function HubListPage() {
   );
   const isTmsAdmin = roles.includes('TMS_ADMIN');
 
-  const [filterMode, setFilterMode] = React.useState<TmsFilterMode>('basic');
   const [filterFormValues, setFilterFormValues] =
     React.useState<HubFilterFormState>(DEFAULT_HUB_FILTER_FORM);
   const [appliedFilters, setAppliedFilters] = React.useState<HubListFilters>(
@@ -154,6 +142,35 @@ export function HubListPage() {
   );
   const [currentPage, setCurrentPage] = React.useState(0);
   const [mapBounds, setMapBounds] = React.useState<TmsMapBounds | null>(null);
+  const [openTableFilter, setOpenTableFilter] = React.useState<
+    'code' | 'name' | 'status' | 'location' | 'address' | 'hubLoad' | null
+  >(null);
+  const codeFilterInputRef = React.useRef<HTMLInputElement>(null);
+  const nameFilterInputRef = React.useRef<HTMLInputElement>(null);
+  const addressFilterInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (
+      openTableFilter !== 'code' &&
+      openTableFilter !== 'name' &&
+      openTableFilter !== 'address'
+    ) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (openTableFilter === 'code') {
+        codeFilterInputRef.current?.focus();
+        codeFilterInputRef.current?.select();
+      } else if (openTableFilter === 'name') {
+        nameFilterInputRef.current?.focus();
+        nameFilterInputRef.current?.select();
+      } else {
+        addressFilterInputRef.current?.focus();
+        addressFilterInputRef.current?.select();
+      }
+    }, 0);
+  }, [openTableFilter]);
 
   const {
     data: hubsData,
@@ -247,11 +264,6 @@ export function HubListPage() {
     return options;
   }, [selectedFilterProvinceCode, selectedFilterWardCode, wardsForFilterData]);
 
-  const advancedFieldCount = React.useMemo(
-    () => countActiveHubAdvancedFilters(filterFormValues),
-    [filterFormValues]
-  );
-
   const updateFilterField = React.useCallback(
     <K extends keyof HubFilterFormState>(
       field: K,
@@ -277,10 +289,6 @@ export function HubListPage() {
     React.useState<HubFormState>(DEFAULT_HUB_FORM);
 
   const [detailHub, setDetailHub] = React.useState<Hub | null>(null);
-  const [detailTab, setDetailTab] = React.useState<'details' | 'orders'>(
-    'details'
-  );
-  const [detailOrdersPage, setDetailOrdersPage] = React.useState(0);
   const [deleteTarget, setDeleteTarget] = React.useState<Hub | null>(null);
 
   const [selectedImportFile, setSelectedImportFile] =
@@ -295,35 +303,6 @@ export function HubListPage() {
   const [imageUploadHubId, setImageUploadHubId] = React.useState<number | null>(
     null
   );
-
-  const {
-    data: detailHubPostOfficeData,
-    isFetching: isFetchingDetailHubPostOffices,
-  } = useGetHubPostOfficesQuery(
-    {
-      hubId: detailHub?.id || 0,
-      page: 0,
-      size: 500,
-    },
-    { skip: !detailHub }
-  );
-  const detailHubPostOfficeCodes = React.useMemo(
-    () =>
-      (detailHubPostOfficeData?.items ?? [])
-        .map((mapping) => mapping.postOfficeCode)
-        .filter((code): code is string => Boolean(code)),
-    [detailHubPostOfficeData?.items]
-  );
-  const { data: detailOrdersData, isFetching: isFetchingDetailOrders } =
-    useGetOrdersQuery(
-      {
-        page: detailOrdersPage,
-        size: HUB_ORDER_PAGE_SIZE,
-        originPostOfficeCodes: detailHubPostOfficeCodes,
-        statuses: HUB_STOCK_ORDER_STATUSES,
-      },
-      { skip: !detailHub || detailHubPostOfficeCodes.length === 0 }
-    );
 
   const { data: provincesData } = useGetProvincesQuery({
     page: 0,
@@ -408,7 +387,7 @@ export function HubListPage() {
 
   const openCreateDialog = () => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can create hubs.');
+      notification.error('Chỉ TMS_ADMIN có thể tạo hub.');
       return;
     }
     setFormMode('create');
@@ -419,7 +398,7 @@ export function HubListPage() {
 
   const openEditDialog = (hub: Hub) => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can update hubs.');
+      notification.error('Chỉ TMS_ADMIN có thể cập nhật hub.');
       return;
     }
     setFormMode('edit');
@@ -431,7 +410,7 @@ export function HubListPage() {
   const handleSubmitHubForm = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can save hubs.');
+      notification.error('Chỉ TMS_ADMIN có thể lưu hub.');
       return;
     }
     const err = validateHubForm(formValues);
@@ -442,13 +421,13 @@ export function HubListPage() {
     try {
       if (formMode === 'create') {
         await createHub(buildCreateHubRequest(formValues)).unwrap();
-        notification.success('Hub created successfully.');
+        notification.success('Tạo hub thành công.');
       } else if (editingHubId != null) {
         await updateHub({
           id: editingHubId,
           body: buildUpdateHubRequest(formValues),
         }).unwrap();
-        notification.success('Hub updated successfully.');
+        notification.success('Cập nhật hub thành công.');
       }
       setFormDialogOpen(false);
       refetch();
@@ -456,7 +435,7 @@ export function HubListPage() {
         void refetchMapHubs();
       }
     } catch (error) {
-      notification.error('Failed to save hub.', {
+      notification.error('Không thể lưu hub.', {
         description: getErrorMessage(error),
       });
     }
@@ -464,19 +443,19 @@ export function HubListPage() {
 
   const handleGeocodeHubAddress = React.useCallback(async () => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can geocode hub location.');
+      notification.error('Chỉ TMS_ADMIN có thể định vị hub.');
       return;
     }
 
     const addressDetail = formValues.address_detail.trim();
     if (!addressDetail) {
-      notification.error('Address detail is required before geocoding.');
+      notification.error('Cần nhập địa chỉ chi tiết trước khi định vị.');
       return;
     }
 
     const provinceCode = selectedFormProvinceCode;
     if (!provinceCode) {
-      notification.error('Select a province before geocoding.');
+      notification.error('Vui lòng chọn tỉnh/thành phố trước khi định vị.');
       return;
     }
 
@@ -497,9 +476,9 @@ export function HubListPage() {
       const geocoded = await geocodeAddress({ address: query }).unwrap();
       updateFormField('latitude', String(geocoded.latitude));
       updateFormField('longitude', String(geocoded.longitude));
-      notification.success('Coordinates updated from address geocoding.');
+      notification.success('Đã cập nhật tọa độ từ địa chỉ.');
     } catch (error) {
-      notification.error('Failed to geocode hub address.', {
+      notification.error('Không thể định vị địa chỉ hub.', {
         description: getErrorMessage(error),
       });
     }
@@ -521,14 +500,14 @@ export function HubListPage() {
     }
     try {
       await deleteHub(deleteTarget.id).unwrap();
-      notification.success('Hub deleted successfully.');
+      notification.success('Xóa hub thành công.');
       setDeleteTarget(null);
       refetch();
       if (mapBounds) {
         void refetchMapHubs();
       }
     } catch (error) {
-      notification.error('Failed to delete hub.', {
+      notification.error('Không thể xóa hub.', {
         description: getErrorMessage(error),
       });
     }
@@ -536,7 +515,7 @@ export function HubListPage() {
 
   const handleDownloadTemplate = async () => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can download hub templates.');
+      notification.error('Chỉ TMS_ADMIN có thể tải mẫu hub.');
       return;
     }
     try {
@@ -549,9 +528,9 @@ export function HubListPage() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      notification.success('Hub template downloaded successfully.');
+      notification.success('Tải mẫu hub thành công.');
     } catch (error) {
-      notification.error('Failed to download hub template.', {
+      notification.error('Không thể tải mẫu hub.', {
         description: getErrorMessage(error),
       });
     }
@@ -559,11 +538,11 @@ export function HubListPage() {
 
   const handleValidateImportFile = async () => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can validate hub imports.');
+      notification.error('Chỉ TMS_ADMIN có thể kiểm tra dữ liệu nhập hub.');
       return;
     }
     if (!selectedImportFile) {
-      notification.error('Please select an Excel file first.');
+      notification.error('Vui lòng chọn tệp Excel trước.');
       return;
     }
     try {
@@ -572,10 +551,10 @@ export function HubListPage() {
       const result = await validateHubImport(formData).unwrap();
       setValidateImportResult(result);
       if (result.is_success) {
-        notification.success('File validated successfully.');
+        notification.success('Kiểm tra tệp thành công.');
       }
     } catch (error) {
-      notification.error('Failed to validate hub import file.', {
+      notification.error('Không thể kiểm tra tệp nhập hub.', {
         description: getErrorMessage(error),
       });
     }
@@ -583,15 +562,15 @@ export function HubListPage() {
 
   const handleImportFile = async () => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can import hubs.');
+      notification.error('Chỉ TMS_ADMIN có thể nhập hub.');
       return;
     }
     if (!selectedImportFile) {
-      notification.error('Please select an Excel file first.');
+      notification.error('Vui lòng chọn tệp Excel trước.');
       return;
     }
     if (!validateImportResult) {
-      notification.error('Please validate the selected file before importing.');
+      notification.error('Vui lòng kiểm tra tệp đã chọn trước khi nhập.');
       return;
     }
     if (!validateImportResult.is_success) {
@@ -602,8 +581,8 @@ export function HubListPage() {
       formData.append('file', selectedImportFile);
       const job = await importHubs(formData).unwrap();
       setLastImportJob(job);
-      notification.success('Hub import job created.', {
-        description: `Import ID: ${job.id}`,
+      notification.success('Đã tạo tác vụ nhập hub.', {
+        description: `Mã nhập: ${job.id}`,
       });
       resetImportFileSelection();
       refetch();
@@ -611,7 +590,7 @@ export function HubListPage() {
         void refetchMapHubs();
       }
     } catch (error) {
-      notification.error('Failed to import hub file.', {
+      notification.error('Không thể nhập tệp hub.', {
         description: getErrorMessage(error),
       });
     }
@@ -619,8 +598,6 @@ export function HubListPage() {
 
   const openHubDetail = React.useCallback((hub: Hub) => {
     setDetailHub(hub);
-    setDetailTab('details');
-    setDetailOrdersPage(0);
   }, []);
 
   const handleMapHubClick = React.useCallback(
@@ -638,7 +615,7 @@ export function HubListPage() {
 
   const triggerHubImagePicker = (hubId: number) => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can upload hub images.');
+      notification.error('Chỉ TMS_ADMIN có thể tải ảnh hub.');
       return;
     }
     setImageUploadHubId(hubId);
@@ -656,10 +633,10 @@ export function HubListPage() {
     }
     try {
       await uploadHubImage({ id: imageUploadHubId, file }).unwrap();
-      notification.success('Hub image updated successfully.');
+      notification.success('Cập nhật ảnh hub thành công.');
       refetch();
     } catch (error) {
-      notification.error('Failed to upload hub image.', {
+      notification.error('Không thể tải ảnh hub.', {
         description: getErrorMessage(error),
       });
     } finally {
@@ -676,17 +653,55 @@ export function HubListPage() {
       setAppliedFilters(nextFilters);
     } catch (error) {
       notification.error(
-        error instanceof Error ? error.message : 'Invalid filter values.'
+        error instanceof Error ? error.message : 'Giá trị lọc không hợp lệ.'
       );
     }
   };
 
-  const handleClearFilters = () => {
-    setFilterFormValues(DEFAULT_HUB_FILTER_FORM);
-    setAppliedFilters({});
-    setFilterMode('basic');
-    setCurrentPage(0);
+  const handleTableFilterSubmit = (event: React.FormEvent) => {
+    handleApplyFilters(event);
+    setOpenTableFilter(null);
   };
+
+  const statusOptions = [
+    { value: 'ALL', label: 'Tất cả trạng thái' },
+    ...HUB_STATUS_OPTIONS,
+  ];
+  const provinceOptions = [
+    { value: 'ALL', label: 'Tất cả tỉnh/thành phố' },
+    ...provinceSelectOptions.flatMap((province) =>
+      province.provinceCode
+        ? [
+            {
+              value: province.provinceCode,
+              label: `${province.name} (${province.provinceCode})`,
+            },
+          ]
+        : []
+    ),
+  ];
+  const wardOptions = [
+    { value: 'ALL', label: 'Tất cả phường/xã' },
+    ...filterWardOptions.flatMap((ward) =>
+      ward.wardCode
+        ? [
+            {
+              value: ward.wardCode,
+              label: `${ward.name} (${ward.wardCode})`,
+            },
+          ]
+        : []
+    ),
+  ];
+  const isCodeFilterActive = Boolean(filterFormValues.code.trim());
+  const isNameFilterActive = Boolean(filterFormValues.name.trim());
+  const isStatusFilterActive = filterFormValues.status !== 'ALL';
+  const isLocationFilterActive =
+    Boolean(selectedFilterProvinceCode) || Boolean(selectedFilterWardCode);
+  const isAddressFilterActive = Boolean(filterFormValues.keyword.trim());
+  const isHubLoadFilterActive =
+    Boolean(filterFormValues.minCurrentLoad.trim()) ||
+    Boolean(filterFormValues.maxCurrentLoad.trim());
 
   return (
     <>
@@ -701,10 +716,9 @@ export function HubListPage() {
       <div className='space-y-6'>
         <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
           <div className='flex flex-col gap-2'>
-            <h1 className='text-2xl font-bold tracking-tight'>Hubs</h1>
+            <h1 className='text-2xl font-bold tracking-tight'>Hub</h1>
             <p className='text-muted-foreground'>
-              Manage second-mile hubs, location quality, and hub stock
-              visibility.
+              Quản lý hub trung chuyển, chất lượng vị trí và tồn đơn tại hub.
             </p>
           </div>
           <div className='flex flex-wrap items-center gap-2'>
@@ -718,7 +732,7 @@ export function HubListPage() {
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`}
               />
-              Refresh
+              Làm mới
             </Button>
             {isTmsAdmin ? (
               <>
@@ -743,46 +757,27 @@ export function HubListPage() {
                 />
                 <Button type='button' onClick={openCreateDialog}>
                   <Plus className='h-4 w-4 mr-2' />
-                  New hub
+                  Tạo hub
                 </Button>
               </>
             ) : (
               <Badge variant='outline' className='gap-1'>
                 <ShieldAlert className='h-3.5 w-3.5' />
-                View only (write actions require TMS_ADMIN)
+                Chỉ xem (cần quyền TMS_ADMIN để thay đổi dữ liệu)
               </Badge>
             )}
           </div>
         </div>
 
-        <HubFiltersCard
-          filterMode={filterMode}
-          filterFormValues={filterFormValues}
-          advancedFieldCount={advancedFieldCount}
-          isFetching={isFetching}
-          provinceSelectOptions={provinceSelectOptions}
-          filterWardOptions={filterWardOptions}
-          selectedFilterProvinceCode={selectedFilterProvinceCode}
-          selectedFilterWardCode={selectedFilterWardCode}
-          isFetchingWardsForFilter={isFetchingWardsForFilter}
-          onFilterModeChange={setFilterMode}
-          onFilterFieldChange={updateFilterField}
-          onApplyFilters={handleApplyFilters}
-          onClearFilters={handleClearFilters}
-          onRefresh={() => {
-            void refetch();
-          }}
-        />
-
         <TmsEntityLocationMap
-          title='Hub map'
-          description='Markers are loaded only for hubs inside the visible map area.'
+          title='Bản đồ hub'
+          description='Chỉ tải marker của hub trong khu vực bản đồ đang hiển thị.'
           points={mapHubPoints}
           markerColor='#b45309'
           markerFillColor='#f59e0b'
           loading={!mapBounds || isFetchingMapHubs}
           totalItems={mapHubsData?.totalItems}
-          emptyText='No geocoded hubs in this map area.'
+          emptyText='Không có hub đã định vị trong khu vực bản đồ này.'
           onBoundsChange={handleMapBoundsChange}
           onPointClick={handleMapHubClick}
         />
@@ -791,35 +786,517 @@ export function HubListPage() {
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <Building2 className='h-5 w-5' />
-              Hub table
+              Danh sách hub
             </CardTitle>
           </CardHeader>
           <CardContent className='space-y-4'>
             {isFetching && hubs.length === 0 ? (
               <div className='text-center text-muted-foreground py-8'>
-                Loading hubs...
+                Đang tải hub...
               </div>
             ) : hubs.length === 0 ? (
               <div className='text-center text-muted-foreground py-8'>
-                No hubs found
+                Không tìm thấy hub
               </div>
             ) : (
               <div className='rounded-md border'>
                 <Table className='min-w-[1240px]'>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className='w-[150px]'>Code</TableHead>
-                      <TableHead className='w-[220px]'>Name</TableHead>
-                      <TableHead className='w-[120px]'>Type</TableHead>
-                      <TableHead className='w-[130px]'>Status</TableHead>
-                      <TableHead className='w-[220px]'>
-                        Province / Ward
+                      <TableHead className='w-[150px]'>
+                        <Popover
+                          open={openTableFilter === 'code'}
+                          onOpenChange={(open) =>
+                            setOpenTableFilter(open ? 'code' : null)
+                          }
+                        >
+                          <div className='flex items-center gap-1'>
+                            <span>Mã hub</span>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type='button'
+                                variant={
+                                  isCodeFilterActive ? 'outline' : 'ghost'
+                                }
+                                size='icon'
+                                className='size-7'
+                                title='Tìm mã hub'
+                                aria-label='Tìm mã hub'
+                              >
+                                <Search className='h-4 w-4' />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                          <PopoverContent
+                            align='start'
+                            sideOffset={8}
+                            className='w-72 p-3'
+                          >
+                            <form
+                              className='flex items-center gap-2'
+                              onSubmit={handleTableFilterSubmit}
+                            >
+                              <Input
+                                ref={codeFilterInputRef}
+                                className='h-9 bg-background'
+                                value={filterFormValues.code}
+                                onChange={(event) =>
+                                  updateFilterField('code', event.target.value)
+                                }
+                                placeholder='Tìm mã hub...'
+                                disabled={isFetching}
+                              />
+                              <Button
+                                type='submit'
+                                variant='outline'
+                                size='icon'
+                                className='size-9 shrink-0'
+                                disabled={isFetching}
+                                title='Tìm kiếm'
+                                aria-label='Tìm mã hub'
+                              >
+                                <Search className='h-4 w-4' />
+                              </Button>
+                              {isCodeFilterActive ? (
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='icon'
+                                  className='size-9 shrink-0'
+                                  disabled={isFetching}
+                                  onClick={() => updateFilterField('code', '')}
+                                  title='Xóa tìm kiếm'
+                                  aria-label='Xóa tìm kiếm mã hub'
+                                >
+                                  <X className='h-4 w-4' />
+                                </Button>
+                              ) : null}
+                            </form>
+                          </PopoverContent>
+                        </Popover>
                       </TableHead>
-                      <TableHead className='w-[280px]'>Address</TableHead>
-                      <TableHead className='w-[130px]'>Hub load</TableHead>
-                      <TableHead className='w-[180px]'>Coordinates</TableHead>
+                      <TableHead className='w-[220px]'>
+                        <Popover
+                          open={openTableFilter === 'name'}
+                          onOpenChange={(open) =>
+                            setOpenTableFilter(open ? 'name' : null)
+                          }
+                        >
+                          <div className='flex items-center gap-1'>
+                            <span>Tên hub</span>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type='button'
+                                variant={
+                                  isNameFilterActive ? 'outline' : 'ghost'
+                                }
+                                size='icon'
+                                className='size-7'
+                                title='Tìm tên hub'
+                                aria-label='Tìm tên hub'
+                              >
+                                <Search className='h-4 w-4' />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                          <PopoverContent
+                            align='start'
+                            sideOffset={8}
+                            className='w-72 p-3'
+                          >
+                            <form
+                              className='flex items-center gap-2'
+                              onSubmit={handleTableFilterSubmit}
+                            >
+                              <Input
+                                ref={nameFilterInputRef}
+                                className='h-9 bg-background'
+                                value={filterFormValues.name}
+                                onChange={(event) =>
+                                  updateFilterField('name', event.target.value)
+                                }
+                                placeholder='Tìm tên hub...'
+                                disabled={isFetching}
+                              />
+                              <Button
+                                type='submit'
+                                variant='outline'
+                                size='icon'
+                                className='size-9 shrink-0'
+                                disabled={isFetching}
+                                title='Tìm kiếm'
+                                aria-label='Tìm tên hub'
+                              >
+                                <Search className='h-4 w-4' />
+                              </Button>
+                              {isNameFilterActive ? (
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='icon'
+                                  className='size-9 shrink-0'
+                                  disabled={isFetching}
+                                  onClick={() => updateFilterField('name', '')}
+                                  title='Xóa tìm kiếm'
+                                  aria-label='Xóa tìm kiếm tên hub'
+                                >
+                                  <X className='h-4 w-4' />
+                                </Button>
+                              ) : null}
+                            </form>
+                          </PopoverContent>
+                        </Popover>
+                      </TableHead>
+                      <TableHead className='w-[130px]'>
+                        <Popover
+                          open={openTableFilter === 'status'}
+                          onOpenChange={(open) =>
+                            setOpenTableFilter(open ? 'status' : null)
+                          }
+                        >
+                          <div className='flex items-center gap-1'>
+                            <span>Trạng thái</span>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type='button'
+                                variant={
+                                  isStatusFilterActive ? 'outline' : 'ghost'
+                                }
+                                size='icon'
+                                className='size-7'
+                                title='Lọc trạng thái'
+                                aria-label='Lọc trạng thái'
+                              >
+                                <Search className='h-4 w-4' />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                          <PopoverContent
+                            align='start'
+                            sideOffset={8}
+                            className='w-60 p-3'
+                          >
+                            <form
+                              className='space-y-3'
+                              onSubmit={handleTableFilterSubmit}
+                            >
+                              <TmsCombobox
+                                id='hub-table-filter-status'
+                                value={filterFormValues.status}
+                                onValueChange={(value) =>
+                                  updateFilterField(
+                                    'status',
+                                    value as HubFilterFormState['status']
+                                  )
+                                }
+                                options={statusOptions}
+                                placeholder='Tất cả trạng thái'
+                                emptyText='Không tìm thấy trạng thái'
+                                disabled={isFetching}
+                              />
+                              <div className='flex justify-end gap-2'>
+                                {isStatusFilterActive ? (
+                                  <Button
+                                    type='button'
+                                    variant='ghost'
+                                    size='sm'
+                                    disabled={isFetching}
+                                    onClick={() =>
+                                      updateFilterField('status', 'ALL')
+                                    }
+                                  >
+                                    Xóa
+                                  </Button>
+                                ) : null}
+                                <Button
+                                  type='submit'
+                                  variant='outline'
+                                  size='sm'
+                                  disabled={isFetching}
+                                >
+                                  Tìm kiếm
+                                </Button>
+                              </div>
+                            </form>
+                          </PopoverContent>
+                        </Popover>
+                      </TableHead>
+                      <TableHead className='w-[220px]'>
+                        <Popover
+                          open={openTableFilter === 'location'}
+                          onOpenChange={(open) =>
+                            setOpenTableFilter(open ? 'location' : null)
+                          }
+                        >
+                          <div className='flex items-center gap-1'>
+                            <span>Tỉnh/Phường xã</span>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type='button'
+                                variant={
+                                  isLocationFilterActive ? 'outline' : 'ghost'
+                                }
+                                size='icon'
+                                className='size-7'
+                                title='Lọc tỉnh/phường xã'
+                                aria-label='Lọc tỉnh/phường xã'
+                              >
+                                <Search className='h-4 w-4' />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                          <PopoverContent
+                            align='start'
+                            sideOffset={8}
+                            className='w-80 p-3'
+                          >
+                            <form
+                              className='space-y-3'
+                              onSubmit={handleTableFilterSubmit}
+                            >
+                              <TmsCombobox
+                                id='hub-table-filter-province'
+                                value={selectedFilterProvinceCode || 'ALL'}
+                                onValueChange={(value) => {
+                                  const nextProvinceCode =
+                                    value === 'ALL' ? '' : value;
+                                  updateFilterField(
+                                    'provinceCode',
+                                    nextProvinceCode
+                                  );
+                                  updateFilterField('wardCode', '');
+                                }}
+                                options={provinceOptions}
+                                placeholder='Tất cả tỉnh/thành phố'
+                                emptyText='Không tìm thấy tỉnh/thành phố'
+                                disabled={isFetching}
+                              />
+                              <TmsCombobox
+                                id='hub-table-filter-ward'
+                                value={selectedFilterWardCode || 'ALL'}
+                                onValueChange={(value) =>
+                                  updateFilterField(
+                                    'wardCode',
+                                    value === 'ALL' ? '' : value
+                                  )
+                                }
+                                options={wardOptions}
+                                placeholder={
+                                  selectedFilterProvinceCode
+                                    ? 'Tất cả phường/xã'
+                                    : 'Chọn tỉnh trước'
+                                }
+                                emptyText={
+                                  isFetchingWardsForFilter
+                                    ? 'Đang tải phường/xã...'
+                                    : 'Không có phường/xã'
+                                }
+                                disabled={
+                                  !selectedFilterProvinceCode || isFetching
+                                }
+                                loading={isFetchingWardsForFilter}
+                              />
+                              <div className='flex justify-end gap-2'>
+                                {isLocationFilterActive ? (
+                                  <Button
+                                    type='button'
+                                    variant='ghost'
+                                    size='sm'
+                                    disabled={isFetching}
+                                    onClick={() => {
+                                      updateFilterField('provinceCode', '');
+                                      updateFilterField('wardCode', '');
+                                    }}
+                                  >
+                                    Xóa
+                                  </Button>
+                                ) : null}
+                                <Button
+                                  type='submit'
+                                  variant='outline'
+                                  size='sm'
+                                  disabled={isFetching}
+                                >
+                                  Tìm kiếm
+                                </Button>
+                              </div>
+                            </form>
+                          </PopoverContent>
+                        </Popover>
+                      </TableHead>
+                      <TableHead className='w-[280px]'>
+                        <Popover
+                          open={openTableFilter === 'address'}
+                          onOpenChange={(open) =>
+                            setOpenTableFilter(open ? 'address' : null)
+                          }
+                        >
+                          <div className='flex items-center gap-1'>
+                            <span>Địa chỉ</span>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type='button'
+                                variant={
+                                  isAddressFilterActive ? 'outline' : 'ghost'
+                                }
+                                size='icon'
+                                className='size-7'
+                                title='Tìm địa chỉ'
+                                aria-label='Tìm địa chỉ'
+                              >
+                                <Search className='h-4 w-4' />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                          <PopoverContent
+                            align='start'
+                            sideOffset={8}
+                            className='w-72 p-3'
+                          >
+                            <form
+                              className='flex items-center gap-2'
+                              onSubmit={handleTableFilterSubmit}
+                            >
+                              <Input
+                                ref={addressFilterInputRef}
+                                className='h-9 bg-background'
+                                value={filterFormValues.keyword}
+                                onChange={(event) =>
+                                  updateFilterField(
+                                    'keyword',
+                                    event.target.value
+                                  )
+                                }
+                                placeholder='Tìm địa chỉ...'
+                                disabled={isFetching}
+                              />
+                              <Button
+                                type='submit'
+                                variant='outline'
+                                size='icon'
+                                className='size-9 shrink-0'
+                                disabled={isFetching}
+                                title='Tìm kiếm'
+                                aria-label='Tìm địa chỉ'
+                              >
+                                <Search className='h-4 w-4' />
+                              </Button>
+                              {isAddressFilterActive ? (
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='icon'
+                                  className='size-9 shrink-0'
+                                  disabled={isFetching}
+                                  onClick={() =>
+                                    updateFilterField('keyword', '')
+                                  }
+                                  title='Xóa tìm kiếm'
+                                  aria-label='Xóa tìm kiếm địa chỉ'
+                                >
+                                  <X className='h-4 w-4' />
+                                </Button>
+                              ) : null}
+                            </form>
+                          </PopoverContent>
+                        </Popover>
+                      </TableHead>
+                      <TableHead className='w-[130px]'>
+                        <Popover
+                          open={openTableFilter === 'hubLoad'}
+                          onOpenChange={(open) =>
+                            setOpenTableFilter(open ? 'hubLoad' : null)
+                          }
+                        >
+                          <div className='flex items-center gap-1'>
+                            <span>Tải hub</span>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type='button'
+                                variant={
+                                  isHubLoadFilterActive ? 'outline' : 'ghost'
+                                }
+                                size='icon'
+                                className='size-7'
+                                title='Lọc tải hub'
+                                aria-label='Lọc tải hub'
+                              >
+                                <Search className='h-4 w-4' />
+                              </Button>
+                            </PopoverTrigger>
+                          </div>
+                          <PopoverContent
+                            align='start'
+                            sideOffset={8}
+                            className='w-72 p-3'
+                          >
+                            <form
+                              className='space-y-3'
+                              onSubmit={handleTableFilterSubmit}
+                            >
+                              <div className='grid grid-cols-2 gap-2'>
+                                <Input
+                                  type='number'
+                                  min={0}
+                                  step={1}
+                                  className='h-9 bg-background'
+                                  value={filterFormValues.minCurrentLoad}
+                                  onChange={(event) =>
+                                    updateFilterField(
+                                      'minCurrentLoad',
+                                      event.target.value
+                                    )
+                                  }
+                                  placeholder='Từ'
+                                  disabled={isFetching}
+                                />
+                                <Input
+                                  type='number'
+                                  min={0}
+                                  step={1}
+                                  className='h-9 bg-background'
+                                  value={filterFormValues.maxCurrentLoad}
+                                  onChange={(event) =>
+                                    updateFilterField(
+                                      'maxCurrentLoad',
+                                      event.target.value
+                                    )
+                                  }
+                                  placeholder='Đến'
+                                  disabled={isFetching}
+                                />
+                              </div>
+                              <div className='flex justify-end gap-2'>
+                                {isHubLoadFilterActive ? (
+                                  <Button
+                                    type='button'
+                                    variant='ghost'
+                                    size='sm'
+                                    disabled={isFetching}
+                                    onClick={() => {
+                                      updateFilterField('minCurrentLoad', '');
+                                      updateFilterField('maxCurrentLoad', '');
+                                    }}
+                                  >
+                                    Xóa
+                                  </Button>
+                                ) : null}
+                                <Button
+                                  type='submit'
+                                  variant='outline'
+                                  size='sm'
+                                  disabled={isFetching}
+                                >
+                                  Tìm kiếm
+                                </Button>
+                              </div>
+                            </form>
+                          </PopoverContent>
+                        </Popover>
+                      </TableHead>
+                      <TableHead className='w-[180px]'>Tọa độ</TableHead>
                       <TableHead className={HUB_ACTION_HEADER_CLASS}>
-                        <span className='flex justify-end'>Actions</span>
+                        <span className='flex justify-end'>Thao tác</span>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -844,12 +1321,11 @@ export function HubListPage() {
                               </p>
                             ) : null}
                           </TableCell>
-                          <TableCell>{getHubTypeLabel(hub.hubType)}</TableCell>
                           <TableCell>
                             <Badge
                               variant={getHubStatusBadgeVariant(hub.status)}
                             >
-                              {hub.status}
+                              {getHubStatusLabel(hub.status)}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -881,13 +1357,13 @@ export function HubListPage() {
                                     type='button'
                                     variant='outline'
                                     size='icon'
-                                    aria-label='View hub details'
+                                    aria-label={`Xem chi tiết ${hub.code}`}
                                     onClick={() => openHubDetail(hub)}
                                   >
                                     <Eye className='h-4 w-4' />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>View details</TooltipContent>
+                                <TooltipContent>Chi tiết</TooltipContent>
                               </Tooltip>
 
                               {isTmsAdmin ? (
@@ -898,13 +1374,13 @@ export function HubListPage() {
                                         type='button'
                                         variant='outline'
                                         size='icon'
-                                        aria-label='Edit hub'
+                                        aria-label={`Sửa ${hub.code}`}
                                         onClick={() => openEditDialog(hub)}
                                       >
                                         <Pencil className='h-4 w-4' />
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>Edit</TooltipContent>
+                                    <TooltipContent>Sửa</TooltipContent>
                                   </Tooltip>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -912,7 +1388,7 @@ export function HubListPage() {
                                         type='button'
                                         variant='outline'
                                         size='icon'
-                                        aria-label='Upload hub image'
+                                        aria-label={`Tải ảnh cho ${hub.code}`}
                                         onClick={() =>
                                           triggerHubImagePicker(hub.id)
                                         }
@@ -921,7 +1397,7 @@ export function HubListPage() {
                                         <ImageUp className='h-4 w-4' />
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>Image</TooltipContent>
+                                    <TooltipContent>Ảnh</TooltipContent>
                                   </Tooltip>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -929,13 +1405,13 @@ export function HubListPage() {
                                         type='button'
                                         variant='destructive'
                                         size='icon'
-                                        aria-label='Delete hub'
+                                        aria-label={`Xóa ${hub.code}`}
                                         onClick={() => setDeleteTarget(hub)}
                                       >
                                         <Trash2 className='h-4 w-4' />
                                       </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>Delete</TooltipContent>
+                                    <TooltipContent>Xóa</TooltipContent>
                                   </Tooltip>
                                 </>
                               ) : null}
@@ -952,7 +1428,7 @@ export function HubListPage() {
             {totalPages > 1 && (
               <div className='flex items-center justify-between border-t pt-4'>
                 <div className='text-sm text-muted-foreground'>
-                  Page {currentPage + 1} of {totalPages}
+                  Trang {currentPage + 1} / {totalPages}
                 </div>
                 <div className='flex gap-2'>
                   <Button
@@ -961,7 +1437,7 @@ export function HubListPage() {
                     disabled={!hasPrev || isFetching}
                     onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
                   >
-                    Previous
+                    Trước
                   </Button>
                   <Button
                     variant='outline'
@@ -969,7 +1445,7 @@ export function HubListPage() {
                     disabled={!hasNext || isFetching}
                     onClick={() => setCurrentPage((p) => p + 1)}
                   >
-                    Next
+                    Sau
                   </Button>
                 </div>
               </div>
@@ -1000,114 +1476,88 @@ export function HubListPage() {
         onOpenChange={(open) => {
           if (!open) {
             setDetailHub(null);
-            setDetailTab('details');
-            setDetailOrdersPage(0);
           }
         }}
       >
         <DialogContent className='max-w-5xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader>
-            <DialogTitle>{detailHub?.name}</DialogTitle>
-            <DialogDescription className='font-mono'>
-              {detailHub?.code}
+            <DialogTitle>Chi tiết hub</DialogTitle>
+            <DialogDescription>
+              Thông tin chi tiết và vị trí bản đồ của hub đã chọn.
             </DialogDescription>
           </DialogHeader>
           {detailHub && (
-            <Tabs
-              value={detailTab}
-              onValueChange={(value) => setDetailTab(value as typeof detailTab)}
-            >
-              <TabsList>
-                <TabsTrigger value='details'>Details</TabsTrigger>
-                <TabsTrigger value='orders'>Orders</TabsTrigger>
-              </TabsList>
-              <TabsContent value='details' className='mt-4'>
-                <div className='space-y-3 text-sm'>
-                  {detailHub.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={detailHub.imageUrl}
-                      alt=''
-                      className='w-full rounded-md border max-h-48 object-cover'
-                    />
-                  )}
-                  <p>
-                    <span className='font-medium'>Type:</span>{' '}
-                    {getHubTypeLabel(detailHub.hubType)}
-                  </p>
-                  <p>
-                    <span className='font-medium'>Status:</span>{' '}
-                    {detailHub.status}
-                  </p>
-                  <p>
-                    <span className='font-medium'>Province / Ward:</span>{' '}
-                    {getProvinceLabel(detailHub.provinceCode)} /{' '}
-                    {detailHub.wardCode}
-                  </p>
-                  <p>
-                    <span className='font-medium'>Address:</span>{' '}
-                    {detailHub.addressDetail}
-                  </p>
-                  {detailHub.phoneNumber && (
-                    <p>
-                      <span className='font-medium'>Phone:</span>{' '}
-                      {detailHub.phoneNumber}
-                    </p>
-                  )}
-                  <p>
-                    <span className='font-medium'>Hub load:</span>{' '}
-                    {detailHub.currentLoad ?? 0}/{detailHub.dailyCapacity ?? 0}
-                  </p>
-                  {(detailHub.latitude != null ||
-                    detailHub.longitude != null) && (
-                    <p>
-                      <span className='font-medium'>Coordinates:</span>{' '}
-                      {detailHub.latitude}, {detailHub.longitude}
-                    </p>
-                  )}
-                  {isTmsAdmin && (
-                    <div className='flex flex-wrap gap-2 pt-2'>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => triggerHubImagePicker(detailHub.id)}
-                        disabled={isUploadingImage}
-                      >
-                        <ImageUp className='h-4 w-4 mr-1' />
-                        Change image
-                      </Button>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() => {
-                          setDetailHub(null);
-                          setDetailTab('details');
-                          setDetailOrdersPage(0);
-                          openEditDialog(detailHub);
-                        }}
-                      >
-                        <Pencil className='h-4 w-4 mr-1' />
-                        Edit
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-              <TabsContent value='orders' className='mt-4'>
-                <TmsEntityOrdersTab
-                  data={detailOrdersData}
-                  isFetching={
-                    isFetchingDetailHubPostOffices || isFetchingDetailOrders
-                  }
-                  page={detailOrdersPage}
-                  emptyText='No orders are currently at this hub.'
-                  onPreviousPage={() =>
-                    setDetailOrdersPage((prev) => Math.max(prev - 1, 0))
-                  }
-                  onNextPage={() => setDetailOrdersPage((prev) => prev + 1)}
+            <div className='mt-4 space-y-4'>
+              {detailHub.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={detailHub.imageUrl}
+                  alt=''
+                  className='w-full rounded-md border max-h-48 object-cover'
                 />
-              </TabsContent>
-            </Tabs>
+              )}
+              <div className='grid gap-3 text-sm md:grid-cols-2'>
+                <div>
+                  <p className='text-muted-foreground'>Mã hub</p>
+                  <p className='font-medium'>{detailHub.code}</p>
+                </div>
+                <div>
+                  <p className='text-muted-foreground'>Tên hub</p>
+                  <p className='font-medium'>{detailHub.name}</p>
+                </div>
+                <p>
+                  <span className='font-medium'>Trạng thái:</span>{' '}
+                  {getHubStatusLabel(detailHub.status)}
+                </p>
+                <p>
+                  <span className='font-medium'>Tỉnh/Phường xã:</span>{' '}
+                  {getProvinceLabel(detailHub.provinceCode)} /{' '}
+                  {detailHub.wardCode}
+                </p>
+                <p>
+                  <span className='font-medium'>Địa chỉ:</span>{' '}
+                  {detailHub.addressDetail}
+                </p>
+                {detailHub.phoneNumber && (
+                  <p>
+                    <span className='font-medium'>Số điện thoại:</span>{' '}
+                    {detailHub.phoneNumber}
+                  </p>
+                )}
+                <p>
+                  <span className='font-medium'>Tải hub:</span>{' '}
+                  {detailHub.currentLoad ?? 0}/{detailHub.dailyCapacity ?? 0}
+                </p>
+                {(detailHub.latitude != null ||
+                  detailHub.longitude != null) && (
+                  <p>
+                    <span className='font-medium'>Tọa độ:</span>{' '}
+                    {detailHub.latitude}, {detailHub.longitude}
+                  </p>
+                )}
+              </div>
+              <div className='space-y-2'>
+                <p className='text-sm font-medium'>Bản đồ</p>
+                {detailHub.latitude !== undefined &&
+                detailHub.latitude !== null &&
+                detailHub.longitude !== undefined &&
+                detailHub.longitude !== null ? (
+                  <CoordinatePickerMap
+                    latitude={detailHub.latitude}
+                    longitude={detailHub.longitude}
+                    disabled
+                    className='h-72'
+                    onChange={() => {
+                      // Bản đồ chỉ xem trong modal chi tiết.
+                    }}
+                  />
+                ) : (
+                  <p className='text-sm text-muted-foreground'>
+                    Hub này chưa có tọa độ định vị.
+                  </p>
+                )}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -1119,14 +1569,14 @@ export function HubListPage() {
             setDeleteTarget(null);
           }
         }}
-        title='Delete hub'
+        title='Xóa hub'
         description={
           deleteTarget
-            ? `This will permanently delete hub ${deleteTarget.code} — ${deleteTarget.name}.`
-            : 'This action cannot be undone.'
+            ? `Thao tác này sẽ xóa vĩnh viễn hub ${deleteTarget.code} - ${deleteTarget.name}.`
+            : 'Thao tác này không thể hoàn tác.'
         }
-        confirmText='Delete'
-        cancelText='Cancel'
+        confirmText='Xóa'
+        cancelText='Hủy'
         onConfirm={handleDeleteHub}
         isLoading={isDeleting}
         variant='destructive'

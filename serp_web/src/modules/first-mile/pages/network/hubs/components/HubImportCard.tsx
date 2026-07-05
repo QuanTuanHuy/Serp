@@ -47,7 +47,7 @@ export const HubImportCard: React.FC<HubImportCardProps> = ({
     <TmsExcelImportToolbar
       className={className}
       canImport={isTmsAdmin}
-      entityLabel='hubs'
+      entityLabel='hub'
       isBusy={isImportFlowBusy}
       isExportingTemplate={isExportingTemplate}
       isValidating={isValidatingImport}
@@ -55,7 +55,7 @@ export const HubImportCard: React.FC<HubImportCardProps> = ({
       importFileInputKey={importFileInputKey}
       selectedFileName={selectedImportFile?.name}
       validateImportResult={validateImportResult}
-      permissionHint='Import requires TMS_ADMIN.'
+      permissionHint='Nhập dữ liệu cần quyền TMS_ADMIN.'
       onDownloadTemplate={() => {
         void onDownloadTemplate();
       }}

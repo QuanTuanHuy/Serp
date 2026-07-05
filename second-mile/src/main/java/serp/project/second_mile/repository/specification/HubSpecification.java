@@ -47,10 +47,6 @@ public final class HubSpecification {
                 ));
             }
 
-            if (filterRequest.getHubType() != null) {
-                predicates.add(criteriaBuilder.equal(root.get("hubType"), filterRequest.getHubType()));
-            }
-
             if (hasText(filterRequest.getProvinceCode())) {
                 predicates.add(criteriaBuilder.equal(
                         criteriaBuilder.lower(root.get("provinceCode")),

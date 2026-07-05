@@ -7,7 +7,6 @@ import type {
   CreateHubRequest,
   Hub,
   HubStatus,
-  HubType,
   UpdateHubRequest,
 } from '../../../types';
 
@@ -16,7 +15,6 @@ export type HubFormMode = 'create' | 'edit';
 export interface HubFormState {
   code: string;
   name: string;
-  hub_type: HubType;
   province_code: string;
   ward_code: string;
   address_detail: string;
@@ -35,38 +33,34 @@ export type UpdateHubFormField = <K extends keyof HubFormState>(
   value: HubFormState[K]
 ) => void;
 
-export const HUB_TYPE_OPTIONS: Array<{ value: HubType; label: string }> = [
-  { value: 'REGIONAL', label: 'Regional' },
-  { value: 'LOCAL', label: 'Local' },
-];
-
 export const HUB_FORM_STATUS_OPTIONS: Array<{
   value: HubStatus;
   label: string;
 }> = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'INACTIVE', label: 'Inactive' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
+  { value: 'ACTIVE', label: 'Đang hoạt động' },
+  { value: 'INACTIVE', label: 'Ngừng hoạt động' },
+  { value: 'MAINTENANCE', label: 'Bảo trì' },
 ];
 
 /** Status filter options (same values as form). */
 export const HUB_STATUS_OPTIONS = HUB_FORM_STATUS_OPTIONS;
 
-export function getHubTypeLabel(hubType: string): string {
-  switch (hubType) {
-    case 'REGIONAL':
-      return 'Regional hub';
-    case 'LOCAL':
-      return 'Local hub';
+export function getHubStatusLabel(status: string): string {
+  switch (status) {
+    case 'ACTIVE':
+      return 'Đang hoạt động';
+    case 'INACTIVE':
+      return 'Ngừng hoạt động';
+    case 'MAINTENANCE':
+      return 'Bảo trì';
     default:
-      return hubType;
+      return status;
   }
 }
 
 export const DEFAULT_HUB_FORM: HubFormState = {
   code: '',
   name: '',
-  hub_type: 'REGIONAL',
   province_code: '',
   ward_code: '',
   address_detail: '',
@@ -114,7 +108,6 @@ export const mapHubToFormState = (hub: Hub): HubFormState => {
   return {
     code: hub.code || '',
     name: hub.name || '',
-    hub_type: hub.hubType || 'REGIONAL',
     province_code: hub.provinceCode || '',
     ward_code: hub.wardCode || '',
     address_detail: hub.addressDetail || '',
@@ -137,60 +130,60 @@ export const mapHubToFormState = (hub: Hub): HubFormState => {
 
 export const validateHubForm = (values: HubFormState): string | null => {
   if (!values.code.trim()) {
-    return 'Code is required.';
+    return 'Mã hub là bắt buộc.';
   }
   if (!values.name.trim()) {
-    return 'Name is required.';
+    return 'Tên hub là bắt buộc.';
   }
   if (!values.province_code.trim()) {
-    return 'Province is required.';
+    return 'Tỉnh/Thành phố là bắt buộc.';
   }
   if (!values.ward_code.trim()) {
-    return 'Ward is required.';
+    return 'Phường/Xã là bắt buộc.';
   }
   if (!values.address_detail.trim()) {
-    return 'Address detail is required.';
+    return 'Địa chỉ chi tiết là bắt buộc.';
   }
 
   const ws = values.working_start_time.trim();
   const we = values.working_end_time.trim();
   if (ws !== we && (!ws || !we)) {
-    return 'Provide both working start and end times, or leave both empty.';
+    return 'Vui lòng nhập cả giờ bắt đầu và giờ kết thúc, hoặc để trống cả hai.';
   }
   if (ws && we) {
     const startM = timeToMinutes(ws);
     const endM = timeToMinutes(we);
     if (!Number.isFinite(startM) || !Number.isFinite(endM)) {
-      return 'Working times must use HH:mm format.';
+      return 'Giờ làm việc phải đúng định dạng HH:mm.';
     }
     if (endM <= startM) {
-      return 'Working end time must be after start time.';
+      return 'Giờ kết thúc phải sau giờ bắt đầu.';
     }
   }
 
   const latStr = values.latitude.trim();
   const lngStr = values.longitude.trim();
   if (latStr !== lngStr && (!latStr || !lngStr)) {
-    return 'Provide both latitude and longitude, or leave both empty.';
+    return 'Vui lòng nhập cả vĩ độ và kinh độ, hoặc để trống cả hai.';
   }
   if (latStr && lngStr) {
     const latitude = Number(latStr);
     const longitude = Number(lngStr);
     if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-      return 'Latitude must be between -90 and 90.';
+      return 'Vĩ độ phải nằm trong khoảng từ -90 đến 90.';
     }
     if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-      return 'Longitude must be between -180 and 180.';
+      return 'Kinh độ phải nằm trong khoảng từ -180 đến 180.';
     }
   }
 
   const dailyCapacity = Number(values.daily_capacity);
   const currentLoad = Number(values.current_load);
   if (!Number.isInteger(dailyCapacity) || dailyCapacity < 0) {
-    return 'Hub order capacity must be a non-negative integer.';
+    return 'Sức chứa đơn tại hub phải là số nguyên không âm.';
   }
   if (!Number.isInteger(currentLoad) || currentLoad < 0) {
-    return 'Current hub load must be a non-negative integer.';
+    return 'Tải hiện tại của hub phải là số nguyên không âm.';
   }
 
   return null;
@@ -209,7 +202,6 @@ export const buildCreateHubRequest = (
   const body: CreateHubRequest = {
     code: values.code.trim(),
     name: values.name.trim(),
-    hub_type: values.hub_type,
     province_code: values.province_code.trim(),
     ward_code: values.ward_code.trim(),
     address_detail: values.address_detail.trim(),
@@ -248,7 +240,6 @@ export const buildUpdateHubRequest = (
   const body: UpdateHubRequest = {
     code: values.code.trim(),
     name: values.name.trim(),
-    hub_type: values.hub_type,
     province_code: values.province_code.trim(),
     ward_code: values.ward_code.trim(),
     address_detail: values.address_detail.trim(),

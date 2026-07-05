@@ -76,15 +76,12 @@ export interface PostOffice {
   hubId?: number;
 }
 
-export type HubType = 'REGIONAL' | 'LOCAL';
-
 export type HubStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 
 export interface Hub {
   id: number;
   code: string;
   name: string;
-  hubType: HubType;
   provinceCode: string;
   wardCode: string;
   addressDetail: string;
@@ -153,7 +150,6 @@ export interface AssignHubPostOfficeRequest {
 export interface CreateHubRequest {
   code: string;
   name: string;
-  hub_type: HubType;
   province_code: string;
   ward_code: string;
   address_detail: string;
@@ -170,7 +166,6 @@ export interface CreateHubRequest {
 export interface UpdateHubRequest {
   code: string;
   name: string;
-  hub_type: HubType;
   province_code: string;
   ward_code: string;
   address_detail: string;
@@ -192,7 +187,6 @@ export interface HubImportItem {
   ward_code?: string;
   address_detail?: string;
   phone_number?: string;
-  hub_type?: HubType;
   operational_start_date?: string;
   operational_end_date?: string;
   working_start_time?: string;
@@ -1446,7 +1440,6 @@ export interface HubListFilters {
   keyword?: string;
   code?: string;
   name?: string;
-  hubType?: HubType;
   provinceCode?: string;
   wardCode?: string;
   status?: HubStatus;

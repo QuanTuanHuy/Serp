@@ -34,7 +34,6 @@ import serp.project.second_mile.dto.response.HubResponse;
 import serp.project.second_mile.dto.response.ImportHistoryResponse;
 import serp.project.second_mile.dto.response.ValidateImportFileDTO;
 import serp.project.second_mile.enums.HubStatus;
-import serp.project.second_mile.enums.HubType;
 import serp.project.second_mile.exception.MessageService;
 import serp.project.second_mile.service.HubPostOfficeService;
 import serp.project.second_mile.service.HubService;
@@ -55,7 +54,6 @@ public class HubController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String name,
-            @RequestParam(name = "hub_type", required = false) HubType hubType,
             @RequestParam(name = "province_code", required = false) String provinceCode,
             @RequestParam(name = "ward_code", required = false) String wardCode,
             @RequestParam(required = false) HubStatus status,
@@ -73,7 +71,6 @@ public class HubController {
                 .keyword(keyword)
                 .code(code)
                 .name(name)
-                .hubType(hubType)
                 .provinceCode(provinceCode)
                 .wardCode(wardCode)
                 .status(status)

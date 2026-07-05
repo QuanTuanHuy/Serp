@@ -120,15 +120,21 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
     | 'name'
     | 'status'
     | 'location'
+    | 'address'
     | 'pickupLoad'
     | 'deliveryLoad'
     | null
   >(null);
   const codeInputRef = React.useRef<HTMLInputElement>(null);
   const nameInputRef = React.useRef<HTMLInputElement>(null);
+  const addressInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    if (openFilter !== 'code' && openFilter !== 'name') {
+    if (
+      openFilter !== 'code' &&
+      openFilter !== 'name' &&
+      openFilter !== 'address'
+    ) {
       return;
     }
 
@@ -136,9 +142,12 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
       if (openFilter === 'code') {
         codeInputRef.current?.focus();
         codeInputRef.current?.select();
-      } else {
+      } else if (openFilter === 'name') {
         nameInputRef.current?.focus();
         nameInputRef.current?.select();
+      } else {
+        addressInputRef.current?.focus();
+        addressInputRef.current?.select();
       }
     }, 0);
   }, [openFilter]);
@@ -183,6 +192,7 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
   const isStatusFilterActive = filterFormValues.status !== 'ALL';
   const isLocationFilterActive =
     Boolean(selectedFilterProvinceCode) || Boolean(selectedFilterWardCode);
+  const isAddressFilterActive = Boolean(filterFormValues.keyword.trim());
   const isPickupLoadFilterActive =
     Boolean(filterFormValues.minCurrentLoad.trim()) ||
     Boolean(filterFormValues.maxCurrentLoad.trim());
@@ -539,7 +549,83 @@ export const PostOfficeResultsCard: React.FC<PostOfficeResultsCardProps> = ({
                         </PopoverContent>
                       </Popover>
                     </TableHead>
-                    <TableHead className='min-w-[360px]'>Địa chỉ</TableHead>
+                    <TableHead className='min-w-[360px]'>
+                      <Popover
+                        open={openFilter === 'address'}
+                        onOpenChange={(open) =>
+                          setOpenFilter(open ? 'address' : null)
+                        }
+                      >
+                        <div className='flex items-center gap-1'>
+                          <span>Địa chỉ</span>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type='button'
+                              variant={
+                                isAddressFilterActive ? 'outline' : 'ghost'
+                              }
+                              size='icon'
+                              className='size-7'
+                              title='Tìm địa chỉ'
+                              aria-label='Tìm địa chỉ'
+                            >
+                              <Search className='h-4 w-4' />
+                            </Button>
+                          </PopoverTrigger>
+                        </div>
+                        <PopoverContent
+                          align='start'
+                          sideOffset={8}
+                          className='w-72 p-3'
+                        >
+                          <form
+                            className='flex items-center gap-2'
+                            onSubmit={handleSearchSubmit}
+                          >
+                            <Input
+                              ref={addressInputRef}
+                              className='h-9 bg-background'
+                              value={filterFormValues.keyword}
+                              onChange={(event) =>
+                                onFilterFieldChange(
+                                  'keyword',
+                                  event.target.value
+                                )
+                              }
+                              placeholder='Tìm địa chỉ...'
+                              disabled={isFetching}
+                            />
+                            <Button
+                              type='submit'
+                              variant='outline'
+                              size='icon'
+                              className='size-9 shrink-0'
+                              disabled={isFetching}
+                              title='Tìm kiếm'
+                              aria-label='Tìm địa chỉ'
+                            >
+                              <Search className='h-4 w-4' />
+                            </Button>
+                            {isAddressFilterActive ? (
+                              <Button
+                                type='button'
+                                variant='ghost'
+                                size='icon'
+                                className='size-9 shrink-0'
+                                disabled={isFetching}
+                                onClick={() => {
+                                  onFilterFieldChange('keyword', '');
+                                }}
+                                title='Xóa tìm kiếm'
+                                aria-label='Xóa tìm kiếm địa chỉ'
+                              >
+                                <X className='h-4 w-4' />
+                              </Button>
+                            ) : null}
+                          </form>
+                        </PopoverContent>
+                      </Popover>
+                    </TableHead>
                     <TableHead className='w-[170px]'>
                       <Popover
                         open={openFilter === 'pickupLoad'}
