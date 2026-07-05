@@ -32,6 +32,27 @@ export const CRMCalendarGrid: React.FC<CRMCalendarGridProps> = ({
 
   return (
     <div className='overflow-hidden rounded-lg border bg-background'>
+      <style>{`
+        .crm-calendar-cell-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+        .crm-calendar-cell-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .crm-calendar-cell-scroll::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.3);
+          border-radius: 4px;
+        }
+        .crm-calendar-cell-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(156, 163, 175, 0.5);
+        }
+        .dark .crm-calendar-cell-scroll::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.2);
+        }
+        .dark .crm-calendar-cell-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(156, 163, 175, 0.4);
+        }
+      `}</style>
       <div className='grid grid-cols-7 border-b bg-muted/20'>
         {dayLabels.map((label) => (
           <div
@@ -116,7 +137,12 @@ const CalendarDayCell = React.memo(
             <Plus className='h-3.5 w-3.5' />
           </button>
         </div>
-        <div className='space-y-1.5 flex-1 overflow-y-auto pr-0.5 max-h-[110px]'>
+        <div
+          className={cn(
+            'space-y-1.5 flex-1 overflow-y-auto pr-1 crm-calendar-cell-scroll max-h-[105px]',
+            view === 'week' && 'max-h-[260px]'
+          )}
+        >
           {items.map((activity) => (
             <DraggableActivityChip
               key={activity.id}
