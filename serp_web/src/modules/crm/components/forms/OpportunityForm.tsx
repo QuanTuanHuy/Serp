@@ -6,6 +6,7 @@ import { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Sparkles } from 'lucide-react';
 
 import {
   Button,
@@ -185,256 +186,202 @@ export const OpportunityForm: React.FC<OpportunityFormProps> = ({
   });
 
   return (
-    <Card className={cn('w-full max-w-4xl', className)}>
-      <CardHeader>
-        <CardTitle className='text-xl'>
-          {isEditing ? 'Edit Opportunity' : 'Create Opportunity'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={onFormSubmit} className='space-y-6'>
-          <div className='space-y-4'>
-            <CardTitle className='text-lg'>Basic Information</CardTitle>
-
-            <div className='space-y-2'>
-              <Label htmlFor='name'>Opportunity Name *</Label>
-              <Input
-                id='name'
-                {...register('name')}
-                placeholder='Enter opportunity name'
-                className={errors.name ? 'border-destructive' : ''}
-                disabled={isLoading}
-              />
-              {errors.name && (
-                <p className='text-sm text-destructive'>
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
-
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label>Account *</Label>
-                <Select
-                  value={watch('accountId')}
-                  onValueChange={(value) => setValue('accountId', value)}
-                  disabled={isLoading || isAccountsLoading}
-                >
-                  <SelectTrigger
-                    className={errors.accountId ? 'border-destructive' : ''}
-                  >
-                    <SelectValue
-                      placeholder={
-                        isAccountsLoading
-                          ? 'Loading accounts...'
-                          : 'Select account'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.accountId && (
-                  <p className='text-sm text-destructive'>
-                    {errors.accountId.message}
-                  </p>
-                )}
-              </div>
-
-              <div className='space-y-2'>
-                <Label>Lead</Label>
-                <Select
-                  value={watch('leadId') || ''}
-                  onValueChange={(value) => setValue('leadId', value)}
-                  disabled={isLoading || isLeadsLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        isLeadsLoading
-                          ? 'Loading leads...'
-                          : 'Select lead (optional)'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leads.map((lead) => (
-                      <SelectItem key={lead.id} value={lead.id}>
-                        {lead.name || lead.email || `Lead #${lead.id}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <div className='space-y-4'>
-            <CardTitle className='text-lg'>Pipeline Information</CardTitle>
-
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <div className='space-y-2'>
-                <Label>Stage *</Label>
-                <Select
-                  value={watch('stage')}
-                  onValueChange={(value) =>
-                    setValue('stage', value as OpportunityStage)
-                  }
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select stage' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='PROSPECTING'>Prospecting</SelectItem>
-                    <SelectItem value='QUALIFICATION'>Qualification</SelectItem>
-                    <SelectItem value='PROPOSAL'>Proposal</SelectItem>
-                    <SelectItem value='NEGOTIATION'>Negotiation</SelectItem>
-                    <SelectItem value='CLOSED_WON'>Closed Won</SelectItem>
-                    <SelectItem value='CLOSED_LOST'>Closed Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='assignedTo'>Assigned To</Label>
-                <Controller
-                  name='assignedTo'
-                  control={control}
-                  render={({ field }) => (
-                    <CRMUserSelect
-                      id='assignedTo'
-                      value={field.value}
-                      onChange={field.onChange}
-                      fallbackUserName={opportunity?.assignedToName}
-                      disabled={isLoading}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label htmlFor='estimatedValue'>Estimated Value *</Label>
+    <div className={cn("grid grid-cols-1 lg:grid-cols-3 gap-6", className)}>
+      <Card className="lg:col-span-2 border border-muted/50 shadow-sm rounded-xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-extrabold tracking-tight text-foreground">
+            {isEditing ? 'Edit Opportunity Profile' : 'Create Opportunity Profile'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onFormSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Basic Information</h3>
+              
+              <div className="space-y-2">
+                <Label htmlFor="name">Opportunity Name *</Label>
                 <Input
-                  id='estimatedValue'
-                  type='number'
-                  min={0}
-                  {...register('estimatedValue', { valueAsNumber: true })}
-                  placeholder='0'
-                  className={errors.estimatedValue ? 'border-destructive' : ''}
+                  id="name"
+                  {...register('name')}
+                  placeholder="e.g. Enterprise CRM Deal"
+                  className={errors.name ? 'border-destructive' : ''}
                   disabled={isLoading}
                 />
-                {errors.estimatedValue && (
-                  <p className='text-sm text-destructive'>
-                    {errors.estimatedValue.message}
-                  </p>
-                )}
+                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='expectedCloseDate'>Expected Close Date *</Label>
-                <Controller
-                  name='expectedCloseDate'
-                  control={control}
-                  render={({ field }) => (
-                    <CRMDatePicker
-                      id='expectedCloseDate'
-                      value={field.value}
-                      onChange={(date) =>
-                        field.onChange(date ? toLocalDateInputValue(date) : '')
-                      }
-                      disabled={isLoading}
-                      className={
-                        errors.expectedCloseDate ? 'border-destructive' : ''
-                      }
-                    />
-                  )}
-                />
-                {errors.expectedCloseDate && (
-                  <p className='text-sm text-destructive'>
-                    {errors.expectedCloseDate.message}
-                  </p>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Account *</Label>
+                  <Select
+                    value={watch('accountId')}
+                    onValueChange={(value) => setValue('accountId', value)}
+                    disabled={isLoading || isAccountsLoading}
+                  >
+                    <SelectTrigger className={errors.accountId ? 'border-destructive' : ''}>
+                      <SelectValue placeholder={isAccountsLoading ? 'Loading accounts...' : 'Select account'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((acc) => (
+                        <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.accountId && <p className="text-xs text-destructive">{errors.accountId.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Lead Source</Label>
+                  <Select
+                    value={watch('leadId') || ''}
+                    onValueChange={(value) => setValue('leadId', value)}
+                    disabled={isLoading || isLeadsLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={isLeadsLoading ? 'Loading leads...' : 'Select lead (optional)'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {leads.map((ld) => (
+                        <SelectItem key={ld.id} value={ld.id}>{ld.name || ld.email || `Lead #${ld.id}`}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-muted/30">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pipeline Settings</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Stage *</Label>
+                  <Select
+                    value={watch('stage')}
+                    onValueChange={(value) => setValue('stage', value as OpportunityStage)}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select stage" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PROSPECTING">Prospecting</SelectItem>
+                      <SelectItem value="QUALIFICATION">Qualification</SelectItem>
+                      <SelectItem value="PROPOSAL">Proposal</SelectItem>
+                      <SelectItem value="NEGOTIATION">Negotiation</SelectItem>
+                      <SelectItem value="CLOSED_WON">Closed Won</SelectItem>
+                      <SelectItem value="CLOSED_LOST">Closed Lost</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="assignedTo">Assigned Rep</Label>
+                  <Controller
+                    name="assignedTo"
+                    control={control}
+                    render={({ field }) => (
+                      <CRMUserSelect
+                        id="assignedTo"
+                        value={field.value}
+                        onChange={field.onChange}
+                        fallbackUserName={opportunity?.assignedToName}
+                        disabled={isLoading}
+                      />
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="estimatedValue">Estimated Value *</Label>
+                  <Input
+                    id="estimatedValue"
+                    type="number"
+                    min={0}
+                    {...register('estimatedValue', { valueAsNumber: true })}
+                    placeholder="0"
+                    className={errors.estimatedValue ? 'border-destructive' : ''}
+                    disabled={isLoading}
+                  />
+                  {errors.estimatedValue && <p className="text-xs text-destructive">{errors.estimatedValue.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expectedCloseDate">Expected Close Date *</Label>
+                  <Controller
+                    name="expectedCloseDate"
+                    control={control}
+                    render={({ field }) => (
+                      <CRMDatePicker
+                        id="expectedCloseDate"
+                        value={field.value}
+                        onChange={(date) => field.onChange(date ? toLocalDateInputValue(date) : '')}
+                        disabled={isLoading}
+                        className={errors.expectedCloseDate ? 'border-destructive' : ''}
+                      />
+                    )}
+                  />
+                  {errors.expectedCloseDate && <p className="text-xs text-destructive">{errors.expectedCloseDate.message}</p>}
+                </div>
               </div>
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 rounded-lg border bg-muted/30 p-4'>
-              <div>
-                <p className='text-sm text-muted-foreground'>Probability</p>
-                <p className='text-xl font-semibold'>{computedProbability}%</p>
+            <div className="space-y-4 pt-4 border-t border-muted/30">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Additional Information</h3>
+              <div className="space-y-2">
+                <Label htmlFor="description">Deal Description</Label>
+                <Textarea id="description" {...register('description')} rows={3} placeholder="Describe the opportunity terms..." disabled={isLoading} />
               </div>
-              <div>
-                <p className='text-sm text-muted-foreground'>Weighted Value</p>
-                <p className='text-xl font-semibold'>
-                  {formatCurrency(weightedValue)}
-                </p>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Static Notes</Label>
+                <Textarea id="notes" {...register('notes')} rows={2} placeholder="Add miscellaneous remarks..." disabled={isLoading} />
               </div>
             </div>
-          </div>
 
-          <div className='space-y-4'>
-            <CardTitle className='text-lg'>Additional Information</CardTitle>
-
-            <div className='space-y-2'>
-              <Label htmlFor='description'>Description</Label>
-              <Textarea
-                id='description'
-                {...register('description')}
-                rows={4}
-                placeholder='Enter opportunity description...'
-                disabled={isLoading}
-              />
-              {errors.description && (
-                <p className='text-sm text-destructive'>
-                  {errors.description.message}
-                </p>
+            <div className="flex justify-end space-x-3 pt-6 border-t border-muted/30">
+              {onCancel && (
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading || isSubmitting}>
+                  Cancel
+                </Button>
               )}
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='notes'>Notes</Label>
-              <Textarea
-                id='notes'
-                {...register('notes')}
-                rows={3}
-                placeholder='Enter any additional notes...'
-                disabled={isLoading}
-              />
-              {errors.notes && (
-                <p className='text-sm text-destructive'>
-                  {errors.notes.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className='flex justify-end space-x-3 pt-6 border-t'>
-            {onCancel && (
-              <Button
-                type='button'
-                variant='outline'
-                onClick={onCancel}
-                disabled={isLoading || isSubmitting}
-              >
-                Cancel
+              <Button type="submit" disabled={isLoading || isSubmitting}>
+                {isSubmitting ? 'Saving...' : isEditing ? 'Update Opportunity' : 'Create Opportunity'}
               </Button>
-            )}
-            <Button type='submit' disabled={isLoading || isSubmitting}>
-              {isSubmitting
-                ? 'Saving...'
-                : isEditing
-                  ? 'Update Opportunity'
-                  : 'Create Opportunity'}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Live Calculator Column */}
+      <div className="lg:col-span-1 space-y-6">
+        <Card className="border border-muted/50 shadow-sm rounded-xl overflow-hidden sticky top-6">
+          <CardHeader className="bg-primary/[0.03] border-b border-muted/40">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" /> Live Deal Calculator
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-5 space-y-6">
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground uppercase font-semibold">Deal Stage</div>
+              <div className="text-sm font-bold text-foreground">{watchedStage}</div>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground uppercase font-semibold">Win Probability</div>
+              <div className="text-3xl font-extrabold text-primary">{computedProbability}%</div>
+            </div>
+
+            <div className="space-y-1 pt-4 border-t border-muted/30">
+              <div className="text-xs text-muted-foreground uppercase font-semibold">Weighted Value</div>
+              <div className="text-xl font-bold text-emerald-600">{formatCurrency(weightedValue)}</div>
+              <div className="text-[10px] text-muted-foreground italic mt-1">
+                Weighted Value = Est. Value ({formatCurrency(estimatedValue)}) × Prob. ({computedProbability}%)
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 };
 
