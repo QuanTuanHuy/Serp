@@ -8,12 +8,14 @@ package serp.project.account.infrastructure.store.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import serp.project.account.core.domain.enums.ModuleStatus;
+import serp.project.account.core.domain.enums.ModuleType;
 import serp.project.account.infrastructure.store.model.ModuleModel;
 
 @Repository
@@ -44,4 +46,18 @@ public interface IModuleRepository extends IBaseRepository<ModuleModel> {
                OR LOWER(COALESCE(m.description, '')) LIKE LOWER(CONCAT('%', :search, '%'))
             """)
     Long countSearchModules(@Param("search") String search);
+
+    @Query("""
+            SELECT m FROM ModuleModel m
+            WHERE (:search IS NULL OR LOWER(m.moduleName) LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(m.code) LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(COALESCE(m.description, '')) LIKE LOWER(CONCAT('%', :search, '%')))
+              AND (:status IS NULL OR m.status = :status)
+              AND (:moduleType IS NULL OR m.moduleType = :moduleType)
+            """)
+    Page<ModuleModel> findAllPaginated(
+            @Param("search") String search,
+            @Param("status") ModuleStatus status,
+            @Param("moduleType") ModuleType moduleType,
+            Pageable pageable);
 }
