@@ -34,6 +34,7 @@ type Claims struct {
 	FullName          string                 `json:"name"`
 	PreferredUsername string                 `json:"preferred_username"`
 	EmailVerified     bool                   `json:"email_verified"`
+	TokenType         string                 `json:"typ"`
 	RealmAccess       map[string]interface{} `json:"realm_access"`
 	ResourceAccess    map[string]interface{} `json:"resource_access"`
 	AuthorizedParty   string                 `json:"azp"`
@@ -41,55 +42,112 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func (j *JWTUtils) ValidateToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, errors.New("unexpected signing method")
-		}
+type ValidatedJWT struct {
+	Claims *Claims
+	Roles  []string
+}
 
-		keyId, ok := token.Header["kid"].(string)
-		if !ok {
-			log.Warn("No key ID found in JWT header, skipping signature verification")
-			return nil, errors.New("no key ID in JWT header")
-		}
+var ErrInvalidTokenType = errors.New("invalid token type")
 
-		publicKey, err := j.keycloakJwksUtils.GetPublicKey(keyId)
-		if err != nil {
-			log.Warn("Could not find public key for key ID: ", keyId, ", error: ", err)
-			return nil, err
-		}
-
-		return publicKey, nil
-	})
-
+func (j *JWTUtils) ValidateAccessToken(tokenString string) (*ValidatedJWT, error) {
+	claims, token, err := j.parseAndValidateClaims(tokenString)
 	if err != nil {
 		log.Error("Failed to parse JWT token: ", err)
 		return nil, err
 	}
 
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		if claims.ExpiresAt != nil && time.Now().After(claims.ExpiresAt.Time) {
-			log.Error("JWT token is expired")
-			return nil, errors.New("token is expired")
-		}
-
-		if j.keycloakProps.ExpectedIssuer != "" && claims.Issuer != j.keycloakProps.ExpectedIssuer {
-			log.Error("JWT token issuer mismatch. Expected: ", j.keycloakProps.ExpectedIssuer, ", Actual: ", claims.Issuer)
-			return nil, errors.New("token issuer mismatch")
-		}
-
-		if j.keycloakProps.ExpectedAudience != "" {
-			audienceFound := slices.Contains(claims.Audience, j.keycloakProps.ExpectedAudience)
-			if !audienceFound {
-				log.Error("JWT token audience mismatch. Expected: ", j.keycloakProps.ExpectedAudience, ", Actual: ", claims.Audience)
-				return nil, errors.New("token audience mismatch")
-			}
-		}
-
-		return claims, nil
+	if err := validateJWTHeaderType(token); err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("invalid token")
+	if claims.TokenType != "" && claims.TokenType != "Bearer" {
+		return nil, ErrInvalidTokenType
+	}
+
+	return &ValidatedJWT{
+		Claims: claims,
+		Roles:  extractRolesFromClaims(claims),
+	}, nil
+}
+
+func (j *JWTUtils) ValidateToken(tokenString string) (*Claims, error) {
+	claims, _, err := j.parseAndValidateClaims(tokenString)
+	if err != nil {
+		log.Error("Failed to parse JWT token: ", err)
+		return nil, err
+	}
+
+	return claims, nil
+}
+
+func (j *JWTUtils) parseAndValidateClaims(tokenString string) (*Claims, *jwt.Token, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return j.signingKeyForToken(token)
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		return nil, nil, errors.New("invalid token")
+	}
+
+	if err := j.validateRegisteredClaims(claims); err != nil {
+		return nil, nil, err
+	}
+
+	return claims, token, nil
+}
+
+func (j *JWTUtils) signingKeyForToken(token *jwt.Token) (interface{}, error) {
+	if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+		return nil, errors.New("unexpected signing method")
+	}
+
+	keyId, ok := token.Header["kid"].(string)
+	if !ok {
+		log.Warn("No key ID found in JWT header, skipping signature verification")
+		return nil, errors.New("no key ID in JWT header")
+	}
+
+	publicKey, err := j.keycloakJwksUtils.GetPublicKey(keyId)
+	if err != nil {
+		log.Warn("Could not find public key for key ID: ", keyId, ", error: ", err)
+		return nil, err
+	}
+
+	return publicKey, nil
+}
+
+func (j *JWTUtils) validateRegisteredClaims(claims *Claims) error {
+	if claims.ExpiresAt != nil && time.Now().After(claims.ExpiresAt.Time) {
+		log.Error("JWT token is expired")
+		return errors.New("token is expired")
+	}
+
+	if j.keycloakProps.ExpectedIssuer != "" && claims.Issuer != j.keycloakProps.ExpectedIssuer {
+		log.Error("JWT token issuer mismatch. Expected: ", j.keycloakProps.ExpectedIssuer, ", Actual: ", claims.Issuer)
+		return errors.New("token issuer mismatch")
+	}
+
+	if j.keycloakProps.ExpectedAudience != "" {
+		audienceFound := slices.Contains(claims.Audience, j.keycloakProps.ExpectedAudience)
+		if !audienceFound {
+			log.Error("JWT token audience mismatch. Expected: ", j.keycloakProps.ExpectedAudience, ", Actual: ", claims.Audience)
+			return errors.New("token audience mismatch")
+		}
+	}
+
+	return nil
+}
+
+func validateJWTHeaderType(token *jwt.Token) error {
+	if tokenType, ok := token.Header["typ"].(string); ok && tokenType != "JWT" {
+		return ErrInvalidTokenType
+	}
+
+	return nil
 }
 
 func (j *JWTUtils) ExtractUserID(tokenString string) (int64, error) {
@@ -122,19 +180,15 @@ func (j *JWTUtils) ExtractRoles(tokenString string) ([]string, error) {
 		return nil, err
 	}
 
+	return extractRolesFromClaims(claims), nil
+}
+
+func extractRolesFromClaims(claims *Claims) []string {
 	var roles []string
 
-	if claims.RealmAccess != nil {
-		if realmRoles, ok := claims.RealmAccess["roles"].([]interface{}); ok {
-			for _, role := range realmRoles {
-				if roleStr, ok := role.(string); ok {
-					roles = append(roles, roleStr)
-				}
-			}
-		}
-	}
+	roles = append(roles, extractRealmRolesFromClaims(claims)...)
 
-	if claims.ResourceAccess != nil {
+	if claims != nil && claims.ResourceAccess != nil {
 		for _, clientAccess := range claims.ResourceAccess {
 			if clientMap, ok := clientAccess.(map[string]interface{}); ok {
 				if clientRoles, ok := clientMap["roles"].([]interface{}); ok {
@@ -157,7 +211,39 @@ func (j *JWTUtils) ExtractRoles(tokenString string) ([]string, error) {
 		}
 	}
 
-	return result, nil
+	return result
+}
+
+func extractRealmRolesFromClaims(claims *Claims) []string {
+	var roles []string
+	if claims != nil && claims.RealmAccess != nil {
+		if realmRoles, ok := claims.RealmAccess["roles"].([]interface{}); ok {
+			for _, role := range realmRoles {
+				if roleStr, ok := role.(string); ok {
+					roles = append(roles, roleStr)
+				}
+			}
+		}
+	}
+
+	return roles
+}
+
+func extractResourceRolesFromClaims(claims *Claims, clientId string) []string {
+	var roles []string
+	if claims != nil && claims.ResourceAccess != nil {
+		if clientAccess, ok := claims.ResourceAccess[clientId].(map[string]interface{}); ok {
+			if clientRoles, ok := clientAccess["roles"].([]interface{}); ok {
+				for _, role := range clientRoles {
+					if roleStr, ok := role.(string); ok {
+						roles = append(roles, roleStr)
+					}
+				}
+			}
+		}
+	}
+
+	return roles
 }
 
 func (j *JWTUtils) HasRole(tokenString string, roleName string) bool {
@@ -300,18 +386,7 @@ func (j *JWTUtils) GetRealmRolesFromToken(tokenString string) ([]string, error) 
 		return nil, err
 	}
 
-	var roles []string
-	if claims.RealmAccess != nil {
-		if realmRoles, ok := claims.RealmAccess["roles"].([]interface{}); ok {
-			for _, role := range realmRoles {
-				if roleStr, ok := role.(string); ok {
-					roles = append(roles, roleStr)
-				}
-			}
-		}
-	}
-
-	return roles, nil
+	return extractRealmRolesFromClaims(claims), nil
 }
 
 func (j *JWTUtils) GetResourceRolesFromToken(tokenString string, clientId string) ([]string, error) {
@@ -320,20 +395,7 @@ func (j *JWTUtils) GetResourceRolesFromToken(tokenString string, clientId string
 		return nil, err
 	}
 
-	var roles []string
-	if claims.ResourceAccess != nil {
-		if clientAccess, ok := claims.ResourceAccess[clientId].(map[string]interface{}); ok {
-			if clientRoles, ok := clientAccess["roles"].([]interface{}); ok {
-				for _, role := range clientRoles {
-					if roleStr, ok := role.(string); ok {
-						roles = append(roles, roleStr)
-					}
-				}
-			}
-		}
-	}
-
-	return roles, nil
+	return extractResourceRolesFromClaims(claims, clientId), nil
 }
 
 func (j *JWTUtils) HasRealmRole(tokenString string, roleName string) bool {
