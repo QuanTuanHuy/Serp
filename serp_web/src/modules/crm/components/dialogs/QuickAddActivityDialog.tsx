@@ -5,7 +5,7 @@ Description: Part of Serp Project - Quick Add Activity Dialog for CRM
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,8 @@ import {
 } from '../../api/crmApi';
 import { CRMDatePicker, CRMUserSelect } from '../shared';
 import { toLocalDateInputValue } from '../../utils';
+import { useDebounce } from '@/shared/hooks';
+import { Combobox } from '@/shared/components/ui/combobox';
 
 export interface QuickActivityFormData {
   type: ActivityType;
@@ -132,18 +134,30 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
     }
   }, [open, preselectedDate, preselectedRelation]);
 
-  const { data: customersData } = useGetCustomersQuery({
-    filters: {},
+  const [relationSearch, setRelationSearch] = useState('');
+  const debouncedRelationSearch = useDebounce(relationSearch, 300);
+
+  const { data: customersData, isFetching: isFetchingCustomers } =
+    useGetCustomersQuery({
+      filters: { search: debouncedRelationSearch },
+      pagination: { page: 1, limit: 50 },
+    });
+  const { data: leadsData, isFetching: isFetchingLeads } = useGetLeadsQuery({
+    filters: { search: debouncedRelationSearch },
     pagination: { page: 1, limit: 50 },
   });
-  const { data: leadsData } = useGetLeadsQuery({
-    filters: {},
-    pagination: { page: 1, limit: 50 },
-  });
-  const { data: opportunitiesData } = useGetOpportunitiesQuery({
-    filters: {},
-    pagination: { page: 1, limit: 50 },
-  });
+  const { data: opportunitiesData, isFetching: isFetchingOpportunities } =
+    useGetOpportunitiesQuery({
+      filters: { search: debouncedRelationSearch },
+      pagination: { page: 1, limit: 50 },
+    });
+
+  const isFetchingRelated =
+    isFetchingCustomers || isFetchingLeads || isFetchingOpportunities;
+
+  useEffect(() => {
+    setRelationSearch('');
+  }, [formData.relatedTo.type]);
 
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
 
@@ -266,9 +280,44 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
 
   const relatedOptions = getRelatedOptions();
 
+  const [selectedItemName, setSelectedItemName] = useState('');
+
+  // Keep track of selected item name
+  useEffect(() => {
+    if (formData.relatedTo.id) {
+      const found = relatedOptions.find(
+        (opt) => String(opt.id) === String(formData.relatedTo.id)
+      );
+      if (found) {
+        setSelectedItemName(found.name);
+      }
+    } else {
+      setSelectedItemName('');
+    }
+  }, [formData.relatedTo.id, relatedOptions]);
+
+  const comboboxItems = useMemo(() => {
+    const list = relatedOptions.map((opt) => ({
+      value: String(opt.id),
+      label: opt.subtitle ? `${opt.name} (${opt.subtitle})` : opt.name,
+    }));
+
+    // Fallback/Ensure selected item is always in the items list
+    if (
+      formData.relatedTo.id &&
+      !list.some((item) => String(item.value) === String(formData.relatedTo.id))
+    ) {
+      list.unshift({
+        value: String(formData.relatedTo.id),
+        label: selectedItemName || `Selected (ID: ${formData.relatedTo.id})`,
+      });
+    }
+    return list;
+  }, [relatedOptions, formData.relatedTo.id, selectedItemName]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
+      <DialogContent className='sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>Create New Activity</DialogTitle>
           <DialogDescription>
@@ -349,30 +398,16 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
                     )
                   )}
                 </div>
-                <Select
+                <Combobox
                   value={formData.relatedTo.id}
-                  onValueChange={(value) => handleChange('relatedTo.id', value)}
-                >
-                  <SelectTrigger
-                    className={cn(errors.relatedToId && 'border-red-500')}
-                  >
-                    <SelectValue placeholder='Select...' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {relatedOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        <div>
-                          <span>{option.name}</span>
-                          {option.subtitle && (
-                            <span className='text-muted-foreground ml-1'>
-                              ({option.subtitle})
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(value) => handleChange('relatedTo.id', value)}
+                  items={comboboxItems}
+                  placeholder={`Search ${formData.relatedTo.type.toLowerCase()}...`}
+                  onSearch={setRelationSearch}
+                  loading={isFetchingRelated}
+                  modal={true}
+                  className={cn(errors.relatedToId && 'border-red-500')}
+                />
                 {errors.relatedToId && (
                   <p className='text-xs text-red-500'>{errors.relatedToId}</p>
                 )}

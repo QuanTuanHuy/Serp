@@ -255,9 +255,9 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
               </div>
 
               {/* Related To */}
-              <div className='rounded-lg border border-border bg-muted/30 p-4 text-sm'>
+              <div className='rounded-lg border border-border bg-muted/30 p-4 text-sm min-w-0'>
                 <p className='font-medium text-foreground'>Related To</p>
-                <p className='mt-1 text-muted-foreground'>
+                <p className='mt-1 text-muted-foreground break-words whitespace-normal'>
                   {activity.relatedTo.type}: {activity.relatedTo.name}
                 </p>
               </div>
