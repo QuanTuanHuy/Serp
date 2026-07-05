@@ -85,7 +85,8 @@ public class TruckContainerInitializer {
 		solver.group2IL = new HashMap<Integer, ImportLadenRequests>();
 
 		solver.point2moocWeight = new HashMap<Point, Integer>(); // trọng số thay đổi số mooc khi đi qua điểm đó. Ví dụ start mooc +2, end mooc -2, điểm pickup/delivery thường 0.
-		solver.point2containerWeight = new HashMap<Point, Integer>(); // trọng số thay đổi số container khi đi qua điểm đó. Ví dụ điểm pickup +1 (hoặc +2 nếu là container 40ft), điểm delivery -1 (hoặc -2 nếu là container 40ft), điểm start/stop mooc thường 0.
+		solver.point2containerWeight = new HashMap<Point, Integer>();
+		solver.point2ContainerCode = new HashMap<Point, String>(); // trọng số thay đổi số container khi đi qua điểm đó. Ví dụ điểm pickup +1 (hoặc +2 nếu là container 40ft), điểm delivery -1 (hoặc -2 nếu là container 40ft), điểm start/stop mooc thường 0.
 
 		solver.route2DeliveryMooc = new HashMap<Integer, Point>(); // ánh xạ giữa tuyến đường (route) và điểm delivery mooc tương ứng trên tuyến đó để dễ dàng truy xuất điểm delivery mooc từ tuyến đường, phục vụ cho việc áp dụng ràng buộc liên quan đến mooc trên tuyến đường đó.
 	}
@@ -234,6 +235,8 @@ public class TruckContainerInitializer {
 					solver.point2containerWeight.put(pickup, 2);
 					solver.point2containerWeight.put(delivery, -2);
 				}
+
+				solver.point2ContainerCode.put(pickup, c.getCode());
 
 				solver.point2Type.put(pickup, TruckContainerSolver.START_CONT);
 				solver.point2Type.put(delivery, TruckContainerSolver.WH_DELIVERY_EMPTYCONT);

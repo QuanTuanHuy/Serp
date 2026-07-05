@@ -71,6 +71,7 @@ public class TruckContainerSolver {
 	
 	public HashMap<Point, Integer> point2moocWeight;
 	public HashMap<Point, Integer> point2containerWeight;
+	public HashMap<Point, String> point2ContainerCode;
 	
 	public HashMap<Integer, Point> route2DeliveryMooc;
 	
@@ -420,14 +421,7 @@ public class TruckContainerSolver {
 	 */
 	private String resolveContainerCodeForPoint(Point p) {
 		if (!START_CONT.equals(point2Type.get(p))) return null;
-		String depotCode = p.getLocationCode();
-		if (depotCode == null) return null;
-		for (Container c : mCode2Container.values()) {
-			if (depotCode.equals(c.getDepotContainerCode())) {
-				return c.getCode();
-			}
-		}
-		return null;
+		return point2ContainerCode.get(p);
 	}
 
     public static void main(String[] args){
@@ -459,21 +453,21 @@ public class TruckContainerSolver {
 					solver.nRemovalOperators = 8;
 					solver.nInsertionOperators = 8;
 					
-					solver.lower_removal = (int) 0.01*nRequest;
-					solver.upper_removal = (int) 0.25*nRequest;
-					solver.sigma1 = 5;
+					solver.lower_removal = (int) 0.01*nRequest; // cận dưới số lượng request bị remove trong 1 lần remove
+					solver.upper_removal = (int) 0.25*nRequest; // cận trên số lượng request bị remove trong 1 lần remove
+					solver.sigma1 = 5; // 3 cái pi
 					solver.sigma2 = 1;
 					solver.sigma3 = (int)0.01;
 					
-					solver.rp = 0.1;
-					solver.nw = 1;
-					solver.shaw1st = 0.5;
+					solver.rp = 0.1; // learning rate
+					solver.nw = 1; // bao nhiêu iter mới update weight, điểm
+					solver.shaw1st = 0.5; // 3 hệ số của shaw
 					solver.shaw2nd = 0.2;
 					solver.	shaw3rd = 0.1;
 			
-					solver.temperature = 200;
-					solver.cooling_rate = 0.9995;
-					solver.nTabu = 5;
+					solver.temperature = 200; // nhiệt độ ban đầu, càng cao → càng dễ chấp nhận lời giải tệ hơn. temperature *= cooling_rate
+					solver.cooling_rate = 0.9995; // tỷ lệ làm mát, càng về sau càng khó chấp nhận lời giải tệ hơn
+					solver.nTabu = 5; // số iter mà 1 điểm bị tabu: cấm remove request đã bị chọn > nTabu lần
 
 					solver.setOptimizationStrategy(new ALNS(solver));
 					solver.optimizeSolution(outputALNSfileTxt);

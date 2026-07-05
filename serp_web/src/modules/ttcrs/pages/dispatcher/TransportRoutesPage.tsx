@@ -403,7 +403,17 @@ export function TransportRoutesPage() {
                     )}
                     onClick={() => router.push(`/ttcrs/dispatcher/routes/${plan.id}`)}
                   >
-                    <TableCell className='px-4 py-3' onClick={(e) => { e.stopPropagation(); toggleRow(plan.id); }}>
+                    <TableCell
+                      className='px-4 py-3'
+                      onClick={(e) => {
+                        if (e.target !== e.currentTarget) {
+                          e.stopPropagation();
+                          return;
+                        }
+                        e.stopPropagation();
+                        toggleRow(plan.id);
+                      }}
+                    >
                       <Checkbox
                         checked={selectedIds.has(plan.id)}
                         onCheckedChange={() => toggleRow(plan.id)}

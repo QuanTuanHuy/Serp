@@ -75,7 +75,7 @@ public class RequestService {
         // 4. Query và map sang DTO
         Page<RequestResponseDTO> resultPage = requestRepository
                 .findAll(spec, pageable)
-                .map(RequestResponseDTO::fromEntity);
+                .map(RequestResponseDTO::fromEntity); //convert entity → DTO
 
         return PageResponse.from(resultPage);
     }
@@ -145,7 +145,7 @@ public class RequestService {
 
         List<RequestEntity> saved = requestRepository.saveAll(entities);
 
-        return saved.stream()
+        return saved.stream() //convert collection to stream → map → collect to list
                 .map(RequestResponseDTO::fromEntity)
                 .toList();
     }
@@ -179,7 +179,7 @@ public class RequestService {
 
         // Chỉ cập nhật các request thuộc đúng tenant
         List<RequestEntity> owned = requests.stream()
-                .filter(r -> r.getTenantId().equals(tenantId))
+                .filter(r -> r.getTenantId().equals(tenantId)) // phải chuyển qua stream vì List không có filter
                 .toList();
 
         owned.forEach(r -> {
