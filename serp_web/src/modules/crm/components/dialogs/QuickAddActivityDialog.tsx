@@ -5,7 +5,7 @@ Description: Part of Serp Project - Quick Add Activity Dialog for CRM
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +79,7 @@ interface QuickAddActivityDialogProps {
     type: 'CUSTOMER' | 'LEAD' | 'OPPORTUNITY';
     id: string;
   };
+  preselectedDate?: string;
 }
 
 const ACTIVITY_TYPE_CONFIG = [
@@ -94,13 +95,14 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
   onSubmit,
   isLoading = false,
   preselectedRelation,
+  preselectedDate,
 }) => {
   const [formData, setFormData] = useState<QuickActivityFormData>({
     type: 'CALL',
     subject: '',
     description: '',
-    scheduledDate: '',
-    scheduledTime: '',
+    scheduledDate: preselectedDate || '',
+    scheduledTime: preselectedDate ? '09:00' : '',
     duration: 30,
     priority: 'MEDIUM',
     status: 'PLANNED',
@@ -108,6 +110,17 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
     location: '',
     assignedTo: '',
   });
+
+  useEffect(() => {
+    if (open) {
+      setFormData((prev) => ({
+        ...prev,
+        scheduledDate: preselectedDate || '',
+        scheduledTime: preselectedDate ? '09:00' : '',
+        relatedTo: preselectedRelation || { type: 'CUSTOMER', id: '' },
+      }));
+    }
+  }, [open, preselectedDate, preselectedRelation]);
 
   const { data: customersData } = useGetCustomersQuery({
     filters: {},
@@ -174,8 +187,8 @@ export const QuickAddActivityDialog: React.FC<QuickAddActivityDialogProps> = ({
       type: 'CALL',
       subject: '',
       description: '',
-      scheduledDate: '',
-      scheduledTime: '',
+      scheduledDate: preselectedDate || '',
+      scheduledTime: preselectedDate ? '09:00' : '',
       duration: 30,
       priority: 'MEDIUM',
       status: 'PLANNED',

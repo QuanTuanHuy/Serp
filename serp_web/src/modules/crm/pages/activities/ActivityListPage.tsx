@@ -2,7 +2,15 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import moment from 'moment';
+import { DndContext } from '@dnd-kit/core';
+import { CRMCalendarGrid } from '../../components/calendar/CRMCalendarGrid';
+import {
+  toVietnamMoment,
+  getVisibleCalendarDays,
+  getCalendarDayKey,
+} from '../../components/calendar/crmCalendar.utils';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import {
@@ -42,6 +50,7 @@ import {
   useSearchActivitiesQuery,
   useGetActivityStatsQuery,
   useBulkActivityOperationsMutation,
+  useRescheduleActivityMutation,
 } from '../../api/crmApi';
 import type {
   Activity,
@@ -135,6 +144,28 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
   );
   const pageSize = 10;
 
+  // Calendar specific state
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [calendarView, setCalendarView] = useState<'month' | 'week'>('month');
+  const [preselectedDate, setPreselectedDate] = useState<string>('');
+
+  useEffect(() => {
+    if (viewMode === 'calendar') {
+      const anchor = toVietnamMoment(calendarDate);
+      const start =
+        calendarView === 'month'
+          ? anchor.clone().startOf('month').startOf('isoWeek')
+          : anchor.clone().startOf('isoWeek');
+      const end =
+        calendarView === 'month'
+          ? anchor.clone().endOf('month').endOf('isoWeek')
+          : anchor.clone().endOf('isoWeek');
+
+      setDueDateFrom(start.format('YYYY-MM-DD'));
+      setDueDateTo(end.format('YYYY-MM-DD'));
+    }
+  }, [viewMode, calendarDate, calendarView]);
+
   const activityQuery = useSearchActivitiesQuery({
     filters: {
       keyword: searchQuery || undefined,
@@ -145,10 +176,10 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
       dueDateTo: dueDateTo || undefined,
     },
     pagination: {
-      page: currentPage,
-      limit: pageSize,
-      sortBy,
-      sortOrder,
+      page: viewMode === 'calendar' ? 1 : currentPage,
+      limit: viewMode === 'calendar' ? 200 : pageSize,
+      sortBy: viewMode === 'calendar' ? 'dueDate' : sortBy,
+      sortOrder: viewMode === 'calendar' ? 'asc' : sortOrder,
     },
   });
   const { data: statsData } = useGetActivityStatsQuery(undefined, {
@@ -158,11 +189,99 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
     useCreateActivityMutation();
   const [bulkActivityOperations, { isLoading: isBulkOperating }] =
     useBulkActivityOperationsMutation();
+  const [rescheduleActivity] = useRescheduleActivityMutation();
+
+  const handleDragEnd = async (event: any) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    if (activeData?.type === 'activity' && overData?.type === 'calendar-day') {
+      const activity = activeData.activity;
+      const targetDayKey = overData.dayKey;
+      const originalScheduledDate = activity.scheduledDate;
+
+      let timeStr = '09:00';
+      if (originalScheduledDate) {
+        const originalDate = new Date(originalScheduledDate);
+        const hours = String(originalDate.getHours()).padStart(2, '0');
+        const minutes = String(originalDate.getMinutes()).padStart(2, '0');
+        timeStr = `${hours}:${minutes}`;
+      }
+
+      const newScheduledDate = new Date(`${targetDayKey}T${timeStr}`);
+      const newTimestamp = newScheduledDate.getTime();
+
+      try {
+        await rescheduleActivity({
+          id: activity.id,
+          data: {
+            dueDate: newTimestamp,
+          },
+        }).unwrap();
+        toast.success('Activity rescheduled successfully');
+      } catch {
+        toast.error('Failed to reschedule activity');
+      }
+    }
+  };
+
+  const calendarDays = useMemo(() => {
+    return getVisibleCalendarDays(calendarDate, calendarView);
+  }, [calendarDate, calendarView]);
+
+  const calendarTitle = useMemo(() => {
+    const m = moment(calendarDate);
+    return calendarView === 'month'
+      ? m.format('MMMM YYYY')
+      : `Week of ${m.clone().startOf('isoWeek').format('MMM D, YYYY')}`;
+  }, [calendarDate, calendarView]);
+
+  const handleCalendarPrev = () => {
+    setCalendarDate((prev) =>
+      moment(prev)
+        .subtract(1, calendarView === 'month' ? 'month' : 'week')
+        .toDate()
+    );
+  };
+
+  const handleCalendarNext = () => {
+    setCalendarDate((prev) =>
+      moment(prev)
+        .add(1, calendarView === 'month' ? 'month' : 'week')
+        .toDate()
+    );
+  };
+
+  const handleCalendarToday = () => {
+    setCalendarDate(new Date());
+  };
+
+  const handleCalendarCellClick = (dateStr: string) => {
+    setPreselectedDate(dateStr);
+    setShowQuickAdd(true);
+  };
 
   const activities = useMemo(
     () => activityQuery.data?.data?.data || [],
     [activityQuery.data]
   );
+
+  const activitiesByDay = useMemo(() => {
+    const map = new Map<string, Activity[]>();
+    activities.forEach((activity) => {
+      const dayKey = getCalendarDayKey(activity.scheduledDate);
+      if (dayKey) {
+        if (!map.has(dayKey)) {
+          map.set(dayKey, []);
+        }
+        map.get(dayKey)!.push(activity);
+      }
+    });
+    return map;
+  }, [activities]);
   const pagination = activityQuery.data?.data?.pagination;
   const total = pagination?.total || 0;
   const totalPages = pagination?.totalPages || 1;
@@ -772,20 +891,72 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
         </div>
       )}
 
-      {/* Calendar View Placeholder */}
+      {/* Calendar View */}
       {viewMode === 'calendar' && (
-        <Card>
-          <CardContent className='py-16 text-center'>
-            <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
-              <Calendar className='w-10 h-10 text-muted-foreground' />
+        <div className='space-y-4'>
+          {/* Navigation and views toolbar */}
+          <div className='flex items-center justify-between p-4 bg-muted/20 border rounded-lg'>
+            <div className='flex items-center gap-2'>
+              <div className='flex items-center gap-1'>
+                <Button
+                  variant='outline'
+                  size='icon'
+                  className='h-8 w-8'
+                  onClick={handleCalendarPrev}
+                >
+                  <ChevronLeft className='h-4 w-4' />
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='h-8 px-3'
+                  onClick={handleCalendarToday}
+                >
+                  Today
+                </Button>
+                <Button
+                  variant='outline'
+                  size='icon'
+                  className='h-8 w-8'
+                  onClick={handleCalendarNext}
+                >
+                  <ChevronRight className='h-4 w-4' />
+                </Button>
+              </div>
+              <span className='text-sm font-semibold ml-2'>
+                {calendarTitle}
+              </span>
             </div>
-            <h3 className='text-lg font-semibold mb-2'>Calendar View</h3>
-            <p className='text-muted-foreground max-w-sm mx-auto'>
-              Calendar view coming soon. Switch to list view to see all
-              activities.
-            </p>
-          </CardContent>
-        </Card>
+            <div className='flex items-center gap-1 bg-muted p-0.5 rounded-md'>
+              <Button
+                variant={calendarView === 'month' ? 'secondary' : 'ghost'}
+                size='sm'
+                className='h-7 text-xs cursor-pointer'
+                onClick={() => setCalendarView('month')}
+              >
+                Month
+              </Button>
+              <Button
+                variant={calendarView === 'week' ? 'secondary' : 'ghost'}
+                size='sm'
+                className='h-7 text-xs cursor-pointer'
+                onClick={() => setCalendarView('week')}
+              >
+                Week
+              </Button>
+            </div>
+          </div>
+
+          <DndContext onDragEnd={handleDragEnd}>
+            <CRMCalendarGrid
+              days={calendarDays}
+              view={calendarView}
+              activitiesByDay={activitiesByDay}
+              onActivityClick={(activity) => handleViewActivity(activity.id)}
+              onAddActivity={handleCalendarCellClick}
+            />
+          </DndContext>
+        </div>
       )}
 
       {/* Pagination */}
@@ -821,9 +992,15 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
       {/* Quick Add Dialog */}
       <QuickAddActivityDialog
         open={showQuickAdd}
-        onOpenChange={setShowQuickAdd}
+        onOpenChange={(isOpen) => {
+          setShowQuickAdd(isOpen);
+          if (!isOpen) {
+            setPreselectedDate('');
+          }
+        }}
         onSubmit={handleQuickAddActivity}
         isLoading={isCreating}
+        preselectedDate={preselectedDate || undefined}
       />
     </div>
   );
