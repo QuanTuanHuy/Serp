@@ -15,6 +15,8 @@ import serp.project.tms_billing_service.domain.Tariff;
 import serp.project.tms_billing_service.dto.request.CalculateShippingFeeRequest;
 import serp.project.tms_billing_service.dto.response.CalculateShippingFeeResponse;
 import serp.project.tms_billing_service.dto.response.FeeLineItemResponse;
+import serp.project.tms_billing_service.enums.CalculationType;
+import serp.project.tms_billing_service.enums.ProductCategory;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
 import serp.project.tms_billing_service.exception.AppException;
@@ -22,7 +24,9 @@ import serp.project.tms_billing_service.exception.ErrorCode;
 import serp.project.tms_billing_service.repository.DeliveryServiceConfigRepository;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -60,7 +64,7 @@ public class ConfiguredDeliveryPricingCalculator {
         List<FeeLineItemResponse> feeItems = new ArrayList<>();
         // Tổng phí được tách thành cước chính và phụ phí để UI/API có thể giải thích từng dòng phí.
         long baseFee = calculateBaseFreight(serviceCode, routeType, chargeableWeight, feeItems);
-        long surchargeFee = calculateSurcharges(request, chargeableWeight, feeItems);
+        long surchargeFee = calculateSurcharges(request, chargeableWeight, baseFee, feeItems);
         long totalFee = baseFee + surchargeFee;
 
         return CalculateShippingFeeResponse.builder()
@@ -80,8 +84,7 @@ public class ConfiguredDeliveryPricingCalculator {
             long chargeableWeight,
             List<FeeLineItemResponse> feeItems
     ) {
-        RouteType normalizedRouteType = normalizeRouteType(routeType);
-        Tariff tariff = pricingRuleService.getTariff(serviceCode, normalizedRouteType);
+        Tariff tariff = pricingRuleService.getTariff(serviceCode, routeType);
 
         long baseWeight = requiredLong(tariff.getBaseWeight(), "tariff.baseWeight");
         long basePrice = requiredLong(tariff.getBasePrice(), "tariff.basePrice");
@@ -109,26 +112,93 @@ public class ConfiguredDeliveryPricingCalculator {
     private long calculateSurcharges(
             CalculateShippingFeeRequest request,
             long chargeableWeight,
+            long baseFee,
             List<FeeLineItemResponse> feeItems
     ) {
-        // Hiện chỉ phụ thu vùng xa, nên đơn không thuộc vùng xa sẽ không phát sinh surcharge.
-        if (!routeClassificationService.isRemoteArea(request.getReceiverWardCode())) {
-            return 0L;
+        Set<SurchargeRuleEnum> surchargeCodes = resolveSurchargeCodes(request);
+        long totalSurchargeFee = 0L;
+
+        for (SurchargeRuleEnum code : surchargeCodes) {
+            SurchargeRule rule = pricingRuleService.getRequiredSurchargeRule(code);
+            long amount = calculateSurchargeAmount(chargeableWeight, baseFee, rule);
+            feeItems.add(FeeLineItemResponse.builder()
+                    .code(code.name())
+                    .name(rule.getName())
+                    .category("SURCHARGE")
+                    .amount(amount)
+                    .build());
+            totalSurchargeFee += amount;
         }
 
-        long remoteAreaFee = calculateRemoteAreaFee(chargeableWeight);
-        feeItems.add(FeeLineItemResponse.builder()
-                .code(SurchargeRuleEnum.VUNG_XA.name())
-                .name("Phụ phí vùng sâu vùng xa")
-                .category("SURCHARGE")
-                .amount(remoteAreaFee)
-                .build());
-        return remoteAreaFee;
+        return totalSurchargeFee;
     }
 
-    private long calculateRemoteAreaFee(long chargeableWeight) {
-        SurchargeRule configuredRule = pricingRuleService.getRequiredSurchargeRule(SurchargeRuleEnum.VUNG_XA);
-        return calculateStepWeightSurcharge(chargeableWeight, configuredRule);
+    private Set<SurchargeRuleEnum> resolveSurchargeCodes(CalculateShippingFeeRequest request) {
+        Set<SurchargeRuleEnum> surchargeCodes = new LinkedHashSet<>();
+        if (routeClassificationService.isRemoteArea(request.getReceiverWardCode())) {
+            surchargeCodes.add(SurchargeRuleEnum.VUNG_XA);
+        }
+        SurchargeRuleEnum categorySurchargeCode = resolveProductCategorySurchargeCode(request.getProductCategory());
+        if (categorySurchargeCode != null) {
+            surchargeCodes.add(categorySurchargeCode);
+        }
+        if (request.getSurchargeRuleCodes() != null) {
+            surchargeCodes.addAll(request.getSurchargeRuleCodes());
+        }
+        return surchargeCodes;
+    }
+
+    private SurchargeRuleEnum resolveProductCategorySurchargeCode(ProductCategory productCategory) {
+        if (productCategory == null) {
+            return null;
+        }
+        return switch (productCategory) {
+            case HIGH_VALUE -> SurchargeRuleEnum.HANG_GIA_TRI_CAO;
+            case FRAGILE -> SurchargeRuleEnum.DE_VO;
+            case IMPORTANT_DOCUMENT -> SurchargeRuleEnum.CHUNG_TU_QUAN_TRONG;
+            case OVERSIZED -> SurchargeRuleEnum.QUA_KHO;
+            case LIQUID -> SurchargeRuleEnum.CHAT_LONG;
+            case SOLID, MAGNETIC_BATTERY -> null;
+        };
+    }
+
+    private long calculateSurchargeAmount(long chargeableWeight, long baseFee, SurchargeRule rule) {
+        CalculationType calculationType = rule.getCalculationType();
+        if (calculationType == null) {
+            throw new AppException(
+                    ErrorCode.BILLING_RULE_NOT_FOUND,
+                    "Thiếu cấu hình cách tính phụ phí cho mã: " + rule.getCode()
+            );
+        }
+
+        long amount = switch (calculationType) {
+            case FIXED_PER_ORDER -> requiredLong(rule.getFixedAmount(), "surcharge.fixedAmount");
+            case FIXED_PER_KG -> calculateFixedPerKgSurcharge(chargeableWeight, rule);
+            case PERCENTAGE -> calculatePercentageSurcharge(baseFee, rule);
+            case STEP_WEIGHT -> calculateStepWeightSurcharge(chargeableWeight, rule);
+        };
+
+        if (rule.getMinAmount() == null) {
+            return amount;
+        }
+        return Math.max(amount, requiredLong(rule.getMinAmount(), "surcharge.minAmount"));
+    }
+
+    private long calculateFixedPerKgSurcharge(long chargeableWeight, SurchargeRule rule) {
+        long fixedAmount = requiredLong(rule.getFixedAmount(), "surcharge.fixedAmount");
+        long chargedKg = (long) Math.ceil((double) chargeableWeight / 1000);
+        return chargedKg * fixedAmount;
+    }
+
+    private long calculatePercentageSurcharge(long baseFee, SurchargeRule rule) {
+        Double ratePercent = rule.getRatePercent();
+        if (ratePercent == null) {
+            throw new AppException(
+                    ErrorCode.BILLING_RULE_NOT_FOUND,
+                    "Thiếu cấu hình trường giá: surcharge.ratePercent"
+            );
+        }
+        return Math.round(baseFee * ratePercent / 100);
     }
 
     private long calculateStepWeightSurcharge(long chargeableWeight, SurchargeRule rule) {
@@ -145,13 +215,6 @@ public class ConfiguredDeliveryPricingCalculator {
         // Quy tắc STEP_WEIGHT của phụ phí dùng cùng nguyên tắc làm tròn lên như cước chính.
         long extraSteps = (long) Math.ceil((double) extraWeight / stepWeight);
         return basePrice + (extraSteps * stepPrice);
-    }
-
-    private RouteType normalizeRouteType(RouteType routeType) {
-        if (routeType == RouteType.LIEN_MIEN_DAC_BIET) {
-            return RouteType.LIEN_MIEN;
-        }
-        return routeType;
     }
 
     private long requiredLong(Double value, String fieldName) {

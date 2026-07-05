@@ -35,11 +35,11 @@ export const OrderDropOffSuggestionsDialog: React.FC<
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>Suggested Post Offices</DialogTitle>
+          <DialogTitle>Bưu cục gợi ý</DialogTitle>
           <DialogDescription>
             {order
-              ? `Order ${order.orderCode} - drop-off post offices that can still accept more orders.`
-              : 'Suggested drop-off post offices.'}
+              ? `Đơn hàng ${order.orderCode} - các bưu cục nhận gửi vẫn còn khả năng tiếp nhận thêm đơn.`
+              : 'Các bưu cục nhận gửi được gợi ý.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -56,14 +56,14 @@ export const OrderDropOffSuggestionsDialog: React.FC<
             ) : (
               <RefreshCw className='mr-2 h-4 w-4' />
             )}
-            Refresh suggestions
+            Làm mới gợi ý
           </Button>
         </div>
 
         {isLoading ? (
           <div className='flex items-center gap-2 text-sm text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Loading suggested post offices...
+            Đang tải bưu cục gợi ý...
           </div>
         ) : suggestions.length > 0 ? (
           <div className='space-y-3'>
@@ -83,17 +83,17 @@ export const OrderDropOffSuggestionsDialog: React.FC<
                   </div>
                   <div className='flex flex-wrap gap-1'>
                     <Badge variant='secondary'>
-                      Pickup remaining: {suggestion.remainingCapacity ?? '--'}
+                      Sức chứa còn lại: {suggestion.remainingCapacity ?? '--'}
                     </Badge>
                     <Badge variant='outline'>
-                      Distance: {suggestion.distanceMeters?.toFixed(0) ?? '--'}{' '}
-                      m
+                      Khoảng cách:{' '}
+                      {suggestion.distanceMeters?.toFixed(0) ?? '--'} m
                     </Badge>
                   </div>
                 </div>
                 <p className='mt-2 text-xs text-muted-foreground'>
-                  Pickup load: {suggestion.currentLoad ?? '--'} /
-                  {suggestion.dailyCapacity ?? '--'} | Priority:{' '}
+                  Tải hiện tại: {suggestion.currentLoad ?? '--'} /
+                  {suggestion.dailyCapacity ?? '--'} | Độ ưu tiên:{' '}
                   {suggestion.priority ?? '--'}
                 </p>
               </div>
@@ -101,7 +101,7 @@ export const OrderDropOffSuggestionsDialog: React.FC<
           </div>
         ) : (
           <p className='text-sm text-muted-foreground'>
-            No suitable post office suggestions for this order right now.
+            Hiện chưa có bưu cục phù hợp nào cho đơn hàng này.
           </p>
         )}
       </DialogContent>

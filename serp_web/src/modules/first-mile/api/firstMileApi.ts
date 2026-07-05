@@ -60,6 +60,7 @@ import type {
   UpdatePostOfficeRequest,
   UpdateProductTypeRequest,
   ValidateImportFileResponse,
+  VehicleListFilters,
   SecondMileCreateVehicleRequest,
   SecondMileUpdateVehicleRequest,
   SecondMileVehicle,
@@ -106,6 +107,7 @@ import {
   normalizeSecondMileHubImportHistory,
   normalizeSecondMileHubStaffAssignment,
   normalizeSecondMileHubStaff,
+  normalizePostOfficeStaff,
   normalizePostOfficeStaffAssignment,
   normalizeHubPostOfficeMapping,
   normalizeHubPostOfficeMappingPage,
@@ -148,7 +150,6 @@ export const firstMileApi = api.injectEndpoints({
         keyword,
         code,
         name,
-        hubType,
         provinceCode,
         wardCode,
         status,
@@ -170,7 +171,6 @@ export const firstMileApi = api.injectEndpoints({
           ...(keyword ? { keyword } : {}),
           ...(code ? { code } : {}),
           ...(name ? { name } : {}),
-          ...(hubType ? { hub_type: hubType } : {}),
           ...(provinceCode ? { province_code: provinceCode } : {}),
           ...(wardCode ? { ward_code: wardCode } : {}),
           ...(status ? { status } : {}),
@@ -406,7 +406,9 @@ export const firstMileApi = api.injectEndpoints({
         licensePlate,
         vehicleType,
         hubId,
+        hubKeyword,
         assignedStaffId,
+        driverKeyword,
         status,
       }) => ({
         url: '/vehicles',
@@ -418,9 +420,11 @@ export const firstMileApi = api.injectEndpoints({
           ...(licensePlate ? { license_plate: licensePlate } : {}),
           ...(vehicleType ? { vehicle_type: vehicleType } : {}),
           ...(hubId !== undefined ? { hub_id: hubId } : {}),
+          ...(hubKeyword ? { hub_keyword: hubKeyword } : {}),
           ...(assignedStaffId !== undefined
             ? { assigned_staff_id: assignedStaffId }
             : {}),
+          ...(driverKeyword ? { driver_keyword: driverKeyword } : {}),
           ...(status ? { status } : {}),
         },
       }),
@@ -1496,6 +1500,23 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: unwrapFirstMileResult<PostOffice>,
     }),
 
+    uploadPostOfficeImage: builder.mutation<
+      PostOffice,
+      { id: number; file: File }
+    >({
+      query: ({ id, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/post-offices/${id}/image`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<PostOffice>,
+    }),
+
     deletePostOffice: builder.mutation<string, number>({
       query: (id) => ({
         url: `/post-offices/${id}`,
@@ -1564,15 +1585,29 @@ export const firstMileApi = api.injectEndpoints({
 
     getFirstMileVehicles: builder.query<
       FirstMilePaginatedData<Vehicle>,
-      { page?: number; size?: number; keyword?: string }
+      { page?: number; size?: number } & VehicleListFilters
     >({
-      query: ({ page = 0, size = 20, keyword }) => ({
+      query: ({
+        page = 0,
+        size = 20,
+        keyword,
+        vehicleType,
+        status,
+        postOfficeKeyword,
+        courierKeyword,
+      }) => ({
         url: '/vehicles',
         method: 'GET',
         params: {
           page,
           size,
           ...(keyword ? { keyword } : {}),
+          ...(vehicleType ? { vehicle_type: vehicleType } : {}),
+          ...(status ? { status } : {}),
+          ...(postOfficeKeyword
+            ? { post_office_keyword: postOfficeKeyword }
+            : {}),
+          ...(courierKeyword ? { courier_keyword: courierKeyword } : {}),
         },
       }),
       extraOptions: FIRST_MILE_SERVICE,
@@ -1619,6 +1654,20 @@ export const firstMileApi = api.injectEndpoints({
       extraOptions: FIRST_MILE_SERVICE,
       transformResponse: (response: { message?: string }) =>
         response?.message || 'Deleted successfully',
+    }),
+
+    uploadVehicleImage: builder.mutation<Vehicle, { id: number; file: File }>({
+      query: ({ id, file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return {
+          url: `/vehicles/${id}/image`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResult<Vehicle>,
     }),
 
     exportVehicleTemplate: builder.query<Blob, void>({
@@ -1994,7 +2043,10 @@ export const firstMileApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff[]>,
+      transformResponse: (response: FirstMileApiResponse<unknown[]>) =>
+        unwrapFirstMileResultOrRaw<unknown[]>(response).map((item) =>
+          normalizePostOfficeStaff(item)
+        ),
     }),
 
     getPostOfficeStaffById: builder.query<PostOfficeStaff, number>({
@@ -2003,7 +2055,8 @@ export const firstMileApi = api.injectEndpoints({
         method: 'GET',
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff>,
+      transformResponse: (response: FirstMileApiResponse<unknown>) =>
+        normalizePostOfficeStaff(unwrapFirstMileResultOrRaw<unknown>(response)),
     }),
 
     getAssignablePostOfficeStaffs: builder.query<
@@ -2019,7 +2072,10 @@ export const firstMileApi = api.injectEndpoints({
         },
       }),
       extraOptions: FIRST_MILE_SERVICE,
-      transformResponse: unwrapFirstMileResultOrRaw<PostOfficeStaff[]>,
+      transformResponse: (response: FirstMileApiResponse<unknown[]>) =>
+        unwrapFirstMileResultOrRaw<unknown[]>(response).map((item) =>
+          normalizePostOfficeStaff(item)
+        ),
     }),
 
     getPostOfficeStaffAssignmentsByPostOffice: builder.query<
@@ -2327,6 +2383,7 @@ export const {
   useGetPostOfficeByIdQuery,
   useCreatePostOfficeMutation,
   useUpdatePostOfficeMutation,
+  useUploadPostOfficeImageMutation,
   useDeletePostOfficeMutation,
   useGeocodePostOfficeByIdMutation,
   useGeocodeNullPostOfficesMutation,
@@ -2338,6 +2395,7 @@ export const {
   useCreateFirstMileVehicleMutation,
   useUpdateFirstMileVehicleMutation,
   useDeleteVehicleMutation,
+  useUploadVehicleImageMutation,
   useLazyExportVehicleTemplateQuery,
   useValidateVehicleImportMutation,
   useImportVehiclesMutation,

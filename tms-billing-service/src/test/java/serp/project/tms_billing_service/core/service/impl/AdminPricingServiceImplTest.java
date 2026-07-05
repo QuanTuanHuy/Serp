@@ -23,7 +23,6 @@ import serp.project.tms_billing_service.dto.response.admin.TariffAdminResponse;
 import serp.project.tms_billing_service.enums.CalculationType;
 import serp.project.tms_billing_service.enums.RouteType;
 import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
-import serp.project.tms_billing_service.exception.AppException;
 import serp.project.tms_billing_service.repository.ChargeableWeightConfigRepository;
 import serp.project.tms_billing_service.repository.DeliveryServiceConfigRepository;
 import serp.project.tms_billing_service.repository.SurchargeRuleRepository;
@@ -34,7 +33,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -92,7 +90,7 @@ class AdminPricingServiceImplTest {
     }
 
     @Test
-    void shouldListOnlyActiveSurchargeRules() {
+    void shouldListConfiguredSurchargeRules() {
         SurchargeRule remoteRule = SurchargeRule.builder()
                 .id(1L)
                 .code(SurchargeRuleEnum.VUNG_XA)
@@ -110,18 +108,32 @@ class AdminPricingServiceImplTest {
 
         List<SurchargeRuleAdminResponse> response = adminPricingService.listSurchargeRules();
 
-        assertEquals(1, response.size());
+        assertEquals(2, response.size());
         assertEquals(SurchargeRuleEnum.VUNG_XA, response.getFirst().getCode());
+        assertEquals(SurchargeRuleEnum.QUA_KHO, response.get(1).getCode());
     }
 
     @Test
-    void shouldRejectUnsupportedSpecialGoodsSurchargeRule() {
+    void shouldUpsertConfiguredSpecialGoodsSurchargeRule() {
         UpsertSurchargeRuleRequest request = new UpsertSurchargeRuleRequest();
         request.setCode(SurchargeRuleEnum.QUA_KHO);
         request.setName("Oversized goods surcharge");
         request.setCalculationType(CalculationType.FIXED_PER_KG);
+        request.setFixedAmount(3_000d);
 
-        assertThrows(AppException.class, () -> adminPricingService.upsertSurchargeRule(request));
+        when(surchargeRuleRepository.findByCode(SurchargeRuleEnum.QUA_KHO)).thenReturn(Optional.empty());
+        when(surchargeRuleRepository.save(org.mockito.ArgumentMatchers.any(SurchargeRule.class)))
+                .thenAnswer(invocation -> {
+                    SurchargeRule rule = invocation.getArgument(0);
+                    rule.setId(10L);
+                    return rule;
+                });
+
+        SurchargeRuleAdminResponse response = adminPricingService.upsertSurchargeRule(request);
+
+        assertEquals(10L, response.getId());
+        assertEquals(SurchargeRuleEnum.QUA_KHO, response.getCode());
+        assertEquals(CalculationType.FIXED_PER_KG, response.getCalculationType());
     }
 
     @Test

@@ -13,7 +13,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
 import serp.project.second_mile.enums.HubStatus;
-import serp.project.second_mile.enums.HubType;
 import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDate;
@@ -37,10 +36,6 @@ public class Hub extends AbstractAudit {
 
     @Column(name = "name")
     private String name;
-
-    @Column(name = "hub_type")
-    @Enumerated(EnumType.STRING)
-    private HubType hubType;
 
     @Column(name = "province_code")
     private String provinceCode;

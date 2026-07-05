@@ -11,8 +11,8 @@ import {
   TmsListFilterPanel,
   type TmsFilterMode,
 } from '../../../../components/list';
-import type { HubType, Province, Ward } from '../../../../types';
-import { HUB_STATUS_OPTIONS, HUB_TYPE_OPTIONS } from '../hubForm';
+import type { Province, Ward } from '../../../../types';
+import { HUB_STATUS_OPTIONS } from '../hubForm';
 import type { HasLocationFilter, HubFilterFormState } from '../hubFilterModels';
 
 interface HubFiltersCardProps {
@@ -52,15 +52,11 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
   onRefresh,
 }) => {
   const statusOptions = [
-    { value: 'ALL', label: 'All statuses' },
+    { value: 'ALL', label: 'Tất cả trạng thái' },
     ...HUB_STATUS_OPTIONS,
   ];
-  const hubTypeOptions = [
-    { value: 'ALL', label: 'All types' },
-    ...HUB_TYPE_OPTIONS,
-  ];
   const provinceOptions = [
-    { value: 'ALL', label: 'All provinces' },
+    { value: 'ALL', label: 'Tất cả tỉnh/thành phố' },
     ...provinceSelectOptions.flatMap((province) =>
       province.provinceCode
         ? [
@@ -73,7 +69,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
     ),
   ];
   const wardOptions = [
-    { value: 'ALL', label: 'All wards' },
+    { value: 'ALL', label: 'Tất cả phường/xã' },
     ...filterWardOptions.flatMap((ward) =>
       ward.wardCode
         ? [
@@ -86,15 +82,15 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
     ),
   ];
   const hasLocationOptions = [
-    { value: 'ALL', label: 'All records' },
-    { value: 'YES', label: 'Has location' },
-    { value: 'NO', label: 'No location' },
+    { value: 'ALL', label: 'Tất cả bản ghi' },
+    { value: 'YES', label: 'Đã có tọa độ' },
+    { value: 'NO', label: 'Chưa có tọa độ' },
   ];
 
   return (
     <TmsListFilterPanel
-      title='Search & filters'
-      description='Basic search by keyword and status. Advanced filters match the hubs API query parameters.'
+      title='Tìm kiếm và bộ lọc'
+      description='Tìm kiếm nhanh theo từ khóa, trạng thái và các tham số lọc của API hub.'
       filterMode={filterMode}
       onFilterModeChange={onFilterModeChange}
       advancedFieldCount={advancedFieldCount}
@@ -105,7 +101,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
       basicFilters={
         <>
           <div className='space-y-2 sm:col-span-2'>
-            <Label htmlFor='hub-filter-keyword'>Keyword</Label>
+            <Label htmlFor='hub-filter-keyword'>Từ khóa</Label>
             <div className='relative'>
               <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
               <Input
@@ -115,13 +111,13 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
                 onChange={(event) =>
                   onFilterFieldChange('keyword', event.target.value)
                 }
-                placeholder='Code, name, address...'
+                placeholder='Mã, tên, địa chỉ...'
               />
             </div>
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='hub-filter-status'>Status</Label>
+            <Label htmlFor='hub-filter-status'>Trạng thái</Label>
             <TmsCombobox
               id='hub-filter-status'
               value={filterFormValues.status}
@@ -132,8 +128,8 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
                 )
               }
               options={statusOptions}
-              placeholder='All statuses'
-              emptyText='No statuses found'
+              placeholder='Tất cả trạng thái'
+              emptyText='Không tìm thấy trạng thái'
             />
           </div>
         </>
@@ -141,7 +137,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
       advancedFilters={
         <>
           <div className='space-y-2'>
-            <Label htmlFor='hub-filter-code'>Code</Label>
+            <Label htmlFor='hub-filter-code'>Mã hub</Label>
             <Input
               id='hub-filter-code'
               value={filterFormValues.code}
@@ -152,7 +148,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='hub-filter-name'>Name</Label>
+            <Label htmlFor='hub-filter-name'>Tên hub</Label>
             <Input
               id='hub-filter-name'
               value={filterFormValues.name}
@@ -163,21 +159,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='hub-filter-hub-type'>Hub type</Label>
-            <TmsCombobox
-              id='hub-filter-hub-type'
-              value={filterFormValues.hubType}
-              onValueChange={(value) =>
-                onFilterFieldChange('hubType', value as 'ALL' | HubType)
-              }
-              options={hubTypeOptions}
-              placeholder='All types'
-              emptyText='No hub types found'
-            />
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='hub-filter-province'>Province</Label>
+            <Label htmlFor='hub-filter-province'>Tỉnh/Thành phố</Label>
             <TmsCombobox
               id='hub-filter-province'
               value={selectedFilterProvinceCode || 'ALL'}
@@ -187,13 +169,13 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
                 onFilterFieldChange('wardCode', '');
               }}
               options={provinceOptions}
-              placeholder='All provinces'
-              emptyText='No provinces found'
+              placeholder='Tất cả tỉnh/thành phố'
+              emptyText='Không tìm thấy tỉnh/thành phố'
             />
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='hub-filter-ward'>Ward</Label>
+            <Label htmlFor='hub-filter-ward'>Phường/Xã</Label>
             <TmsCombobox
               id='hub-filter-ward'
               value={selectedFilterWardCode || 'ALL'}
@@ -203,13 +185,13 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
               options={wardOptions}
               placeholder={
                 selectedFilterProvinceCode
-                  ? 'All wards'
-                  : 'Select province first'
+                  ? 'Tất cả phường/xã'
+                  : 'Chọn tỉnh/thành phố trước'
               }
               emptyText={
                 isFetchingWardsForFilter
-                  ? 'Loading wards...'
-                  : 'No wards available'
+                  ? 'Đang tải phường/xã...'
+                  : 'Không có phường/xã'
               }
               disabled={!selectedFilterProvinceCode}
               loading={isFetchingWardsForFilter}
@@ -217,7 +199,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='hub-filter-has-location'>Has location</Label>
+            <Label htmlFor='hub-filter-has-location'>Tọa độ</Label>
             <TmsCombobox
               id='hub-filter-has-location'
               value={filterFormValues.hasLocation}
@@ -225,14 +207,14 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
                 onFilterFieldChange('hasLocation', value as HasLocationFilter)
               }
               options={hasLocationOptions}
-              placeholder='All records'
-              emptyText='No options found'
+              placeholder='Tất cả bản ghi'
+              emptyText='Không tìm thấy tùy chọn'
             />
           </div>
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-min-daily-capacity'>
-              Min hub order capacity
+              Sức chứa đơn tối thiểu
             </Label>
             <Input
               id='hub-filter-min-daily-capacity'
@@ -248,7 +230,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-max-daily-capacity'>
-              Max hub order capacity
+              Sức chứa đơn tối đa
             </Label>
             <Input
               id='hub-filter-max-daily-capacity'
@@ -264,7 +246,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-min-current-load'>
-              Min current hub load
+              Tải hub tối thiểu
             </Label>
             <Input
               id='hub-filter-min-current-load'
@@ -280,7 +262,7 @@ export const HubFiltersCard: React.FC<HubFiltersCardProps> = ({
 
           <div className='space-y-2'>
             <Label htmlFor='hub-filter-max-current-load'>
-              Max current hub load
+              Tải hub tối đa
             </Label>
             <Input
               id='hub-filter-max-current-load'

@@ -12,8 +12,5 @@ export * from './opportunities';
 // Activity Pages
 export * from './activities';
 
-// Calendar Pages
-export * from './calendar';
-
 // Meeting requests
 export * from './meeting-requests';

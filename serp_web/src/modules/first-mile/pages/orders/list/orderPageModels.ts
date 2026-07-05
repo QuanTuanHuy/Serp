@@ -9,6 +9,7 @@ import type {
   FirstMileFeePayer,
   FirstMileOrderDetail,
   FirstMileOrderPickupMethod,
+  FirstMileOrderProductCategory,
   FirstMileOrderProductItem,
   FirstMileOrderStatus,
   FirstMileOrderType,
@@ -93,6 +94,7 @@ export interface CreateOrderFormState {
   deliveryRequestTime: FirstMileDeliveryRequestTime;
   pickupMethod: FirstMileOrderPickupMethod;
   orderType: FirstMileOrderType;
+  orderProductCategory: FirstMileOrderProductCategory;
   feePayer: FirstMileFeePayer;
   isCod: 'true' | 'false';
   dimensionLengthCm: string;
@@ -128,6 +130,7 @@ export const DEFAULT_CREATE_ORDER_FORM: CreateOrderFormState = {
   deliveryRequestTime: 'BUSINESS_HOURS',
   pickupMethod: 'COURIER_PICKUP',
   orderType: 'STANDARD_ORDER',
+  orderProductCategory: 'SOLID',
   feePayer: 'SENDER',
   isCod: 'false',
   dimensionLengthCm: '',
@@ -141,22 +144,25 @@ export const DELIVERY_REQUEST_TIME_OPTIONS: Array<{
   value: FirstMileDeliveryRequestTime;
   label: string;
 }> = [
-  { value: 'BUSINESS_HOURS', label: 'Business hours' },
-  { value: 'FULL_DAY', label: 'Full day' },
-  { value: 'MORNING', label: 'Morning' },
-  { value: 'AFTERNOON', label: 'Afternoon' },
-  { value: 'SUNDAY', label: 'Sunday' },
-  { value: 'HOLIDAY', label: 'Holiday' },
+  { value: 'BUSINESS_HOURS', label: 'Giờ hành chính' },
+  { value: 'FULL_DAY', label: 'Cả ngày' },
+  { value: 'MORNING', label: 'Buổi sáng' },
+  { value: 'AFTERNOON', label: 'Buổi chiều' },
+  { value: 'SUNDAY', label: 'Chủ nhật' },
+  { value: 'HOLIDAY', label: 'Ngày lễ' },
 ];
 
 export const ORDER_PICKUP_METHOD_OPTIONS: Array<{
   value: FirstMileOrderPickupMethod;
   label: string;
 }> = [
-  { value: 'COURIER_PICKUP', label: 'Courier pickup at sender address' },
+  {
+    value: 'COURIER_PICKUP',
+    label: 'Nhân viên lấy hàng tại địa chỉ người gửi',
+  },
   {
     value: 'DROP_OFF_AT_POST_OFFICE',
-    label: 'Customer drop-off at post office',
+    label: 'Khách hàng gửi tại bưu cục',
   },
 ];
 
@@ -164,9 +170,34 @@ export const FEE_PAYER_OPTIONS: Array<{
   value: FirstMileFeePayer;
   label: string;
 }> = [
-  { value: 'SENDER', label: 'Sender' },
-  { value: 'RECEIVER', label: 'Receiver' },
+  { value: 'SENDER', label: 'Người gửi' },
+  { value: 'RECEIVER', label: 'Người nhận' },
 ];
+
+export const ORDER_PRODUCT_CATEGORY_OPTIONS: Array<{
+  value: FirstMileOrderProductCategory;
+  label: string;
+}> = [
+  { value: 'SOLID', label: 'Hàng thường' },
+  { value: 'HIGH_VALUE', label: 'Hàng giá trị cao' },
+  { value: 'FRAGILE', label: 'Hàng dễ vỡ' },
+  { value: 'IMPORTANT_DOCUMENT', label: 'Chứng từ quan trọng' },
+  { value: 'OVERSIZED', label: 'Hàng quá khổ' },
+  { value: 'LIQUID', label: 'Chất lỏng' },
+  { value: 'MAGNETIC_BATTERY', label: 'Từ tính/pin' },
+];
+
+export const getOrderProductCategoryLabel = (
+  category?: FirstMileOrderProductCategory
+): string => {
+  if (!category) {
+    return '--';
+  }
+  return (
+    ORDER_PRODUCT_CATEGORY_OPTIONS.find((option) => option.value === category)
+      ?.label ?? category
+  );
+};
 
 export const resolveOrderAccessScope = (roles: string[]): OrderAccessScope => {
   if (roles.includes('TMS_ADMIN')) {
@@ -191,44 +222,66 @@ export const resolveOrderAccessScope = (roles: string[]): OrderAccessScope => {
 export const getScopeBadgeLabel = (scope: OrderAccessScope): string => {
   switch (scope) {
     case 'ADMIN_ALL':
-      return 'TMS admin';
+      return 'Quản trị TMS';
     case 'MANAGER_POST_OFFICE':
-      return 'Post office manager';
+      return 'Quản lý bưu cục';
     case 'COURIER_ASSIGNED':
-      return 'Courier';
+      return 'Nhân viên giao nhận';
     case 'CUSTOMER_CREATED':
-      return 'Customer';
+      return 'Khách hàng';
     default:
-      return 'No access';
+      return 'Không có quyền';
   }
 };
 
 export const getScopeDescription = (scope: OrderAccessScope): string => {
   switch (scope) {
     case 'ADMIN_ALL':
-      return 'You can view all orders in the system.';
+      return 'Bạn có thể xem toàn bộ đơn hàng trong hệ thống.';
     case 'MANAGER_POST_OFFICE':
-      return 'You can view orders assigned to the post office you manage.';
+      return 'Bạn có thể xem các đơn hàng được gán cho bưu cục mình quản lý.';
     case 'COURIER_ASSIGNED':
-      return 'You can view orders assigned to you.';
+      return 'Bạn có thể xem các đơn hàng được gán cho mình.';
     case 'CUSTOMER_CREATED':
-      return 'You can only view orders created by you.';
+      return 'Bạn chỉ có thể xem các đơn hàng do chính mình tạo.';
     default:
-      return 'Your current account does not have permission to access the order list.';
+      return 'Tài khoản hiện tại không có quyền truy cập danh sách đơn hàng.';
   }
 };
 
-export const formatStatusLabel = (status: FirstMileOrderStatus): string =>
-  status.replaceAll('_', ' ');
+export const formatStatusLabel = (status: FirstMileOrderStatus): string => {
+  switch (status) {
+    case 'CREATED':
+      return 'Mới tạo';
+    case 'ASSIGNED_TO_PICKUP':
+      return 'Đã phân công lấy hàng';
+    case 'PICKING_UP':
+      return 'Đang lấy hàng';
+    case 'PICKUP_FAILED':
+      return 'Lấy hàng thất bại';
+    case 'PICKED_UP':
+      return 'Đã lấy hàng';
+    case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
+      return 'Chờ nhập bưu cục gốc';
+    case 'AT_ORIGIN_POST_OFFICE':
+      return 'Tại bưu cục gốc';
+    case 'CANCELLED':
+      return 'Đã hủy';
+    case 'LOST_OR_DAMAGED':
+      return 'Thất lạc / hư hỏng';
+    default:
+      return status.replaceAll('_', ' ');
+  }
+};
 
 export const formatPickupMethodLabel = (
   pickupMethod?: FirstMileOrderPickupMethod
 ): string => {
   if (pickupMethod === 'DROP_OFF_AT_POST_OFFICE') {
-    return 'Drop-off at post office';
+    return 'Gửi tại bưu cục';
   }
 
-  return 'Courier pickup';
+  return 'Nhân viên lấy hàng';
 };
 
 export const getStatusBadgeVariant = (
@@ -263,7 +316,7 @@ export const formatDateTime = (value?: string): string => {
     return value;
   }
 
-  return parsedDate.toLocaleString('en-US');
+  return parsedDate.toLocaleString('vi-VN');
 };
 
 export const buildOrderAddressLabel = (
@@ -370,6 +423,7 @@ export const mapOrderToFormState = (
     deliveryRequestTime: order.deliveryRequestTime || 'BUSINESS_HOURS',
     pickupMethod: order.pickupMethod || 'COURIER_PICKUP',
     orderType: order.orderType || 'STANDARD_ORDER',
+    orderProductCategory: order.orderProductCategory || 'SOLID',
     feePayer: order.feePayer || 'SENDER',
     isCod:
       order.codAmount !== undefined &&

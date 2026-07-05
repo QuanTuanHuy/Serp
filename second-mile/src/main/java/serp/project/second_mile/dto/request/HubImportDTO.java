@@ -11,7 +11,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.second_mile.enums.HubStatus;
-import serp.project.second_mile.enums.HubType;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -41,9 +40,6 @@ public class HubImportDTO {
 
     @JsonProperty("phone_number")
     private String phoneNumber;
-
-    @JsonProperty("hub_type")
-    private HubType hubType;
 
     @JsonProperty("operational_start_date")
     private LocalDate operationalStartDate;

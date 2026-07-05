@@ -20,7 +20,7 @@ import {
   ChevronRight,
   X,
 } from 'lucide-react';
-import { cn } from '@/shared/utils';
+import { cn, getVisiblePages } from '@/shared/utils';
 import { QuickAddOpportunityDialog } from '../../components/dialogs';
 import {
   WonOpportunityDialog,
@@ -441,23 +441,20 @@ export const OpportunityListPage: React.FC<OpportunityListPageProps> = ({
                 Previous
               </Button>
               <div className='flex items-center gap-1'>
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={cn(
-                        'h-8 w-8 rounded-md text-sm font-medium transition-colors',
-                        currentPage === pageNum
-                          ? 'bg-primary text-primary-foreground'
-                          : 'hover:bg-muted'
-                      )}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+                {getVisiblePages(currentPage, totalPages).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={cn(
+                      'h-8 w-8 rounded-md text-sm font-medium transition-colors',
+                      currentPage === pageNum
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted'
+                    )}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
               </div>
               <Button
                 variant='outline'

@@ -13,8 +13,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
 } from '@/shared/components/ui';
 import { Loader2, Pencil } from 'lucide-react';
 import type { Hub, SecondMileVehicle } from '../../../../types';
@@ -30,14 +28,12 @@ interface SecondMileVehicleDetailDialogProps {
   open: boolean;
   canManage: boolean;
   isFetching: boolean;
-  isUploadingImage: boolean;
   vehicle?: SecondMileVehicle;
   driverLabelByStaffId: Record<number, string>;
   hubById: Record<number, Hub>;
   imageRefreshKey?: number;
   onOpenChange: (open: boolean) => void;
   onEdit: () => void;
-  onUploadImage: (file: File) => void;
 }
 
 export const SecondMileVehicleDetailDialog: React.FC<
@@ -46,14 +42,12 @@ export const SecondMileVehicleDetailDialog: React.FC<
   open,
   canManage,
   isFetching,
-  isUploadingImage,
   vehicle,
   driverLabelByStaffId,
   hubById,
   imageRefreshKey,
   onOpenChange,
   onEdit,
-  onUploadImage,
 }) => {
   const imageUrl = vehicle?.imageUrl?.trim();
   const imageSrc =
@@ -62,23 +56,23 @@ export const SecondMileVehicleDetailDialog: React.FC<
       : imageUrl;
   const driverLabel = vehicle?.assignedStaffId
     ? (driverLabelByStaffId[vehicle.assignedStaffId] ??
-      `Driver #${vehicle.assignedStaffId}`)
-    : '—';
+      `Tài xế #${vehicle.assignedStaffId}`)
+    : '-';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>Vehicle details</DialogTitle>
+          <DialogTitle>Chi tiết phương tiện</DialogTitle>
           <DialogDescription>
-            Second-mile vehicle information.
+            Thông tin phương tiện chặng giữa.
           </DialogDescription>
         </DialogHeader>
 
         {isFetching ? (
           <div className='flex items-center gap-2 text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Loading...
+            Đang tải...
           </div>
         ) : vehicle ? (
           <div className='space-y-4'>
@@ -94,41 +88,22 @@ export const SecondMileVehicleDetailDialog: React.FC<
                 />
               ) : (
                 <div className='flex h-full items-center justify-center text-sm text-muted-foreground'>
-                  No image
+                  Chưa có ảnh
                 </div>
               )}
             </div>
 
-            {canManage && (
-              <div className='space-y-2'>
-                <Label htmlFor='vehicle-image-upload'>Upload image</Label>
-                <Input
-                  id='vehicle-image-upload'
-                  type='file'
-                  accept='image/*'
-                  disabled={isUploadingImage}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) {
-                      onUploadImage(file);
-                      event.target.value = '';
-                    }
-                  }}
-                />
-              </div>
-            )}
-
             <dl className='grid gap-3 text-sm sm:grid-cols-2'>
               <div>
-                <dt className='text-muted-foreground'>License plate</dt>
+                <dt className='text-muted-foreground'>Biển số xe</dt>
                 <dd className='font-medium'>{vehicle.licensePlate}</dd>
               </div>
               <div>
-                <dt className='text-muted-foreground'>Type</dt>
+                <dt className='text-muted-foreground'>Loại xe</dt>
                 <dd>{formatVehicleType(vehicle.vehicleType)}</dd>
               </div>
               <div>
-                <dt className='text-muted-foreground'>Status</dt>
+                <dt className='text-muted-foreground'>Trạng thái</dt>
                 <dd>{formatStatusLabel(vehicle.status)}</dd>
               </div>
               <div>
@@ -136,40 +111,40 @@ export const SecondMileVehicleDetailDialog: React.FC<
                 <dd>{buildHubLabel(vehicle.hubId, hubById)}</dd>
               </div>
               <div>
-                <dt className='text-muted-foreground'>Driver</dt>
+                <dt className='text-muted-foreground'>Tài xế</dt>
                 <dd>{driverLabel}</dd>
               </div>
               <div>
-                <dt className='text-muted-foreground'>Max bags</dt>
+                <dt className='text-muted-foreground'>Số bao tối đa</dt>
                 <dd>{vehicle.maxBags}</dd>
               </div>
               <div>
-                <dt className='text-muted-foreground'>Max weight (kg)</dt>
+                <dt className='text-muted-foreground'>Tải trọng tối đa (kg)</dt>
                 <dd>{formatOptionalNumber(vehicle.maxWeight)}</dd>
               </div>
               <div>
-                <dt className='text-muted-foreground'>Max volume (m³)</dt>
+                <dt className='text-muted-foreground'>Thể tích tối đa (m3)</dt>
                 <dd>{formatOptionalNumber(vehicle.maxVolume)}</dd>
               </div>
               <div>
-                <dt className='text-muted-foreground'>Created</dt>
+                <dt className='text-muted-foreground'>Thời gian tạo</dt>
                 <dd>{formatDateTime(vehicle.createdAt)}</dd>
               </div>
               <div>
-                <dt className='text-muted-foreground'>Updated</dt>
+                <dt className='text-muted-foreground'>Thời gian cập nhật</dt>
                 <dd>{formatDateTime(vehicle.updatedAt)}</dd>
               </div>
             </dl>
           </div>
         ) : (
-          <p className='text-muted-foreground'>Vehicle not found.</p>
+          <p className='text-muted-foreground'>Không tìm thấy phương tiện.</p>
         )}
 
         <DialogFooter>
           {canManage && vehicle && (
             <Button type='button' variant='outline' onClick={onEdit}>
               <Pencil className='mr-2 h-4 w-4' />
-              Edit
+              Sửa
             </Button>
           )}
           <Button
@@ -177,7 +152,7 @@ export const SecondMileVehicleDetailDialog: React.FC<
             variant='outline'
             onClick={() => onOpenChange(false)}
           >
-            Close
+            Đóng
           </Button>
         </DialogFooter>
       </DialogContent>

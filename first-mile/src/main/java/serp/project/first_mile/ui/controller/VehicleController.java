@@ -30,6 +30,8 @@ import serp.project.first_mile.dto.request.VehicleImportDTO;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.dto.response.VehicleResponse;
+import serp.project.first_mile.enums.VehicleStatus;
+import serp.project.first_mile.enums.VehicleType;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.exception.MessageService;
@@ -50,11 +52,23 @@ public class VehicleController {
     public ApiResponse<PageResponse<VehicleResponse>> getVehicles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String keyword
+            @RequestParam(required = false) String keyword,
+            @RequestParam(name = "vehicle_type", required = false) VehicleType vehicleType,
+            @RequestParam(required = false) VehicleStatus status,
+            @RequestParam(name = "post_office_keyword", required = false) String postOfficeKeyword,
+            @RequestParam(name = "courier_keyword", required = false) String courierKeyword
     ) {
         return ApiResponse.<PageResponse<VehicleResponse>>builder()
                 .message(messageService.getMessage("success.vehicles.list"))
-                .result(vehicleService.getVehicles(page, size, keyword))
+                .result(vehicleService.getVehicles(
+                        page,
+                        size,
+                        keyword,
+                        vehicleType,
+                        status,
+                        postOfficeKeyword,
+                        courierKeyword
+                ))
                 .build();
     }
 

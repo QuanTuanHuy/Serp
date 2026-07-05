@@ -21,9 +21,9 @@ export const OrderPageHeader: React.FC<OrderPageHeaderProps> = ({
   return (
     <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
       <div className='flex flex-col gap-2'>
-        <h1 className='text-2xl font-bold tracking-tight'>Orders</h1>
+        <h1 className='text-2xl font-bold tracking-tight'>Đơn hàng</h1>
         <p className='text-muted-foreground'>
-          Track first-mile orders based on your role and access scope.
+          Theo dõi đơn hàng theo vai trò và phạm vi truy cập của bạn.
         </p>
       </div>
 
@@ -32,7 +32,7 @@ export const OrderPageHeader: React.FC<OrderPageHeaderProps> = ({
         {canMutateOrders ? (
           <Button onClick={onCreateOrder}>
             <Plus className='mr-2 h-4 w-4' />
-            New Order
+            Tạo đơn hàng mới
           </Button>
         ) : null}
       </div>

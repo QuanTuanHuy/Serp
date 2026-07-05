@@ -44,7 +44,7 @@ export const VehicleImportCard: React.FC<VehicleImportCardProps> = ({
   return (
     <TmsExcelImportToolbar
       canImport={canManageVehicles}
-      entityLabel='vehicles'
+      entityLabel='phương tiện'
       isBusy={isImportFlowBusy}
       isExportingTemplate={isExportingTemplate}
       isValidating={isValidatingImport}
@@ -52,7 +52,7 @@ export const VehicleImportCard: React.FC<VehicleImportCardProps> = ({
       importFileInputKey={importFileInputKey}
       selectedFileName={selectedImportFile?.name}
       validateImportResult={validateImportResult}
-      permissionHint='Import actions require TMS_ADMIN or TMS_POSTOFFICER_MANAGER permission.'
+      permissionHint='Cần quyền TMS_ADMIN hoặc TMS_POSTOFFICER_MANAGER để nhập Excel.'
       onDownloadTemplate={onDownloadTemplate}
       onSelectFile={onSelectImportFile}
       onValidate={onValidateFile}

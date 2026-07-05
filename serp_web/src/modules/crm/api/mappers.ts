@@ -1050,11 +1050,15 @@ export const mapActivityFormToBackendPayload = (
   data: CreateActivityRequest | UpdateActivityRequest
 ): CreateActivityRequest | UpdateActivityRequest => data;
 
-const toEpochMillis = (value?: string) => {
+const toEpochMillis = (value?: string, isEnd = false) => {
   if (!value) {
     return undefined;
   }
-  const parsed = new Date(value).getTime();
+  let dateStr = value;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    dateStr = isEnd ? `${value}T23:59:59.999` : `${value}T00:00:00.000`;
+  }
+  const parsed = new Date(dateStr).getTime();
   return Number.isNaN(parsed) ? undefined : parsed;
 };
 
@@ -1080,9 +1084,9 @@ export const mapActivityFiltersToBackendRequest = (
     : undefined,
   contactId: filters.contactId ? Number(filters.contactId) : undefined,
   activityDateFrom: toEpochMillis(filters.activityDateFrom),
-  activityDateTo: toEpochMillis(filters.activityDateTo),
+  activityDateTo: toEpochMillis(filters.activityDateTo, true),
   dueDateFrom: toEpochMillis(filters.dueDateFrom),
-  dueDateTo: toEpochMillis(filters.dueDateTo),
+  dueDateTo: toEpochMillis(filters.dueDateTo, true),
   page: pagination.page,
   size: pagination.limit,
   sortBy: pagination.sortBy || undefined,

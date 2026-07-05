@@ -36,19 +36,19 @@ export const VEHICLE_STATUS_OPTIONS: Array<{
   value: VehicleStatus;
   label: string;
 }> = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'IN_USE', label: 'In use' },
-  { value: 'FULL', label: 'Full' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'ACTIVE', label: 'Đang hoạt động' },
+  { value: 'IN_USE', label: 'Đang sử dụng' },
+  { value: 'FULL', label: 'Đã đầy' },
+  { value: 'MAINTENANCE', label: 'Bảo trì' },
+  { value: 'INACTIVE', label: 'Ngừng hoạt động' },
 ];
 
 export const VEHICLE_TYPE_OPTIONS: Array<{
   value: VehicleType;
   label: string;
 }> = [
-  { value: 'BIKE', label: 'Bike' },
-  { value: 'TRUCK', label: 'Truck' },
+  { value: 'BIKE', label: 'Xe máy' },
+  { value: 'TRUCK', label: 'Xe tải' },
 ];
 
 export const DEFAULT_VEHICLE_FORM: VehicleFormState = {
@@ -82,26 +82,26 @@ export const resolveVehicleAccessScope = (
 export const getScopeBadgeLabel = (scope: VehicleAccessScope): string => {
   switch (scope) {
     case 'ADMIN_ALL':
-      return 'TMS admin';
+      return 'Quản trị TMS';
     case 'MANAGER_POST_OFFICES':
-      return 'Post office manager';
+      return 'Quản lý bưu cục';
     case 'COURIER_READ_ONLY':
-      return 'Courier';
+      return 'Nhân viên giao nhận';
     default:
-      return 'No access';
+      return 'Không có quyền';
   }
 };
 
 export const getScopeDescription = (scope: VehicleAccessScope): string => {
   switch (scope) {
     case 'ADMIN_ALL':
-      return 'You can view all vehicles in the system.';
+      return 'Bạn có thể xem toàn bộ phương tiện trong hệ thống.';
     case 'MANAGER_POST_OFFICES':
-      return 'You can view vehicles belonging to the post offices you manage.';
+      return 'Bạn có thể xem phương tiện thuộc các bưu cục mình quản lý.';
     case 'COURIER_READ_ONLY':
-      return 'You can view vehicles but cannot create, update, delete, or import.';
+      return 'Bạn có thể xem phương tiện nhưng không thể tạo, cập nhật, xóa hoặc nhập Excel.';
     default:
-      return 'Your current account does not have permission to access the vehicle list.';
+      return 'Tài khoản hiện tại không có quyền truy cập danh sách phương tiện.';
   }
 };
 
@@ -122,10 +122,11 @@ export const getStatusBadgeVariant = (status: VehicleStatus): BadgeVariant => {
 };
 
 export const formatStatusLabel = (status: VehicleStatus): string =>
+  VEHICLE_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
   status.replaceAll('_', ' ');
 
 export const formatVehicleType = (vehicleType: VehicleType): string =>
-  vehicleType === 'TRUCK' ? 'Truck' : 'Bike';
+  vehicleType === 'TRUCK' ? 'Xe tải' : 'Xe máy';
 
 export const formatDateTime = (value?: string): string => {
   if (!value) {
@@ -137,7 +138,7 @@ export const formatDateTime = (value?: string): string => {
     return value;
   }
 
-  return parsedDate.toLocaleString('en-US');
+  return parsedDate.toLocaleString('vi-VN');
 };
 
 export const formatOptionalNumber = (value?: number): string => {
@@ -150,7 +151,7 @@ export const formatOptionalNumber = (value?: number): string => {
 
 export const buildPostOfficeLabel = (vehicle: Vehicle): string => {
   if (!vehicle.postOfficeCode) {
-    return 'Not assigned';
+    return 'Chưa phân công';
   }
 
   if (!vehicle.postOfficeName) {
@@ -219,20 +220,20 @@ export const validateVehicleForm = (
   values: VehicleFormState
 ): string | null => {
   if (!values.licensePlate.trim()) {
-    return 'License plate is required.';
+    return 'Vui lòng nhập biển số xe.';
   }
 
   if (values.maxWeight.trim()) {
     const parsedWeight = parseOptionalNumber(values.maxWeight);
     if (parsedWeight === undefined || parsedWeight <= 0) {
-      return 'Max weight must be a number greater than 0.';
+      return 'Tải trọng tối đa phải là số lớn hơn 0.';
     }
   }
 
   if (values.maxVolume.trim()) {
     const parsedVolume = parseOptionalNumber(values.maxVolume);
     if (parsedVolume === undefined || parsedVolume <= 0) {
-      return 'Max volume must be a number greater than 0.';
+      return 'Thể tích tối đa phải là số lớn hơn 0.';
     }
   }
 
@@ -240,14 +241,14 @@ export const validateVehicleForm = (
     values.postOfficeId.trim() &&
     parseOptionalPositiveInteger(values.postOfficeId) === undefined
   ) {
-    return 'Post office ID must be a positive integer.';
+    return 'Mã bưu cục phải là số nguyên dương.';
   }
 
   if (
     values.postOfficeStaffId.trim() &&
     parseOptionalPositiveInteger(values.postOfficeStaffId) === undefined
   ) {
-    return 'Courier staff ID must be a positive integer.';
+    return 'Mã nhân viên giao nhận phải là số nguyên dương.';
   }
 
   return null;

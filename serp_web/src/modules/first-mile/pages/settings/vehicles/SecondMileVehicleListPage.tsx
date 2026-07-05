@@ -11,15 +11,13 @@ import { getErrorMessage, useAppSelector } from '@/lib/store';
 import {
   Button,
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
 } from '@/shared/components/ui';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
 import { useNotification } from '@/shared/hooks';
-import { Plus, RefreshCw, Search, ShieldAlert } from 'lucide-react';
+import { Plus, ShieldAlert } from 'lucide-react';
 import {
   useCreateSecondMileVehicleMutation,
   useDeleteSecondMileVehicleMutation,
@@ -41,6 +39,8 @@ import type {
   SecondMileHubStaffAssignment,
   SecondMileVehicle,
   SecondMileVehicleImportItem,
+  SecondMileVehicleStatus,
+  SecondMileVehicleType,
   ValidateImportFileResponse,
 } from '../../../types';
 import {
@@ -53,7 +53,6 @@ import {
   buildVehicleRequest,
   DEFAULT_VEHICLE_FORM,
   mapVehicleToFormState,
-  PAGE_SIZE,
   parseOptionalPositiveInteger,
   validateVehicleForm,
   type VehicleFormMode,
@@ -62,10 +61,12 @@ import {
 
 interface SecondMileVehicleListPageProps {
   showScopeNavigation?: boolean;
+  scopeNavigation?: React.ReactNode;
 }
 
 export function SecondMileVehicleListPage({
   showScopeNavigation = true,
+  scopeNavigation,
 }: SecondMileVehicleListPageProps) {
   const notification = useNotification();
   const isTmsAdmin = useAppSelector((state) =>
@@ -73,8 +74,21 @@ export function SecondMileVehicleListPage({
   );
 
   const [page, setPage] = React.useState(0);
+  const [pageSize, setPageSize] = React.useState(20);
   const [keywordInput, setKeywordInput] = React.useState('');
   const [keyword, setKeyword] = React.useState<string | undefined>();
+  const [vehicleTypeFilter, setVehicleTypeFilter] = React.useState<
+    SecondMileVehicleType | undefined
+  >();
+  const [statusFilter, setStatusFilter] = React.useState<
+    SecondMileVehicleStatus | undefined
+  >();
+  const [hubKeywordInput, setHubKeywordInput] = React.useState('');
+  const [hubKeyword, setHubKeyword] = React.useState<string | undefined>();
+  const [driverKeywordInput, setDriverKeywordInput] = React.useState('');
+  const [driverKeyword, setDriverKeyword] = React.useState<
+    string | undefined
+  >();
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [formMode, setFormMode] = React.useState<VehicleFormMode>('create');
   const [editingId, setEditingId] = React.useState<number | null>(null);
@@ -96,7 +110,15 @@ export function SecondMileVehicleListPage({
 
   const { data, isLoading, isFetching, refetch } =
     useGetSecondMileVehiclesQuery(
-      { page, size: PAGE_SIZE, keyword },
+      {
+        page,
+        size: pageSize,
+        keyword,
+        vehicleType: vehicleTypeFilter,
+        status: statusFilter,
+        hubKeyword,
+        driverKeyword,
+      },
       { skip: !isTmsAdmin }
     );
 
@@ -205,7 +227,7 @@ export function SecondMileVehicleListPage({
 
   const formatDriverOptionLabel = React.useCallback(
     (assignment: SecondMileHubStaffAssignment & { staffId: number }) => {
-      return formatDriverLabel(assignment) ?? `Driver #${assignment.staffId}`;
+      return formatDriverLabel(assignment) ?? `Tài xế #${assignment.staffId}`;
     },
     [formatDriverLabel]
   );
@@ -239,7 +261,7 @@ export function SecondMileVehicleListPage({
     ) {
       options.unshift({
         value: String(selectedDriverStaffId),
-        label: `Driver #${selectedDriverStaffId}`,
+        label: `Tài xế #${selectedDriverStaffId}`,
       });
     }
 
@@ -275,16 +297,83 @@ export function SecondMileVehicleListPage({
     setFormValues((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    setPage(0);
+    setKeyword(keywordInput.trim() || undefined);
+  };
+
+  const handleClearSearch = () => {
+    setKeywordInput('');
+    setKeyword(undefined);
+    setPage(0);
+  };
+
+  const handleVehicleTypeFilterChange = (
+    value?: SecondMileVehicleType
+  ) => {
+    setVehicleTypeFilter(value);
+    setPage(0);
+  };
+
+  const handleStatusFilterChange = (value?: SecondMileVehicleStatus) => {
+    setStatusFilter(value);
+    setPage(0);
+  };
+
+  const handleHubSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    setPage(0);
+    setHubKeyword(hubKeywordInput.trim() || undefined);
+  };
+
+  const handleClearHubSearch = () => {
+    setHubKeywordInput('');
+    setHubKeyword(undefined);
+    setPage(0);
+  };
+
+  const handleDriverSearch = (event: React.FormEvent) => {
+    event.preventDefault();
+    setPage(0);
+    setDriverKeyword(driverKeywordInput.trim() || undefined);
+  };
+
+  const handleClearDriverSearch = () => {
+    setDriverKeywordInput('');
+    setDriverKeyword(undefined);
+    setPage(0);
+  };
+
+  const handleUploadVehicleImage = async (
+    vehicle: SecondMileVehicle,
+    file: File
+  ) => {
+    try {
+      await uploadImage({ id: vehicle.id, file }).unwrap();
+      setImageRefreshKey(Date.now());
+      void refetch();
+      if (selectedId === vehicle.id) {
+        void refetchVehicleDetail();
+      }
+      notification.success('Đã tải ảnh lên.');
+    } catch (error) {
+      notification.error('Không thể tải ảnh lên.', {
+        description: getErrorMessage(error),
+      });
+    }
+  };
+
   if (!isTmsAdmin) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
             <ShieldAlert className='h-5 w-5' />
-            Access denied
+            Không có quyền truy cập
           </CardTitle>
           <CardDescription>
-            Second-mile vehicles require TMS_ADMIN role.
+            Phương tiện chặng giữa yêu cầu quyền TMS_ADMIN.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -296,20 +385,24 @@ export function SecondMileVehicleListPage({
       <div className='space-y-6'>
         <div
           className={`flex flex-col gap-3 sm:flex-row sm:items-center ${
-            showScopeNavigation ? 'sm:justify-between' : 'sm:justify-end'
+            showScopeNavigation || scopeNavigation
+              ? 'sm:justify-between'
+              : 'sm:justify-end'
           }`}
         >
-          {showScopeNavigation ? (
+          {scopeNavigation ? (
+            <div>{scopeNavigation}</div>
+          ) : showScopeNavigation ? (
             <div>
               <div className='mb-2 flex flex-wrap gap-2 text-sm'>
                 <Link
                   href='/first-mile/settings/vehicles?scope=first-mile'
                   className='text-muted-foreground hover:text-foreground'
                 >
-                  First-mile vehicles
+                  Phương tiện chặng đầu
                 </Link>
                 <span className='text-muted-foreground'>/</span>
-                <span className='font-medium'>Second-mile</span>
+                <span className='font-medium'>Chặng giữa</span>
               </div>
             </div>
           ) : null}
@@ -335,9 +428,9 @@ export function SecondMileVehicleListPage({
                   link.click();
                   link.remove();
                   URL.revokeObjectURL(url);
-                  notification.success('Template downloaded.');
+                  notification.success('Đã tải mẫu nhập liệu.');
                 } catch (error) {
-                  notification.error('Download failed.', {
+                  notification.error('Không thể tải mẫu nhập liệu.', {
                     description: getErrorMessage(error),
                   });
                 }
@@ -349,7 +442,7 @@ export function SecondMileVehicleListPage({
               }}
               onValidate={async () => {
                 if (!importFile) {
-                  notification.error('Select a file first.');
+                  notification.error('Vui lòng chọn tệp Excel trước.');
                   return;
                 }
                 const formData = new FormData();
@@ -359,11 +452,11 @@ export function SecondMileVehicleListPage({
                   setValidateResult(result);
                   if (result.is_success) {
                     notification.success(
-                      `Validated ${result.data.length} row(s).`
+                      `Đã kiểm tra ${result.data.length} dòng.`
                     );
                   }
                 } catch (error) {
-                  notification.error('Validate failed.', {
+                  notification.error('Không thể kiểm tra tệp nhập.', {
                     description: getErrorMessage(error),
                   });
                 }
@@ -380,10 +473,10 @@ export function SecondMileVehicleListPage({
                   setImportFile(null);
                   setValidateResult(null);
                   setImportFileKey((k) => k + 1);
-                  notification.success(`Import job #${job.id} started.`);
+                  notification.success(`Đã tạo lệnh nhập #${job.id}.`);
                   void refetch();
                 } catch (error) {
-                  notification.error('Import failed.', {
+                  notification.error('Không thể nhập phương tiện.', {
                     description: getErrorMessage(error),
                   });
                 }
@@ -398,46 +491,10 @@ export function SecondMileVehicleListPage({
               }}
             >
               <Plus className='mr-2 h-4 w-4' />
-              New vehicle
+              Thêm phương tiện
             </Button>
           </div>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Search</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              className='flex flex-col gap-2 md:flex-row'
-              onSubmit={(event) => {
-                event.preventDefault();
-                setPage(0);
-                setKeyword(keywordInput.trim() || undefined);
-              }}
-            >
-              <div className='relative flex-1'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  className='pl-10'
-                  value={keywordInput}
-                  onChange={(e) => setKeywordInput(e.target.value)}
-                  placeholder='License plate...'
-                />
-              </div>
-              <Button type='submit'>Search</Button>
-              <Button
-                type='button'
-                variant='outline'
-                disabled={isFetching}
-                onClick={() => void refetch()}
-              >
-                <RefreshCw className='mr-2 h-4 w-4' />
-                Refresh
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
 
         <SecondMileVehicleResultsCard
           canManage={isTmsAdmin}
@@ -449,6 +506,13 @@ export function SecondMileVehicleListPage({
           isFetching={isFetching}
           isSaving={isSaving}
           isDeleting={isDeleting}
+          isUploadingImage={isUploadingImage}
+          pageSize={pageSize}
+          keywordInput={keywordInput}
+          vehicleTypeFilter={vehicleTypeFilter}
+          statusFilter={statusFilter}
+          hubKeywordInput={hubKeywordInput}
+          driverKeywordInput={driverKeywordInput}
           onView={(id) => {
             setSelectedId(id);
             setDetailOpen(true);
@@ -459,7 +523,23 @@ export function SecondMileVehicleListPage({
             setFormValues(mapVehicleToFormState(vehicle));
             setIsFormOpen(true);
           }}
+          onUploadImage={handleUploadVehicleImage}
           onDelete={setDeleteTarget}
+          onKeywordInputChange={setKeywordInput}
+          onSearchSubmit={handleSearch}
+          onClearSearch={handleClearSearch}
+          onVehicleTypeFilterChange={handleVehicleTypeFilterChange}
+          onStatusFilterChange={handleStatusFilterChange}
+          onHubKeywordInputChange={setHubKeywordInput}
+          onHubSearchSubmit={handleHubSearch}
+          onClearHubSearch={handleClearHubSearch}
+          onDriverKeywordInputChange={setDriverKeywordInput}
+          onDriverSearchSubmit={handleDriverSearch}
+          onClearDriverSearch={handleClearDriverSearch}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(0);
+          }}
           onPreviousPage={() => setPage((p) => Math.max(p - 1, 0))}
           onNextPage={() => setPage((p) => p + 1)}
         />
@@ -492,18 +572,18 @@ export function SecondMileVehicleListPage({
           try {
             if (formMode === 'create') {
               await createVehicle(body).unwrap();
-              notification.success('Vehicle created.');
+              notification.success('Đã tạo phương tiện.');
               if (page !== 0) setPage(0);
               else void refetch();
             } else if (editingId !== null) {
               await updateVehicle({ id: editingId, body }).unwrap();
-              notification.success('Vehicle updated.');
+              notification.success('Đã cập nhật phương tiện.');
               void refetch();
             }
             setIsFormOpen(false);
             setEditingId(null);
           } catch (error) {
-            notification.error('Save failed.', {
+            notification.error('Không thể lưu phương tiện.', {
               description: getErrorMessage(error),
             });
           }
@@ -514,7 +594,6 @@ export function SecondMileVehicleListPage({
         open={detailOpen}
         canManage={isTmsAdmin}
         isFetching={isFetchingDetail}
-        isUploadingImage={isUploadingImage}
         vehicle={vehicleDetail}
         driverLabelByStaffId={driverLabelByStaffId}
         hubById={hubById}
@@ -532,20 +611,6 @@ export function SecondMileVehicleListPage({
           setSelectedId(null);
           setIsFormOpen(true);
         }}
-        onUploadImage={async (file) => {
-          if (!selectedId) return;
-          try {
-            await uploadImage({ id: selectedId, file }).unwrap();
-            setImageRefreshKey(Date.now());
-            void refetch();
-            void refetchVehicleDetail();
-            notification.success('Image uploaded.');
-          } catch (error) {
-            notification.error('Upload failed.', {
-              description: getErrorMessage(error),
-            });
-          }
-        }}
       />
 
       <ConfirmDialog
@@ -553,24 +618,24 @@ export function SecondMileVehicleListPage({
         onOpenChange={(open) => {
           if (!open && !isDeleting) setDeleteTarget(null);
         }}
-        title='Delete vehicle'
+        title='Xóa phương tiện'
         description={
           deleteTarget
-            ? `Delete vehicle ${deleteTarget.licensePlate}?`
+            ? `Xóa phương tiện ${deleteTarget.licensePlate}?`
             : undefined
         }
-        confirmText='Delete'
+        confirmText='Xóa'
         variant='destructive'
         isLoading={isDeleting}
         onConfirm={async () => {
           if (!deleteTarget) return;
           try {
             await deleteVehicle(deleteTarget.id).unwrap();
-            notification.success('Vehicle deleted.');
+            notification.success('Đã xóa phương tiện.');
             setDeleteTarget(null);
             void refetch();
           } catch (error) {
-            notification.error('Delete failed.', {
+            notification.error('Không thể xóa phương tiện.', {
               description: getErrorMessage(error),
             });
           }

@@ -18,6 +18,7 @@ import {
 import { TmsCombobox } from '@/modules/first-mile/components';
 import { Calculator, Loader2 } from 'lucide-react';
 import {
+  BILLING_PRODUCT_CATEGORY_OPTIONS,
   type BillingFormState,
   type BillingDeliveryServiceOption,
   type BillingSelectOption,
@@ -105,6 +106,24 @@ export const BillingCalculatorForm: React.FC<BillingCalculatorFormProps> = ({
                   }))
                 }
                 placeholder='Ví dụ: 1500'
+              />
+            </div>
+
+            <div className='space-y-2 md:col-span-2'>
+              <Label htmlFor='productCategory'>Phân loại hàng hóa</Label>
+              <TmsCombobox
+                id='productCategory'
+                value={formValues.productCategory}
+                onValueChange={(value) =>
+                  onFormChange((prev) => ({
+                    ...prev,
+                    productCategory:
+                      value as BillingFormState['productCategory'],
+                  }))
+                }
+                options={BILLING_PRODUCT_CATEGORY_OPTIONS}
+                placeholder='Chọn phân loại hàng hóa'
+                emptyText='Không có phân loại phù hợp'
               />
             </div>
 

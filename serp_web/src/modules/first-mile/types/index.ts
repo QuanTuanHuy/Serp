@@ -36,11 +36,7 @@ export interface FirstMilePaginatedData<T> {
   hasPrevious: boolean;
 }
 
-export type PostOfficeStatus =
-  | 'ACTIVE'
-  | 'INACTIVE'
-  | 'MAINTENANCE'
-  | 'SUSPENDED';
+export type PostOfficeStatus = 'ACTIVE' | 'INACTIVE';
 export type ImportType = 'ORDER' | 'POST_OFFICE' | 'VEHICLE' | 'HUB';
 export type ImportHistoryStatus =
   | 'PENDING'
@@ -80,15 +76,12 @@ export interface PostOffice {
   hubId?: number;
 }
 
-export type HubType = 'REGIONAL' | 'LOCAL';
-
 export type HubStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 
 export interface Hub {
   id: number;
   code: string;
   name: string;
-  hubType: HubType;
   provinceCode: string;
   wardCode: string;
   addressDetail: string;
@@ -157,7 +150,6 @@ export interface AssignHubPostOfficeRequest {
 export interface CreateHubRequest {
   code: string;
   name: string;
-  hub_type: HubType;
   province_code: string;
   ward_code: string;
   address_detail: string;
@@ -174,7 +166,6 @@ export interface CreateHubRequest {
 export interface UpdateHubRequest {
   code: string;
   name: string;
-  hub_type: HubType;
   province_code: string;
   ward_code: string;
   address_detail: string;
@@ -196,7 +187,6 @@ export interface HubImportItem {
   ward_code?: string;
   address_detail?: string;
   phone_number?: string;
-  hub_type?: HubType;
   operational_start_date?: string;
   operational_end_date?: string;
   working_start_time?: string;
@@ -239,6 +229,7 @@ export interface PostOfficeStaffAssignment {
   staffCode?: string;
   staffFullName?: string;
   staffRole?: PostOfficeStaffRole;
+  staffStatus?: PostOfficeStaffStatus;
   assignedFrom?: string;
   assignedTo?: string;
   isPrimary?: boolean;
@@ -297,6 +288,14 @@ export interface CreateVehicleRequest {
 
 export type UpdateVehicleRequest = CreateVehicleRequest;
 
+export interface VehicleListFilters {
+  keyword?: string;
+  vehicleType?: VehicleType;
+  status?: VehicleStatus;
+  postOfficeKeyword?: string;
+  courierKeyword?: string;
+}
+
 export interface VehicleImportItem {
   license_plate?: string;
   max_weight?: number;
@@ -341,7 +340,9 @@ export interface SecondMileVehicleListFilters {
   licensePlate?: string;
   vehicleType?: SecondMileVehicleType;
   hubId?: number;
+  hubKeyword?: string;
   assignedStaffId?: number;
+  driverKeyword?: string;
   status?: SecondMileVehicleStatus;
 }
 
@@ -867,6 +868,15 @@ export type FirstMileDeliveryRequestTime =
 
 export type FirstMileOrderType = 'STANDARD_ORDER';
 
+export type FirstMileOrderProductCategory =
+  | 'HIGH_VALUE'
+  | 'FRAGILE'
+  | 'IMPORTANT_DOCUMENT'
+  | 'SOLID'
+  | 'OVERSIZED'
+  | 'LIQUID'
+  | 'MAGNETIC_BATTERY';
+
 export type FirstMileOrderPickupMethod =
   | 'COURIER_PICKUP'
   | 'DROP_OFF_AT_POST_OFFICE';
@@ -911,6 +921,7 @@ export interface FirstMileOrderDetail {
   pickupTimeEnd?: string;
   deliveryRequestTime?: FirstMileDeliveryRequestTime;
   orderType?: FirstMileOrderType;
+  orderProductCategory?: FirstMileOrderProductCategory;
   feePayer?: FirstMileFeePayer;
   paymentStatus?: FirstMilePaymentStatus;
   codAmount?: number;
@@ -1006,6 +1017,7 @@ export interface CreateOrderRequest {
   delivery_request_time: FirstMileDeliveryRequestTime;
   pickup_method?: FirstMileOrderPickupMethod;
   order_type: FirstMileOrderType;
+  order_product_category?: FirstMileOrderProductCategory;
   fee_payer: FirstMileFeePayer;
   is_cod?: boolean;
   dimension_length_cm?: number;
@@ -1428,7 +1440,6 @@ export interface HubListFilters {
   keyword?: string;
   code?: string;
   name?: string;
-  hubType?: HubType;
   provinceCode?: string;
   wardCode?: string;
   status?: HubStatus;

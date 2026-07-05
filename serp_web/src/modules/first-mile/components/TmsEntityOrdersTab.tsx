@@ -41,10 +41,24 @@ const formatOrderStatusLabel = (status?: FirstMileOrderStatus) => {
     return '--';
   }
 
-  return status
-    .split('_')
-    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
-    .join(' ');
+  switch (status) {
+    case 'AT_ORIGIN_POST_OFFICE':
+      return 'Tại bưu cục gốc';
+    case 'INBOUND_AT_ORIGIN_HUB':
+      return 'Đã vào hub gốc';
+    case 'BAGGING_IN_PROGRESS':
+      return 'Đang đóng bao';
+    case 'BAGGED':
+      return 'Đã đóng bao';
+    case 'BAG_SEALED':
+      return 'Bao đã niêm phong';
+    case 'CANCELLED':
+      return 'Đã hủy';
+    case 'LOST_OR_DAMAGED':
+      return 'Mất hoặc hư hỏng';
+    default:
+      return status;
+  }
 };
 
 const getOrderStatusBadgeVariant = (
@@ -95,7 +109,7 @@ const formatDateTime = (value?: string) => {
     return value;
   }
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('vi-VN', {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(date);
@@ -116,7 +130,7 @@ export function TmsEntityOrdersTab({
     return (
       <div className='flex items-center gap-2 rounded-md border p-4 text-sm text-muted-foreground'>
         <Loader2 className='h-4 w-4 animate-spin' />
-        Loading orders...
+        Đang tải đơn hàng...
       </div>
     );
   }
@@ -133,11 +147,11 @@ export function TmsEntityOrdersTab({
   return (
     <div className='space-y-3'>
       <div className='flex items-center justify-between gap-3 text-sm'>
-        <p className='font-medium'>Orders ({data?.totalItems ?? 0})</p>
+        <p className='font-medium'>Đơn hàng ({data?.totalItems ?? 0})</p>
         {isFetching && (
           <span className='flex items-center gap-1 text-muted-foreground'>
             <Loader2 className='h-3.5 w-3.5 animate-spin' />
-            Refreshing
+            Đang làm mới
           </span>
         )}
       </div>
@@ -146,11 +160,11 @@ export function TmsEntityOrdersTab({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Order</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Route</TableHead>
-              <TableHead>Receiver</TableHead>
-              <TableHead>Updated</TableHead>
+              <TableHead>Đơn hàng</TableHead>
+              <TableHead>Trạng thái</TableHead>
+              <TableHead>Tuyến</TableHead>
+              <TableHead>Người nhận</TableHead>
+              <TableHead>Cập nhật</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -186,8 +200,8 @@ export function TmsEntityOrdersTab({
 
       <div className='flex items-center justify-between gap-3 text-sm text-muted-foreground'>
         <span>
-          Page {page + 1}
-          {data?.totalPages ? ` of ${data.totalPages}` : ''}
+          Trang {page + 1}
+          {data?.totalPages ? ` / ${data.totalPages}` : ''}
         </span>
         <div className='flex items-center gap-2'>
           <Button
@@ -198,7 +212,7 @@ export function TmsEntityOrdersTab({
             onClick={onPreviousPage}
           >
             <ChevronLeft className='h-4 w-4' />
-            Previous
+            Trước
           </Button>
           <Button
             type='button'
@@ -207,7 +221,7 @@ export function TmsEntityOrdersTab({
             disabled={!data?.hasNext || isFetching}
             onClick={onNextPage}
           >
-            Next
+            Sau
             <ChevronRight className='h-4 w-4' />
           </Button>
         </div>

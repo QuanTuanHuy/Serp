@@ -45,6 +45,7 @@ export interface Activity extends BaseEntity {
   participants?: string[];
   location?: string;
   outcome?: string;
+  progressPercent?: number;
   followUpRequired?: boolean;
   followUpDate?: string;
   tags: string[];

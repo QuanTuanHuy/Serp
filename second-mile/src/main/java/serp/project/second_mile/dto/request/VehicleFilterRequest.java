@@ -21,7 +21,9 @@ public class VehicleFilterRequest {
     private String licensePlate;
     private VehicleType vehicleType;
     private Long hubId;
+    private String hubKeyword;
     private Long assignedStaffId;
+    private String driverKeyword;
     private VehicleStatus status;
 }
 

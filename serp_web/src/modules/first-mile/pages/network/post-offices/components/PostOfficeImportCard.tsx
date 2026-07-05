@@ -47,7 +47,7 @@ export const PostOfficeImportCard: React.FC<PostOfficeImportCardProps> = ({
     <TmsExcelImportToolbar
       className={className}
       canImport={isTmsAdmin}
-      entityLabel='post offices'
+      entityLabel='bưu cục'
       isBusy={isImportFlowBusy}
       isExportingTemplate={isExportingTemplate}
       isValidating={isValidatingImport}
@@ -55,7 +55,7 @@ export const PostOfficeImportCard: React.FC<PostOfficeImportCardProps> = ({
       importFileInputKey={importFileInputKey}
       selectedFileName={selectedImportFile?.name}
       validateImportResult={validateImportResult}
-      permissionHint='Import requires TMS_ADMIN.'
+      permissionHint='Nhập dữ liệu cần quyền TMS_ADMIN.'
       onDownloadTemplate={() => {
         void onDownloadTemplate();
       }}

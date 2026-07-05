@@ -24,7 +24,6 @@ import serp.project.second_mile.dto.request.HubImportDTO;
 import serp.project.second_mile.dto.response.ImportHistoryResponse;
 import serp.project.second_mile.dto.response.ValidateImportFileDTO;
 import serp.project.second_mile.enums.HubStatus;
-import serp.project.second_mile.enums.HubType;
 import serp.project.second_mile.enums.ImportHistoryStatus;
 import serp.project.second_mile.enums.ImportType;
 import serp.project.second_mile.exception.AppException;
@@ -87,13 +86,12 @@ public class HubImportExcelServiceImpl implements HubImportExcelService {
     private static final int COLUMN_WARD = 4;
     private static final int COLUMN_ADDRESS_DETAIL = 5;
     private static final int COLUMN_PHONE = 6;
-    private static final int COLUMN_HUB_TYPE = 7;
-    private static final int COLUMN_OPERATIONAL_START_DATE = 8;
-    private static final int COLUMN_OPERATIONAL_END_DATE = 9;
-    private static final int COLUMN_WORKING_START_TIME = 10;
-    private static final int COLUMN_WORKING_END_TIME = 11;
-    private static final int COLUMN_STATUS = 12;
-    private static final int LAST_COLUMN_INDEX = 12;
+    private static final int COLUMN_OPERATIONAL_START_DATE = 7;
+    private static final int COLUMN_OPERATIONAL_END_DATE = 8;
+    private static final int COLUMN_WORKING_START_TIME = 9;
+    private static final int COLUMN_WORKING_END_TIME = 10;
+    private static final int COLUMN_STATUS = 11;
+    private static final int LAST_COLUMN_INDEX = 11;
 
     private static final String DATA_SHEET_NAME = "Hub";
     private static final LocalDate TIME_ANCHOR_DATE = LocalDate.of(1970, 1, 1);
@@ -111,7 +109,6 @@ public class HubImportExcelServiceImpl implements HubImportExcelService {
             "Phường/Xã (*)",
             "Địa chỉ chi tiết (*)",
             "Số điện thoại",
-            "Loại Hub (*)",
             "Ngày bắt đầu vận hành (dd/mm/yyyy)",
             "Ngày kết thúc vận hành (dd/mm/yyyy)",
             "Giờ bắt đầu làm việc (hh:mm)",
@@ -127,19 +124,11 @@ public class HubImportExcelServiceImpl implements HubImportExcelService {
             "ward_code",
             "address_detail",
             "phone_number",
-            "hub_type",
             "operational_start_date",
             "operational_end_date",
             "working_start_time",
             "working_end_time",
             "status"
-    );
-
-    private static final Map<String, HubType> HUB_TYPE_MAP = Map.of(
-            "miền", HubType.REGIONAL,
-            "regional", HubType.REGIONAL,
-            "cục bộ", HubType.LOCAL,
-            "local", HubType.LOCAL
     );
 
     private static final Map<String, HubStatus> STATUS_MAP = Map.of(
@@ -448,14 +437,6 @@ public class HubImportExcelServiceImpl implements HubImportExcelService {
 
             validateWardProvince(wardCode, provinceCode, excelRowNumber, errors, masterData.wardProvinceByCode());
 
-            HubType hubType = resolveHubType(
-                    row,
-                    COLUMN_HUB_TYPE,
-                    formatter,
-                    evaluator,
-                    excelRowNumber,
-                    errors
-            );
             LocalDate operationalStartDate = resolveDate(
                     row,
                     COLUMN_OPERATIONAL_START_DATE,
@@ -511,7 +492,6 @@ public class HubImportExcelServiceImpl implements HubImportExcelService {
                     .wardCode(wardCode)
                     .addressDetail(addressDetail)
                     .phoneNumber(hasText(phoneNumber) ? phoneNumber : null)
-                    .hubType(hubType)
                     .operationalStartDate(operationalStartDate)
                     .operationalEndDate(operationalEndDate)
                     .workingStartTime(workingStartTime)
@@ -621,32 +601,6 @@ public class HubImportExcelServiceImpl implements HubImportExcelService {
                     buildCellRef(excelRowNumber, COLUMN_WARD)
             ));
         }
-    }
-
-    private HubType resolveHubType(
-            Row row,
-            int columnIndex,
-            DataFormatter formatter,
-            FormulaEvaluator evaluator,
-            int excelRowNumber,
-            List<String> errors
-    ) {
-        String rawValue = normalizeWhitespace(getCellText(row, columnIndex, formatter, evaluator));
-        if (!hasText(rawValue)) {
-            errors.add(message("hub.import.validation.required", buildCellRef(excelRowNumber, columnIndex)));
-            return null;
-        }
-
-        HubType hubType = HUB_TYPE_MAP.get(rawValue.toLowerCase(Locale.ROOT));
-        if (hubType == null) {
-            errors.add(message(
-                    "hub.import.validation.value.invalid_option",
-                    buildCellRef(excelRowNumber, columnIndex),
-                    rawValue,
-                    message("hub.import.allowed.hub_type")
-            ));
-        }
-        return hubType;
     }
 
     private HubStatus resolveStatus(
@@ -781,7 +735,6 @@ public class HubImportExcelServiceImpl implements HubImportExcelService {
         hub.setWardCode(hubImportDTO.getWardCode());
         hub.setAddressDetail(hubImportDTO.getAddressDetail());
         hub.setPhoneNumber(hubImportDTO.getPhoneNumber());
-        hub.setHubType(hubImportDTO.getHubType());
         hub.setOperationalStartDate(hubImportDTO.getOperationalStartDate());
         hub.setOperationalEndDate(hubImportDTO.getOperationalEndDate());
         hub.setWorkingStartTime(toAnchoredDateTime(hubImportDTO.getWorkingStartTime()));

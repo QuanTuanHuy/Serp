@@ -191,6 +191,34 @@ export function getAvatarColor(identifier: string): string {
   return gradients[Math.abs(hash) % gradients.length];
 }
 
+/**
+ * Generate a sliding array of visible page numbers for pagination
+ * @param currentPage - Currently active page (1-indexed)
+ * @param totalPages - Total number of pages
+ * @param maxVisiblePages - Maximum page buttons to show (default 5)
+ * @returns Array of page numbers to render
+ */
+export function getVisiblePages(
+  currentPage: number,
+  totalPages: number,
+  maxVisiblePages: number = 5
+): number[] {
+  if (totalPages <= 0) return [];
+  
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+  if (endPage - startPage < maxVisiblePages - 1) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+
+  const pages: number[] = [];
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i);
+  }
+  return pages;
+}
+
 export { getIconComponent } from './getIconComponent';
 export {
   getModuleRootPath,

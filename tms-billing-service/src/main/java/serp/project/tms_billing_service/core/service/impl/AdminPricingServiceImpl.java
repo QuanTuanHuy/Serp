@@ -32,13 +32,10 @@ import serp.project.tms_billing_service.repository.TariffRepository;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AdminPricingServiceImpl implements IAdminPricingService {
-    private static final Set<SurchargeRuleEnum> ACTIVE_SURCHARGE_CODES = Set.of(SurchargeRuleEnum.VUNG_XA);
-
     private final TariffRepository tariffRepository;
     private final SurchargeRuleRepository surchargeRuleRepository;
     private final ChargeableWeightConfigRepository chargeableWeightConfigRepository;
@@ -171,12 +168,12 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     }
 
     /**
-     * Chỉ trả về các mã phụ phí còn được dùng trong tính phí để ẩn cấu hình cũ.
+     * Trả về các quy tắc phụ phí đã cấu hình để admin quản lý và calculator có thể áp dụng theo request.
      */
     @Override
     public List<SurchargeRuleAdminResponse> listSurchargeRules() {
         return surchargeRuleRepository.findAll().stream()
-                .filter(rule -> rule.getCode() != null && ACTIVE_SURCHARGE_CODES.contains(rule.getCode()))
+                .filter(rule -> rule.getCode() != null)
                 .map(AdminPricingMapper::toSurchargeResponse)
                 .toList();
     }
@@ -205,13 +202,13 @@ public class AdminPricingServiceImpl implements IAdminPricingService {
     }
 
     /**
-     * Chặn các mã phụ phí cũ không còn tham gia công thức tính phí.
+     * Đảm bảo mã phụ phí hợp lệ trước khi lưu cấu hình.
      */
     private void validateActiveSurchargeCode(SurchargeRuleEnum code) {
-        if (code == null || !ACTIVE_SURCHARGE_CODES.contains(code)) {
+        if (code == null) {
             throw new AppException(
                     ErrorCode.INVALID_REQUEST,
-                    "Surcharge rule is no longer supported for shipping fee calculation"
+                    "Surcharge rule code is required"
             );
         }
     }

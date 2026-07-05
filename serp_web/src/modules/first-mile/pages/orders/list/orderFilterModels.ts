@@ -77,11 +77,13 @@ export const buildOrderListFilters = (
   const pickupTo = formatDateTimeLocalForApi(values.pickupTo);
 
   if (createdFrom && createdTo && createdFrom > createdTo) {
-    throw new Error('Created from must be before created to.');
+    throw new Error('Thời gian tạo từ phải nhỏ hơn thời gian tạo đến.');
   }
 
   if (pickupFrom && pickupTo && pickupFrom > pickupTo) {
-    throw new Error('Pickup from must be before pickup to.');
+    throw new Error(
+      'Thời gian lấy hàng từ phải nhỏ hơn thời gian lấy hàng đến.'
+    );
   }
 
   return {

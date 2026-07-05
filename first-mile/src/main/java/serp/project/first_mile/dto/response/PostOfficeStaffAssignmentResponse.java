@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package serp.project.first_mile.dto.response;
 
 import serp.project.first_mile.enums.PostOfficeStaffRole;
+import serp.project.first_mile.enums.PostOfficeStaffStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ public record PostOfficeStaffAssignmentResponse(
         String staffCode,
         String staffFullName,
         PostOfficeStaffRole staffRole,
+        PostOfficeStaffStatus staffStatus,
         LocalDate assignedFrom,
         LocalDate assignedTo,
         Boolean isPrimary,

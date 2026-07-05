@@ -336,6 +336,7 @@ public class OrderServiceImpl implements OrderService {
                 ? OrderPickupMethod.COURIER_PICKUP
                 : request.getPickupMethod());
         order.setOrderType(request.getOrderType());
+        order.setOrderProductCategory(request.getOrderProductCategory());
         order.setFeePayer(request.getFeePayer());
         order.setNote(OrderTextUtils.normalizeText(request.getNote()));
         order.setDimensions(OrderLocationUtils.buildDimensions(

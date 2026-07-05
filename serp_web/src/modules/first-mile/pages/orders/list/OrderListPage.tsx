@@ -23,7 +23,6 @@ import {
   useLazyExportOrderTemplateQuery,
   useLazyGetDropOffPostOfficeSuggestionsQuery,
   useLazyGetOrderByIdQuery,
-  useLazyGetOrderTimelineQuery,
   useGetOrdersQuery,
   useGetPostOfficesQuery,
   useGetProductTypesQuery,
@@ -39,7 +38,6 @@ import type {
   CancelOrderRequest,
   CreateOrderRequest,
   FirstMileOrderDetail,
-  FirstMileOrderTimelineItem,
   FirstMileOrderListFilters,
   ImportHistory,
   OrderDropOffPostOfficeSuggestion,
@@ -118,7 +116,7 @@ const buildConfirmationPostOfficeDescription = (
   const details: string[] = [];
 
   const originDetail = formatConfirmationPostOffice(
-    'Origin post office',
+    'Bưu cục gốc',
     confirmation.originPostOffice
   );
   if (originDetail) {
@@ -126,7 +124,7 @@ const buildConfirmationPostOfficeDescription = (
   }
 
   const destinationDetail = formatConfirmationPostOffice(
-    'Destination post office',
+    'Bưu cục đích',
     confirmation.destinationPostOffice
   );
   if (destinationDetail) {
@@ -163,10 +161,6 @@ export const OrderListPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false);
   const [detailOrder, setDetailOrder] =
     React.useState<FirstMileOrderDetail | null>(null);
-  const [detailTimeline, setDetailTimeline] = React.useState<
-    FirstMileOrderTimelineItem[]
-  >([]);
-  const [isLoadingTimeline, setIsLoadingTimeline] = React.useState(false);
   const [cancelTarget, setCancelTarget] =
     React.useState<FirstMileOrderDetail | null>(null);
   const [cancelReason, setCancelReason] = React.useState('');
@@ -530,7 +524,6 @@ export const OrderListPage: React.FC = () => {
   ] = useLazyGetDropOffPostOfficeSuggestionsQuery();
   const [geocodeAddress] = useGeocodeAddressMutation();
   const [loadOrderById] = useLazyGetOrderByIdQuery();
-  const [loadOrderTimeline] = useLazyGetOrderTimelineQuery();
   const [triggerExportOrderTemplate, { isFetching: isExportingTemplate }] =
     useLazyExportOrderTemplateQuery();
   const [validateOrderImport, { isLoading: isValidatingImport }] =
@@ -551,7 +544,7 @@ export const OrderListPage: React.FC = () => {
       setAppliedFilters(nextFilters);
     } catch (error) {
       notification.error(
-        error instanceof Error ? error.message : 'Invalid filter values.'
+        error instanceof Error ? error.message : 'Giá trị bộ lọc không hợp lệ.'
       );
     }
   };
@@ -566,7 +559,7 @@ export const OrderListPage: React.FC = () => {
   const handleOpenCreateDialog = () => {
     if (!canMutateOrders) {
       notification.error(
-        'Only TMS_ADMIN or TMS_CUSTOMER can create first-mile orders.'
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể tạo đơn hàng first-mile.'
       );
       return;
     }
@@ -619,17 +612,19 @@ export const OrderListPage: React.FC = () => {
       : receiverWardSelectOptions;
 
     if (!provinceCode) {
-      notification.error('Please select a province before geocoding.');
+      notification.error('Vui lòng chọn tỉnh/thành trước khi lấy tọa độ.');
       return;
     }
 
     if (!wardCode) {
-      notification.error('Please select a ward before geocoding.');
+      notification.error('Vui lòng chọn phường/xã trước khi lấy tọa độ.');
       return;
     }
 
     if (!addressDetail) {
-      notification.error('Please enter address detail before geocoding.');
+      notification.error(
+        'Vui lòng nhập chi tiết địa chỉ trước khi lấy tọa độ.'
+      );
       return;
     }
 
@@ -638,7 +633,7 @@ export const OrderListPage: React.FC = () => {
       wardOptions.find(
         (ward) => normalizeLocationCode(ward.wardCode) === wardCode
       )?.name || wardCode;
-    const fullAddress = [addressDetail, wardName, provinceName, 'Vietnam']
+    const fullAddress = [addressDetail, wardName, provinceName, 'Việt Nam']
       .filter(Boolean)
       .join(', ');
 
@@ -655,11 +650,11 @@ export const OrderListPage: React.FC = () => {
         geocodeResult.longitude
       );
 
-      notification.success('Coordinates updated from address.', {
+      notification.success('Đã cập nhật tọa độ từ địa chỉ.', {
         description: `${geocodeResult.latitude.toFixed(6)}, ${geocodeResult.longitude.toFixed(6)}`,
       });
     } catch (error) {
-      notification.error('Failed to geocode address.', {
+      notification.error('Không thể lấy tọa độ từ địa chỉ.', {
         description: getErrorMessage(error),
       });
     } finally {
@@ -682,7 +677,7 @@ export const OrderListPage: React.FC = () => {
         const orderDetailResult = await loadOrderById(orderId).unwrap();
         return orderDetailResult;
       } catch (error) {
-        notification.error('Failed to load order detail.', {
+        notification.error('Không thể tải chi tiết đơn hàng.', {
           description: getErrorMessage(error),
         });
         return null;
@@ -691,53 +686,32 @@ export const OrderListPage: React.FC = () => {
     [loadOrderById, notification]
   );
 
-  const loadOrderTimelineData = React.useCallback(
-    async (orderId: number): Promise<FirstMileOrderTimelineItem[]> => {
-      try {
-        return await loadOrderTimeline(orderId).unwrap();
-      } catch (error) {
-        notification.error('Failed to load order timeline.', {
-          description: getErrorMessage(error),
-        });
-        return [];
-      }
-    },
-    [loadOrderTimeline, notification]
-  );
-
   const handleOpenOrderDetail = async (orderId: number) => {
     setLoadingOrderActionId(orderId);
     setIsDetailDialogOpen(true);
     setDetailOrder(null);
-    setDetailTimeline([]);
-    setIsLoadingTimeline(true);
 
-    const [orderDetailResult, orderTimelineResult] = await Promise.all([
-      loadOrderDetail(orderId),
-      loadOrderTimelineData(orderId),
-    ]);
+    const orderDetailResult = await loadOrderDetail(orderId);
     if (orderDetailResult) {
       setDetailOrder(orderDetailResult);
-      setDetailTimeline(orderTimelineResult);
     } else {
       setIsDetailDialogOpen(false);
     }
 
-    setIsLoadingTimeline(false);
     setLoadingOrderActionId(null);
   };
 
   const handleOpenEditOrder = async (order: FirstMileOrderDetail) => {
     if (!canMutateOrders) {
       notification.error(
-        'Only TMS_ADMIN or TMS_CUSTOMER can update first-mile orders.'
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể cập nhật đơn hàng first-mile.'
       );
       return;
     }
 
     if (!isDraftOrder(order)) {
       notification.error(
-        'Only newly created and unconfirmed orders can be edited.'
+        'Chỉ các đơn hàng mới tạo và chưa xác nhận mới có thể chỉnh sửa.'
       );
       return;
     }
@@ -760,14 +734,14 @@ export const OrderListPage: React.FC = () => {
   const handleRequestCancelOrder = (order: FirstMileOrderDetail) => {
     if (!canMutateOrders) {
       notification.error(
-        'Only TMS_ADMIN or TMS_CUSTOMER can cancel first-mile orders.'
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể hủy đơn hàng first-mile.'
       );
       return;
     }
 
     if (!isDraftOrder(order)) {
       notification.error(
-        'Only newly created and unconfirmed orders can be cancelled.'
+        'Chỉ các đơn hàng mới tạo và chưa xác nhận mới có thể hủy.'
       );
       return;
     }
@@ -791,12 +765,12 @@ export const OrderListPage: React.FC = () => {
         body,
       }).unwrap();
 
-      notification.success('Order cancelled successfully.');
+      notification.success('Đã hủy đơn hàng thành công.');
       setCancelTarget(null);
       setCancelReason('');
       refreshOrdersAfterMutation();
     } catch (error) {
-      notification.error('Failed to cancel order.', {
+      notification.error('Không thể hủy đơn hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -805,14 +779,14 @@ export const OrderListPage: React.FC = () => {
   const handleRequestDeleteOrder = (order: FirstMileOrderDetail) => {
     if (!canMutateOrders) {
       notification.error(
-        'Only TMS_ADMIN or TMS_CUSTOMER can delete first-mile orders.'
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể xóa đơn hàng first-mile.'
       );
       return;
     }
 
     if (!isDraftOrder(order)) {
       notification.error(
-        'Only newly created and unconfirmed orders can be deleted.'
+        'Chỉ các đơn hàng mới tạo và chưa xác nhận mới có thể xóa.'
       );
       return;
     }
@@ -829,17 +803,18 @@ export const OrderListPage: React.FC = () => {
       await cancelOrder({
         id: deleteTarget.id,
         body: {
-          cancel_reason: 'Deleted by user from frontend order list.',
+          cancel_reason:
+            'Đã xóa bởi người dùng từ danh sách đơn hàng trên giao diện.',
         },
       }).unwrap();
 
-      notification.success('Order deleted successfully.', {
-        description: 'Backend currently maps delete action to cancel status.',
+      notification.success('Đã xóa đơn hàng thành công.', {
+        description: 'Hiện backend ánh xạ thao tác xóa sang trạng thái hủy.',
       });
       setDeleteTarget(null);
       refreshOrdersAfterMutation();
     } catch (error) {
-      notification.error('Failed to delete order.', {
+      notification.error('Không thể xóa đơn hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -849,35 +824,35 @@ export const OrderListPage: React.FC = () => {
     const requiredFields: Array<{ value: string; label: string }> = [
       {
         value: createForm.customerOrderCode,
-        label: 'Customer order code',
+        label: 'Mã đơn của khách hàng',
       },
-      { value: createForm.senderName, label: 'Sender name' },
-      { value: createForm.senderPhone, label: 'Sender phone' },
+      { value: createForm.senderName, label: 'Tên người gửi' },
+      { value: createForm.senderPhone, label: 'Số điện thoại người gửi' },
       {
         value: createForm.senderProvinceCode,
-        label: 'Sender province code',
+        label: 'Mã tỉnh người gửi',
       },
-      { value: createForm.senderWardCode, label: 'Sender ward code' },
+      { value: createForm.senderWardCode, label: 'Mã phường/xã người gửi' },
       {
         value: createForm.senderAddressDetail,
-        label: 'Sender address detail',
+        label: 'Chi tiết địa chỉ người gửi',
       },
-      { value: createForm.receiverName, label: 'Receiver name' },
-      { value: createForm.receiverPhone, label: 'Receiver phone' },
+      { value: createForm.receiverName, label: 'Tên người nhận' },
+      { value: createForm.receiverPhone, label: 'Số điện thoại người nhận' },
       {
         value: createForm.receiverProvinceCode,
-        label: 'Receiver province code',
+        label: 'Mã tỉnh người nhận',
       },
-      { value: createForm.receiverWardCode, label: 'Receiver ward code' },
+      { value: createForm.receiverWardCode, label: 'Mã phường/xã người nhận' },
       {
         value: createForm.receiverAddressDetail,
-        label: 'Receiver address detail',
+        label: 'Chi tiết địa chỉ người nhận',
       },
     ];
 
     const missingField = requiredFields.find((field) => !field.value.trim());
     if (missingField) {
-      notification.error(`${missingField.label} is required.`);
+      notification.error(`${missingField.label} là bắt buộc.`);
       return null;
     }
 
@@ -898,7 +873,7 @@ export const OrderListPage: React.FC = () => {
       receiverLatitude === null ||
       receiverLongitude === null
     ) {
-      notification.error('Sender and receiver coordinates must be valid.');
+      notification.error('Tọa độ người gửi và người nhận phải hợp lệ.');
       return null;
     }
 
@@ -913,7 +888,7 @@ export const OrderListPage: React.FC = () => {
       receiverLongitude > 180
     ) {
       notification.error(
-        'Latitude must be in [-90, 90] and longitude must be in [-180, 180].'
+        'Vĩ độ phải nằm trong [-90, 90] và kinh độ phải nằm trong [-180, 180].'
       );
       return null;
     }
@@ -938,7 +913,7 @@ export const OrderListPage: React.FC = () => {
       (createForm.totalVolumeM3.trim() && totalVolumeM3 === undefined);
 
     if (hasInvalidOptionalNumericField) {
-      notification.error('Dimension and volume values must be valid numbers.');
+      notification.error('Giá trị kích thước và thể tích phải là số hợp lệ.');
       return null;
     }
 
@@ -963,7 +938,7 @@ export const OrderListPage: React.FC = () => {
 
     if (invalidProductIndex >= 0) {
       notification.error(
-        `Product #${invalidProductIndex + 1} is incomplete or invalid.`
+        `Sản phẩm #${invalidProductIndex + 1} chưa đầy đủ hoặc không hợp lệ.`
       );
       return null;
     }
@@ -993,6 +968,7 @@ export const OrderListPage: React.FC = () => {
       delivery_request_time: createForm.deliveryRequestTime,
       pickup_method: createForm.pickupMethod,
       order_type: createForm.orderType,
+      order_product_category: createForm.orderProductCategory,
       fee_payer: createForm.feePayer,
       is_cod: createForm.isCod === 'true',
       ...(dimensionLengthCm !== undefined
@@ -1017,7 +993,7 @@ export const OrderListPage: React.FC = () => {
 
     if (!canMutateOrders) {
       notification.error(
-        'Only TMS_ADMIN or TMS_CUSTOMER can create first-mile orders.'
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể tạo đơn hàng first-mile.'
       );
       return;
     }
@@ -1031,8 +1007,8 @@ export const OrderListPage: React.FC = () => {
       if (orderFormMode === 'create') {
         const createdOrder = await createOrder(payload).unwrap();
 
-        notification.success('Order created successfully.', {
-          description: `Order code: ${createdOrder.orderCode}`,
+        notification.success('Đã tạo đơn hàng thành công.', {
+          description: `Mã đơn hàng: ${createdOrder.orderCode}`,
         });
 
         if (
@@ -1050,14 +1026,14 @@ export const OrderListPage: React.FC = () => {
             setDropOffSuggestionTarget(createdOrder);
             setDropOffSuggestions(suggestions);
           } catch {
-            // Ignore suggestion loading failures here because order creation already succeeded.
+            // Bỏ qua lỗi tải gợi ý ở đây vì đơn hàng đã được tạo thành công.
           } finally {
             setLoadingDropOffSuggestionOrderId(null);
           }
         }
       } else {
         if (editingOrderId === null) {
-          notification.error('Missing order id for update.');
+          notification.error('Thiếu mã đơn hàng để cập nhật.');
           return;
         }
 
@@ -1066,7 +1042,7 @@ export const OrderListPage: React.FC = () => {
           body: payload as UpdateOrderRequest,
         }).unwrap();
 
-        notification.success('Order updated successfully.');
+        notification.success('Đã cập nhật đơn hàng thành công.');
       }
 
       setIsCreateDialogOpen(false);
@@ -1083,8 +1059,8 @@ export const OrderListPage: React.FC = () => {
     } catch (error) {
       notification.error(
         orderFormMode === 'create'
-          ? 'Failed to create order.'
-          : 'Failed to update order.',
+          ? 'Không thể tạo đơn hàng.'
+          : 'Không thể cập nhật đơn hàng.',
         {
           description: getErrorMessage(error),
         }
@@ -1096,7 +1072,7 @@ export const OrderListPage: React.FC = () => {
     (order: FirstMileOrderDetail): CalculateShippingFeeRequest => {
       if (!order.senderWardCode || !order.receiverWardCode) {
         throw new Error(
-          'Order is missing sender/receiver ward code for fee calculation.'
+          'Đơn hàng thiếu mã phường/xã của người gửi hoặc người nhận để tính phí.'
         );
       }
 
@@ -1113,6 +1089,9 @@ export const OrderListPage: React.FC = () => {
         lengthCm,
         widthCm,
         heightCm,
+        ...(order.orderProductCategory
+          ? { productCategory: order.orderProductCategory }
+          : {}),
       };
     },
     []
@@ -1129,9 +1108,12 @@ export const OrderListPage: React.FC = () => {
         return feeResult;
       } catch (error) {
         setShippingFeeQuote(null);
-        notification.error('Failed to calculate shipping fee from billing.', {
-          description: getErrorMessage(error),
-        });
+        notification.error(
+          'Không thể tính phí vận chuyển từ dịch vụ billing.',
+          {
+            description: getErrorMessage(error),
+          }
+        );
         return null;
       }
     },
@@ -1146,8 +1128,8 @@ export const OrderListPage: React.FC = () => {
 
       notification.success(
         confirmationResult.alreadyConfirmed
-          ? 'Order was already confirmed.'
-          : 'Order confirmed successfully.',
+          ? 'Đơn hàng đã được xác nhận trước đó.'
+          : 'Đã xác nhận đơn hàng thành công.',
         confirmationDescription
           ? { description: confirmationDescription }
           : undefined
@@ -1235,9 +1217,9 @@ export const OrderListPage: React.FC = () => {
           setIsAwaitingPaymentCompletion(false);
           setIsProcessingPaymentWebhook(true);
           setConfirmDialogOrder(latestOrder);
-          notification.info('Payment is being finalized.', {
+          notification.info('Đang hoàn tất thanh toán.', {
             description:
-              'Gateway payment was completed. Waiting for webhook confirmation from payment service.',
+              'Thanh toán tại cổng đã hoàn tất. Đang chờ webhook xác nhận từ dịch vụ thanh toán.',
           });
           return;
         }
@@ -1247,8 +1229,8 @@ export const OrderListPage: React.FC = () => {
         setIsAwaitingPaymentCompletion(false);
         setIsProcessingPaymentWebhook(false);
 
-        notification.success('Shipping fee payment confirmed successfully.', {
-          description: 'Confirming order...',
+        notification.success('Đã xác nhận thanh toán phí vận chuyển.', {
+          description: 'Đang xác nhận đơn hàng...',
         });
 
         await confirmOrderAndRefreshRef.current(latestOrder);
@@ -1256,7 +1238,7 @@ export const OrderListPage: React.FC = () => {
         setIsAwaitingPaymentCompletion(false);
         setIsProcessingPaymentWebhook(false);
         lastHandledPaymentMessageKeyRef.current = null;
-        notification.error('Failed to finalize payment confirmation.', {
+        notification.error('Không thể hoàn tất xác nhận thanh toán.', {
           description: getErrorMessage(error),
         });
       } finally {
@@ -1322,14 +1304,14 @@ export const OrderListPage: React.FC = () => {
   const handleOpenConfirmOrder = async (order: FirstMileOrderDetail) => {
     if (!canMutateOrders) {
       notification.error(
-        'Only TMS_ADMIN or TMS_CUSTOMER can confirm first-mile orders.'
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể xác nhận đơn hàng first-mile.'
       );
       return;
     }
 
     if (isDropOffOrder(order)) {
       notification.error(
-        'Drop-off orders must use post office suggestion flow and manager confirmation at post office.'
+        'Đơn gửi tại bưu cục phải dùng luồng gợi ý bưu cục và xác nhận của quản lý bưu cục.'
       );
       return;
     }
@@ -1364,7 +1346,7 @@ export const OrderListPage: React.FC = () => {
       confirmDialogOrder.paymentStatus !== 'PAID'
     ) {
       notification.error(
-        'Sender payment is required before order confirmation.'
+        'Người gửi phải thanh toán trước khi xác nhận đơn hàng.'
       );
       return;
     }
@@ -1372,7 +1354,7 @@ export const OrderListPage: React.FC = () => {
     try {
       await confirmOrderAndRefresh(confirmDialogOrder);
     } catch (error) {
-      notification.error('Failed to confirm order.', {
+      notification.error('Không thể xác nhận đơn hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -1391,13 +1373,15 @@ export const OrderListPage: React.FC = () => {
     }
 
     if (confirmDialogOrder.feePayer !== 'SENDER') {
-      notification.error('Payment is only required when sender pays shipping.');
+      notification.error(
+        'Chỉ cần thanh toán khi người gửi trả phí vận chuyển.'
+      );
       return;
     }
 
     if (!shippingFeeQuote || !Number.isFinite(shippingFeeQuote.totalFee)) {
       notification.error(
-        'Shipping fee quote is required before initiating payment.'
+        'Cần có báo giá phí vận chuyển trước khi khởi tạo thanh toán.'
       );
       return;
     }
@@ -1427,20 +1411,20 @@ export const OrderListPage: React.FC = () => {
         if (!paymentPopup) {
           setIsAwaitingPaymentCompletion(false);
           setIsProcessingPaymentWebhook(false);
-          notification.error('Popup was blocked by the browser.', {
+          notification.error('Trình duyệt đã chặn cửa sổ bật lên.', {
             description:
-              'Allow popups for this site to complete payment confirmation automatically.',
+              'Hãy cho phép popup trên trang này để hoàn tất xác nhận thanh toán tự động.',
           });
           return;
         }
       }
 
-      notification.success('Payment request created.', {
+      notification.success('Đã tạo yêu cầu thanh toán.', {
         description:
-          'Complete payment in the opened window. This dialog will confirm the order automatically when payment succeeds.',
+          'Hoàn tất thanh toán trong cửa sổ vừa mở. Hộp thoại này sẽ tự động xác nhận đơn hàng khi thanh toán thành công.',
       });
     } catch (error) {
-      notification.error('Failed to initiate payment.', {
+      notification.error('Không thể khởi tạo thanh toán.', {
         description: getErrorMessage(error),
       });
     }
@@ -1463,14 +1447,14 @@ export const OrderListPage: React.FC = () => {
   const handleOpenDropOffSuggestions = async (order: FirstMileOrderDetail) => {
     if (!canMutateOrders) {
       notification.error(
-        'Only TMS_ADMIN or TMS_CUSTOMER can view drop-off post office suggestions.'
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể xem gợi ý bưu cục gửi hàng.'
       );
       return;
     }
 
     if (!isDropOffOrder(order)) {
       notification.error(
-        'This order is not configured for post office drop-off.'
+        'Đơn hàng này không được cấu hình để gửi tại bưu cục.'
       );
       return;
     }
@@ -1486,7 +1470,7 @@ export const OrderListPage: React.FC = () => {
       setDropOffSuggestionTarget(order);
       setDropOffSuggestions(suggestions);
     } catch (error) {
-      notification.error('Failed to load drop-off post office suggestions.', {
+      notification.error('Không thể tải gợi ý bưu cục gửi hàng.', {
         description: getErrorMessage(error),
       });
     } finally {
@@ -1509,7 +1493,7 @@ export const OrderListPage: React.FC = () => {
 
       setDropOffSuggestions(suggestions);
     } catch (error) {
-      notification.error('Failed to refresh post office suggestions.', {
+      notification.error('Không thể làm mới gợi ý bưu cục.', {
         description: getErrorMessage(error),
       });
     } finally {
@@ -1520,7 +1504,7 @@ export const OrderListPage: React.FC = () => {
   const handleOpenManagerDropOffConfirm = (order: FirstMileOrderDetail) => {
     if (!canConfirmDropOffAtPostOffice) {
       notification.error(
-        'Only TMS_POSTOFFICER_MANAGER can confirm drop-off orders.'
+        'Chỉ TMS_POSTOFFICER_MANAGER mới có thể xác nhận đơn gửi tại bưu cục.'
       );
       return;
     }
@@ -1541,14 +1525,14 @@ export const OrderListPage: React.FC = () => {
   const handleManagerConfirmDropOffOrder = async () => {
     if (!canConfirmDropOffAtPostOffice) {
       notification.error(
-        'Only TMS_POSTOFFICER_MANAGER can confirm drop-off orders.'
+        'Chỉ TMS_POSTOFFICER_MANAGER mới có thể xác nhận đơn gửi tại bưu cục.'
       );
       return;
     }
 
     const orderId = parsePositiveIntegerInput(managerDropOffOrderIdInput);
     if (orderId === null) {
-      notification.error('Order ID must be a positive integer.');
+      notification.error('Mã đơn hàng phải là số nguyên dương.');
       return;
     }
 
@@ -1556,7 +1540,7 @@ export const OrderListPage: React.FC = () => {
       managerDropOffPostOfficeIdInput
     );
     if (postOfficeId === null) {
-      notification.error('Please select a valid post office.');
+      notification.error('Vui lòng chọn một bưu cục hợp lệ.');
       return;
     }
 
@@ -1569,7 +1553,7 @@ export const OrderListPage: React.FC = () => {
       const confirmationDescription =
         buildConfirmationPostOfficeDescription(confirmationResult);
       notification.success(
-        'Drop-off order confirmed at post office.',
+        'Đã xác nhận đơn gửi tại bưu cục.',
         confirmationDescription
           ? { description: confirmationDescription }
           : undefined
@@ -1580,7 +1564,7 @@ export const OrderListPage: React.FC = () => {
       setDropOffSuggestions([]);
       void refetch();
     } catch (error) {
-      notification.error('Failed to confirm drop-off order at post office.', {
+      notification.error('Không thể xác nhận đơn gửi tại bưu cục.', {
         description: getErrorMessage(error),
       });
     }
@@ -1614,7 +1598,7 @@ export const OrderListPage: React.FC = () => {
   const handleDownloadTemplate = async () => {
     if (!canMutateOrders) {
       notification.error(
-        'Only TMS_ADMIN or TMS_CUSTOMER can download order templates.'
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể tải mẫu đơn hàng.'
       );
       return;
     }
@@ -1631,9 +1615,9 @@ export const OrderListPage: React.FC = () => {
       link.remove();
       URL.revokeObjectURL(downloadUrl);
 
-      notification.success('Order template downloaded successfully.');
+      notification.success('Đã tải mẫu đơn hàng thành công.');
     } catch (error) {
-      notification.error('Failed to download order template.', {
+      notification.error('Không thể tải mẫu đơn hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -1642,14 +1626,14 @@ export const OrderListPage: React.FC = () => {
   const handleValidateImportFile = async () => {
     if (!canMutateOrders) {
       notification.error(
-        'Only TMS_ADMIN or TMS_CUSTOMER can validate order imports.'
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể kiểm tra file nhập đơn hàng.'
       );
       return;
     }
 
     const formData = buildImportFormData();
     if (!formData) {
-      notification.error('Please select an Excel file first.');
+      notification.error('Vui lòng chọn tệp Excel trước.');
       return;
     }
 
@@ -1658,12 +1642,12 @@ export const OrderListPage: React.FC = () => {
       setValidateImportResult(result);
 
       if (result.is_success) {
-        notification.success('File validated successfully.', {
-          description: `${result.data.length} order(s) are ready to import.`,
+        notification.success('Đã kiểm tra tệp thành công.', {
+          description: `${result.data.length} đơn hàng sẵn sàng nhập.`,
         });
       }
     } catch (error) {
-      notification.error('Failed to validate order import file.', {
+      notification.error('Không thể kiểm tra file nhập đơn hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -1671,12 +1655,14 @@ export const OrderListPage: React.FC = () => {
 
   const handleImportFile = async () => {
     if (!canMutateOrders) {
-      notification.error('Only TMS_ADMIN or TMS_CUSTOMER can import orders.');
+      notification.error(
+        'Chỉ TMS_ADMIN hoặc TMS_CUSTOMER mới có thể nhập đơn hàng.'
+      );
       return;
     }
 
     if (!validateImportResult) {
-      notification.error('Please validate the selected file before importing.');
+      notification.error('Vui lòng kiểm tra tệp đã chọn trước khi nhập.');
       return;
     }
 
@@ -1686,7 +1672,7 @@ export const OrderListPage: React.FC = () => {
 
     const formData = buildImportFormData();
     if (!formData) {
-      notification.error('Please select an Excel file first.');
+      notification.error('Vui lòng chọn tệp Excel trước.');
       return;
     }
 
@@ -1695,13 +1681,13 @@ export const OrderListPage: React.FC = () => {
       setLastImportJob(importResult);
       resetImportFileSelection();
 
-      notification.success('Order import job created.', {
-        description: `Job #${importResult.id} is ${importResult.status}.`,
+      notification.success('Đã tạo tác vụ nhập đơn hàng.', {
+        description: `Tác vụ #${importResult.id} hiện ở trạng thái ${importResult.status}.`,
       });
 
       void refetch();
     } catch (error) {
-      notification.error('Failed to import order file.', {
+      notification.error('Không thể nhập file đơn hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -1850,14 +1836,10 @@ export const OrderListPage: React.FC = () => {
       <OrderDetailDialog
         open={isDetailDialogOpen}
         detailOrder={detailOrder}
-        timeline={detailTimeline}
-        isLoadingTimeline={isLoadingTimeline}
         onOpenChange={(open) => {
           setIsDetailDialogOpen(open);
           if (!open) {
             setDetailOrder(null);
-            setDetailTimeline([]);
-            setIsLoadingTimeline(false);
           }
         }}
         formatStatusLabel={formatStatusLabel}
@@ -1945,14 +1927,14 @@ export const OrderListPage: React.FC = () => {
             setDeleteTarget(null);
           }
         }}
-        title='Delete Order'
+        title='Xóa đơn hàng'
         description={
           deleteTarget
-            ? `Delete order ${deleteTarget.orderCode}? This action will be mapped to cancel status because backend does not expose hard-delete API.`
-            : 'Delete this order?'
+            ? `Xóa đơn hàng ${deleteTarget.orderCode}? Thao tác này sẽ được ánh xạ sang trạng thái hủy vì backend chưa cung cấp API xóa vĩnh viễn.`
+            : 'Xóa đơn hàng này?'
         }
-        confirmText='Delete order'
-        cancelText='Keep order'
+        confirmText='Xóa đơn hàng'
+        cancelText='Giữ lại đơn'
         onConfirm={() => {
           void handleDeleteOrder();
         }}

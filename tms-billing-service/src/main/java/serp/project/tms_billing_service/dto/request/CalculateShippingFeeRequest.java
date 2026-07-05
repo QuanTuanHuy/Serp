@@ -9,6 +9,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
+import serp.project.tms_billing_service.enums.ProductCategory;
+import serp.project.tms_billing_service.enums.SurchargeRuleEnum;
+
+import java.util.Set;
 
 @Data
 public class CalculateShippingFeeRequest {
@@ -36,4 +40,8 @@ public class CalculateShippingFeeRequest {
     @NotNull(message = "INVALID_REQUEST")
     @Positive(message = "INVALID_REQUEST")
     private Integer heightCm;
+
+    private ProductCategory productCategory;
+
+    private Set<SurchargeRuleEnum> surchargeRuleCodes;
 }
