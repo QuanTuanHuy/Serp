@@ -23,6 +23,7 @@ func newBenchmarkJWTUtils(b *testing.B) (*JWTUtils, string) {
 		Email:             "user@example.com",
 		FullName:          "Test User",
 		PreferredUsername: "test.user",
+		TokenType:         "Bearer",
 		RealmAccess: map[string]interface{}{
 			"roles": []interface{}{"USER", "ADMIN"},
 		},
@@ -97,6 +98,26 @@ func BenchmarkJWTUtils_CurrentAuthenticateJWTWork(b *testing.B) {
 		}
 		if len(roles) != 2 {
 			b.Fatalf("expected 2 roles, got %d", len(roles))
+		}
+	}
+}
+
+func BenchmarkJWTUtils_ValidateAccessToken(b *testing.B) {
+	jwtUtils, token := newBenchmarkJWTUtils(b)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		validated, err := jwtUtils.ValidateAccessToken(token)
+		if err != nil {
+			b.Fatalf("validate access token: %v", err)
+		}
+		if validated.Claims.UserID != 123 {
+			b.Fatalf("expected user id 123, got %d", validated.Claims.UserID)
+		}
+		if len(validated.Roles) != 2 {
+			b.Fatalf("expected 2 roles, got %d", len(validated.Roles))
 		}
 	}
 }
