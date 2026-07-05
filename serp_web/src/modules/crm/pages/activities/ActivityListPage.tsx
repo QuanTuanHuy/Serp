@@ -45,6 +45,7 @@ import { ExportDropdown, CRMDatePicker } from '../../components/shared';
 import { QuickAddActivityDialog } from '../../components/dialogs';
 import { toLocalDateInputValue } from '../../utils';
 import { ACTIVITY_EXPORT_COLUMNS } from '../../utils/export';
+import { ActivityUrgencyGroups } from './components/list/ActivityUrgencyGroups';
 import {
   useCreateActivityMutation,
   useSearchActivitiesQuery,
@@ -740,154 +741,75 @@ export const ActivityListPage: React.FC<ActivityListPageProps> = ({
 
       {/* Activity List */}
       {viewMode === 'list' && (
-        <div className='space-y-3'>
+        <div className="space-y-4">
           {activityQuery.isLoading && (
             <Card>
-              <CardContent className='py-12 text-center text-muted-foreground'>
-                Loading activities...
+              <CardContent className="py-12 text-center text-muted-foreground text-xs">
+                Loading activities workspace...
               </CardContent>
             </Card>
           )}
 
           {activityQuery.isError && (
             <Card>
-              <CardContent className='py-12 text-center text-destructive'>
+              <CardContent className="py-12 text-center text-destructive text-xs">
                 Failed to load activities.
               </CardContent>
             </Card>
           )}
 
-          {!activityQuery.isLoading &&
-            !activityQuery.isError &&
-            activities.length > 0 && (
-              <Card className='mb-3'>
-                <CardContent className='p-4'>
-                  <label className='flex items-center gap-3 cursor-pointer'>
+          {!activityQuery.isLoading && !activityQuery.isError && activities.length > 0 && (
+            <>
+              <Card className="mb-3">
+                <CardContent className="p-4">
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
                     <input
-                      type='checkbox'
+                      type="checkbox"
                       checked={selectedActivityIds.size === activities.length}
                       onChange={handleSelectAll}
-                      className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary'
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                     />
-                    <span className='text-sm font-medium'>
+                    <span className="text-xs font-semibold">
                       Select all ({activities.length})
                     </span>
                   </label>
                 </CardContent>
               </Card>
-            )}
 
-          {!activityQuery.isLoading &&
-            !activityQuery.isError &&
-            activities.map((activity: Activity) => {
-              const Icon = getActivityIcon(activity.type);
-              const colorClass = getActivityColor(activity.type);
-              const displayStatus = getActivityDisplayStatus(activity);
-              const statusConfig = STATUS_CONFIG[displayStatus];
-              const isSelected = selectedActivityIds.has(activity.id);
+              <ActivityUrgencyGroups
+                activities={activities}
+                selectedActivityIds={selectedActivityIds}
+                onSelectActivity={handleSelectActivity}
+                onViewActivity={handleViewActivity}
+                getActivityIcon={getActivityIcon}
+                getActivityColor={getActivityColor}
+                formatDate={formatDate}
+              />
+            </>
+          )}
 
-              return (
-                <Card
-                  key={activity.id}
-                  className={cn(
-                    'hover:shadow-md transition-shadow',
-                    isSelected && 'ring-2 ring-primary'
-                  )}
-                >
-                  <CardContent className='p-4'>
-                    <div className='flex items-start gap-4'>
-                      {/* Checkbox */}
-                      <input
-                        type='checkbox'
-                        checked={isSelected}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleSelectActivity(activity.id);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className='mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer'
-                      />
-
-                      {/* Icon */}
-                      <div
-                        className={cn(
-                          'p-2.5 rounded-xl cursor-pointer',
-                          colorClass.split(' ')[1]
-                        )}
-                        onClick={() => handleViewActivity(activity.id)}
-                      >
-                        <Icon
-                          className={cn('h-5 w-5', colorClass.split(' ')[0])}
-                        />
-                      </div>
-
-                      {/* Content */}
-                      <div
-                        className='flex-1 min-w-0 cursor-pointer'
-                        onClick={() => handleViewActivity(activity.id)}
-                      >
-                        <div className='flex items-start justify-between gap-2'>
-                          <div>
-                            <h3 className='font-semibold text-sm'>
-                              {activity.subject}
-                            </h3>
-                            <p className='text-sm text-muted-foreground mt-0.5 line-clamp-1'>
-                              {activity.description}
-                            </p>
-                          </div>
-                          <Badge className={cn('shrink-0', statusConfig.color)}>
-                            {statusConfig.label}
-                          </Badge>
-                        </div>
-
-                        <div className='flex items-center gap-4 mt-3 text-xs text-muted-foreground'>
-                          <span className='flex items-center gap-1'>
-                            <Calendar className='h-3.5 w-3.5' />
-                            {formatDate(activity.scheduledDate)}
-                          </span>
-                          <span>•</span>
-                          <span>
-                            {activity.relatedTo.type}: {activity.relatedTo.name}
-                          </span>
-                          <span>•</span>
-                          <span>Assigned: {activity.assignedToName}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-
-          {!activityQuery.isLoading &&
-            !activityQuery.isError &&
-            activities.length === 0 && (
-              <Card>
-                <CardContent className='py-16 text-center'>
-                  <div className='mx-auto w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-4'>
-                    <Calendar className='w-10 h-10 text-muted-foreground' />
-                  </div>
-                  <h3 className='text-lg font-semibold mb-2'>
-                    No activities found
-                  </h3>
-                  <p className='text-muted-foreground mb-6 max-w-sm mx-auto'>
-                    {hasActiveFilters
-                      ? 'Try adjusting your filters.'
-                      : 'Start by logging your first activity.'}
-                  </p>
-                  {hasActiveFilters ? (
-                    <Button variant='outline' onClick={clearFilters}>
-                      Clear Filters
-                    </Button>
-                  ) : (
-                    <Button>
-                      <Plus className='h-4 w-4 mr-2' />
-                      Log First Activity
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+          {!activityQuery.isLoading && !activityQuery.isError && activities.length === 0 && (
+            <Card className="border border-dashed border-muted/60 p-8 rounded-xl">
+              <CardContent className="py-12 text-center">
+                <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground/60">
+                  <Calendar className="w-8 h-8" />
+                </div>
+                <h3 className="text-sm font-bold mb-1">No activities found</h3>
+                <p className="text-xs text-muted-foreground mb-6 max-w-sm mx-auto">
+                  {hasActiveFilters ? 'Try adjusting your filters.' : 'Start by logging your first activity.'}
+                </p>
+                {hasActiveFilters ? (
+                  <Button variant="outline" size="sm" onClick={clearFilters}>
+                    Clear Filters
+                  </Button>
+                ) : (
+                  <Button size="sm" onClick={() => setShowQuickAdd(true)}>
+                    <Plus className="h-4 w-4 mr-2" /> Log First Activity
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
