@@ -23,16 +23,16 @@ public interface IRoleRepository extends IBaseRepository<RoleModel> {
 
     @Query("""
             SELECT r FROM RoleModel r
-            WHERE LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(COALESCE(r.description, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+            WHERE LOWER(r.name) LIKE :search
+               OR LOWER(r.description) LIKE :search
             ORDER BY r.name ASC
             """)
     List<RoleModel> searchRoles(@Param("search") String search, Pageable pageable);
 
     @Query("""
             SELECT COUNT(r) FROM RoleModel r
-            WHERE LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(COALESCE(r.description, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+            WHERE LOWER(r.name) LIKE :search
+               OR LOWER(r.description) LIKE :search
             """)
     Long countSearchRoles(@Param("search") String search);
 }

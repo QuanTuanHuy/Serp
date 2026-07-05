@@ -57,8 +57,9 @@ public class RoleAdapter implements IRolePort {
     @Override
     public Pair<List<RoleEntity>, Long> searchRoles(String search, int limit) {
         var pageable = PageRequest.of(0, limit);
-        var roles = roleMapper.toEntityList(roleRepository.searchRoles(search, pageable));
-        Long total = roleRepository.countSearchRoles(search);
+        String formattedSearch = (search == null || search.trim().isEmpty()) ? "" : "%" + search.trim().toLowerCase() + "%";
+        var roles = roleMapper.toEntityList(roleRepository.searchRoles(formattedSearch, pageable));
+        Long total = roleRepository.countSearchRoles(formattedSearch);
         return Pair.of(roles, total != null ? total : 0L);
     }
 }

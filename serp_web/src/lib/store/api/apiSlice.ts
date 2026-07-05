@@ -42,13 +42,14 @@ const dynamicBaseQuery: BaseQueryFn<
   FetchBaseQueryError
 > = async (args, api, extraOptions: any) => {
   const service = extraOptions?.service;
-  // Default to 'account' behavior (no prefix before /api/v1)
+  const version = extraOptions?.version || 'v1';
+  // Default to 'account' behavior (no prefix before /api/<version>)
   // If service is provided and not 'account', prepend /service
 
-  let urlPrefix = '/api/v1';
+  let urlPrefix = `/api/${version}`;
 
   if (service && service !== 'account') {
-    urlPrefix = `/${service}/api/v1`;
+    urlPrefix = `/${service}/api/${version}`;
   }
 
   let adjustedArgs = args;

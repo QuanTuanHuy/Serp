@@ -25,4 +25,13 @@ func RegisterAccountRoutes(
 			genericProxyController.ProxyHandler("account"),
 		)
 	}
+
+	accountV2 := group.Group("/api/v2")
+	{
+		accountV2.Any(
+			"/*proxyPath",
+			accountProxyJWTGateMiddleware.Handler(appPath),
+			genericProxyController.ProxyHandler("accountV2"),
+		)
+	}
 }
