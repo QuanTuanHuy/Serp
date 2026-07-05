@@ -35,8 +35,8 @@ public class RepTimeBlockService implements IRepTimeBlockService {
             return;
         }
 
-        repTimeBlockPort.deleteByActivityId(activity.getId(), tenantId);
         if (!shouldCreateBlock(activity)) {
+            repTimeBlockPort.deleteByActivityId(activity.getId(), tenantId);
             return;
         }
 
@@ -44,19 +44,26 @@ public class RepTimeBlockService implements IRepTimeBlockService {
                 .filter(member -> TeamMemberStatus.ACTIVE.equals(member.getStatus()))
                 .orElse(null);
         if (teamMember == null) {
+            repTimeBlockPort.deleteByActivityId(activity.getId(), tenantId);
             return;
         }
 
-        repTimeBlockPort.save(RepTimeBlockEntity.builder()
-                .tenantId(tenantId)
-                .teamMemberId(teamMember.getId())
-                .activityId(activity.getId())
-                .startTime(activity.getActivityDate())
-                .endTime(activity.getActivityDate() + Duration.ofMinutes(activity.getDurationMinutes()).toMillis())
-                .blockType(RepTimeBlockType.MEETING)
-                .createdBy(activity.getUpdatedBy() != null ? activity.getUpdatedBy() : activity.getCreatedBy())
-                .updatedBy(activity.getUpdatedBy() != null ? activity.getUpdatedBy() : activity.getCreatedBy())
-                .build());
+        RepTimeBlockEntity block = repTimeBlockPort.findByActivityId(activity.getId(), tenantId)
+                .orElseGet(() -> RepTimeBlockEntity.builder()
+                        .tenantId(tenantId)
+                        .activityId(activity.getId())
+                        .createdBy(activity.getUpdatedBy() != null ? activity.getUpdatedBy() : activity.getCreatedBy())
+                        .build());
+
+        block.setTenantId(tenantId);
+        block.setTeamMemberId(teamMember.getId());
+        block.setActivityId(activity.getId());
+        block.setStartTime(activity.getActivityDate());
+        block.setEndTime(activity.getActivityDate() + Duration.ofMinutes(activity.getDurationMinutes()).toMillis());
+        block.setBlockType(RepTimeBlockType.MEETING);
+        block.setUpdatedBy(activity.getUpdatedBy() != null ? activity.getUpdatedBy() : activity.getCreatedBy());
+
+        repTimeBlockPort.save(block);
     }
 
     @Override
