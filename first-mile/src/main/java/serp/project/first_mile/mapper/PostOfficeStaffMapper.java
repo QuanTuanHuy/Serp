@@ -10,6 +10,7 @@ import serp.project.first_mile.domain.PostOfficeStaffAssignment;
 import serp.project.first_mile.dto.response.PostOfficeStaffAssignmentResponse;
 import serp.project.first_mile.dto.response.PostOfficeStaffResponse;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
+import serp.project.first_mile.enums.PostOfficeStaffStatus;
 
 public final class PostOfficeStaffMapper {
 
@@ -53,11 +54,13 @@ public final class PostOfficeStaffMapper {
         String staffCode = null;
         String staffFullName = null;
         PostOfficeStaffRole staffRole = null;
+        PostOfficeStaffStatus staffStatus = null;
         if (assignment.getStaff() != null) {
             staffId = assignment.getStaff().getId();
             staffCode = assignment.getStaff().getCode();
             staffFullName = assignment.getStaff().getFullName();
             staffRole = assignment.getStaff().getRole();
+            staffStatus = assignment.getStaff().getStatus();
         }
 
         return new PostOfficeStaffAssignmentResponse(
@@ -69,6 +72,7 @@ public final class PostOfficeStaffMapper {
                 staffCode,
                 staffFullName,
                 staffRole,
+                staffStatus,
                 assignment.getAssignedFrom(),
                 assignment.getAssignedTo(),
                 assignment.getIsPrimary(),

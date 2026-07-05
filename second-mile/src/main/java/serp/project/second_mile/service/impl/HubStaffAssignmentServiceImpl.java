@@ -126,15 +126,13 @@ public class HubStaffAssignmentServiceImpl implements HubStaffAssignmentService 
         }
 
         Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
-        String normalizedKeyword = normalizeText(keyword);
-        List<HubStaff> staffs = normalizedKeyword == null
-                ? hubStaffRepository.findByTenantIdAndRoleAndStatus(tenantId, role, HubStaffStatus.ACTIVE)
-                : hubStaffRepository.findAssignableByTenantIdAndRoleAndStatusAndKeyword(
-                        tenantId,
-                        role,
-                        HubStaffStatus.ACTIVE,
-                        normalizedKeyword
-                );
+        List<HubStaff> staffs = hubStaffRepository.findAssignableByTenantIdAndRoleAndStatusAndKeyword(
+                tenantId,
+                role,
+                HubStaffStatus.ACTIVE,
+                buildKeywordLike(keyword),
+                LocalDate.now()
+        );
         return staffs.stream()
                 .map(staff -> new HubStaffResponse(
                         staff.getId(),
@@ -225,5 +223,10 @@ public class HubStaffAssignmentServiceImpl implements HubStaffAssignmentService 
         }
         String trimmedValue = value.trim();
         return trimmedValue.isEmpty() ? null : trimmedValue;
+    }
+
+    private String buildKeywordLike(String value) {
+        String normalized = normalizeText(value);
+        return normalized == null ? null : "%" + normalized.toLowerCase() + "%";
     }
 }

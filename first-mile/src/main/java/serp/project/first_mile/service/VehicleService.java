@@ -13,6 +13,8 @@ import serp.project.first_mile.dto.request.VehicleImportDTO;
 import serp.project.first_mile.dto.response.ImportHistoryResponse;
 import serp.project.first_mile.dto.response.ValidateImportFileDTO;
 import serp.project.first_mile.dto.response.VehicleResponse;
+import serp.project.first_mile.enums.VehicleStatus;
+import serp.project.first_mile.enums.VehicleType;
 
 public interface VehicleService {
     byte[] exportTemplate();
@@ -21,7 +23,15 @@ public interface VehicleService {
 
     ImportHistoryResponse importVehiclesAsync(MultipartFile file, Long tenantId);
 
-    PageResponse<VehicleResponse> getVehicles(int page, int size, String keyword);
+    PageResponse<VehicleResponse> getVehicles(
+            int page,
+            int size,
+            String keyword,
+            VehicleType vehicleType,
+            VehicleStatus status,
+            String postOfficeKeyword,
+            String courierKeyword
+    );
 
     VehicleResponse getVehicleById(Long id);
 

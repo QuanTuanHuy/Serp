@@ -36,7 +36,7 @@ class PostOfficeTest {
     @Test
     void canAcceptShouldReturnFalseWhenPostOfficeIsNotActive() {
         PostOffice postOffice = new PostOffice();
-        postOffice.setStatus(PostOfficeStatus.MAINTENANCE);
+        postOffice.setStatus(PostOfficeStatus.INACTIVE);
         postOffice.setDailyCapacity(100);
         postOffice.setCurrentLoad(40);
 

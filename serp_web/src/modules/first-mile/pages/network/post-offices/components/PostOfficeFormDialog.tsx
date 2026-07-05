@@ -85,20 +85,18 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
       <DialogContent className='sm:max-w-3xl max-h-[85vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>
-            {formMode === 'create'
-              ? 'Create Post Office'
-              : 'Update Post Office'}
+            {formMode === 'create' ? 'Tạo bưu cục' : 'Cập nhật bưu cục'}
           </DialogTitle>
           <DialogDescription>
-            Fill in required fields to{' '}
-            {formMode === 'create' ? 'create a new' : 'update the'} post office.
+            Nhập các thông tin bắt buộc để{' '}
+            {formMode === 'create' ? 'tạo bưu cục mới' : 'cập nhật bưu cục'}.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className='space-y-4'>
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='post-office-code'>Code *</Label>
+              <Label htmlFor='post-office-code'>Mã bưu cục *</Label>
               <Input
                 id='post-office-code'
                 value={formValues.code}
@@ -110,7 +108,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-name'>Name *</Label>
+              <Label htmlFor='post-office-name'>Tên bưu cục *</Label>
               <Input
                 id='post-office-name'
                 value={formValues.name}
@@ -122,7 +120,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-province'>Province *</Label>
+              <Label htmlFor='post-office-province'>Tỉnh/Thành phố *</Label>
               <TmsCombobox
                 id='post-office-province'
                 value={selectedProvinceCode}
@@ -131,26 +129,28 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
                   updateFormField('ward_code', '');
                 }}
                 options={provinceOptions}
-                placeholder='Select province'
-                emptyText='No provinces found'
+                placeholder='Chọn tỉnh/thành phố'
+                emptyText='Không tìm thấy tỉnh/thành phố'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-ward'>Ward *</Label>
+              <Label htmlFor='post-office-ward'>Phường/Xã *</Label>
               <TmsCombobox
                 id='post-office-ward'
                 value={selectedWardCode}
                 onValueChange={(value) => updateFormField('ward_code', value)}
                 options={wardOptions}
                 placeholder={
-                  selectedProvinceCode ? 'Select ward' : 'Select province first'
+                  selectedProvinceCode
+                    ? 'Chọn phường/xã'
+                    : 'Chọn tỉnh/thành phố trước'
                 }
                 emptyText={
                   selectedProvinceCode && isFetchingWardsForForm
-                    ? 'Loading wards...'
-                    : 'No wards available.'
+                    ? 'Đang tải phường/xã...'
+                    : 'Không có phường/xã phù hợp.'
                 }
                 disabled={isSaving || !selectedProvinceCode}
                 loading={isFetchingWardsForForm}
@@ -158,7 +158,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2 sm:col-span-2'>
-              <Label htmlFor='post-office-address'>Address detail *</Label>
+              <Label htmlFor='post-office-address'>Địa chỉ chi tiết *</Label>
               <Input
                 id='post-office-address'
                 value={formValues.address_detail}
@@ -170,7 +170,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-phone'>Phone number</Label>
+              <Label htmlFor='post-office-phone'>Số điện thoại</Label>
               <Input
                 id='post-office-phone'
                 value={formValues.phone_number}
@@ -182,7 +182,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-status'>Status *</Label>
+              <Label htmlFor='post-office-status'>Trạng thái *</Label>
               <TmsCombobox
                 id='post-office-status'
                 value={formValues.status}
@@ -193,15 +193,15 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
                   )
                 }
                 options={POST_OFFICE_STATUS_OPTIONS}
-                placeholder='Select status'
-                emptyText='No statuses found'
+                placeholder='Chọn trạng thái'
+                emptyText='Không tìm thấy trạng thái'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-service-radius'>
-                Service radius (m) *
+                Bán kính phục vụ (m) *
               </Label>
               <Input
                 id='post-office-service-radius'
@@ -217,7 +217,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-daily-capacity'>
-                Pickup order capacity *
+                Sức chứa lấy hàng *
               </Label>
               <Input
                 id='post-office-daily-capacity'
@@ -233,7 +233,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-current-load'>
-                Current pickup load *
+                Tải lấy hàng hiện tại *
               </Label>
               <Input
                 id='post-office-current-load'
@@ -249,7 +249,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-delivery-capacity'>
-                Delivery capacity *
+                Sức chứa giao hàng *
               </Label>
               <Input
                 id='post-office-delivery-capacity'
@@ -265,7 +265,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-current-delivery-load'>
-                Current delivery load *
+                Tải giao hàng hiện tại *
               </Label>
               <Input
                 id='post-office-current-delivery-load'
@@ -280,7 +280,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-priority'>Priority *</Label>
+              <Label htmlFor='post-office-priority'>Độ ưu tiên *</Label>
               <Input
                 id='post-office-priority'
                 type='number'
@@ -294,7 +294,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-latitude'>Latitude</Label>
+              <Label htmlFor='post-office-latitude'>Vĩ độ</Label>
               <Input
                 id='post-office-latitude'
                 type='number'
@@ -310,7 +310,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-longitude'>Longitude</Label>
+              <Label htmlFor='post-office-longitude'>Kinh độ</Label>
               <Input
                 id='post-office-longitude'
                 type='number'
@@ -327,7 +327,7 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
 
             <div className='space-y-2'>
               <Label htmlFor='post-office-start-date'>
-                Operational start date
+                Ngày bắt đầu hoạt động
               </Label>
               <Input
                 id='post-office-start-date'
@@ -341,7 +341,9 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-end-date'>Operational end date</Label>
+              <Label htmlFor='post-office-end-date'>
+                Ngày kết thúc hoạt động
+              </Label>
               <Input
                 id='post-office-end-date'
                 type='date'
@@ -354,7 +356,9 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-start-time'>Working start time</Label>
+              <Label htmlFor='post-office-start-time'>
+                Giờ bắt đầu làm việc
+              </Label>
               <Input
                 id='post-office-start-time'
                 type='time'
@@ -367,7 +371,9 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='post-office-end-time'>Working end time</Label>
+              <Label htmlFor='post-office-end-time'>
+                Giờ kết thúc làm việc
+              </Label>
               <Input
                 id='post-office-end-time'
                 type='time'
@@ -387,11 +393,11 @@ export const PostOfficeFormDialog: React.FC<PostOfficeFormDialogProps> = ({
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' disabled={isSaving}>
               {isSaving && <Loader2 className='h-4 w-4 mr-2 animate-spin' />}
-              {formMode === 'create' ? 'Create' : 'Save changes'}
+              {formMode === 'create' ? 'Tạo mới' : 'Lưu thay đổi'}
             </Button>
           </DialogFooter>
         </form>

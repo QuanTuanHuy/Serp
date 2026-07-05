@@ -20,7 +20,6 @@ import { CoordinatePickerMap, TmsCombobox } from '../../../../components';
 import type { Province, Ward } from '../../../../types';
 import {
   HUB_FORM_STATUS_OPTIONS,
-  HUB_TYPE_OPTIONS,
   normalizeLocationCode,
   type HubFormMode,
   type HubFormState,
@@ -94,19 +93,19 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
       <DialogContent className='sm:max-w-3xl max-h-[85vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>
-            {formMode === 'create' ? 'Create Hub' : 'Update Hub'}
+            {formMode === 'create' ? 'Tạo hub' : 'Cập nhật hub'}
           </DialogTitle>
           <DialogDescription>
             {formMode === 'create'
-              ? 'Create a new distribution hub.'
-              : 'Update hub details.'}
+              ? 'Tạo hub trung chuyển mới.'
+              : 'Cập nhật thông tin hub.'}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className='space-y-4'>
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='hub-code'>Code *</Label>
+              <Label htmlFor='hub-code'>Mã hub *</Label>
               <Input
                 id='hub-code'
                 value={formValues.code}
@@ -116,7 +115,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-name'>Name *</Label>
+              <Label htmlFor='hub-name'>Tên hub *</Label>
               <Input
                 id='hub-name'
                 value={formValues.name}
@@ -126,22 +125,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-type'>Hub type *</Label>
-              <TmsCombobox
-                id='hub-type'
-                value={formValues.hub_type}
-                onValueChange={(v) =>
-                  updateFormField('hub_type', v as HubFormState['hub_type'])
-                }
-                options={HUB_TYPE_OPTIONS}
-                placeholder='Select hub type'
-                emptyText='No hub types found'
-                disabled={isSaving}
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='hub-status'>Status *</Label>
+              <Label htmlFor='hub-status'>Trạng thái *</Label>
               <TmsCombobox
                 id='hub-status'
                 value={formValues.status}
@@ -149,14 +133,14 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
                   updateFormField('status', v as HubFormState['status'])
                 }
                 options={HUB_FORM_STATUS_OPTIONS}
-                placeholder='Select status'
-                emptyText='No statuses found'
+                placeholder='Chọn trạng thái'
+                emptyText='Không tìm thấy trạng thái'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-province'>Province *</Label>
+              <Label htmlFor='hub-province'>Tỉnh/Thành phố *</Label>
               <TmsCombobox
                 id='hub-province'
                 value={selectedProvinceCode}
@@ -165,14 +149,14 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
                   updateFormField('ward_code', '');
                 }}
                 options={provinceOptions}
-                placeholder='Select province'
-                emptyText='No provinces found'
+                placeholder='Chọn tỉnh/thành phố'
+                emptyText='Không tìm thấy tỉnh/thành phố'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-ward'>Ward *</Label>
+              <Label htmlFor='hub-ward'>Phường/Xã *</Label>
               <TmsCombobox
                 id='hub-ward'
                 value={selectedWardCode}
@@ -181,18 +165,18 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
                 placeholder={
                   selectedProvinceCode
                     ? isFetchingWardsForForm
-                      ? 'Loading wards...'
-                      : 'Select ward'
-                    : 'Select province first'
+                      ? 'Đang tải phường/xã...'
+                      : 'Chọn phường/xã'
+                    : 'Chọn tỉnh/thành phố trước'
                 }
-                emptyText='No wards found'
+                emptyText='Không tìm thấy phường/xã'
                 disabled={isSaving || !selectedProvinceCode}
                 loading={isFetchingWardsForForm}
               />
             </div>
 
             <div className='space-y-2 sm:col-span-2'>
-              <Label htmlFor='hub-address'>Address detail *</Label>
+              <Label htmlFor='hub-address'>Địa chỉ chi tiết *</Label>
               <Input
                 id='hub-address'
                 value={formValues.address_detail}
@@ -204,7 +188,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-phone'>Phone</Label>
+              <Label htmlFor='hub-phone'>Số điện thoại</Label>
               <Input
                 id='hub-phone'
                 value={formValues.phone_number}
@@ -216,7 +200,9 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-daily-capacity'>Hub order capacity *</Label>
+              <Label htmlFor='hub-daily-capacity'>
+                Sức chứa đơn tại hub *
+              </Label>
               <Input
                 id='hub-daily-capacity'
                 type='number'
@@ -231,7 +217,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-current-load'>Current hub load *</Label>
+              <Label htmlFor='hub-current-load'>Tải hiện tại *</Label>
               <Input
                 id='hub-current-load'
                 type='number'
@@ -246,7 +232,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-working-start'>Working start (HH:mm)</Label>
+              <Label htmlFor='hub-working-start'>Giờ bắt đầu (HH:mm)</Label>
               <Input
                 id='hub-working-start'
                 type='time'
@@ -259,7 +245,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-working-end'>Working end (HH:mm)</Label>
+              <Label htmlFor='hub-working-end'>Giờ kết thúc (HH:mm)</Label>
               <Input
                 id='hub-working-end'
                 type='time'
@@ -272,7 +258,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-latitude'>Latitude</Label>
+              <Label htmlFor='hub-latitude'>Vĩ độ</Label>
               <Input
                 id='hub-latitude'
                 value={formValues.latitude}
@@ -282,7 +268,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-longitude'>Longitude</Label>
+              <Label htmlFor='hub-longitude'>Kinh độ</Label>
               <Input
                 id='hub-longitude'
                 value={formValues.longitude}
@@ -294,7 +280,7 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
 
           <div className='space-y-2'>
             <div className='flex items-center justify-between gap-2'>
-              <Label>Location map</Label>
+              <Label>Bản đồ vị trí</Label>
               <Button
                 type='button'
                 variant='outline'
@@ -305,12 +291,12 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
                 {isGeocodingAddress ? (
                   <>
                     <Loader2 className='h-4 w-4 mr-1 animate-spin' />
-                    Geocoding...
+                    Đang định vị...
                   </>
                 ) : (
                   <>
                     <LocateFixed className='h-4 w-4 mr-1' />
-                    Geocode from address
+                    Lấy tọa độ từ địa chỉ
                   </>
                 )}
               </Button>
@@ -325,8 +311,8 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
               }}
             />
             <p className='text-xs text-muted-foreground'>
-              Pick a point on the map or type coordinates. Leave both empty if
-              unknown.
+              Chọn một điểm trên bản đồ hoặc nhập tọa độ. Để trống cả hai nếu
+              chưa xác định.
             </p>
           </div>
 
@@ -337,18 +323,18 @@ export const HubFormDialog: React.FC<HubFormDialogProps> = ({
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' disabled={isSaving}>
               {isSaving ? (
                 <>
                   <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                  Saving...
+                  Đang lưu...
                 </>
               ) : formMode === 'create' ? (
-                'Create'
+                'Tạo mới'
               ) : (
-                'Save changes'
+                'Lưu thay đổi'
               )}
             </Button>
           </DialogFooter>

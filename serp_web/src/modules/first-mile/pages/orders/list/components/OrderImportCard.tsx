@@ -47,7 +47,7 @@ export const OrderImportCard: React.FC<OrderImportCardProps> = ({
     <TmsExcelImportToolbar
       className={className}
       canImport={canMutateOrders}
-      entityLabel='orders'
+      entityLabel='đơn hàng'
       isBusy={isImportFlowBusy}
       isExportingTemplate={isExportingTemplate}
       isValidating={isValidatingImport}
@@ -55,7 +55,7 @@ export const OrderImportCard: React.FC<OrderImportCardProps> = ({
       importFileInputKey={importFileInputKey}
       selectedFileName={selectedImportFile?.name}
       validateImportResult={validateImportResult}
-      permissionHint='Import requires TMS_ADMIN or TMS_CUSTOMER.'
+      permissionHint='Nhập Excel yêu cầu vai trò TMS_ADMIN hoặc TMS_CUSTOMER.'
       onDownloadTemplate={onDownloadTemplate}
       onSelectFile={onSelectImportFile}
       onValidate={onValidateImportFile}

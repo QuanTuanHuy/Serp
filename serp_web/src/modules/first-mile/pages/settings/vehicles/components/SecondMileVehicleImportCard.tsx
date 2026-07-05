@@ -46,7 +46,7 @@ export const SecondMileVehicleImportCard: React.FC<
   return (
     <TmsExcelImportToolbar
       canImport={canManage}
-      entityLabel='vehicles'
+      entityLabel='phương tiện'
       isBusy={isBusy}
       isExportingTemplate={isExporting}
       isValidating={isValidating}
@@ -54,7 +54,7 @@ export const SecondMileVehicleImportCard: React.FC<
       importFileInputKey={importFileInputKey}
       selectedFileName={selectedFile?.name}
       validateImportResult={validateResult}
-      permissionHint='Import requires TMS_ADMIN permission.'
+      permissionHint='Cần quyền TMS_ADMIN để nhập Excel.'
       onDownloadTemplate={onDownloadTemplate}
       onSelectFile={onSelectFile}
       onValidate={onValidate}

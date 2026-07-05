@@ -49,20 +49,19 @@ export const OrderDropOffManagerConfirmCard: React.FC<
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Drop-off Confirmation</CardTitle>
+        <CardTitle>Xác nhận gửi tại bưu cục</CardTitle>
         <CardDescription>
-          For post office managers: confirm customer drop-off order at the
-          current post office.
+          Dành cho quản lý bưu cục: xác nhận đơn gửi tại bưu cục hiện tại.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-3'>
         <div className='grid gap-3 md:grid-cols-2'>
           <div className='space-y-2'>
-            <Label htmlFor='dropOffOrderId'>Order ID *</Label>
+            <Label htmlFor='dropOffOrderId'>Mã đơn hàng *</Label>
             <Input
               id='dropOffOrderId'
               inputMode='numeric'
-              placeholder='Enter order id'
+              placeholder='Nhập mã đơn hàng'
               value={orderIdInput}
               onChange={(event) => onOrderIdInputChange(event.target.value)}
               disabled={isSubmitting}
@@ -70,14 +69,14 @@ export const OrderDropOffManagerConfirmCard: React.FC<
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='dropOffPostOfficeId'>Post office *</Label>
+            <Label htmlFor='dropOffPostOfficeId'>Bưu cục *</Label>
             <TmsCombobox
               id='dropOffPostOfficeId'
               value={postOfficeIdInput}
               onValueChange={onPostOfficeIdInputChange}
               options={postOfficeOptions}
-              placeholder='Select post office'
-              emptyText='No post offices found'
+              placeholder='Chọn bưu cục'
+              emptyText='Không tìm thấy bưu cục'
               disabled={isLoadingPostOffices || isSubmitting}
               loading={isLoadingPostOffices}
             />
@@ -85,15 +84,14 @@ export const OrderDropOffManagerConfirmCard: React.FC<
         </div>
 
         <p className='text-xs text-muted-foreground'>
-          The backend validates manager assignment to the selected post office
-          before confirming.
+          Backend sẽ kiểm tra quyền quản lý bưu cục đã chọn trước khi xác nhận.
         </p>
 
         <Button type='button' onClick={onSubmit} disabled={isSubmitting}>
           {isSubmitting ? (
             <Loader2 className='mr-2 h-4 w-4 animate-spin' />
           ) : null}
-          Confirm drop-off order
+          Xác nhận đơn gửi tại bưu cục
         </Button>
       </CardContent>
     </Card>

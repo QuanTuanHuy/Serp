@@ -18,7 +18,22 @@ export type BillingCalculationType =
   | 'PERCENTAGE'
   | 'STEP_WEIGHT';
 
-export type BillingSurchargeRuleCode = 'VUNG_XA';
+export type BillingSurchargeRuleCode =
+  | 'VUNG_XA'
+  | 'HANG_GIA_TRI_CAO'
+  | 'CHUNG_TU_QUAN_TRONG'
+  | 'DE_VO'
+  | 'QUA_KHO'
+  | 'CHAT_LONG';
+
+export type BillingProductCategory =
+  | 'HIGH_VALUE'
+  | 'FRAGILE'
+  | 'IMPORTANT_DOCUMENT'
+  | 'SOLID'
+  | 'OVERSIZED'
+  | 'LIQUID'
+  | 'MAGNETIC_BATTERY';
 
 export interface CalculateShippingFeeRequest {
   serviceCode: BillingDeliveryService;
@@ -28,6 +43,8 @@ export interface CalculateShippingFeeRequest {
   lengthCm: number;
   widthCm: number;
   heightCm: number;
+  productCategory?: BillingProductCategory;
+  surchargeRuleCodes?: BillingSurchargeRuleCode[];
 }
 
 export interface FeeLineItemResponse {

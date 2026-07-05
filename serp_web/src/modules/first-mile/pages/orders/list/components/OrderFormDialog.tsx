@@ -27,6 +27,7 @@ import type {
 import {
   DELIVERY_REQUEST_TIME_OPTIONS,
   FEE_PAYER_OPTIONS,
+  ORDER_PRODUCT_CATEGORY_OPTIONS,
   ORDER_PICKUP_METHOD_OPTIONS,
   type CreateOrderFormState,
   type LocationTarget,
@@ -182,46 +183,46 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
         <DialogHeader>
           <DialogTitle>
-            {orderFormMode === 'create' ? 'Create Order' : 'Edit Order'}
+            {orderFormMode === 'create' ? 'Tạo đơn hàng' : 'Sửa đơn hàng'}
           </DialogTitle>
           <DialogDescription>
             {orderFormMode === 'create'
-              ? 'Create a first-mile order as customer or admin. Required fields follow backend validation rules.'
-              : 'Update an existing first-mile order. Only newly created and unconfirmed orders can be edited.'}
+              ? 'Tạo đơn hàng.'
+              : 'Cập nhật một đơn hàng đã tồn tại. Chỉ các đơn hàng mới tạo và chưa xác nhận mới có thể chỉnh sửa.'}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className='space-y-5'>
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='customerOrderCode'>Customer order code *</Label>
+              <Label htmlFor='customerOrderCode'>Mã đơn của khách hàng *</Label>
               <Input
                 id='customerOrderCode'
                 value={createForm.customerOrderCode}
                 onChange={(event) =>
                   onFormChange('customerOrderCode', event.target.value)
                 }
-                placeholder='CUS-ORDER-001'
+                placeholder='KH-DON-001'
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='note'>Note</Label>
+              <Label htmlFor='note'>Ghi chú</Label>
               <Textarea
                 id='note'
                 value={createForm.note}
                 onChange={(event) => onFormChange('note', event.target.value)}
-                placeholder='Optional note for pickup/delivery'
+                placeholder='Ghi chú tùy chọn cho lấy/giao hàng'
                 rows={2}
               />
             </div>
           </div>
 
           <div className='space-y-3 rounded-md border p-3'>
-            <h3 className='text-sm font-semibold'>Sender information</h3>
+            <h3 className='text-sm font-semibold'>Thông tin người gửi</h3>
             <div className='grid gap-3 md:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='senderName'>Sender name *</Label>
+                <Label htmlFor='senderName'>Tên người gửi *</Label>
                 <Input
                   id='senderName'
                   value={createForm.senderName}
@@ -231,7 +232,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='senderPhone'>Sender phone *</Label>
+                <Label htmlFor='senderPhone'>Số điện thoại người gửi *</Label>
                 <Input
                   id='senderPhone'
                   value={createForm.senderPhone}
@@ -241,7 +242,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='senderProvinceCode'>Sender province *</Label>
+                <Label htmlFor='senderProvinceCode'>Tỉnh người gửi *</Label>
                 <TmsCombobox
                   id='senderProvinceCode'
                   value={selectedSenderProvinceCode}
@@ -250,12 +251,12 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                     onFormChange('senderWardCode', '');
                   }}
                   options={provinceOptions}
-                  placeholder='Select province'
-                  emptyText='No provinces found'
+                  placeholder='Chọn tỉnh/thành'
+                  emptyText='Không tìm thấy tỉnh/thành'
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='senderWardCode'>Sender ward *</Label>
+                <Label htmlFor='senderWardCode'>Phường/xã người gửi *</Label>
                 <TmsCombobox
                   id='senderWardCode'
                   value={selectedSenderWardCode}
@@ -265,20 +266,20 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                   options={senderWardOptions}
                   placeholder={
                     selectedSenderProvinceCode
-                      ? 'Select ward'
-                      : 'Select province first'
+                      ? 'Chọn phường/xã'
+                      : 'Chọn tỉnh/thành trước'
                   }
                   emptyText={
                     selectedSenderProvinceCode && isFetchingSenderWards
-                      ? 'Loading wards...'
-                      : 'No wards available.'
+                      ? 'Đang tải phường/xã...'
+                      : 'Không có phường/xã phù hợp.'
                   }
                   disabled={!selectedSenderProvinceCode}
                   loading={isFetchingSenderWards}
                 />
               </div>
               <div className='space-y-2 md:col-span-2'>
-                <Label htmlFor='senderAddressDetail'>Sender address *</Label>
+                <Label htmlFor='senderAddressDetail'>Địa chỉ người gửi *</Label>
                 <Input
                   id='senderAddressDetail'
                   value={createForm.senderAddressDetail}
@@ -288,16 +289,16 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2 md:col-span-2'>
-                <Label>Sender coordinates *</Label>
+                <Label>Tọa độ người gửi *</Label>
                 <div className='grid gap-2 md:grid-cols-2'>
                   <Input
                     value={createForm.senderLatitude}
-                    placeholder='Latitude'
+                    placeholder='Vĩ độ'
                     readOnly
                   />
                   <Input
                     value={createForm.senderLongitude}
-                    placeholder='Longitude'
+                    placeholder='Kinh độ'
                     readOnly
                   />
                 </div>
@@ -311,7 +312,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                     {geocodingTarget === 'sender' ? (
                       <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                     ) : null}
-                    Geocode from address
+                    Lấy tọa độ từ địa chỉ
                   </Button>
                 </div>
                 <CoordinatePickerMap
@@ -325,17 +326,17 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                   className='h-56'
                 />
                 <p className='text-xs text-muted-foreground'>
-                  Click on the map to pick sender coordinates.
+                  Bấm vào bản đồ để chọn tọa độ người gửi.
                 </p>
               </div>
             </div>
           </div>
 
           <div className='space-y-3 rounded-md border p-3'>
-            <h3 className='text-sm font-semibold'>Receiver information</h3>
+            <h3 className='text-sm font-semibold'>Thông tin người nhận</h3>
             <div className='grid gap-3 md:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='receiverName'>Receiver name *</Label>
+                <Label htmlFor='receiverName'>Tên người nhận *</Label>
                 <Input
                   id='receiverName'
                   value={createForm.receiverName}
@@ -345,7 +346,9 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='receiverPhone'>Receiver phone *</Label>
+                <Label htmlFor='receiverPhone'>
+                  Số điện thoại người nhận *
+                </Label>
                 <Input
                   id='receiverPhone'
                   value={createForm.receiverPhone}
@@ -355,9 +358,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='receiverProvinceCode'>
-                  Receiver province *
-                </Label>
+                <Label htmlFor='receiverProvinceCode'>Tỉnh người nhận *</Label>
                 <TmsCombobox
                   id='receiverProvinceCode'
                   value={selectedReceiverProvinceCode}
@@ -366,12 +367,12 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                     onFormChange('receiverWardCode', '');
                   }}
                   options={provinceOptions}
-                  placeholder='Select province'
-                  emptyText='No provinces found'
+                  placeholder='Chọn tỉnh/thành'
+                  emptyText='Không tìm thấy tỉnh/thành'
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='receiverWardCode'>Receiver ward *</Label>
+                <Label htmlFor='receiverWardCode'>Phường/xã người nhận *</Label>
                 <TmsCombobox
                   id='receiverWardCode'
                   value={selectedReceiverWardCode}
@@ -381,13 +382,13 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                   options={receiverWardOptions}
                   placeholder={
                     selectedReceiverProvinceCode
-                      ? 'Select ward'
-                      : 'Select province first'
+                      ? 'Chọn phường/xã'
+                      : 'Chọn tỉnh/thành trước'
                   }
                   emptyText={
                     selectedReceiverProvinceCode && isFetchingReceiverWards
-                      ? 'Loading wards...'
-                      : 'No wards available.'
+                      ? 'Đang tải phường/xã...'
+                      : 'Không có phường/xã phù hợp.'
                   }
                   disabled={!selectedReceiverProvinceCode}
                   loading={isFetchingReceiverWards}
@@ -395,7 +396,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
               </div>
               <div className='space-y-2 md:col-span-2'>
                 <Label htmlFor='receiverAddressDetail'>
-                  Receiver address *
+                  Địa chỉ người nhận *
                 </Label>
                 <Input
                   id='receiverAddressDetail'
@@ -406,16 +407,16 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2 md:col-span-2'>
-                <Label>Receiver coordinates *</Label>
+                <Label>Tọa độ người nhận *</Label>
                 <div className='grid gap-2 md:grid-cols-2'>
                   <Input
                     value={createForm.receiverLatitude}
-                    placeholder='Latitude'
+                    placeholder='Vĩ độ'
                     readOnly
                   />
                   <Input
                     value={createForm.receiverLongitude}
-                    placeholder='Longitude'
+                    placeholder='Kinh độ'
                     readOnly
                   />
                 </div>
@@ -429,7 +430,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                     {geocodingTarget === 'receiver' ? (
                       <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                     ) : null}
-                    Geocode from address
+                    Lấy tọa độ từ địa chỉ
                   </Button>
                 </div>
                 <CoordinatePickerMap
@@ -445,17 +446,17 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                   className='h-56'
                 />
                 <p className='text-xs text-muted-foreground'>
-                  Click on the map to pick receiver coordinates.
+                  Bấm vào bản đồ để chọn tọa độ người nhận.
                 </p>
               </div>
             </div>
           </div>
 
           <div className='space-y-3 rounded-md border p-3'>
-            <h3 className='text-sm font-semibold'>Order options</h3>
+            <h3 className='text-sm font-semibold'>Tùy chọn đơn hàng</h3>
             <div className='grid gap-3 md:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='pickupMethod'>Pickup method *</Label>
+                <Label htmlFor='pickupMethod'>Phương thức lấy hàng *</Label>
                 <TmsCombobox
                   id='pickupMethod'
                   value={createForm.pickupMethod}
@@ -466,14 +467,14 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                     )
                   }
                   options={ORDER_PICKUP_METHOD_OPTIONS}
-                  placeholder='Select pickup method'
-                  emptyText='No pickup methods found'
+                  placeholder='Chọn phương thức lấy hàng'
+                  emptyText='Không tìm thấy phương thức lấy hàng'
                 />
               </div>
 
               <div className='space-y-2'>
                 <Label htmlFor='deliveryRequestTime'>
-                  Delivery request time *
+                  Thời gian yêu cầu giao hàng *
                 </Label>
                 <TmsCombobox
                   id='deliveryRequestTime'
@@ -485,13 +486,13 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                     )
                   }
                   options={DELIVERY_REQUEST_TIME_OPTIONS}
-                  placeholder='Select request time'
-                  emptyText='No request times found'
+                  placeholder='Chọn thời gian'
+                  emptyText='Không tìm thấy thời gian phù hợp'
                 />
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='feePayer'>Fee payer *</Label>
+                <Label htmlFor='feePayer'>Bên trả phí *</Label>
                 <TmsCombobox
                   id='feePayer'
                   value={createForm.feePayer}
@@ -502,8 +503,25 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                     )
                   }
                   options={FEE_PAYER_OPTIONS}
-                  placeholder='Select fee payer'
-                  emptyText='No fee payers found'
+                  placeholder='Chọn bên trả phí'
+                  emptyText='Không tìm thấy lựa chọn phù hợp'
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='orderProductCategory'>Phân loại hàng hóa</Label>
+                <TmsCombobox
+                  id='orderProductCategory'
+                  value={createForm.orderProductCategory}
+                  onValueChange={(value) =>
+                    onFormChange(
+                      'orderProductCategory',
+                      value as CreateOrderFormState['orderProductCategory']
+                    )
+                  }
+                  options={ORDER_PRODUCT_CATEGORY_OPTIONS}
+                  placeholder='Chọn phân loại hàng hóa'
+                  emptyText='Không có phân loại phù hợp'
                 />
               </div>
 
@@ -516,18 +534,18 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                     onFormChange('isCod', value as 'true' | 'false')
                   }
                   options={codOptions}
-                  placeholder='Select COD option'
-                  emptyText='No COD options found'
+                  placeholder='Chọn tùy chọn COD'
+                  emptyText='Không tìm thấy tùy chọn COD'
                 />
               </div>
             </div>
           </div>
 
           <div className='space-y-3 rounded-md border p-3'>
-            <h3 className='text-sm font-semibold'>Pickup and dimensions</h3>
+            <h3 className='text-sm font-semibold'>Lấy hàng và kích thước</h3>
             <div className='grid gap-3 md:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='pickupTimeStart'>Pickup start</Label>
+                <Label htmlFor='pickupTimeStart'>Bắt đầu lấy hàng</Label>
                 <Input
                   id='pickupTimeStart'
                   type='datetime-local'
@@ -538,7 +556,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='pickupTimeEnd'>Pickup end</Label>
+                <Label htmlFor='pickupTimeEnd'>Kết thúc lấy hàng</Label>
                 <Input
                   id='pickupTimeEnd'
                   type='datetime-local'
@@ -549,7 +567,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='dimensionLengthCm'>Length (cm)</Label>
+                <Label htmlFor='dimensionLengthCm'>Dài (cm)</Label>
                 <Input
                   id='dimensionLengthCm'
                   type='number'
@@ -561,7 +579,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='dimensionWidthCm'>Width (cm)</Label>
+                <Label htmlFor='dimensionWidthCm'>Rộng (cm)</Label>
                 <Input
                   id='dimensionWidthCm'
                   type='number'
@@ -573,7 +591,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='dimensionHeightCm'>Height (cm)</Label>
+                <Label htmlFor='dimensionHeightCm'>Cao (cm)</Label>
                 <Input
                   id='dimensionHeightCm'
                   type='number'
@@ -585,7 +603,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='totalVolumeM3'>Total volume (m3)</Label>
+                <Label htmlFor='totalVolumeM3'>Tổng thể tích (m3)</Label>
                 <Input
                   id='totalVolumeM3'
                   type='number'
@@ -602,9 +620,9 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
           <div className='space-y-3 rounded-md border p-3'>
             <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
               <div>
-                <h3 className='text-sm font-semibold'>Products</h3>
+                <h3 className='text-sm font-semibold'>Sản phẩm</h3>
                 <p className='text-xs text-muted-foreground'>
-                  Add product lines that will be sent with this order.
+                  Thêm các dòng sản phẩm sẽ được gửi cùng đơn hàng này.
                 </p>
               </div>
               <Button
@@ -616,23 +634,23 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                 }
               >
                 <Plus className='mr-2 h-4 w-4' />
-                Add product
+                Thêm sản phẩm
               </Button>
             </div>
 
             {isFetchingProductTypes ? (
               <div className='flex items-center gap-2 text-sm text-muted-foreground'>
                 <Loader2 className='h-4 w-4 animate-spin' />
-                Loading product types...
+                Đang tải loại sản phẩm...
               </div>
             ) : productTypeOptions.length === 0 ? (
               <p className='rounded-md border border-dashed p-3 text-sm text-muted-foreground'>
-                No active product types are available. Create a product type
-                before adding order products.
+                Không có loại sản phẩm đang hoạt động. Hãy tạo loại sản phẩm
+                trước khi thêm sản phẩm cho đơn hàng.
               </p>
             ) : orderProducts.length === 0 ? (
               <p className='rounded-md border border-dashed p-3 text-sm text-muted-foreground'>
-                No products added yet.
+                Chưa có sản phẩm nào được thêm.
               </p>
             ) : (
               <div className='space-y-3'>
@@ -643,14 +661,14 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                   >
                     <div className='mb-3 flex items-center justify-between gap-2'>
                       <p className='text-sm font-medium'>
-                        Product #{index + 1}
+                        Sản phẩm #{index + 1}
                       </p>
                       <Button
                         type='button'
                         variant='ghost'
                         size='icon'
                         onClick={() => handleRemoveProduct(index)}
-                        aria-label={`Remove product ${index + 1}`}
+                        aria-label={`Xóa sản phẩm ${index + 1}`}
                       >
                         <Trash2 className='h-4 w-4 text-destructive' />
                       </Button>
@@ -658,7 +676,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                     <div className='grid gap-3 md:grid-cols-2'>
                       <div className='space-y-2'>
                         <Label htmlFor={`product-name-${index}`}>
-                          Product name *
+                          Tên sản phẩm *
                         </Label>
                         <Input
                           id={`product-name-${index}`}
@@ -670,12 +688,12 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                               event.target.value
                             )
                           }
-                          placeholder='Product name'
+                          placeholder='Tên sản phẩm'
                         />
                       </div>
                       <div className='space-y-2'>
                         <Label htmlFor={`product-type-${index}`}>
-                          Product type *
+                          Loại sản phẩm *
                         </Label>
                         <TmsCombobox
                           id={`product-type-${index}`}
@@ -692,13 +710,13 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                             )
                           }
                           options={productTypeComboboxOptions}
-                          placeholder='Select product type'
-                          emptyText='No product types found'
+                          placeholder='Chọn loại sản phẩm'
+                          emptyText='Không tìm thấy loại sản phẩm'
                         />
                       </div>
                       <div className='space-y-2'>
                         <Label htmlFor={`product-value-${index}`}>
-                          Value *
+                          Giá trị *
                         </Label>
                         <Input
                           id={`product-value-${index}`}
@@ -717,7 +735,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                       </div>
                       <div className='space-y-2'>
                         <Label htmlFor={`product-quantity-${index}`}>
-                          Quantity *
+                          Số lượng *
                         </Label>
                         <Input
                           id={`product-quantity-${index}`}
@@ -736,7 +754,7 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
                       </div>
                       <div className='space-y-2 md:col-span-2'>
                         <Label htmlFor={`product-weight-${index}`}>
-                          Weight (gram) *
+                          Khối lượng (gram) *
                         </Label>
                         <Input
                           id={`product-weight-${index}`}
@@ -767,13 +785,15 @@ export const OrderFormDialog: React.FC<OrderFormDialogProps> = ({
               onClick={() => onOpenChange(false)}
               disabled={isSubmittingOrder}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' disabled={isSubmittingOrder}>
               {isSubmittingOrder ? (
                 <Loader2 className='mr-2 h-4 w-4 animate-spin' />
               ) : null}
-              {orderFormMode === 'create' ? 'Create order' : 'Update order'}
+              {orderFormMode === 'create'
+                ? 'Tạo đơn hàng'
+                : 'Cập nhật đơn hàng'}
             </Button>
           </DialogFooter>
         </form>

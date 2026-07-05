@@ -42,11 +42,13 @@ export const POST_OFFICE_STATUS_OPTIONS: Array<{
   value: PostOfficeStatus;
   label: string;
 }> = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'INACTIVE', label: 'Inactive' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'SUSPENDED', label: 'Suspended' },
+  { value: 'ACTIVE', label: 'Đang hoạt động' },
+  { value: 'INACTIVE', label: 'Ngừng hoạt động' },
 ];
+
+export const formatPostOfficeStatusLabel = (status: PostOfficeStatus): string =>
+  POST_OFFICE_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
+  status;
 
 export const DEFAULT_POST_OFFICE_FORM: PostOfficeFormState = {
   code: '',
@@ -125,66 +127,66 @@ export const validatePostOfficeForm = (
   values: PostOfficeFormState
 ): string | null => {
   if (!values.code.trim()) {
-    return 'Code is required.';
+    return 'Vui lòng nhập mã bưu cục.';
   }
 
   if (!values.name.trim()) {
-    return 'Name is required.';
+    return 'Vui lòng nhập tên bưu cục.';
   }
 
   if (!values.province_code.trim()) {
-    return 'Province code is required.';
+    return 'Vui lòng chọn tỉnh/thành phố.';
   }
 
   if (!values.ward_code.trim()) {
-    return 'Ward code is required.';
+    return 'Vui lòng chọn phường/xã.';
   }
 
   if (!values.address_detail.trim()) {
-    return 'Address detail is required.';
+    return 'Vui lòng nhập địa chỉ chi tiết.';
   }
 
   const serviceRadius = Number(values.service_radius_m);
   if (!Number.isInteger(serviceRadius) || serviceRadius < 1) {
-    return 'Service radius must be an integer greater than or equal to 1.';
+    return 'Bán kính phục vụ phải là số nguyên lớn hơn hoặc bằng 1.';
   }
 
   const dailyCapacity = Number(values.daily_capacity);
   if (!Number.isInteger(dailyCapacity) || dailyCapacity < 0) {
-    return 'Pickup order capacity must be an integer greater than or equal to 0.';
+    return 'Sức chứa lấy hàng phải là số nguyên lớn hơn hoặc bằng 0.';
   }
 
   const currentLoad = Number(values.current_load);
   if (!Number.isInteger(currentLoad) || currentLoad < 0) {
-    return 'Current pickup load must be an integer greater than or equal to 0.';
+    return 'Tải lấy hàng hiện tại phải là số nguyên lớn hơn hoặc bằng 0.';
   }
 
   const deliveryCapacity = Number(values.delivery_capacity);
   if (!Number.isInteger(deliveryCapacity) || deliveryCapacity < 0) {
-    return 'Delivery capacity must be an integer greater than or equal to 0.';
+    return 'Sức chứa giao hàng phải là số nguyên lớn hơn hoặc bằng 0.';
   }
 
   const currentDeliveryLoad = Number(values.current_delivery_load);
   if (!Number.isInteger(currentDeliveryLoad) || currentDeliveryLoad < 0) {
-    return 'Current delivery load must be an integer greater than or equal to 0.';
+    return 'Tải giao hàng hiện tại phải là số nguyên lớn hơn hoặc bằng 0.';
   }
 
   const priority = Number(values.priority);
   if (!Number.isInteger(priority) || priority < 0) {
-    return 'Priority must be an integer greater than or equal to 0.';
+    return 'Độ ưu tiên phải là số nguyên lớn hơn hoặc bằng 0.';
   }
 
   if (values.latitude.trim()) {
     const latitude = Number(values.latitude);
     if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-      return 'Latitude must be between -90 and 90.';
+      return 'Vĩ độ phải nằm trong khoảng -90 đến 90.';
     }
   }
 
   if (values.longitude.trim()) {
     const longitude = Number(values.longitude);
     if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-      return 'Longitude must be between -180 and 180.';
+      return 'Kinh độ phải nằm trong khoảng -180 đến 180.';
     }
   }
 
@@ -232,14 +234,6 @@ export const getStatusBadgeVariant = (
 ): 'default' | 'secondary' | 'outline' | 'destructive' => {
   if (status === 'ACTIVE') {
     return 'default';
-  }
-
-  if (status === 'SUSPENDED') {
-    return 'destructive';
-  }
-
-  if (status === 'MAINTENANCE') {
-    return 'outline';
   }
 
   return 'secondary';

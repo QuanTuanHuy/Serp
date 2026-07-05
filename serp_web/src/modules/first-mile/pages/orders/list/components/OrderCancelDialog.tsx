@@ -41,19 +41,19 @@ export const OrderCancelDialog: React.FC<OrderCancelDialogProps> = ({
     <Dialog open={Boolean(cancelTarget)} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader>
-          <DialogTitle>Cancel Order</DialogTitle>
+          <DialogTitle>Hủy đơn hàng</DialogTitle>
           <DialogDescription>
-            Cancel order {cancelTarget?.orderCode}. Provide a reason if needed.
+            Hủy đơn hàng {cancelTarget?.orderCode}. Hãy nhập lý do nếu cần.
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-2'>
-          <Label htmlFor='cancelReason'>Cancel reason</Label>
+          <Label htmlFor='cancelReason'>Lý do hủy</Label>
           <Textarea
             id='cancelReason'
             value={cancelReason}
             onChange={(event) => onCancelReasonChange(event.target.value)}
-            placeholder='Optional reason for cancellation'
+            placeholder='Lý do hủy tùy chọn'
             rows={3}
           />
         </div>
@@ -65,7 +65,7 @@ export const OrderCancelDialog: React.FC<OrderCancelDialogProps> = ({
             onClick={onKeepOrder}
             disabled={isCancellingOrder}
           >
-            Keep order
+            Giữ lại đơn
           </Button>
           <Button
             type='button'
@@ -76,7 +76,7 @@ export const OrderCancelDialog: React.FC<OrderCancelDialogProps> = ({
             {isCancellingOrder ? (
               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
             ) : null}
-            Confirm cancel
+            Xác nhận hủy
           </Button>
         </DialogFooter>
       </DialogContent>

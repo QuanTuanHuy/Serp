@@ -10,7 +10,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import serp.project.second_mile.enums.HubStatus;
-import serp.project.second_mile.enums.HubType;
 
 @Data
 @Builder
@@ -20,7 +19,6 @@ public class HubFilterRequest {
     private String keyword;
     private String code;
     private String name;
-    private HubType hubType;
     private String provinceCode;
     private String wardCode;
     private HubStatus status;

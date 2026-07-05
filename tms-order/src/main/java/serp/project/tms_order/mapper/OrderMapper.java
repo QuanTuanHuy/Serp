@@ -51,6 +51,7 @@ public final class OrderMapper {
                 order.getDeliveryRequestTime(),
                 order.getPickupMethod() == null ? OrderPickupMethod.COURIER_PICKUP : order.getPickupMethod(),
                 order.getOrderType(),
+                order.getOrderProductCategory(),
                 order.getFeePayer(),
                 order.getPaymentStatus(),
                 order.getCodAmount(),

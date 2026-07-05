@@ -6,7 +6,11 @@ Description: Part of Serp Project
 package serp.project.second_mile.repository.specification;
 
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
+import serp.project.second_mile.domain.Hub;
+import serp.project.second_mile.domain.HubStaff;
 import serp.project.second_mile.domain.Vehicle;
 import serp.project.second_mile.dto.request.VehicleFilterRequest;
 
@@ -46,8 +50,50 @@ public final class VehicleSpecification {
                 predicates.add(criteriaBuilder.equal(root.get("hubId"), filterRequest.getHubId()));
             }
 
+            if (hasText(filterRequest.getHubKeyword())) {
+                String hubKeywordPattern = toLikePattern(filterRequest.getHubKeyword());
+                Subquery<Long> hubSubquery = query.subquery(Long.class);
+                Root<Hub> hubRoot = hubSubquery.from(Hub.class);
+                hubSubquery.select(hubRoot.get("id"))
+                        .where(
+                                criteriaBuilder.equal(hubRoot.get("tenantId"), tenantId),
+                                criteriaBuilder.or(
+                                        criteriaBuilder.like(
+                                                criteriaBuilder.lower(hubRoot.get("code")),
+                                                hubKeywordPattern
+                                        ),
+                                        criteriaBuilder.like(
+                                                criteriaBuilder.lower(hubRoot.get("name")),
+                                                hubKeywordPattern
+                                        )
+                                )
+                        );
+                predicates.add(root.get("hubId").in(hubSubquery));
+            }
+
             if (filterRequest.getAssignedStaffId() != null) {
                 predicates.add(criteriaBuilder.equal(root.get("assignedStaffId"), filterRequest.getAssignedStaffId()));
+            }
+
+            if (hasText(filterRequest.getDriverKeyword())) {
+                String driverKeywordPattern = toLikePattern(filterRequest.getDriverKeyword());
+                Subquery<Long> driverSubquery = query.subquery(Long.class);
+                Root<HubStaff> driverRoot = driverSubquery.from(HubStaff.class);
+                driverSubquery.select(driverRoot.get("id"))
+                        .where(
+                                criteriaBuilder.equal(driverRoot.get("tenantId"), tenantId),
+                                criteriaBuilder.or(
+                                        criteriaBuilder.like(
+                                                criteriaBuilder.lower(driverRoot.get("code")),
+                                                driverKeywordPattern
+                                        ),
+                                        criteriaBuilder.like(
+                                                criteriaBuilder.lower(driverRoot.get("fullName")),
+                                                driverKeywordPattern
+                                        )
+                                )
+                        );
+                predicates.add(root.get("assignedStaffId").in(driverSubquery));
             }
 
             if (filterRequest.getStatus() != null) {

@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import serp.project.first_mile.domain.Vehicle;
 import serp.project.first_mile.enums.VehicleStatus;
+import serp.project.first_mile.enums.VehicleType;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -34,8 +35,43 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
                     or :keyword = ''
                     or lower(v.licensePlate) like lower(concat('%', :keyword, '%'))
                 )
+                and (:vehicleType is null or v.vehicleType = :vehicleType)
+                and (:status is null or v.status = :status)
+                and (
+                    :postOfficeKeyword is null
+                    or :postOfficeKeyword = ''
+                    or (
+                        v.postOffice is not null
+                        and (
+                            lower(v.postOffice.code) like lower(concat('%', :postOfficeKeyword, '%'))
+                            or lower(v.postOffice.name) like lower(concat('%', :postOfficeKeyword, '%'))
+                        )
+                    )
+                )
+                and (
+                    :courierKeyword is null
+                    or :courierKeyword = ''
+                    or exists (
+                        select 1
+                        from PostOfficeStaff s
+                        where s.id = v.postOfficeStaffId
+                            and s.tenantId = :tenantId
+                            and (
+                                lower(s.code) like lower(concat('%', :courierKeyword, '%'))
+                                or lower(s.fullName) like lower(concat('%', :courierKeyword, '%'))
+                            )
+                    )
+                )
             """)
-    Page<Vehicle> searchByTenantId(@Param("tenantId") Long tenantId, @Param("keyword") String keyword, Pageable pageable);
+    Page<Vehicle> searchByTenantId(
+            @Param("tenantId") Long tenantId,
+            @Param("keyword") String keyword,
+            @Param("vehicleType") VehicleType vehicleType,
+            @Param("status") VehicleStatus status,
+            @Param("postOfficeKeyword") String postOfficeKeyword,
+            @Param("courierKeyword") String courierKeyword,
+            Pageable pageable
+    );
 
     @EntityGraph(attributePaths = "postOffice")
     @Query("""
@@ -59,10 +95,41 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
                     or :keyword = ''
                     or lower(v.licensePlate) like lower(concat('%', :keyword, '%'))
                 )
+                and (:vehicleType is null or v.vehicleType = :vehicleType)
+                and (:status is null or v.status = :status)
+                and (
+                    :postOfficeKeyword is null
+                    or :postOfficeKeyword = ''
+                    or (
+                        v.postOffice is not null
+                        and (
+                            lower(v.postOffice.code) like lower(concat('%', :postOfficeKeyword, '%'))
+                            or lower(v.postOffice.name) like lower(concat('%', :postOfficeKeyword, '%'))
+                        )
+                    )
+                )
+                and (
+                    :courierKeyword is null
+                    or :courierKeyword = ''
+                    or exists (
+                        select 1
+                        from PostOfficeStaff s
+                        where s.id = v.postOfficeStaffId
+                            and s.tenantId = :tenantId
+                            and (
+                                lower(s.code) like lower(concat('%', :courierKeyword, '%'))
+                                or lower(s.fullName) like lower(concat('%', :courierKeyword, '%'))
+                            )
+                    )
+                )
             """)
     Page<Vehicle> searchByTenantIdAndManagedPostOfficeIds(
             @Param("tenantId") Long tenantId,
             @Param("keyword") String keyword,
+            @Param("vehicleType") VehicleType vehicleType,
+            @Param("status") VehicleStatus status,
+            @Param("postOfficeKeyword") String postOfficeKeyword,
+            @Param("courierKeyword") String courierKeyword,
             @Param("managedPostOfficeIds") Collection<Long> managedPostOfficeIds,
             @Param("today") LocalDate today,
             Pageable pageable

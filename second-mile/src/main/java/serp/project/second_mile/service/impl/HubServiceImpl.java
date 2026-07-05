@@ -232,7 +232,6 @@ public class HubServiceImpl implements HubService {
                 .keyword(normalizeText(filterRequest.getKeyword()))
                 .code(normalizeText(filterRequest.getCode()))
                 .name(normalizeText(filterRequest.getName()))
-                .hubType(filterRequest.getHubType())
                 .provinceCode(normalizeText(filterRequest.getProvinceCode()))
                 .wardCode(normalizeText(filterRequest.getWardCode()))
                 .status(filterRequest.getStatus())

@@ -213,7 +213,9 @@ public class VehicleServiceImpl implements VehicleService {
                 .licensePlate(normalizeText(filterRequest.getLicensePlate()))
                 .vehicleType(filterRequest.getVehicleType())
                 .hubId(filterRequest.getHubId())
+                .hubKeyword(normalizeText(filterRequest.getHubKeyword()))
                 .assignedStaffId(filterRequest.getAssignedStaffId())
+                .driverKeyword(normalizeText(filterRequest.getDriverKeyword()))
                 .status(filterRequest.getStatus())
                 .build();
     }

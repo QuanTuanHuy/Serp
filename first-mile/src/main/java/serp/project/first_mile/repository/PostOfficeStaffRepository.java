@@ -13,6 +13,7 @@ import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
 import serp.project.first_mile.enums.PostOfficeStaffStatus;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -40,9 +41,17 @@ public interface PostOfficeStaffRepository extends JpaRepository<PostOfficeStaff
                 and s.role = :role
                 and s.status = :status
                 and (
-                    :keyword is null
-                    or lower(coalesce(s.code, '')) like concat('%', lower(:keyword), '%')
-                    or lower(coalesce(s.fullName, '')) like concat('%', lower(:keyword), '%')
+                    :keywordLike is null
+                    or lower(coalesce(s.code, '')) like :keywordLike
+                    or lower(coalesce(s.fullName, '')) like :keywordLike
+                )
+                and not exists (
+                    select 1
+                    from PostOfficeStaffAssignment a
+                    where a.staff = s
+                        and a.tenantId = :tenantId
+                        and a.assignedFrom <= :today
+                        and (a.assignedTo is null or a.assignedTo >= :today)
                 )
             order by s.fullName asc
             """)
@@ -50,7 +59,8 @@ public interface PostOfficeStaffRepository extends JpaRepository<PostOfficeStaff
             @Param("tenantId") Long tenantId,
             @Param("role") PostOfficeStaffRole role,
             @Param("status") PostOfficeStaffStatus status,
-            @Param("keyword") String keyword
+            @Param("keywordLike") String keywordLike,
+            @Param("today") LocalDate today
     );
 
     List<PostOfficeStaff> findByTenantIdAndIdIn(Long tenantId, Collection<Long> ids);

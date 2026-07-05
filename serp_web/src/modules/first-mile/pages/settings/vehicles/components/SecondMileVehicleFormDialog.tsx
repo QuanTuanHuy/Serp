@@ -70,7 +70,7 @@ export const SecondMileVehicleFormDialog: React.FC<
   onUpdateField,
 }) => {
   const driverComboboxOptions = [
-    { value: NONE_VALUE, label: 'Not assigned' },
+    { value: NONE_VALUE, label: 'Chưa phân công' },
     ...driverOptions,
   ];
 
@@ -79,17 +79,19 @@ export const SecondMileVehicleFormDialog: React.FC<
       <DialogContent className='sm:max-w-2xl'>
         <DialogHeader>
           <DialogTitle>
-            {formMode === 'create' ? 'Create vehicle' : 'Update vehicle'}
+            {formMode === 'create'
+              ? 'Thêm phương tiện'
+              : 'Cập nhật phương tiện'}
           </DialogTitle>
           <DialogDescription>
-            Second-mile vehicle linked to a hub and optional driver staff.
+            Phương tiện chặng giữa được liên kết với hub và tài xế phụ trách.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className='space-y-4'>
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='sm-vehicle-license-plate'>License plate *</Label>
+              <Label htmlFor='sm-vehicle-license-plate'>Biển số xe *</Label>
               <Input
                 id='sm-vehicle-license-plate'
                 value={formValues.licensePlate}
@@ -102,7 +104,7 @@ export const SecondMileVehicleFormDialog: React.FC<
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='sm-vehicle-status'>Status *</Label>
+              <Label htmlFor='sm-vehicle-status'>Trạng thái *</Label>
               <TmsCombobox
                 id='sm-vehicle-status'
                 value={formValues.status}
@@ -110,14 +112,14 @@ export const SecondMileVehicleFormDialog: React.FC<
                   onUpdateField('status', value as SecondMileVehicleStatus)
                 }
                 options={VEHICLE_STATUS_OPTIONS}
-                placeholder='Select status'
-                emptyText='No statuses found'
+                placeholder='Chọn trạng thái'
+                emptyText='Không có trạng thái phù hợp'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='sm-vehicle-type'>Vehicle type *</Label>
+              <Label htmlFor='sm-vehicle-type'>Loại xe *</Label>
               <TmsCombobox
                 id='sm-vehicle-type'
                 value={formValues.vehicleType}
@@ -125,14 +127,14 @@ export const SecondMileVehicleFormDialog: React.FC<
                   onUpdateField('vehicleType', value as SecondMileVehicleType)
                 }
                 options={VEHICLE_TYPE_OPTIONS}
-                placeholder='Select type'
-                emptyText='No vehicle types found'
+                placeholder='Chọn loại xe'
+                emptyText='Không có loại xe phù hợp'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='sm-vehicle-max-bags'>Max bags *</Label>
+              <Label htmlFor='sm-vehicle-max-bags'>Số bao tối đa *</Label>
               <Input
                 id='sm-vehicle-max-bags'
                 type='number'
@@ -147,7 +149,9 @@ export const SecondMileVehicleFormDialog: React.FC<
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='sm-vehicle-max-weight'>Max weight (kg) *</Label>
+              <Label htmlFor='sm-vehicle-max-weight'>
+                Tải trọng tối đa (kg) *
+              </Label>
               <Input
                 id='sm-vehicle-max-weight'
                 type='number'
@@ -162,7 +166,9 @@ export const SecondMileVehicleFormDialog: React.FC<
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='sm-vehicle-max-volume'>Max volume (m³) *</Label>
+              <Label htmlFor='sm-vehicle-max-volume'>
+                Thể tích tối đa (m3) *
+              </Label>
               <Input
                 id='sm-vehicle-max-volume'
                 type='number'
@@ -191,15 +197,17 @@ export const SecondMileVehicleFormDialog: React.FC<
                   }
                 }}
                 options={hubOptions}
-                placeholder={isLoadingHubs ? 'Loading hubs...' : 'Select hub'}
-                emptyText={isLoadingHubs ? 'Loading hubs...' : 'No hubs found'}
+                placeholder={isLoadingHubs ? 'Đang tải hub...' : 'Chọn hub'}
+                emptyText={
+                  isLoadingHubs ? 'Đang tải hub...' : 'Không tìm thấy hub'
+                }
                 disabled={isSaving || isLoadingHubs}
                 loading={isLoadingHubs}
               />
             </div>
 
             <div className='space-y-2 sm:col-span-2'>
-              <Label htmlFor='sm-vehicle-driver'>Driver</Label>
+              <Label htmlFor='sm-vehicle-driver'>Tài xế</Label>
               <TmsCombobox
                 id='sm-vehicle-driver'
                 value={formValues.assignedStaffId.trim() || NONE_VALUE}
@@ -212,17 +220,17 @@ export const SecondMileVehicleFormDialog: React.FC<
                 options={driverComboboxOptions}
                 placeholder={
                   !formValues.hubId.trim()
-                    ? 'Select hub first'
+                    ? 'Chọn hub trước'
                     : isLoadingDrivers
-                      ? 'Loading drivers...'
-                      : 'Select driver'
+                      ? 'Đang tải tài xế...'
+                      : 'Chọn tài xế'
                 }
                 emptyText={
                   !formValues.hubId.trim()
-                    ? 'Select hub first.'
+                    ? 'Chọn hub trước.'
                     : isLoadingDrivers
-                      ? 'Loading drivers...'
-                      : 'No drivers assigned to this hub.'
+                      ? 'Đang tải tài xế...'
+                      : 'Không có tài xế được phân công cho hub này.'
                 }
                 disabled={
                   isSaving || !formValues.hubId.trim() || isLoadingDrivers
@@ -239,11 +247,11 @@ export const SecondMileVehicleFormDialog: React.FC<
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' disabled={isSaving}>
               {isSaving && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
-              {formMode === 'create' ? 'Create' : 'Save changes'}
+              {formMode === 'create' ? 'Tạo mới' : 'Lưu thay đổi'}
             </Button>
           </DialogFooter>
         </form>

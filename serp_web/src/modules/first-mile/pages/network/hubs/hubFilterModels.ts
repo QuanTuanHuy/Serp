@@ -9,7 +9,7 @@ import {
   parseTriStateBoolean,
   validateNumericRange,
 } from '../../../components/list/listFilterUtils';
-import type { HubListFilters, HubStatus, HubType } from '../../../types';
+import type { HubListFilters, HubStatus } from '../../../types';
 
 export type HasLocationFilter = 'ALL' | 'YES' | 'NO';
 
@@ -18,7 +18,6 @@ export interface HubFilterFormState {
   status: 'ALL' | HubStatus;
   code: string;
   name: string;
-  hubType: 'ALL' | HubType;
   provinceCode: string;
   wardCode: string;
   hasLocation: HasLocationFilter;
@@ -33,7 +32,6 @@ export const DEFAULT_HUB_FILTER_FORM: HubFilterFormState = {
   status: 'ALL',
   code: '',
   name: '',
-  hubType: 'ALL',
   provinceCode: '',
   wardCode: '',
   hasLocation: 'ALL',
@@ -50,7 +48,6 @@ export const countActiveHubAdvancedFilters = (
 
   if (values.code.trim()) count += 1;
   if (values.name.trim()) count += 1;
-  if (values.hubType !== 'ALL') count += 1;
   if (values.provinceCode.trim()) count += 1;
   if (values.wardCode.trim()) count += 1;
   if (values.hasLocation !== 'ALL') count += 1;
@@ -67,33 +64,32 @@ export const buildHubListFilters = (
 ): HubListFilters => {
   const minDailyCapacity = parseOptionalNonNegativeInteger(
     values.minDailyCapacity,
-    'Min hub order capacity'
+    'Sức chứa đơn tối thiểu tại hub'
   );
   const maxDailyCapacity = parseOptionalNonNegativeInteger(
     values.maxDailyCapacity,
-    'Max hub order capacity'
+    'Sức chứa đơn tối đa tại hub'
   );
   const minCurrentLoad = parseOptionalNonNegativeInteger(
     values.minCurrentLoad,
-    'Min current hub load'
+    'Tải hub tối thiểu'
   );
   const maxCurrentLoad = parseOptionalNonNegativeInteger(
     values.maxCurrentLoad,
-    'Max current hub load'
+    'Tải hub tối đa'
   );
 
   validateNumericRange(
     minDailyCapacity,
     maxDailyCapacity,
-    'Hub order capacity'
+    'Sức chứa đơn tại hub'
   );
-  validateNumericRange(minCurrentLoad, maxCurrentLoad, 'Current hub load');
+  validateNumericRange(minCurrentLoad, maxCurrentLoad, 'Tải hiện tại của hub');
 
   return {
     keyword: normalizeFilterText(values.keyword),
     code: normalizeFilterText(values.code),
     name: normalizeFilterText(values.name),
-    hubType: values.hubType === 'ALL' ? undefined : values.hubType,
     provinceCode: normalizeFilterText(values.provinceCode),
     wardCode: normalizeFilterText(values.wardCode),
     status: values.status === 'ALL' ? undefined : values.status,

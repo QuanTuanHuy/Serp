@@ -24,7 +24,7 @@ interface OrderStatsCardsProps {
 }
 
 const formatNumber = (value: number): string =>
-  new Intl.NumberFormat('en-US').format(value);
+  new Intl.NumberFormat('vi-VN').format(value);
 
 export const OrderStatsCards: React.FC<OrderStatsCardsProps> = ({
   canViewOrders,
@@ -38,27 +38,27 @@ export const OrderStatsCards: React.FC<OrderStatsCardsProps> = ({
   ).length;
   const stats = [
     {
-      label: 'Total results',
+      label: 'Tổng kết quả',
       value: data?.totalItems ?? 0,
-      description: 'Orders matching current filters',
+      description: 'Các đơn hàng khớp với bộ lọc hiện tại',
       icon: PackageCheck,
     },
     {
-      label: 'Current page',
+      label: 'Trang hiện tại',
       value: orders.length,
-      description: 'Orders loaded in this page',
+      description: 'Các đơn hàng đã tải trên trang này',
       icon: Clock3,
     },
     {
-      label: 'Confirmed',
+      label: 'Đã xác nhận',
       value: confirmedOrders,
-      description: 'Confirmed orders on this page',
+      description: 'Các đơn hàng đã xác nhận trên trang này',
       icon: CheckCircle2,
     },
     {
-      label: 'Pending confirmation',
+      label: 'Chờ xác nhận',
       value: pendingConfirmationOrders,
-      description: 'Orders awaiting confirmation on this page',
+      description: 'Các đơn hàng đang chờ xác nhận trên trang này',
       icon: TimerReset,
     },
   ];
@@ -83,7 +83,7 @@ export const OrderStatsCards: React.FC<OrderStatsCardsProps> = ({
                 {formatNumber(stat.value)}
               </CardTitle>
               <p className='mt-1 text-xs text-muted-foreground'>
-                {isFetching ? 'Refreshing...' : stat.description}
+                {isFetching ? 'Đang tải lại...' : stat.description}
               </p>
             </CardContent>
           </Card>

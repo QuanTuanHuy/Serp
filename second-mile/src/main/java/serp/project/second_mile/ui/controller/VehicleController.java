@@ -52,7 +52,9 @@ public class VehicleController {
             @RequestParam(name = "license_plate", required = false) String licensePlate,
             @RequestParam(name = "vehicle_type", required = false) VehicleType vehicleType,
             @RequestParam(name = "hub_id", required = false) Long hubId,
+            @RequestParam(name = "hub_keyword", required = false) String hubKeyword,
             @RequestParam(name = "assigned_staff_id", required = false) Long assignedStaffId,
+            @RequestParam(name = "driver_keyword", required = false) String driverKeyword,
             @RequestParam(required = false) VehicleStatus status
     ) {
         VehicleFilterRequest filterRequest = VehicleFilterRequest.builder()
@@ -60,7 +62,9 @@ public class VehicleController {
                 .licensePlate(licensePlate)
                 .vehicleType(vehicleType)
                 .hubId(hubId)
+                .hubKeyword(hubKeyword)
                 .assignedStaffId(assignedStaffId)
+                .driverKeyword(driverKeyword)
                 .status(status)
                 .build();
 
