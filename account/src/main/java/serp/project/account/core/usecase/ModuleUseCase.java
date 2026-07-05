@@ -13,11 +13,16 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateModuleDto;
 import serp.project.account.core.domain.dto.request.UpdateModuleDto;
+import serp.project.account.core.domain.dto.request.GetModulesParams;
 import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.infrastructure.store.mapper.UserModuleAccessMapper;
+import serp.project.account.core.domain.constant.CacheConstants;
+import serp.project.account.core.domain.dto.response.ModuleStatsResponse;
+import serp.project.account.core.port.client.ICachePort;
 import serp.project.account.kernel.utils.ResponseUtils;
+import serp.project.account.kernel.utils.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +35,9 @@ public class ModuleUseCase {
     private final ResponseUtils responseUtils;
 
     private final UserModuleAccessMapper userModuleAccessMapper;
+
+    private final PaginationUtils paginationUtils;
+    private final ICachePort cachePort;
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createModule(CreateModuleDto request) {
@@ -102,6 +110,50 @@ public class ModuleUseCase {
             return responseUtils.success(roles);
         } catch (Exception e) {
             log.error("Error getting roles in module: {}", e.getMessage());
+            return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public GeneralResponse<?> getModulesPaginated(GetModulesParams params) {
+        try {
+            var pageable = paginationUtils.getPageable(params);
+            var result = moduleService.getModulesPaginated(
+                    params.getSearch(),
+                    params.getStatus(),
+                    params.getModuleType(),
+                    pageable
+            );
+            
+            var responseData = paginationUtils.getResponse(
+                    result.getSecond(),
+                    params.getPage(),
+                    params.getPageSize(),
+                    result.getFirst()
+            );
+            return responseUtils.success(responseData);
+        } catch (Exception e) {
+            log.error("Error retrieving paginated modules: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    public GeneralResponse<?> getModuleStats() {
+        try {
+            var cachedStats = cachePort.getFromCache(CacheConstants.MODULES_STATS, ModuleStatsResponse.class);
+            if (cachedStats != null) {
+                return responseUtils.success(cachedStats);
+            }
+
+            long total = moduleService.countModules();
+            long enabled = moduleService.countAvailableModules();
+            long disabled = total - enabled;
+
+            var stats = new ModuleStatsResponse(total, enabled, disabled);
+            cachePort.setToCache(CacheConstants.MODULES_STATS, stats, CacheConstants.DEFAULT_EXPIRATION);
+
+            return responseUtils.success(stats);
+        } catch (Exception e) {
+            log.error("Error retrieving module stats: {}", e.getMessage());
             return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
         }
     }

@@ -7,11 +7,14 @@ package serp.project.account.infrastructure.store.adapter;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
+import serp.project.account.core.domain.enums.ModuleType;
 import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.core.domain.enums.ModuleStatus;
 import serp.project.account.core.port.store.IModulePort;
@@ -78,8 +81,20 @@ public class ModuleAdapter implements IModulePort {
     @Override
     public Pair<List<ModuleEntity>, Long> searchModules(String search, int limit) {
         var pageable = PageRequest.of(0, limit);
-        var modules = moduleMapper.toEntityList(moduleRepository.searchModules(search, pageable));
-        Long total = moduleRepository.countSearchModules(search);
+        String formattedSearch = (search == null || search.trim().isEmpty()) ? "" : "%" + search.trim().toLowerCase() + "%";
+        var modules = moduleMapper.toEntityList(moduleRepository.searchModules(formattedSearch, pageable));
+        Long total = moduleRepository.countSearchModules(formattedSearch);
         return Pair.of(modules, total != null ? total : 0L);
+    }
+
+    @Override
+    public Pair<List<ModuleEntity>, Long> getModulesPaginated(
+            String search,
+            ModuleStatus status,
+            ModuleType moduleType,
+            Pageable pageable) {
+        String formattedSearch = (search == null || search.trim().isEmpty()) ? null : "%" + search.trim().toLowerCase() + "%";
+        var page = moduleRepository.findAllPaginated(formattedSearch, status, moduleType, pageable);
+        return Pair.of(moduleMapper.toEntityList(page.getContent()), page.getTotalElements());
     }
 }

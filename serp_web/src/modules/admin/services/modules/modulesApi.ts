@@ -7,6 +7,29 @@ import { api } from '@/lib/store/api';
 import type { Module } from '../../types';
 import { createDataTransform } from '@/lib/store/api/utils';
 
+export interface ModuleQueryParams {
+  page: number; // 0-based page index
+  pageSize: number;
+  search?: string;
+  status?: string;
+  moduleType?: string;
+  sortBy?: string;
+  sortDirection?: string;
+}
+
+export interface PaginatedModulesResponse {
+  items: Module[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+export interface ModuleStats {
+  total: number;
+  enabled: number;
+  disabled: number;
+}
+
 export const modulesApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getModules: builder.query<Module[], void>({
@@ -27,6 +50,26 @@ export const modulesApi = api.injectEndpoints({
           : [{ type: 'admin/Module', id: 'LIST' }],
     }),
 
+    getModulesV2: builder.query<PaginatedModulesResponse, ModuleQueryParams>({
+      query: (params) => ({
+        url: '/modules',
+        method: 'GET',
+        params,
+      }),
+      extraOptions: { version: 'v2' },
+      transformResponse: createDataTransform<PaginatedModulesResponse>(),
+      providesTags: (result) =>
+        result?.items
+          ? [
+              ...result.items.map(({ id }) => ({
+                type: 'admin/Module' as const,
+                id,
+              })),
+              { type: 'admin/Module', id: 'LIST' },
+            ]
+          : [{ type: 'admin/Module', id: 'LIST' }],
+    }),
+
     getModuleById: builder.query<Module, string>({
       query: (moduleId) => ({
         url: `/modules/${moduleId}`,
@@ -34,6 +77,15 @@ export const modulesApi = api.injectEndpoints({
       }),
       transformResponse: createDataTransform<Module>(),
       providesTags: (_result, _error, id) => [{ type: 'admin/Module', id }],
+    }),
+
+    getModuleStats: builder.query<ModuleStats, void>({
+      query: () => ({
+        url: '/modules/stats',
+        method: 'GET',
+      }),
+      transformResponse: createDataTransform<ModuleStats>(),
+      providesTags: [{ type: 'admin/Module', id: 'STATS' }],
     }),
 
     createModule: builder.mutation<
@@ -46,7 +98,10 @@ export const modulesApi = api.injectEndpoints({
         body: moduleData,
       }),
       transformResponse: createDataTransform<Module>(),
-      invalidatesTags: [{ type: 'admin/Module', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'admin/Module', id: 'LIST' },
+        { type: 'admin/Module', id: 'STATS' },
+      ],
     }),
 
     updateModule: builder.mutation<
@@ -62,6 +117,7 @@ export const modulesApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'admin/Module', id },
         { type: 'admin/Module', id: 'LIST' },
+        { type: 'admin/Module', id: 'STATS' },
       ],
     }),
   }),
@@ -70,7 +126,9 @@ export const modulesApi = api.injectEndpoints({
 
 export const {
   useGetModulesQuery,
+  useGetModulesV2Query,
   useGetModuleByIdQuery,
+  useGetModuleStatsQuery,
   useCreateModuleMutation,
   useUpdateModuleMutation,
 } = modulesApi;

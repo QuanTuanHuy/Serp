@@ -48,6 +48,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { useGetOrganizationsQuery } from '@/modules/admin/services/organizations/organizationsApi';
+import { useGetModulesQuery } from '@/modules/admin/services/modules/modulesApi';
 
 export default function PlansPage() {
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -87,7 +88,7 @@ export default function PlansPage() {
     removeModuleFromPlan,
   } = usePlans();
 
-  const { rawModules: allModules } = useModules();
+  const { data: allModules = [] } = useGetModulesQuery();
 
   // Fetch organizations for filters
   const [orgSearch, setOrgSearch] = useState<string>('');

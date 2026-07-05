@@ -7,9 +7,14 @@ package serp.project.account.core.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.util.Pair;
+
 import serp.project.account.core.domain.dto.request.CreateModuleDto;
 import serp.project.account.core.domain.dto.request.UpdateModuleDto;
 import serp.project.account.core.domain.entity.ModuleEntity;
+import serp.project.account.core.domain.enums.ModuleStatus;
+import serp.project.account.core.domain.enums.ModuleType;
 
 public interface IModuleService {
     ModuleEntity createModule(CreateModuleDto request);
@@ -31,4 +36,10 @@ public interface IModuleService {
     Long countModules();
 
     Long countAvailableModules();
+
+    Pair<List<ModuleEntity>, Long> getModulesPaginated(
+            String search,
+            ModuleStatus status,
+            ModuleType moduleType,
+            Pageable pageable);
 }
