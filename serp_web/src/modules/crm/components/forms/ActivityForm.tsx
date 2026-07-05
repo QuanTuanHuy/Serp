@@ -30,6 +30,7 @@ import type {
   BackendActivityType,
   Priority,
   UpdateActivityRequest,
+  ActivityOutcome,
 } from '../../types';
 
 const editableActivityTypes = ['CALL', 'EMAIL', 'MEETING', 'TASK'] as const;
@@ -78,6 +79,7 @@ const activityFormSchema = z.object({
     .trim()
     .max(1000, 'Notes must not exceed 1000 characters.')
     .optional(),
+  outcome: z.string().optional(),
 });
 
 type ActivityFormData = z.infer<typeof activityFormSchema>;
@@ -140,6 +142,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
         typeof activity.customFields?.notes === 'string'
           ? activity.customFields.notes
           : '',
+      outcome: activity.outcome || '',
     }),
     [activity]
   );
@@ -182,6 +185,10 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
           : undefined,
       description: data.description?.trim() || undefined,
       notes: data.notes?.trim() || undefined,
+      outcome:
+        data.status === 'COMPLETED' && data.outcome
+          ? (data.outcome as ActivityOutcome)
+          : undefined,
     });
   });
 
@@ -214,23 +221,30 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
             <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
               <div className='space-y-2'>
                 <Label>Activity Type *</Label>
-                <Select
-                  value={watch('activityType')}
-                  onValueChange={(value: BackendActivityType) =>
-                    setValue('activityType', value)
-                  }
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Select activity type' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='CALL'>Call</SelectItem>
-                    <SelectItem value='EMAIL'>Email</SelectItem>
-                    <SelectItem value='MEETING'>Meeting</SelectItem>
-                    <SelectItem value='TASK'>Task</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className='flex gap-1 p-1 bg-muted rounded-lg w-full'>
+                  {editableActivityTypes.map((type) => (
+                    <button
+                      key={type}
+                      type='button'
+                      onClick={() => setValue('activityType', type)}
+                      className={cn(
+                        'flex-1 py-1.5 px-3 rounded-md text-xs font-medium transition-all cursor-pointer text-center',
+                        watchedActivityType === type
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      disabled={isLoading}
+                    >
+                      {type === 'CALL'
+                        ? 'Call'
+                        : type === 'EMAIL'
+                          ? 'Email'
+                          : type === 'MEETING'
+                            ? 'Meeting'
+                            : 'Task'}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className='space-y-2'>
@@ -389,22 +403,77 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({
               )}
             </div>
 
-            <div className='space-y-2'>
-              <Label htmlFor='notes'>Notes</Label>
-              <Textarea
-                id='notes'
-                {...register('notes')}
-                placeholder='Add internal notes'
-                rows={4}
-                className={errors.notes ? 'border-destructive' : ''}
-                disabled={isLoading}
-              />
-              {errors.notes && (
-                <p className='text-sm text-destructive'>
-                  {errors.notes.message}
-                </p>
-              )}
-            </div>
+            {watch('status') === 'COMPLETED' && (
+              <div className='space-y-4 p-4 border rounded-lg bg-muted/20'>
+                <Label className='text-sm font-semibold block'>
+                  Completion Details
+                </Label>
+
+                {watchedActivityType === 'CALL' && (
+                  <div className='space-y-2'>
+                    <Label htmlFor='outcome'>Call Outcome</Label>
+                    <Select
+                      value={watch('outcome')}
+                      onValueChange={(value) => setValue('outcome', value)}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select outcome' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='REACHED'>Reached</SelectItem>
+                        <SelectItem value='VOICEMAIL'>Voicemail</SelectItem>
+                        <SelectItem value='NO_ANSWER'>No Answer</SelectItem>
+                        <SelectItem value='BUSY'>Busy</SelectItem>
+                        <SelectItem value='WRONG_NUMBER'>
+                          Wrong Number
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {watchedActivityType === 'MEETING' && (
+                  <div className='space-y-2'>
+                    <Label htmlFor='outcome'>Meeting Outcome</Label>
+                    <Select
+                      value={watch('outcome')}
+                      onValueChange={(value) => setValue('outcome', value)}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select outcome' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='OCCURRED'>Occurred</SelectItem>
+                        <SelectItem value='NO_SHOW'>No Show</SelectItem>
+                        <SelectItem value='RESCHEDULED'>Rescheduled</SelectItem>
+                        <SelectItem value='CANCELLED_BY_CUSTOMER'>
+                          Cancelled by Customer
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className='space-y-2'>
+                  <Label htmlFor='notes'>Notes / Summary</Label>
+                  <Textarea
+                    id='notes'
+                    {...register('notes')}
+                    placeholder='Add summary or notes...'
+                    rows={4}
+                    className={errors.notes ? 'border-destructive' : ''}
+                    disabled={isLoading}
+                  />
+                  {errors.notes && (
+                    <p className='text-sm text-destructive'>
+                      {errors.notes.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className='flex items-center justify-end gap-3'>
