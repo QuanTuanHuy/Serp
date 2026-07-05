@@ -39,7 +39,7 @@ export function DashboardDonutChart({
             </span>
           </div>
           <p className='mt-1 pl-5 text-xs text-muted-foreground'>
-            Count:{' '}
+            Số lượng:{' '}
             <span className='font-bold text-foreground'>{dataPoint.count}</span>
           </p>
         </div>
@@ -56,7 +56,7 @@ export function DashboardDonutChart({
       <div className='flex-1 min-h-[200px] relative flex items-center justify-center'>
         {chartData.length === 0 ? (
           <div className='text-sm italic text-muted-foreground'>
-            No data available
+            Chưa có dữ liệu
           </div>
         ) : (
           <ResponsiveContainer width='100%' height='100%'>

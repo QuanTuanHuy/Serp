@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
@@ -76,7 +76,7 @@ export function SchoolBusSubscriptionDetailPage({
             : await stopSubscription(subscriptionId).unwrap();
       toast.success(response.message || `Subscription ${action}d successfully`);
     } catch (error: any) {
-      toast.error(error?.data?.message || `Failed to ${action} subscription`);
+      toast.error(error?.data?.message || 'Không thể cập nhật đăng ký');
     }
   };
 
@@ -84,7 +84,7 @@ export function SchoolBusSubscriptionDetailPage({
     return (
       <SchoolBusPageShell
         title='Subscription Detail'
-        description='Loading transport subscription details...'
+        description='Đang tải chi tiết đăng ký xe bus...'
       >
         <div className='flex h-[400px] items-center justify-center'>
           <div className='flex flex-col items-center gap-3'>
@@ -259,7 +259,7 @@ export function SchoolBusSubscriptionDetailPage({
         <SchoolBusBreadcrumb
           items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Subscriptions', href: '/school-bus/subscriptions' },
+            { label: 'Đăng ký', href: '/school-bus/subscriptions' },
             { label: sub.subscriptionCode || 'Detail', current: true },
           ]}
         />
@@ -545,7 +545,7 @@ export function SchoolBusSubscriptionDetailPage({
                         Subscription status is Active
                       </span>
                       <span className='ml-auto text-slate-700'>
-                        {isStatusActive ? 'Active' : 'Inactive'}
+                        {isStatusActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
                       </span>
                     </div>
 
@@ -577,7 +577,7 @@ export function SchoolBusSubscriptionDetailPage({
                         Active routing days defined
                       </span>
                       <span className='ml-auto text-slate-700'>
-                        {hasDays ? 'Yes' : 'No days selected'}
+                        {hasDays ? 'Yes' : 'Chưa chọn ngày'}
                       </span>
                     </div>
 

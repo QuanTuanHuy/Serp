@@ -181,7 +181,7 @@ export function SchoolBusDataTable<T>({
       return (
         <div className='flex flex-col items-center justify-center gap-3 px-6 py-16 text-sm text-muted-foreground'>
           <div className='h-6 w-6 animate-spin rounded-full border-2 border-border border-t-[#C81E3A]' />
-          <span>Loading resources...</span>
+          <span>Đang tải dữ liệu...</span>
         </div>
       );
     }
@@ -194,9 +194,9 @@ export function SchoolBusDataTable<T>({
       return (
         <div className='px-6 py-12'>
           <SchoolBusEmptyState
-            title={emptyTitle || 'No items found'}
+            title={emptyTitle || 'Không tìm thấy dữ liệu'}
             description={
-              emptyDescription || 'Try adjusting your filters or search query.'
+              emptyDescription || 'Hãy thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm.'
             }
             icon={emptyIcon}
             className='min-h-[220px]'

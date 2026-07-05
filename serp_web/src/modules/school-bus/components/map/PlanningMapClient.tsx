@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect } from 'react';
 import { Marker, Polyline, Popup, useMap } from 'react-leaflet';
@@ -245,7 +245,7 @@ export default function PlanningMapClient({
                 <p className='text-xs font-semibold text-slate-700'>
                    School
                 </p>
-                <p className='font-medium'>{school.name || 'School'}</p>
+                <p className='font-medium'>{school.name || 'Trường học'}</p>
               </div>
             </Popup>
           </Marker>

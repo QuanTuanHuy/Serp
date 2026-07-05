@@ -8,12 +8,12 @@ import lombok.Setter;
 @Setter
 public class MoveStudentRequest {
 
-    @NotNull(message = "studentId is required")
+    @NotNull(message = "Vui lòng chọn học sinh")
     private Long studentId;
 
-    @NotNull(message = "subscriptionId is required")
+    @NotNull(message = "Vui lòng chọn đăng ký")
     private Long subscriptionId;
 
-    @NotNull(message = "targetRouteId is required")
+    @NotNull(message = "Vui lòng chọn tuyến đích")
     private Long targetRouteId;
 }

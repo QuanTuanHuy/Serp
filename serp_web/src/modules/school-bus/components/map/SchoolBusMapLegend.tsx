@@ -31,12 +31,12 @@ interface SchoolBusMapLegendProps {
 }
 
 const DEFAULT_LEGEND_ITEMS: LegendItem[] = [
-  { kind: 'school', label: 'School', icon: GraduationCap },
-  { kind: 'depot', label: 'Depot', icon: Warehouse },
-  { kind: 'pickup', label: 'Pickup stop', icon: MapPin },
-  { kind: 'dropoff', label: 'Drop-off stop', icon: MapPinCheck },
+  { kind: 'school', label: 'Trường học', icon: GraduationCap },
+  { kind: 'depot', label: 'Bãi xe', icon: Warehouse },
+  { kind: 'pickup', label: 'Điểm đón', icon: MapPin },
+  { kind: 'dropoff', label: 'Điểm trả', icon: MapPinCheck },
   { kind: 'bus', label: 'Bus context', icon: Bus },
-  { kind: 'student', label: 'Student', icon: User },
+  { kind: 'student', label: 'Học sinh', icon: User },
 ];
 
 export function SchoolBusMapLegend({

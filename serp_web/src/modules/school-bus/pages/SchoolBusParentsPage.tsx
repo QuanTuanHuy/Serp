@@ -78,7 +78,7 @@ const contactCompletenessConfig: Record<
     className: 'bg-amber-50 text-amber-700 ring-amber-200',
   },
   'no-linked-student': {
-    label: 'No linked student',
+    label: 'Chưa liên kết học sinh',
     className: 'bg-red-50 text-red-700 ring-red-200',
   },
 };
@@ -216,7 +216,7 @@ export function SchoolBusParentsPage() {
       setDialogOpen(false);
       setEditingParentId(null);
     } catch {
-      toast.error('Failed to save parent profile');
+      toast.error('Không thể lưu hồ sơ phụ huynh');
     }
   };
 
@@ -227,14 +227,14 @@ export function SchoolBusParentsPage() {
       toast.success(response.message || 'Parent profile deleted');
       setDeletingParent(null);
     } catch {
-      toast.error('Failed to delete parent profile');
+      toast.error('Không thể xóa hồ sơ phụ huynh');
     }
   };
 
   const parentColumns: SchoolBusTableColumn<SchoolBusParent>[] = [
     {
       key: 'parent',
-      header: 'Parent',
+      header: 'Phụ huynh',
       className: 'pl-6',
       headerClassName: 'pl-6',
       render: (parent) => (
@@ -258,11 +258,11 @@ export function SchoolBusParentsPage() {
         <div>
           <p className='text-sm'>
             {parent.phone || (
-              <span className='text-slate-400 italic'>No phone</span>
+              <span className='text-slate-400 italic'>Chưa có số điện thoại</span>
             )}
           </p>
           <p className='text-xs text-muted-foreground'>
-            {parent.email || <span className='italic'>No email</span>}
+            {parent.email || <span className='italic'>Chưa có email</span>}
           </p>
         </div>
       ),
@@ -306,14 +306,14 @@ export function SchoolBusParentsPage() {
       render: (parent) => (
         <span className='text-sm'>
           {parent.address || (
-            <span className='text-slate-400 italic'>No address</span>
+            <span className='text-slate-400 italic'>Chưa có địa chỉ</span>
           )}
         </span>
       ),
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       render: (parent) => (
         <SchoolBusStatusBadge
           status={parent.isActive ? 'ACTIVE' : 'INACTIVE'}
@@ -322,7 +322,7 @@ export function SchoolBusParentsPage() {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: 'Thao tác',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (parent) => (
@@ -389,8 +389,8 @@ export function SchoolBusParentsPage() {
         onChange={setFilterStatus}
         placeholder='All statuses'
         options={[
-          { label: 'Active', value: 'active' },
-          { label: 'Inactive', value: 'inactive' },
+          { label: 'Đang hoạt động', value: 'active' },
+          { label: 'Ngừng hoạt động', value: 'inactive' },
         ]}
         clearable
       />
@@ -406,7 +406,7 @@ export function SchoolBusParentsPage() {
           <SchoolBusBreadcrumb
             items={[
               { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Parents', current: true },
+              { label: 'Phụ huynh', current: true },
             ]}
           />
         }
@@ -467,13 +467,13 @@ export function SchoolBusParentsPage() {
             emptyIcon={Users}
             emptyTitle={
               parents.length === 0
-                ? 'No parent profiles found'
-                : 'No parents match the current filters'
+                ? 'Không tìm thấy hồ sơ phụ huynh'
+                : 'Không có phụ huynh phù hợp với bộ lọc'
             }
             emptyDescription={
               parents.length === 0
-                ? 'Create parent profiles so requests and family linkage can be managed in the module.'
-                : 'No parents match the current filters. Try adjusting your search criteria.'
+                ? 'Hãy tạo hồ sơ phụ huynh để quản lý yêu cầu và liên kết gia đình trong module.'
+                : 'Không có phụ huynh phù hợp với bộ lọc. Hãy thử điều chỉnh tiêu chí tìm kiếm.'
             }
           />
         </div>
@@ -520,8 +520,8 @@ export function SchoolBusParentsPage() {
               { label: 'Phone', value: viewingParent?.phone },
               { label: 'Email', value: viewingParent?.email },
               {
-                label: 'Status',
-                value: viewingParent?.isActive === false ? 'Inactive' : 'Active',
+                label: 'Trạng thái',
+                value: viewingParent?.isActive === false ? 'Ngừng hoạt động' : 'Đang hoạt động',
               },
               {
                 label: 'Address',
@@ -538,7 +538,7 @@ export function SchoolBusParentsPage() {
         onOpenChange={(open) => {
           if (!open) setDeletingParent(null);
         }}
-        title='Delete parent profile'
+        title='Xóa hồ sơ phụ huynh'
         description='This will soft-delete the operational parent profile from school-bus use.'
         isLoading={deleting}
         onConfirm={handleDelete}

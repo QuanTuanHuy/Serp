@@ -62,7 +62,7 @@ export function SchoolBusTopbar({
         name = name.split('&')[0];
       }
       if (segment.toLowerCase() === 'school-bus') {
-        name = 'School Bus';
+        name = 'Xe bus trường học';
       } else {
         name = name.charAt(0).toUpperCase() + name.slice(1);
       }

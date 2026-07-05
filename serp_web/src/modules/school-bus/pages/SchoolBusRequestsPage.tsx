@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -137,7 +137,7 @@ export function SchoolBusRequestsPage() {
       toast.success(response.message || 'Transport request approved');
     } catch (error: any) {
       toast.error(
-        error?.data?.message || 'Failed to approve transport request'
+        error?.data?.message || 'Không thể phê duyệt transport request'
       );
     } finally {
       setProcessingId(null);
@@ -158,7 +158,7 @@ export function SchoolBusRequestsPage() {
       toast.success(response.message || 'Transport request rejected');
       setRejectingRequest(null);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to reject transport request');
+      toast.error(error?.data?.message || 'Không thể từ chối transport request');
     } finally {
       setProcessingId(null);
     }
@@ -236,7 +236,7 @@ export function SchoolBusRequestsPage() {
       if (!access.isParentOnly) {
         cols.push({
           key: 'parent',
-          header: 'Parent',
+          header: 'Phụ huynh',
           render: (request) => (
             <div className='flex items-center gap-2'>
               <User className='h-4 w-4 text-slate-400 shrink-0' />
@@ -251,7 +251,7 @@ export function SchoolBusRequestsPage() {
       cols.push(
         {
           key: 'school',
-          header: 'School',
+          header: 'Trường học',
           render: (request) => (
             <div className='flex items-center gap-2'>
               <GraduationCap className='h-4 w-4 text-slate-400 shrink-0' />
@@ -266,7 +266,7 @@ export function SchoolBusRequestsPage() {
         },
         {
           key: 'students',
-          header: 'Students',
+          header: 'Học sinh',
           render: (request: any) => (
             <div className='flex items-center gap-1.5'>
               <span className='font-medium text-xs text-slate-600 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100'>
@@ -279,7 +279,7 @@ export function SchoolBusRequestsPage() {
         },
         {
           key: 'approvalState',
-          header: 'Status',
+          header: 'Trạng thái',
           render: (request) => (
             <div className='space-y-1'>
               <SchoolBusStatusBadge status={request.status} />
@@ -319,7 +319,7 @@ export function SchoolBusRequestsPage() {
         },
         {
           key: 'actions',
-          header: 'Actions',
+          header: 'Thao tác',
           className: 'pr-6 text-right',
           headerClassName: 'pr-6 text-right',
           render: (request) => {
@@ -403,7 +403,7 @@ export function SchoolBusRequestsPage() {
                   </>
                 ) : (
                   <span className='inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400 border border-slate-200/50'>
-                    {request.status === 'SUBMITTED' ? 'Pending' : 'Locked'}
+                    {request.status === 'SUBMITTED' ? 'Đang chờ' : 'Locked'}
                   </span>
                 )}
               </div>
@@ -460,8 +460,8 @@ export function SchoolBusRequestsPage() {
         placeholder='All states'
         options={[
           { label: 'Submitted (Pending)', value: 'SUBMITTED' },
-          { label: 'Approved', value: 'APPROVED' },
-          { label: 'Rejected', value: 'REJECTED' },
+          { label: 'Đã duyệt', value: 'APPROVED' },
+          { label: 'Từ chối', value: 'REJECTED' },
         ]}
         clearable
       />
@@ -679,7 +679,7 @@ export function SchoolBusRequestsPage() {
                       </div>
                       <div>
                         <span className='font-bold text-emerald-900'>
-                          No pending approvals
+                          Không có yêu cầu chờ duyệt
                         </span>
                         <span className='text-slate-500 ml-1.5'>
                           The approval queue is currently clear.
@@ -702,13 +702,13 @@ export function SchoolBusRequestsPage() {
                   emptyIcon={FileText}
                   emptyTitle={
                     requests.length === 0
-                      ? 'No transport requests found'
-                      : 'No requests match current filters'
+                      ? 'Không tìm thấy yêu cầu xe bus'
+                      : 'Không có yêu cầu phù hợp với bộ lọc'
                   }
                   emptyDescription={
                     requests.length === 0
-                      ? 'No requests match the current filters. Modify your search criteria or create a request.'
-                      : 'Try adjusting your search query or clear the active filters.'
+                      ? 'Không có yêu cầu phù hợp. Hãy điều chỉnh tiêu chí hoặc tạo yêu cầu mới.'
+                      : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
                   }
                   className='border border-slate-200/80 shadow-sm'
                 />

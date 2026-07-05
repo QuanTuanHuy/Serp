@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import {
   X,
@@ -125,7 +125,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
             <button
               onClick={onClose}
               className='flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground'
-              aria-label='Close'
+              aria-label='Đóng'
             >
               <X className='h-4 w-4' />
             </button>
@@ -156,7 +156,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
                   mono
                 />
                 <Field
-                  label='Status'
+                  label='Trạng thái'
                   value={<SchoolBusStatusBadge status={sub.status} />}
                 />
                 <Field
@@ -168,8 +168,8 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
 
               {/* Student & School */}
               <Section title='Student & School' icon={User}>
-                <Field label='Student' value={sub.studentName} />
-                <Field label='School' value={sub.schoolName} />
+                <Field label='Học sinh' value={sub.studentName} />
+                <Field label='Trường học' value={sub.schoolName} />
                 <Field label='Trip Option' value={sub.tripOption} />
                 <div />
               </Section>

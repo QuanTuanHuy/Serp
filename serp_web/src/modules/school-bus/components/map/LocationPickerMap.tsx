@@ -12,7 +12,7 @@ export const LocationPickerMap = dynamic<LocationPickerMapClientProps>(
       <div
         className={`flex h-[320px] items-center justify-center text-sm text-slate-500 ${schoolBusUi.mapFrame}`}
       >
-        Loading map...
+        Đang tải bản đồ...
       </div>
     ),
   }

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -251,7 +251,7 @@ function CreateRoutePanel({
             {/* Start location */}
             <div className='space-y-2 pt-1.5'>
               <label className={labelCls}>
-                Start Location ({initDir === 'OUTBOUND' ? 'DEPOT' : 'SCHOOL'})
+                Điểm bắt đầu ({initDir === 'OUTBOUND' ? 'DEPOT' : 'SCHOOL'})
               </label>
               {initDir === 'OUTBOUND' ? (
                 hasDepots ? (
@@ -266,7 +266,7 @@ function CreateRoutePanel({
                           busId: '',
                         }))
                       }
-                      placeholder='- Select depot -'
+                      placeholder='- Chọn bãi xe -'
                       options={depots.map((d) => ({
                         label: d.name,
                         value: d.id,
@@ -275,7 +275,7 @@ function CreateRoutePanel({
                   </div>
                 ) : (
                   <p className='text-[11px] text-amber-600 font-medium'>
-                    Warning: No depots available. Please create a depot first.
+                    Warning: Chưa có bãi xes available. Please create a depot first.
                   </p>
                 )
               ) : (
@@ -292,7 +292,7 @@ function CreateRoutePanel({
             {/* End location */}
             <div className='space-y-2 pt-3 border-t border-slate-100'>
               <label className={labelCls}>
-                End Location ({initDir === 'OUTBOUND' ? 'SCHOOL' : 'DEPOT'})
+                Điểm kết thúc ({initDir === 'OUTBOUND' ? 'SCHOOL' : 'DEPOT'})
               </label>
               {initDir === 'RETURN' ? (
                 hasDepots ? (
@@ -307,7 +307,7 @@ function CreateRoutePanel({
                           busId: '',
                         }))
                       }
-                      placeholder='- Select depot -'
+                      placeholder='- Chọn bãi xe -'
                       options={depots.map((d) => ({
                         label: d.name,
                         value: d.id,
@@ -316,7 +316,7 @@ function CreateRoutePanel({
                   </div>
                 ) : (
                   <p className='text-[11px] text-amber-600 font-medium'>
-                    Warning: No depots available. Please create a depot first.
+                    Warning: Chưa có bãi xes available. Please create a depot first.
                   </p>
                 )
               ) : (
@@ -352,12 +352,12 @@ function CreateRoutePanel({
                 }
                 placeholder={
                   !selectedDepotId
-                    ? 'Select depot first'
+                    ? 'Chọn bãi xe trước'
                     : loadingBuses
-                      ? 'Loading buses...'
+                      ? 'Đang tải xe...'
                       : buses.length === 0
-                        ? 'No buses in this depot'
-                        : 'Select bus'
+                        ? 'Chưa có xees in this depot'
+                        : 'Chọn xe'
                 }
                 options={buses.map((bus) => ({
                   label: `${bus.plateNumber} - ${bus.capacity} seats - ${bus.busType || 'Vehicle'} - ${bus.status || 'UNKNOWN'}`,
@@ -456,7 +456,7 @@ function CreateRoutePanel({
               disabled={submitting || !canSubmit}
               className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white'
             >
-              {submitting ? 'Creating...' : 'Create Route'}
+              {submitting ? 'Đang tạo...' : 'Create Route'}
             </Button>
           </div>
         </form>
@@ -549,10 +549,10 @@ function SessionRouteCard({
             )}
           >
             {route.status === 'PUBLISHED'
-              ? 'Published'
+              ? 'Đã phát hành'
               : route.status === 'CANCELLED'
-                ? 'Cancelled'
-                : 'Draft'}
+                ? 'Đã hủy'
+                : 'Nháp'}
           </span>
           <span
             className={cn(
@@ -598,9 +598,9 @@ function SessionRouteCard({
             {route.driverName && route.attendantName ? (
               `Driver: ${route.driverName} - Attendant: ${route.attendantName}`
             ) : route.driverName ? (
-              `Driver: ${route.driverName} (No attendant)`
+              `Driver: ${route.driverName} (Chưa có phụ xe)`
             ) : route.attendantName ? (
-              `Attendant: ${route.attendantName} (No driver)`
+              `Attendant: ${route.attendantName} (Chưa có tài xế)`
             ) : (
               <span className='text-slate-400 italic font-medium'>
                 Not assigned
@@ -829,7 +829,7 @@ function RouteCard({
           <span className='font-bold text-slate-700'>{route.studentCount}</span>
         </div>
         <div className='flex items-center gap-1.5 min-w-0'>
-          <span className='text-slate-400 font-medium'>Distance:</span>
+          <span className='text-slate-400 font-medium'>Khoảng cách:</span>
           <span className='font-bold text-slate-700'>
             {route.totalDistanceKm != null
               ? route.totalDistanceKm.toFixed(1) + ' km'
@@ -837,7 +837,7 @@ function RouteCard({
           </span>
         </div>
         <div className='flex items-center gap-1.5 justify-end'>
-          <span className='text-slate-400 font-medium'>Duration:</span>
+          <span className='text-slate-400 font-medium'>Thời lượng:</span>
           <span className='font-bold text-slate-700'>
             {route.totalDurationMin != null
               ? route.totalDurationMin + ' min'
@@ -927,7 +927,7 @@ function RouteDetailPanel({
         await removeStop({ routeId, stopId, sessionId }).unwrap();
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message || 'Failed to remove stop');
+        toast.error(err?.data?.message || 'Không thể xóa điểm dừng');
       }
     },
     isLoading: removingStop,
@@ -949,7 +949,7 @@ function RouteDetailPanel({
         }).unwrap();
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message || 'Failed to remove student');
+        toast.error(err?.data?.message || 'Không thể xóa học sinh');
       }
     },
     isLoading: removingStudent,
@@ -958,7 +958,7 @@ function RouteDetailPanel({
   if (isLoading || !detail)
     return (
       <div className='py-8 text-center text-sm text-slate-400'>
-        Loading route detail...
+        Đang tải chi tiết tuyến...
       </div>
     );
 
@@ -987,7 +987,7 @@ function RouteDetailPanel({
       }).unwrap();
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
-      toast.error(err?.data?.message || 'Failed to reorder stops');
+      toast.error(err?.data?.message || 'Không thể sắp xếp lại điểm dừng');
     }
   };
 
@@ -1074,8 +1074,8 @@ function RouteDetailPanel({
           {middleStops.length === 0 ? (
             <p className='text-xs text-slate-400 italic bg-white border border-dashed border-slate-200 rounded-2xl p-4 text-center'>
               {detail.route.routeDirection === 'OUTBOUND'
-                ? 'No pickup stops created yet. Assign students to auto-generate stops.'
-                : 'No drop-off stops created yet. Assign students to auto-generate stops.'}
+                ? 'Chưa tạo điểm đón. Hãy gán học sinh để tự động tạo điểm dừng.'
+                : 'Chưa tạo điểm trả. Hãy gán học sinh để tự động tạo điểm dừng.'}
             </p>
           ) : (
             <div className='space-y-1.5'>
@@ -1146,7 +1146,7 @@ function RouteDetailPanel({
                 </p>
                 {students.length === 0 ? (
                   <p className='text-xs text-slate-300'>
-                    No students assigned to stops
+                    Chưa gán học sinh vào điểm dừng
                   </p>
                 ) : (
                   <div className='space-y-1.5'>
@@ -1242,7 +1242,7 @@ function RouteDetailPanel({
               </div>
             ) : (
               <p className='text-xs text-slate-450 italic py-1'>
-                No staff assigned to this route.
+                Tuyến này chưa được phân công nhân sự.
               </p>
             )}
           </div>
@@ -1351,7 +1351,7 @@ export function PlanningResultsPanel({
         }
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message || 'Failed to delete route');
+        toast.error(err?.data?.message || 'Không thể xóa tuyến');
       }
     },
     isLoading: deletingRoute,
@@ -1413,7 +1413,7 @@ export function PlanningResultsPanel({
               ? `Total ${preview.summary?.totalSubscriptions || preview.totalEligibleStudents} || Eligible ${preview.summary?.eligibleStudents || preview.totalEligibleStudents} || Points ${preview.summary?.pointCount || preview.totalEligiblePickupPoints}`
               : isPreviewStale
                 ? 'Out of date'
-                : 'No preview'}
+                : 'Chưa có xem trước'}
           </span>
         </button>
         <button
@@ -1427,7 +1427,7 @@ export function PlanningResultsPanel({
         >
           <span className='text-xs font-bold'>Route Builder</span>
           <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
-            {activeSession ? `Routes (${sessionRoutes.length})` : 'No session'}
+            {activeSession ? `Routes (${sessionRoutes.length})` : 'Chưa có phiên'}
           </span>
         </button>
       </div>
@@ -1470,7 +1470,7 @@ export function PlanningResultsPanel({
                 <p className='text-sm font-bold text-slate-700'>
                   {activeSession
                     ? 'Preview demand for this session'
-                    : 'No demand preview yet'}
+                    : 'Chưa có xem trước nhu cầu'}
                 </p>
                 <p className='mt-1 text-xs text-slate-455 max-w-[240px] leading-relaxed'>
                   {activeSession
@@ -1531,7 +1531,7 @@ export function PlanningResultsPanel({
                         <Ban className='h-6 w-6' />
                       </div>
                       <p className='text-sm font-bold text-slate-700'>
-                        No eligible students for this date and direction.
+                        Không có học sinh đủ điều kiện cho ngày và chiều này.
                       </p>
                       <p className='text-xs text-slate-450 max-w-[240px] leading-relaxed'>
                         Make sure students have active subscriptions for this
@@ -1650,7 +1650,7 @@ export function PlanningResultsPanel({
                           <div className='space-y-3 pt-1'>
                             {eligibleDemands.length === 0 ? (
                               <div className='text-center py-8 text-slate-400 text-xs'>
-                                No students found.
+                                Không tìm thấy học sinh.
                               </div>
                             ) : (
                               <div className='space-y-2 max-h-[380px] overflow-y-auto pr-1'>
@@ -1715,7 +1715,7 @@ export function PlanningResultsPanel({
                           <div className='space-y-3 pt-1'>
                             {points.length === 0 ? (
                               <div className='text-center py-8 text-slate-400 text-xs'>
-                                No points mapped.
+                                Chưa có điểm trên bản đồ.
                               </div>
                             ) : (
                               <div className='grid gap-2 max-h-[380px] overflow-y-auto pr-1 sm:grid-cols-2'>
@@ -1742,7 +1742,7 @@ export function PlanningResultsPanel({
                                       </span>
                                       {(!pp.latitude || !pp.longitude) && (
                                         <span className='text-[9px] font-bold text-amber-600'>
-                                          No coordinates
+                                          Chưa có tọa độ
                                         </span>
                                       )}
                                     </div>
@@ -1845,7 +1845,7 @@ export function PlanningResultsPanel({
                                 Select Context
                               </p>
                               <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
-                                Select planning context and preview demand.
+                                Chọn ngữ cảnh lập kế hoạch và xem trước nhu cầu.
                               </p>
                             </div>
                           );
@@ -1957,10 +1957,10 @@ export function PlanningResultsPanel({
                   <Route className='h-6 w-6' />
                 </div>
                 <p className='text-sm font-bold text-slate-700'>
-                  No planning session yet
+                  Chưa có phiên lập tuyến
                 </p>
                 <p className='mt-1 text-xs text-slate-455 max-w-[240px] leading-relaxed'>
-                  Create a session before building routes.
+                  Hãy tạo phiên trước khi xây dựng tuyến.
                 </p>
               </div>
             )}
@@ -2004,10 +2004,10 @@ export function PlanningResultsPanel({
                     <div className='flex flex-col items-center justify-center p-8 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 text-center'>
                       <Route className='h-8 w-8 text-slate-300 stroke-[1.5] mb-2' />
                       <p className='text-xs font-bold text-slate-500'>
-                        No routes yet
+                        Chưa có tuyến
                       </p>
                       <p className='text-[10px] text-slate-400 mt-0.5'>
-                        Create your first route above to get started.
+                        Tạo tuyến đầu tiên ở phía trên để bắt đầu.
                       </p>
                     </div>
                   ) : (
@@ -2023,10 +2023,10 @@ export function PlanningResultsPanel({
                           onAddStudents={handleAddStudents}
                           onDelete={() => {
                             deleteConfirm.requestConfirm({
-                              title: 'Delete empty route?',
+                              title: 'Xóa tuyến trống?',
                               description:
                                 'Are you sure you want to delete this route? This action cannot be undone.',
-                              confirmLabel: 'Delete',
+                              confirmLabel: 'Xóa',
                               variant: 'danger',
                               payload: r.id,
                             });

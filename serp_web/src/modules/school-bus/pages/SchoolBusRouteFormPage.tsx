@@ -42,7 +42,7 @@ export function SchoolBusRouteFormPage({
       toast.success(response.message || 'Route saved');
       router.push(`/school-bus/dispatch/${response.data.id}`);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save route');
+      toast.error(error?.data?.message || 'Không thể lưu tuyến');
     }
   };
 
@@ -50,10 +50,10 @@ export function SchoolBusRouteFormPage({
     return (
       <SchoolBusPageShell
         title='Edit route'
-        description='Loading route detail...'
+        description='Đang tải chi tiết tuyến...'
       >
         <SchoolBusEmptyState
-          title='Loading route'
+          title='Đang tải tuyến'
           description='Fetching the route snapshot for editing.'
         />
       </SchoolBusPageShell>
@@ -70,7 +70,7 @@ export function SchoolBusRouteFormPage({
         schools={schoolsData?.data || []}
         depots={getPageItems(depotsData?.data)}
         isLoading={updating}
-        submitLabel='Update route'
+        submitLabel='Cập nhật tuyến'
         onCancel={() => router.push(`/school-bus/dispatch/${routeId}`)}
         onSubmit={handleSubmit}
       />

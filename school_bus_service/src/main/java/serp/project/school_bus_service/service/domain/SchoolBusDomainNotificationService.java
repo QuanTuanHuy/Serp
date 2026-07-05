@@ -55,8 +55,8 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                 "REQUEST_SUBMITTED",
                 "TRANSPORT_REQUEST",
                 request.getId(),
-                "New transport request",
-                "Transport request " + request.getRequestCode() + " is ready for review.",
+                "Có yêu cầu xe bus mới",
+                "Yêu cầu xe bus " + request.getRequestCode() + " đang chờ xem xét.",
                 NotificationType.INFO,
                 NotificationCategory.SCHOOL_BUS_REQUEST,
                 NotificationPriority.MEDIUM,
@@ -73,8 +73,8 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                 "REQUEST_APPROVED",
                 "TRANSPORT_REQUEST",
                 request.getId(),
-                "Transport request approved",
-                "Your transport request " + request.getRequestCode() + " has been approved.",
+                "Yêu cầu xe bus đã được phê duyệt",
+                "Yêu cầu xe bus " + request.getRequestCode() + " của bạn đã được phê duyệt.",
                 NotificationType.SUCCESS,
                 NotificationCategory.SCHOOL_BUS_REQUEST,
                 NotificationPriority.MEDIUM,
@@ -91,9 +91,9 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                 "REQUEST_REJECTED",
                 "TRANSPORT_REQUEST",
                 request.getId(),
-                "Transport request rejected",
+                "Yêu cầu xe bus đã bị từ chối",
                 appendReason(
-                        "Your transport request " + request.getRequestCode() + " has been rejected.",
+                        "Yêu cầu xe bus " + request.getRequestCode() + " của bạn đã bị từ chối.",
                         request.getRejectionReason()),
                 NotificationType.WARNING,
                 NotificationCategory.SCHOOL_BUS_REQUEST,
@@ -114,8 +114,8 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                     "REQUEST_CANCELLED",
                     "TRANSPORT_REQUEST",
                     request.getId(),
-                    "Transport request cancelled",
-                    "Transport request " + request.getRequestCode() + " has been cancelled.",
+                    "Yêu cầu xe bus đã bị hủy",
+                    "Yêu cầu xe bus " + request.getRequestCode() + " đã bị hủy.",
                     NotificationType.WARNING,
                     NotificationCategory.SCHOOL_BUS_REQUEST,
                     NotificationPriority.HIGH,
@@ -130,8 +130,8 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                 subscription,
                 actorId,
                 "SUBSCRIPTION_CREATED",
-                "Transport subscription created",
-                "The transport subscription for " + studentName(subscription) + " has been created.",
+                "Đăng ký dịch vụ xe bus đã được tạo",
+                "Đăng ký dịch vụ xe bus của " + studentName(subscription) + " đã được tạo.",
                 NotificationType.SUCCESS,
                 NotificationPriority.MEDIUM);
     }
@@ -142,8 +142,8 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                 subscription,
                 actorId,
                 "SUBSCRIPTION_UPDATED",
-                "Transport subscription updated",
-                "The transport subscription for " + studentName(subscription) + " has been updated.",
+                "Đăng ký dịch vụ xe bus đã được cập nhật",
+                "Đăng ký dịch vụ xe bus của " + studentName(subscription) + " đã được cập nhật.",
                 NotificationType.SUCCESS,
                 NotificationPriority.MEDIUM);
     }
@@ -163,9 +163,9 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                 subscription,
                 actorId,
                 "SUBSCRIPTION_" + status.name(),
-                "Transport subscription " + status.name().toLowerCase(),
-                "The transport subscription for " + studentName(subscription)
-                        + " is now " + status.name().toLowerCase() + ".",
+                "Trạng thái đăng ký dịch vụ xe bus đã thay đổi",
+                "Đăng ký dịch vụ xe bus của " + studentName(subscription)
+                        + " hiện là " + subscriptionStatusLabel(status) + ".",
                 type,
                 priority);
     }
@@ -183,9 +183,8 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                     "ROUTE_ASSIGNED",
                     "ROUTE",
                     assignment.getRoute().getId(),
-                    "Route assignment",
-                    "You have been assigned to route " + assignment.getRoute().getRouteCode()
-                            + " on " + assignment.getRoute().getServiceDate() + ".",
+                    "Bạn được phân công tuyến xe bus",
+                    "Bạn được phân công tuyến " + assignment.getRoute().getRouteCode() + ".",
                     NotificationType.INFO,
                     NotificationCategory.SCHOOL_BUS_DISPATCH,
                     NotificationPriority.HIGH,
@@ -208,8 +207,8 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                     recipients,
                     actorId,
                     "TRIP_CREATED",
-                    "School bus trip scheduled",
-                    "Trip " + trip.getTripCode() + " has been scheduled for " + trip.getServiceDate() + ".",
+                    "Chuyến xe bus đã được lên lịch",
+                    "Chuyến " + trip.getTripCode() + " đã được lên lịch.",
                     NotificationType.INFO,
                     NotificationPriority.MEDIUM);
         });
@@ -222,8 +221,8 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                 recipientService.findTripParentAccountUserIds(trip),
                 actorId,
                 "TRIP_STARTED",
-                "School bus trip started",
-                "Trip " + trip.getTripCode() + " has started.",
+                "Chuyến xe bus đã bắt đầu",
+                "Chuyến " + trip.getTripCode() + " đã bắt đầu.",
                 NotificationType.INFO,
                 NotificationPriority.HIGH));
     }
@@ -235,8 +234,8 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                 recipientService.findTripParentAccountUserIds(trip),
                 actorId,
                 "TRIP_COMPLETED",
-                "School bus trip completed",
-                "Trip " + trip.getTripCode() + " has been completed.",
+                "Chuyến xe bus đã hoàn thành",
+                "Chuyến " + trip.getTripCode() + " đã hoàn thành.",
                 NotificationType.SUCCESS,
                 NotificationPriority.MEDIUM));
     }
@@ -256,9 +255,9 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                     recipients,
                     actorId,
                     "TRIP_CANCELLED",
-                    "School bus trip cancelled",
+                    "Chuyến xe bus đã bị hủy",
                     appendReason(
-                            "Trip " + trip.getTripCode() + " has been cancelled.",
+                            "Chuyến " + trip.getTripCode() + " đã bị hủy.",
                             trip.getCancellationReason()),
                     NotificationType.ERROR,
                     NotificationPriority.HIGH);
@@ -283,7 +282,7 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                     "TRIP_ATTENDANCE",
                     tripStudent.getId(),
                     studentName(tripStudent) + " " + eventLabel,
-                    studentName(tripStudent) + " " + eventLabel + " for trip " + trip.getTripCode() + ".",
+                    studentName(tripStudent) + " " + eventLabel + " trong chuyến " + trip.getTripCode() + ".",
                     successful ? NotificationType.SUCCESS : NotificationType.WARNING,
                     NotificationCategory.SCHOOL_BUS_ATTENDANCE,
                     successful ? NotificationPriority.MEDIUM : NotificationPriority.HIGH,
@@ -310,9 +309,9 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
                     "STOP_SKIPPED",
                     "TRIP",
                     trip.getId(),
-                    "School bus stop skipped",
+                    "Điểm dừng xe bus đã bị bỏ qua",
                     appendReason(
-                            "A service stop for trip " + trip.getTripCode() + " was skipped.",
+                            "Một điểm dừng của chuyến " + trip.getTripCode() + " đã bị bỏ qua.",
                             reason),
                     NotificationType.WARNING,
                     NotificationCategory.SCHOOL_BUS_TRIP,
@@ -447,25 +446,35 @@ public class SchoolBusDomainNotificationService implements ISchoolBusDomainNotif
     }
 
     private String studentName(StudentSubscriptionEntity subscription) {
-        return subscription.getStudent() == null ? "the student" : subscription.getStudent().getFullName();
+        return subscription.getStudent() == null ? "học sinh" : subscription.getStudent().getFullName();
     }
 
     private String studentName(TripStudentEntity tripStudent) {
-        return tripStudent.getStudent() == null ? "The student" : tripStudent.getStudent().getFullName();
+        return tripStudent.getStudent() == null ? "Học sinh" : tripStudent.getStudent().getFullName();
     }
 
     private String attendanceLabel(AttendanceEventType eventType) {
         return switch (eventType) {
-            case BOARDED -> "boarded the bus";
-            case DROPPED_OFF -> "was dropped off";
-            case ABSENT -> "was marked absent";
-            case NO_SHOW -> "was marked as no-show";
-            case NOT_SERVED -> "was not served";
+            case BOARDED -> "đã lên xe";
+            case DROPPED_OFF -> "đã xuống xe";
+            case ABSENT -> "được ghi nhận vắng mặt";
+            case NO_SHOW -> "không có mặt tại điểm đón";
+            case NOT_SERVED -> "chưa được phục vụ";
         };
     }
 
     private String appendReason(String message, String reason) {
-        return reason == null || reason.isBlank() ? message : message + " Reason: " + reason.trim();
+        return reason == null || reason.isBlank() ? message : message + " Lý do: " + reason.trim();
+    }
+
+    private String subscriptionStatusLabel(SubscriptionStatus status) {
+        return switch (status) {
+            case PENDING -> "đang chờ";
+            case ACTIVE -> "đang hoạt động";
+            case PAUSED -> "tạm dừng";
+            case STOPPED -> "đã dừng";
+            case EXPIRED -> "hết hạn";
+        };
     }
 
     private RouteAssignmentEntity currentAssignment(TripExecutionEntity trip) {

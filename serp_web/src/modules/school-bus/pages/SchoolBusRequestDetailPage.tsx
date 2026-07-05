@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
@@ -203,7 +203,7 @@ export function SchoolBusRequestDetailPage({
       const res = await approveTransportRequest(requestId).unwrap();
       toast.success(res.message || 'Transport request approved');
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to approve');
+      toast.error(e?.data?.message || 'Không thể phê duyệt');
     }
   };
   const handleCancel = async () => {
@@ -211,7 +211,7 @@ export function SchoolBusRequestDetailPage({
       const res = await cancelTransportRequest(requestId).unwrap();
       toast.success(res.message || 'Transport request cancelled');
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to cancel');
+      toast.error(e?.data?.message || 'Không thể hủy');
     }
   };
   const handleReject = async (values: { reason: string }) => {
@@ -223,7 +223,7 @@ export function SchoolBusRequestDetailPage({
       toast.success(res.message || 'Transport request rejected');
       setRejectOpen(false);
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to reject');
+      toast.error(e?.data?.message || 'Không thể từ chối');
     }
   };
 
@@ -231,10 +231,10 @@ export function SchoolBusRequestDetailPage({
     return (
       <SchoolBusPageShell
         title='Transport Request Detail'
-        description='Loading...'
+        description='Đang tải...'
       >
         <SchoolBusEmptyState
-          title='Loading request detail'
+          title='Đang tải chi tiết yêu cầu'
           description='Fetching data...'
         />
       </SchoolBusPageShell>
@@ -271,7 +271,7 @@ export function SchoolBusRequestDetailPage({
       acc.push({
         key: `pickup-${s.id}`,
         studentName: s.studentName,
-        pointName: s.pickupPointName || 'Pickup',
+        pointName: s.pickupPointName || 'Điểm đón',
         latitude: s.pickupPointLatitude,
         longitude: s.pickupPointLongitude,
         role: 'pickup',
@@ -315,7 +315,7 @@ export function SchoolBusRequestDetailPage({
       if (!acc.find((p) => p.id === s.pickupPointId)) {
         acc.push({
           id: s.pickupPointId!,
-          name: s.pickupPointName || 'Pickup',
+          name: s.pickupPointName || 'Điểm đón',
           address: s.pickupPointAddress || '',
           latitude: s.pickupPointLatitude!,
           longitude: s.pickupPointLongitude!,
@@ -853,7 +853,7 @@ export function SchoolBusRequestDetailPage({
                         </div>
                         <div className='grid grid-cols-3 gap-2 text-center'>
                           {[
-                            { label: 'Students', value: students.length },
+                            { label: 'Học sinh', value: students.length },
                             {
                               label: 'Pickups',
                               value: uniquePickupPoints.length,
@@ -935,7 +935,7 @@ export function SchoolBusRequestDetailPage({
                     }
                   />
                   <InfoRow
-                    label='Status'
+                    label='Trạng thái'
                     value={<SchoolBusStatusBadge status={request.status} />}
                   />
                   <InfoRow

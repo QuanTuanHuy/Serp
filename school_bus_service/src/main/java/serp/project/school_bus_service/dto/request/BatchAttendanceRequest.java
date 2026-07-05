@@ -11,10 +11,10 @@ import java.util.List;
 @Setter
 public class BatchAttendanceRequest extends BaseCommandRequest {
 
-    @NotNull(message = "action is required")
+    @NotNull(message = "Vui lòng chọn thao tác điểm danh")
     private String action;
 
-    @NotEmpty(message = "studentIds is required")
+    @NotEmpty(message = "Vui lòng chọn học sinh")
     private List<Long> studentIds;
 
     private String note;

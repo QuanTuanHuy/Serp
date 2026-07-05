@@ -30,7 +30,7 @@ export function DashboardChartCard({
         <div className='flex min-h-[240px] flex-col items-center justify-center text-center'>
           <p className='text-sm font-semibold text-foreground'>{title}</p>
           <p className='mt-2 text-sm text-muted-foreground'>
-            This dashboard block could not be loaded.
+            Không thể tải khối thông tin này.
           </p>
         </div>
       ) : (

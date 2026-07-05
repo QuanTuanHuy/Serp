@@ -8,10 +8,10 @@ import lombok.Setter;
 @Setter
 public class TripAttendanceActionRequest extends BaseCommandRequest {
 
-    @NotNull(message = "studentId is required")
+    @NotNull(message = "Vui lòng chọn học sinh")
     private Long studentId;
 
-    @NotNull(message = "routeStopId is required")
+    @NotNull(message = "Vui lòng chọn điểm dừng")
     private Long routeStopId;
 
     private String notes;

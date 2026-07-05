@@ -79,7 +79,7 @@ export function SchoolBusSelect({
   value,
   onChange,
   options,
-  placeholder = 'Select option...',
+  placeholder = 'Chọn giá trị...',
   label,
   searchable = false,
   clearable = false,
@@ -87,8 +87,8 @@ export function SchoolBusSelect({
   size = 'sm',
   fullWidth = false,
   className,
-  searchPlaceholder = 'Search...',
-  emptyText = 'No options found',
+  searchPlaceholder = 'Tìm kiếm...',
+  emptyText = 'Không tìm thấy lựa chọn',
   icon: TriggerIcon,
 }: SchoolBusSelectProps) {
   const [open, setOpen] = React.useState(false);

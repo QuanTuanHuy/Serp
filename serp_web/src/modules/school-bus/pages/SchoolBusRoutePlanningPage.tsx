@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
@@ -57,7 +57,7 @@ type MapEmptyStep = 'pick-school' | 'preview' | 'no-coords' | null;
 function MapEmptyState({ step }: { step: MapEmptyStep }) {
   const steps: { label: string; done: boolean }[] = [
     {
-      label: 'Select a school in Planning Context',
+      label: 'Chọn trường trong ngữ cảnh lập kế hoạch',
       done: step !== 'pick-school',
     },
     {
@@ -387,7 +387,7 @@ export default function SchoolBusRoutePlanningPage() {
       setFitKey((k) => k + 1);
       toast.success('Demand preview loaded');
     } catch {
-      toast.error('Failed to load preview');
+      toast.error('Không thể tải bản xem trước');
     }
   }, [form, previewMutation]);
 
@@ -405,7 +405,7 @@ export default function SchoolBusRoutePlanningPage() {
       toast.success(`Session #${res.data.id} created`);
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
-      toast.error(err?.data?.message || 'Failed to create session');
+      toast.error(err?.data?.message || 'Không thể tạo phiên');
     }
   }, [form, createSession]);
 
@@ -431,7 +431,7 @@ export default function SchoolBusRoutePlanningPage() {
         return true;
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message || 'Failed to create route');
+        toast.error(err?.data?.message || 'Không thể tạo tuyến');
         return false;
       }
     },
@@ -550,7 +550,7 @@ export default function SchoolBusRoutePlanningPage() {
       setPreview(null);
       toast.success('Session cancelled');
     } catch {
-      toast.error('Failed to cancel session');
+      toast.error('Không thể hủy session');
     } finally {
       setCancelDialogOpen(false);
     }
@@ -810,7 +810,7 @@ export default function SchoolBusRoutePlanningPage() {
           <SchoolBusBreadcrumb
             items={[
               { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Dispatch', href: '/school-bus/dispatch' },
+              { label: 'Điều phối', href: '/school-bus/dispatch' },
               { label: 'Route Planning', current: true },
             ]}
           />

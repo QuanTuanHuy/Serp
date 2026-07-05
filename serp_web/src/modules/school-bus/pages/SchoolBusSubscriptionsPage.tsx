@@ -95,7 +95,7 @@ export function SchoolBusSubscriptionsPage() {
 
   const statusOptions = [
     { label: 'All statuses', value: '' },
-    { label: 'Active', value: 'ACTIVE', color: 'green' as const },
+    { label: 'Đang hoạt động', value: 'ACTIVE', color: 'green' as const },
     { label: 'Paused', value: 'PAUSED', color: 'orange' as const },
     { label: 'Stopped', value: 'STOPPED', color: 'red' as const },
     { label: 'Expired', value: 'EXPIRED', color: 'slate' as const },
@@ -137,7 +137,7 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'student',
-      header: 'Student',
+      header: 'Học sinh',
       render: (subscription) => (
         <div className='flex items-center gap-2.5'>
           <div className='flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full bg-violet-50 text-violet-600 border border-violet-100/40'>
@@ -151,7 +151,7 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'school',
-      header: 'School',
+      header: 'Trường học',
       render: (subscription) => (
         <div className='flex items-center gap-2'>
           <GraduationCap className='h-4 w-4 text-slate-400 shrink-0' />
@@ -253,14 +253,14 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       render: (subscription) => (
         <SchoolBusStatusBadge status={subscription.status} />
       ),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: 'Thao tác',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (subscription) => (
@@ -324,7 +324,7 @@ export function SchoolBusSubscriptionsPage() {
 
   return (
     <SchoolBusPageShell
-      title='Subscriptions'
+      title='Đăng ký'
       description={
         access.isParentOnly
           ? 'Track active transport services for your children.'
@@ -335,7 +335,7 @@ export function SchoolBusSubscriptionsPage() {
         {/* Stats */}
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
-            label='Subscriptions'
+            label='Đăng ký'
             value={data?.data?.totalElements || 0}
             hint={
               access.isParentOnly
@@ -346,7 +346,7 @@ export function SchoolBusSubscriptionsPage() {
             tone='info'
           />
           <SchoolBusMetricCard
-            label='Active'
+            label='Đang hoạt động'
             value={
               subscriptions.filter((item) => item.status === 'ACTIVE').length
             }
@@ -394,13 +394,13 @@ export function SchoolBusSubscriptionsPage() {
           emptyIcon={Repeat}
           emptyTitle={
             subscriptions.length === 0
-              ? 'No subscriptions yet'
-              : 'No subscriptions match current filters'
+              ? 'Chưa có đăng ký'
+              : 'Không có đăng ký phù hợp với bộ lọc'
           }
           emptyDescription={
             subscriptions.length === 0
               ? 'Approve a transport request to create subscriptions automatically, or create subscriptions through the API.'
-              : 'Try adjusting your search query or clear the active filters.'
+              : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
           }
         />
       </div>

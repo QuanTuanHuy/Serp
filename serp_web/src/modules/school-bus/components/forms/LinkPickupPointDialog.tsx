@@ -99,7 +99,7 @@ export function LinkPickupPointDialog({
                     className='h-11 rounded-xl w-full text-slate-900 border-slate-200 shadow-sm'
                     value={field.value ? String(field.value) : ''}
                     onChange={(v) => field.onChange(v ? Number(v) : null)}
-                    placeholder='Select pickup point'
+                    placeholder='Chọn điểm đón/trả'
                     options={pickupPoints.map((pp) => ({
                       label: `${pp.name} - ${pp.address} (${pp.usageType || 'N/A'})`,
                       value: String(pp.id),

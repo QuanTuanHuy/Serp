@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -201,7 +201,7 @@ export function SchoolFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit school' : 'Create school'}
+      title={initialData ? 'Chỉnh sửa trường' : 'Tạo trường'}
       description='Manage school identity and contact details for the tenant.'
       stickyFooter
     >
@@ -348,7 +348,7 @@ export function PickupPointFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit pickup point' : 'Create pickup point'}
+      title={initialData ? 'Chỉnh sửa điểm đón/trả' : 'Tạo điểm đón/trả'}
       description='Register boarding locations for request intake and route planning.'
       stickyFooter
     >
@@ -501,7 +501,7 @@ export function DepotFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit depot' : 'Create depot'}
+      title={initialData ? 'Chỉnh sửa bãi xe' : 'Tạo bãi xe'}
       description='Register a fixed bus yard used as a route start or end point.'
     >
       <SimpleForm
@@ -648,7 +648,7 @@ export function ParentFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit parent profile' : 'Create parent profile'}
+      title={initialData ? 'Chỉnh sửa hồ sơ phụ huynh' : 'Tạo hồ sơ phụ huynh'}
       description='Store the school-bus operational profile linked to an account user.'
     >
       <SimpleForm
@@ -671,15 +671,15 @@ export function ParentFormDialog({
             isEditMode
               ? 'Account user is locked after the profile is linked.'
               : accountUsers.length === 0
-                ? 'No users with School Bus module access found. Grant access in Account settings first.'
+                ? 'Chưa có người dùng có quyền truy cập module School Bus. Vui lòng cấp quyền trong Account trước.'
                 : selectedUser
                   ? `Selected: ${selectedUser.email}`
                   : 'This links the parent profile to a platform login account.'
           }
           placeholder={
             isLoadingAccountUsers
-              ? 'Loading account users...'
-              : 'Select account user'
+              ? 'Đang tải người dùng Account...'
+              : 'Chọn người dùng Account'
           }
           options={accountUsers.map((user) => ({
             value: String(user.id),
@@ -839,7 +839,7 @@ export function StudentFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit student' : 'Create student'}
+      title={initialData ? 'Chỉnh sửa học sinh' : 'Tạo học sinh'}
       description='Manage the roster used by transport requests, routing, and attendance.'
       stickyFooter
     >
@@ -937,10 +937,10 @@ export function StudentFormDialog({
             allowEmpty
             emptyLabel={
               isFetching
-                ? 'Loading pickup points...'
+                ? 'Đang tải điểm đón/trả...'
                 : noSchoolSelected
-                  ? 'Select a school first'
-                  : 'No pickup point'
+                  ? 'Chọn trường first'
+                  : 'Chưa có điểm đón/trả'
             }
             options={pickupOptions}
             disabled={noSchoolSelected || isFetching}
@@ -952,10 +952,10 @@ export function StudentFormDialog({
             allowEmpty
             emptyLabel={
               isFetching
-                ? 'Loading drop-off points...'
+                ? 'Đang tải điểm trả...'
                 : noSchoolSelected
-                  ? 'Select a school first'
-                  : 'No drop-off point'
+                  ? 'Chọn trường first'
+                  : 'Chưa có điểm trả'
             }
             options={dropoffOptions}
             disabled={noSchoolSelected || isFetching}
@@ -1085,7 +1085,7 @@ export function BusFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit bus' : 'Create bus'}
+      title={initialData ? 'Chỉnh sửa xe' : 'Tạo xe'}
       description='Maintain the fleet inventory used for assignment.'
     >
       <SimpleForm
@@ -1109,13 +1109,13 @@ export function BusFormDialog({
           disabled={isLoadingBusTypes || busTypeOptions.length === 0}
           description={
             busTypeOptions.length === 0
-              ? 'No bus types available from backend.'
+              ? 'Chưa có xe types available from backend.'
               : selectedBusType
                 ? `${selectedBusType.description} - capacity ${selectedBusType.value || 'custom'}`
-                : 'Select a bus type.'
+                : 'Chọn loại xe.'
           }
           placeholder={
-            isLoadingBusTypes ? 'Loading bus types...' : 'Select bus type'
+            isLoadingBusTypes ? 'Đang tải loại xe...' : 'Chọn loại xe'
           }
           options={busTypeOptions.map((busType) => ({
             value: busType.code,
@@ -1143,7 +1143,7 @@ export function BusFormDialog({
           name='homeDepotId'
           label='Home depot'
           allowEmpty
-          emptyLabel='No home depot'
+          emptyLabel='Chưa có bãi xe mặc định'
           options={depots.map((depot) => ({
             value: String(depot.id),
             label: `${depot.name}${depot.code ? ` (${depot.code})` : ''}`,
@@ -1236,7 +1236,7 @@ export function DriverFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit driver' : 'Create driver'}
+      title={initialData ? 'Chỉnh sửa tài xế' : 'Tạo tài xế'}
       description='Manage driver availability.'
     >
       <SimpleForm
@@ -1259,15 +1259,15 @@ export function DriverFormDialog({
             isEditMode
               ? 'Account user is locked after the driver profile is linked.'
               : accountUsers.length === 0
-                ? 'No users with School Bus module access found. Grant access in Account settings first.'
+                ? 'Chưa có người dùng có quyền truy cập module School Bus. Vui lòng cấp quyền trong Account trước.'
                 : selectedUser
                   ? `Selected: ${selectedUser.email}`
                   : 'Choose an existing user account if this driver can log in.'
           }
           placeholder={
             isLoadingAccountUsers
-              ? 'Loading account users...'
-              : 'Select account user'
+              ? 'Đang tải người dùng Account...'
+              : 'Chọn người dùng Account'
           }
           options={accountUsers.map((user) => ({
             value: String(user.id),
@@ -1367,7 +1367,7 @@ export function AttendantFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit attendant' : 'Create attendant'}
+      title={initialData ? 'Chỉnh sửa phụ xe' : 'Tạo phụ xe'}
       description='Manage on-board support staff for route execution.'
     >
       <SimpleForm
@@ -1390,15 +1390,15 @@ export function AttendantFormDialog({
             isEditMode
               ? 'Account user is locked after the attendant profile is linked.'
               : accountUsers.length === 0
-                ? 'No users with School Bus module access found. Grant access in Account settings first.'
+                ? 'Chưa có người dùng có quyền truy cập module School Bus. Vui lòng cấp quyền trong Account trước.'
                 : selectedUser
                   ? `Selected: ${selectedUser.email}`
                   : 'Choose an existing user account if this attendant can log in.'
           }
           placeholder={
             isLoadingAccountUsers
-              ? 'Loading account users...'
-              : 'Select account user'
+              ? 'Đang tải người dùng Account...'
+              : 'Chọn người dùng Account'
           }
           options={accountUsers.map((user) => ({
             value: String(user.id),
@@ -1472,7 +1472,7 @@ function SimpleForm({
               className={schoolBusUi.primaryButton}
               disabled={isLoading}
             >
-              {isLoading ? 'Saving...' : 'Save'}
+              {isLoading ? 'Đang lưu...' : 'Lưu'}
             </Button>
           </div>
         </form>
@@ -1499,7 +1499,7 @@ function SimpleForm({
             className={schoolBusUi.primaryButton}
             disabled={isLoading}
           >
-            {isLoading ? 'Saving...' : 'Save'}
+            {isLoading ? 'Đang lưu...' : 'Lưu'}
           </Button>
         </div>
       </form>

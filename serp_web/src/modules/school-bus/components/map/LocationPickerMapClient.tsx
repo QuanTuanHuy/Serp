@@ -156,7 +156,7 @@ export default function LocationPickerMapClient({
                         {marker.name}
                       </p>
                       <p className='text-xs text-slate-500'>
-                        {marker.address || 'No address'}
+                        {marker.address || 'Chưa có địa chỉ'}
                       </p>
                     </div>
                   </Popup>
@@ -190,11 +190,11 @@ export default function LocationPickerMapClient({
             <div className='rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600'>
               <p>
                 Latitude:{' '}
-                {selectedLocation ? selectedLocation[0].toFixed(6) : 'Not set'}
+                {selectedLocation ? selectedLocation[0].toFixed(6) : 'Chưa thiết lập'}
               </p>
               <p>
                 Longitude:{' '}
-                {selectedLocation ? selectedLocation[1].toFixed(6) : 'Not set'}
+                {selectedLocation ? selectedLocation[1].toFixed(6) : 'Chưa thiết lập'}
               </p>
             </div>
           </div>

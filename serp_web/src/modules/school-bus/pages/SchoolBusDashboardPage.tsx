@@ -116,7 +116,7 @@ export function SchoolBusDashboardPage() {
           <SchoolBusBreadcrumb
             items={[
               { label: 'School Bus Ops', href: '/school-bus/dashboard' },
-              { label: 'Dashboard', current: true },
+              { label: 'Tổng quan', current: true },
             ]}
           />
         }

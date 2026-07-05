@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -40,7 +40,7 @@ import { schoolBusUi } from '../theme';
 
 const statusMap: Record<string, { label: string; className: string }> = {
   CREATED: {
-    label: 'Created',
+    label: 'Đã tạo',
     className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
   },
   IN_PROGRESS: {
@@ -48,12 +48,12 @@ const statusMap: Record<string, { label: string; className: string }> = {
     className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50',
   },
   COMPLETED: {
-    label: 'Completed',
+    label: 'Hoàn thành',
     className:
       'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
   },
   CANCELLED: {
-    label: 'Cancelled',
+    label: 'Đã hủy',
     className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50',
   },
   PAUSED: {
@@ -83,10 +83,10 @@ const renderTripStatus = (status: string) => {
 const formatLocationType = (type?: string | null) => {
   if (!type) return '';
   const t = type.toUpperCase();
-  if (t === 'SCHOOL') return 'School';
-  if (t === 'DEPOT') return 'Depot';
-  if (t === 'PICKUP') return 'Pickup';
-  if (t === 'DROPOFF') return 'Dropoff';
+  if (t === 'SCHOOL') return 'Trường học';
+  if (t === 'DEPOT') return 'Bãi xe';
+  if (t === 'PICKUP') return 'Điểm đón';
+  if (t === 'DROPOFF') return 'Điểm trả';
   return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 };
 
@@ -221,10 +221,10 @@ export function SchoolBusTripsPage() {
 
   const statusOptions = [
     { label: 'All statuses', value: '' },
-    { label: 'Created', value: 'CREATED', color: 'slate' as const },
+    { label: 'Đã tạo', value: 'CREATED', color: 'slate' as const },
     { label: 'In progress', value: 'IN_PROGRESS', color: 'blue' as const },
-    { label: 'Completed', value: 'COMPLETED', color: 'green' as const },
-    { label: 'Cancelled', value: 'CANCELLED', color: 'red' as const },
+    { label: 'Hoàn thành', value: 'COMPLETED', color: 'green' as const },
+    { label: 'Đã hủy', value: 'CANCELLED', color: 'red' as const },
   ];
 
   const directionOptions = [
@@ -249,7 +249,7 @@ export function SchoolBusTripsPage() {
   const tripColumns: SchoolBusTableColumn<any>[] = [
     {
       key: 'trip',
-      header: 'Trip',
+      header: 'Chuyến xe',
       className: 'pl-6 font-semibold text-slate-900',
       headerClassName: 'pl-6',
       render: (trip) => (
@@ -271,7 +271,7 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'route',
-      header: 'Route',
+      header: 'Tuyến',
       render: (trip) => (
         <div className='flex flex-col min-w-0'>
           <span className='font-bold text-slate-900 truncate'>
@@ -455,7 +455,7 @@ export function SchoolBusTripsPage() {
               </div>
             ) : (
               <span className='text-[10px] text-slate-400 italic'>
-                No stops
+                Chưa có điểm dừng
               </span>
             )}
             {trip.nextStopName && (
@@ -472,7 +472,7 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       render: (trip) => (
         <div className='space-y-1.5'>
           {renderTripStatus(trip.status)}
@@ -506,7 +506,7 @@ export function SchoolBusTripsPage() {
                 asChild
               >
                 <Link href={`/school-bus/trips/${trip.id}`}>
-                  {access.isParentOnly ? 'Track Trip' : 'View details'}
+                  {access.isParentOnly ? 'Theo dõi chuyến' : 'Xem chi tiết'}
                 </Link>
               </Button>
             </div>
@@ -644,7 +644,7 @@ export function SchoolBusTripsPage() {
               className='rounded-full h-8 text-xs font-semibold px-3'
               disabled
             >
-              No pending stop
+              Không có điểm chờ xử lý
             </Button>
           </div>
         );
@@ -705,7 +705,7 @@ export function SchoolBusTripsPage() {
           items={
             access.isParentOnly
               ? [
-                  { label: 'School Bus', href: '/school-bus/dashboard' },
+                  { label: 'Xe bus trường học', href: '/school-bus/dashboard' },
                   { label: 'Student Trip Tracking', current: true },
                 ]
               : [
@@ -730,7 +730,7 @@ export function SchoolBusTripsPage() {
         {/* Metrics row */}
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
-            label={access.isParentOnly ? 'Total Tracking Trips' : 'Trips'}
+            label={access.isParentOnly ? 'Total Tracking Trips' : 'Chuyến xe'}
             value={data?.data?.totalElements || 0}
             hint={
               access.isParentOnly
@@ -752,7 +752,7 @@ export function SchoolBusTripsPage() {
             tone='info'
           />
           <SchoolBusMetricCard
-            label='Completed'
+            label='Hoàn thành'
             value={trips.filter((trip) => trip.status === 'COMPLETED').length}
             hint={
               access.isParentOnly
@@ -785,16 +785,16 @@ export function SchoolBusTripsPage() {
           emptyTitle={
             trips.length === 0
               ? access.isParentOnly
-                ? 'No trips found'
-                : 'No trips yet'
-              : 'No trips match current filters'
+                ? 'Không tìm thấy chuyến'
+                : 'Chưa có chuyến'
+              : 'Không có chuyến phù hợp với bộ lọc'
           }
           emptyDescription={
             trips.length === 0
               ? access.isParentOnly
                 ? 'There are no active or scheduled trips for your children.'
-                : 'Create a trip from a dispatched route before execution can start.'
-              : 'Try adjusting your search query or clear the active filters.'
+                : 'Hãy tạo chuyến từ tuyến đã điều phối trước khi vận hành.'
+              : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
           }
         />
       </div>

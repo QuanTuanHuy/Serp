@@ -96,7 +96,7 @@ export function PlanningSessionPanel({
               value={activeSession.totalUnassignedStudents}
               warn={activeSession.totalUnassignedStudents > 0}
             />
-            <StatItem label='Routes' value={activeSession.totalRoutes} />
+            <StatItem label='Tuyến' value={activeSession.totalRoutes} />
             <StatItem label='ID' value={`#${activeSession.id}`} />
             <StatItem label='Stops' value={activeSession.totalStops} />
           </div>

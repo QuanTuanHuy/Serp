@@ -127,7 +127,7 @@ export function MapToolbar({
             <ToolBtn
               onClick={onFitAll}
               icon={<Navigation className='h-3.5 w-3.5' />}
-              label='Fit All'
+              label='Hiển thị tất cả'
               title='Zoom to fit all markers'
               disabled={!canFitAll}
             />
@@ -140,7 +140,7 @@ export function MapToolbar({
               title={
                 canFitRoute
                   ? `Zoom to fit ${fitRouteLabel.toLowerCase()}`
-                  : `Select an item first to use ${fitRouteLabel}`
+                  : `Chọn một mục trước để dùng ${fitRouteLabel}`
               }
               disabled={!canFitRoute}
             />

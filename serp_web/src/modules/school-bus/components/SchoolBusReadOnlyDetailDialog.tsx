@@ -46,7 +46,7 @@ export function SchoolBusReadOnlyDetailDialog({
       {isLoading ? (
         <div className='flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground'>
           <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-          Loading detail...
+          Đang tải chi tiết...
         </div>
       ) : isError ? (
         <div className='rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive'>

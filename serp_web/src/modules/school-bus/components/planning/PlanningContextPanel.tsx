@@ -56,7 +56,7 @@ export function PlanningContextPanel({
             Planning Context
           </h3>
           <p className='text-[11px] text-slate-400 mt-0.5'>
-            Select parameters to scope the planning session.
+            Chọn tham số để xác định phạm vi phiên lập kế hoạch.
           </p>
         </div>
         {onNewSession && (
@@ -80,7 +80,7 @@ export function PlanningContextPanel({
           onChange={(val) =>
             onFormChange((f) => ({ ...f, schoolId: val || '' }))
           }
-          placeholder='- Select school -'
+          placeholder='- Chọn trường -'
           options={schools.map((s) => ({
             label: s.label,
             value: String(s.id),

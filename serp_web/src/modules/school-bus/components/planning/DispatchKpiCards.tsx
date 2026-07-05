@@ -48,7 +48,7 @@ export function DispatchKpiCards({
         bgColor={unassigned > 0 ? 'bg-amber-50/30' : undefined}
       />
       <KpiItem
-        label='Routes'
+        label='Tuyến'
         value={routes}
         icon={Route}
         color='text-blue-600'

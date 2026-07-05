@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import {
@@ -214,7 +214,7 @@ export function SchoolBusSchoolDetailPage({
       setSchoolDialogOpen(false);
       refetchSchool();
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to update school');
+      toast.error(error?.data?.message || 'Không thể cập nhật trường');
     }
   };
 
@@ -228,7 +228,7 @@ export function SchoolBusSchoolDetailPage({
       setLinkDialogOpen(false);
       refetchAll();
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to link pickup point');
+      toast.error(error?.data?.message || 'Không thể liên kết điểm đón/trả');
     }
   };
 
@@ -245,7 +245,7 @@ export function SchoolBusSchoolDetailPage({
       setDeleteTarget(null);
       refetchAll();
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Delete operation failed');
+      toast.error(error?.data?.message || 'Không thể thực hiện thao tác xóa');
     }
   };
 
@@ -316,7 +316,7 @@ export function SchoolBusSchoolDetailPage({
       <div className='flex h-screen items-center justify-center bg-slate-50 text-slate-500'>
         <div className='flex flex-col items-center gap-3'>
           <div className='h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#C81E3A]' />
-          <p className='text-sm font-semibold'>Loading school workspace...</p>
+          <p className='text-sm font-semibold'>Đang tải không gian trường...</p>
         </div>
       </div>
     );
@@ -570,7 +570,7 @@ export function SchoolBusSchoolDetailPage({
                   </div>
                   <div>
                     <p className='text-sm font-semibold text-slate-600'>
-                      No map markers yet
+                      Chưa có điểm trên bản đồ
                     </p>
                     <p className='mt-1 max-w-[240px] text-xs leading-5 text-slate-400'>
                       Map markers will appear once coordinates are configured
@@ -585,7 +585,7 @@ export function SchoolBusSchoolDetailPage({
             onFitRoute={handleFitSelected}
             canFitAll={hasMapData}
             canFitRoute={!!cleanSchoolId || !!selectedPickupPointId}
-            fitRouteLabel='Fit Selected'
+            fitRouteLabel='Thu phóng tuyến đang chọn'
           />
         </div>
       </div>
@@ -633,7 +633,7 @@ export function SchoolBusSchoolDetailPage({
                   { label: 'Drop-off only', value: 'DROPOFF' },
                   { label: 'Pickup & Drop-off', value: 'PICKUP_DROPOFF' },
                 ]}
-                placeholder='Select usage type'
+                placeholder='Chọn loại sử dụng'
                 fullWidth
                 className='border-slate-200 hover:border-slate-350 rounded-lg text-xs'
               />
@@ -670,7 +670,7 @@ export function SchoolBusSchoolDetailPage({
               <Link2 className='h-10 w-10 text-slate-300 animate-pulse' />
               <div>
                 <p className='text-sm font-semibold text-slate-600'>
-                  No linked pickup points found
+                  Chưa có điểm đón/trả được liên kết
                 </p>
                 <p className='text-xs text-slate-400 max-w-xs mt-1'>
                   Connect pickup points from the network database to establish
@@ -708,7 +708,7 @@ export function SchoolBusSchoolDetailPage({
                             )}
                           </div>
                           <p className='text-xs text-slate-400 mt-0.5 max-w-xl truncate'>
-                            {lp.pickupPointAddress || 'No address'}
+                            {lp.pickupPointAddress || 'Chưa có địa chỉ'}
                           </p>
                         </div>
                       </div>
@@ -730,7 +730,7 @@ export function SchoolBusSchoolDetailPage({
                           </span>
                         ) : (
                           <span className='inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/15'>
-                            <AlertTriangle className='h-3 w-3' /> No coords
+                            <AlertTriangle className='h-3 w-3' /> Chưa có tọa độ
                           </span>
                         )}
 
@@ -794,7 +794,7 @@ export function SchoolBusSchoolDetailPage({
           onOpenChange={(open) => {
             if (!open) setDeleteTarget(null);
           }}
-          title={deleteTarget?.title || 'Delete confirmation'}
+          title={deleteTarget?.title || 'Xác nhận xóa'}
           description={
             deleteTarget?.description || 'This operation is permanent.'
           }

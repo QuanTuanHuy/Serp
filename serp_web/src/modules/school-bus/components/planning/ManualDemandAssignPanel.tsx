@@ -50,7 +50,7 @@ export function ManualDemandAssignPanel({
       setTimeout(() => setLastAssigned(null), 2000);
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
-      setError(err?.data?.message || 'Failed to assign student');
+      setError(err?.data?.message || 'Không thể gán học sinh');
     } finally {
       setLoadingStudentId(null);
     }
@@ -61,7 +61,7 @@ export function ManualDemandAssignPanel({
       <div className='rounded-2xl border border-slate-100 bg-slate-50/40 px-4 py-6 text-center'>
         <UserPlus className='mx-auto mb-2 h-8 w-8 text-slate-300' />
         <p className='text-sm font-medium text-slate-500'>
-          Select a route to assign students
+          Chọn tuyến to assign students
         </p>
         <p className='mt-1 text-xs text-slate-400'>
           Click a route card above to select it
@@ -124,7 +124,7 @@ export function ManualDemandAssignPanel({
       <SchoolBusSection title='Add Students'>
         <div className='flex items-center gap-2 py-8 justify-center text-slate-500'>
           <Loader2 className='h-4 w-4 animate-spin text-blue-600' />
-          <p className='text-xs font-semibold'>Loading assignable demand...</p>
+          <p className='text-xs font-semibold'>Đang tải nhu cầu có thể gán...</p>
         </div>
       </SchoolBusSection>
     );
@@ -150,7 +150,7 @@ export function ManualDemandAssignPanel({
       <SchoolBusSection title='Add Students'>
         <div className='rounded-2xl border border-slate-100 bg-slate-50/40 px-4 py-6 text-center'>
           <p className='text-xs text-slate-400'>
-            No eligible students for this session.
+            Không có học sinh đủ điều kiện cho phiên này.
           </p>
         </div>
       </SchoolBusSection>
@@ -181,7 +181,7 @@ export function ManualDemandAssignPanel({
         <div className='rounded-2xl border border-amber-100 bg-amber-50/10 px-4 py-6 text-center'>
           <AlertCircle className='mx-auto mb-2 h-8 w-8 text-amber-500' />
           <p className='text-sm font-bold text-amber-800'>
-            No assignable students for this route.
+            Không có học sinh có thể gán cho tuyến này.
           </p>
           <p className='mt-1.5 text-xs text-slate-500 leading-normal px-2'>
             There are unassigned students, but none can be added to this route

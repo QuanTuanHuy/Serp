@@ -40,7 +40,7 @@ export function SchoolBusMapWorkspace({
   onFitRoute,
   canFitAll,
   canFitRoute,
-  fitRouteLabel = 'Fit Selected',
+  fitRouteLabel = 'Thu phóng tuyến đang chọn',
   compact,
   flat = false,
   isExpanded,

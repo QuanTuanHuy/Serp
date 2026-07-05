@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import {
@@ -45,7 +45,6 @@ import {
   useGetAllActiveSchoolPickupLinksQuery,
   useGetDepotsQuery,
   useGetPickupPointsQuery,
-  useGetSchoolByIdQuery,
   useGetSchoolPickupPointsQuery,
   useGetSchoolsQuery,
   useLinkSchoolPickupPointMutation,
@@ -62,7 +61,6 @@ import { SchoolBusEmptyState } from '../components/SchoolBusEmptyState';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
 import { SchoolBusPaginationBar } from '../components/SchoolBusPaginationBar';
 import { SchoolBusPageShell } from '../components/SchoolBusPageShell';
-import { SchoolBusReadOnlyDetailDialog } from '../components/SchoolBusReadOnlyDetailDialog';
 import { SchoolBusScrollableTable } from '../components/SchoolBusScrollableTable';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
@@ -187,7 +185,7 @@ function NetworkDetailPanel({
         </div>
         <div className='space-y-1.5'>
           <p className='text-sm font-semibold text-slate-800'>
-            Select school or pickup
+            Chọn trường hoặc điểm đón/trả
           </p>
           <p className='max-w-[240px] text-xs leading-5 text-slate-400'>
             Click a marker on the map or a list item to inspect network details.
@@ -228,7 +226,7 @@ function NetworkDetailPanel({
             <div className='bg-slate-50/60 border border-slate-100 rounded-2xl p-4 space-y-3'>
               <DetailField label='Code' value={selectedSchool.code || '-'} />
               <DetailField
-                label='Status'
+                label='Trạng thái'
                 value={
                   selectedSchool.isActive ? (
                     <span className='inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10'>
@@ -260,7 +258,7 @@ function NetworkDetailPanel({
                   typeof selectedSchool.latitude === 'number' &&
                   typeof selectedSchool.longitude === 'number'
                     ? `${selectedSchool.latitude.toFixed(5)}, ${selectedSchool.longitude.toFixed(5)}`
-                    : 'Warning: Not set'
+                    : 'Warning: Chưa thiết lập'
                 }
                 warn={typeof selectedSchool.latitude !== 'number'}
               />
@@ -293,7 +291,7 @@ function NetworkDetailPanel({
             className='w-full justify-start border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'
             onClick={() => onEditSchool(selectedSchool)}
           >
-            <Pencil className='mr-2.5 h-3.5 w-3.5 text-slate-400' /> Edit school
+            <Pencil className='mr-2.5 h-3.5 w-3.5 text-slate-400' /> Chỉnh sửa trường
           </Button>
           <Button
             size='sm'
@@ -397,7 +395,7 @@ function NetworkDetailPanel({
                   typeof selectedPickup.latitude === 'number' &&
                   typeof selectedPickup.longitude === 'number'
                     ? `${selectedPickup.latitude.toFixed(5)}, ${selectedPickup.longitude.toFixed(5)}`
-                    : 'Warning: Not set'
+                    : 'Warning: Chưa thiết lập'
                 }
                 warn={typeof selectedPickup.latitude !== 'number'}
               />
@@ -443,7 +441,7 @@ export function SchoolBusSchoolsPage() {
           <div className='flex flex-col items-center gap-3'>
             <div className='h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#C81E3A]' />
             <p className='text-sm font-semibold'>
-              Loading schools workspace...
+              Đang tải không gian trường học...
             </p>
           </div>
         </div>
@@ -528,22 +526,11 @@ function SchoolBusSchoolsPageContent() {
     sortBy: 'name',
     sortDirection: 'ASC',
   });
-  const [viewingSchoolId, setViewingSchoolId] = React.useState<number | null>(
-    null
-  );
-
   const {
     data,
     isLoading: loadingSchools,
     refetch: refetchSchools,
   } = useGetSchoolsQuery(schoolsPagination.params, SCHOOL_BUS_PAGE_QUERY_OPTIONS);
-  const {
-    data: viewingSchoolData,
-    isFetching: loadingViewingSchool,
-    isError: viewingSchoolError,
-  } = useGetSchoolByIdQuery(viewingSchoolId || 0, {
-    skip: !viewingSchoolId,
-  });
   const { data: allSchoolsData, refetch: refetchAllSchools } =
     useGetSchoolsQuery(
       { ...SCHOOL_BUS_OPTION_QUERY, sortBy: 'name' },
@@ -587,7 +574,6 @@ function SchoolBusSchoolsPageContent() {
   const [unlinkPickupPoint] = useUnlinkSchoolPickupPointMutation();
 
   const schools = getPageItems(data?.data);
-  const viewingSchool = viewingSchoolData?.data || null;
   const allSchools = getPageItems(allSchoolsData?.data);
   const pickupPoints = getPageItems(pickupPointsData?.data);
   const depots = getPageItems(depotsData?.data);
@@ -732,7 +718,7 @@ function SchoolBusSchoolsPageContent() {
       setSchoolDialogOpen(false);
       setEditingSchool(null);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save school');
+      toast.error(error?.data?.message || 'Không thể lưu trường');
     }
   };
 
@@ -748,7 +734,7 @@ function SchoolBusSchoolsPageContent() {
       setPickupDialogOpen(false);
       setEditingPickup(null);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save pickup point');
+      toast.error(error?.data?.message || 'Không thể lưu điểm đón/trả');
     }
   };
 
@@ -766,7 +752,7 @@ function SchoolBusSchoolsPageContent() {
       }
       setDeleteTarget(null);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Delete failed');
+      toast.error(error?.data?.message || 'Không thể xóa');
     }
   };
 
@@ -780,7 +766,7 @@ function SchoolBusSchoolsPageContent() {
       toast.success(r.message || 'Pickup point linked');
       setLinkDialogOpen(false);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to link pickup point');
+      toast.error(error?.data?.message || 'Không thể liên kết điểm đón/trả');
     }
   };
 
@@ -793,7 +779,7 @@ function SchoolBusSchoolsPageContent() {
       }).unwrap();
       toast.success(r.message || 'Pickup point unlinked');
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to unlink pickup point');
+      toast.error(error?.data?.message || 'Không thể hủy liên kết điểm đón/trả');
     }
   };
 
@@ -867,7 +853,7 @@ function SchoolBusSchoolsPageContent() {
             <SchoolBusBreadcrumb
               items={[
                 { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-                { label: 'Schools', current: true },
+                { label: 'Trường học', current: true },
               ]}
             />
           }
@@ -900,7 +886,7 @@ function SchoolBusSchoolsPageContent() {
             {/* Stats row */}
             <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
               <SchoolBusMetricCard
-                label='Schools'
+                label='Trường học'
                 value={allSchools.length}
                 icon={GraduationCap}
                 tone='school'
@@ -969,7 +955,7 @@ function SchoolBusSchoolsPageContent() {
                     <div className='pb-2'>
                       {filteredSchools.length === 0 ? (
                         <p className='px-3.5 py-3 text-xs text-slate-400 italic'>
-                          No schools found
+                          Không tìm thấy trường
                         </p>
                       ) : (
                         filteredSchools.map((s) => {
@@ -1003,7 +989,7 @@ function SchoolBusSchoolsPageContent() {
                                 )}
                               </div>
                               <span className='truncate text-[10px] text-slate-400 mt-0.5'>
-                                {s.address || 'No address'}
+                                {s.address || 'Chưa có địa chỉ'}
                               </span>
                             </button>
                           );
@@ -1025,7 +1011,7 @@ function SchoolBusSchoolsPageContent() {
                     <div className='pb-2'>
                       {filteredPickups.length === 0 ? (
                         <p className='px-3.5 py-3 text-xs text-slate-400 italic'>
-                          No pickup points found
+                          Chưa có điểm đón/trảs found
                         </p>
                       ) : (
                         filteredPickups.map((p) => {
@@ -1053,7 +1039,7 @@ function SchoolBusSchoolsPageContent() {
                               type='button'
                               onClick={() => {
                                 setSelectedPickupPointId(p.id);
-                                // Select school of this pickup if it exists in the linked list
+                                // Chọn trường of this pickup if it exists in the linked list
                                 const schoolLink = allLinks.find(
                                   (l) => l.pickupPointId === p.id
                                 );
@@ -1085,7 +1071,7 @@ function SchoolBusSchoolsPageContent() {
                                 )}
                               </div>
                               <span className='truncate text-[10px] text-slate-400 mt-0.5'>
-                                {p.address || 'No address'}
+                                {p.address || 'Chưa có địa chỉ'}
                               </span>
                             </button>
                           );
@@ -1130,7 +1116,7 @@ function SchoolBusSchoolsPageContent() {
                       </div>
                       <div className='text-center'>
                         <p className='text-sm font-semibold text-slate-600'>
-                          No map data yet
+                          Chưa có dữ liệu bản đồ
                         </p>
                         <p className='mt-1 max-w-[240px] text-xs leading-5 text-slate-400'>
                           Add coordinates to schools, depots, or pickup points
@@ -1145,7 +1131,7 @@ function SchoolBusSchoolsPageContent() {
                 onFitRoute={handleFitSelected}
                 canFitAll={canFitAll}
                 canFitRoute={canFitSelected}
-                fitRouteLabel='Fit Selected'
+                fitRouteLabel='Thu phóng tuyến đang chọn'
                 panel={
                   <NetworkDetailPanel
                     selectedSchool={selectedSchoolObj}
@@ -1188,9 +1174,9 @@ function SchoolBusSchoolsPageContent() {
           setSelectedPickupPointId(null);
         }}
         options={allSchools.map((s) => ({ label: s.name, value: s.id }))}
-        placeholder='Select school...'
+        placeholder='Chọn trường...'
         searchPlaceholder='Search school by name...'
-        emptyText='No schools found'
+        emptyText='Không tìm thấy trường'
         clearable
         searchable
         fullWidth
@@ -1203,7 +1189,7 @@ function SchoolBusSchoolsPageContent() {
   const schoolColumns: SchoolBusTableColumn<SchoolBusSchool>[] = [
     {
       key: 'school',
-      header: 'School',
+      header: 'Trường học',
       className: 'pl-6',
       headerClassName: 'pl-6',
       render: (school) => {
@@ -1251,7 +1237,7 @@ function SchoolBusSchoolsPageContent() {
                   className='text-[11px] text-slate-400 mt-0.5 max-w-xs truncate'
                   title={school.address || undefined}
                 >
-                  {school.address || 'No address'}
+                  {school.address || 'Chưa có địa chỉ'}
                 </p>
               </button>
             </div>
@@ -1344,7 +1330,7 @@ function SchoolBusSchoolsPageContent() {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       render: (school) => (
         <SchoolBusStatusBadge
           status={school.isActive ? 'ACTIVE' : 'INACTIVE'}
@@ -1353,7 +1339,7 @@ function SchoolBusSchoolsPageContent() {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: 'Thao tác',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (school) => (
@@ -1363,7 +1349,7 @@ function SchoolBusSchoolsPageContent() {
             variant='outline'
             className='h-8 w-8 rounded-lg border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'
             onClick={() => {
-              setViewingSchoolId(school.id);
+              router.push(`/school-bus/schools/${school.id}?view=${viewMode}`);
             }}
           >
             <Eye className='h-3.5 w-3.5' />
@@ -1440,11 +1426,11 @@ function SchoolBusSchoolsPageContent() {
                     className='text-[11px] text-slate-400 truncate max-w-xs'
                     title={pp.address || undefined}
                   >
-                    {pp.address || 'No address'}
+                    {pp.address || 'Chưa có địa chỉ'}
                   </span>
                   {!hasCoords && (
                     <span className='inline-flex items-center gap-1 rounded-md bg-amber-50 px-1 py-0.2 text-[8px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/10'>
-                      No coords
+                      Chưa có tọa độ
                     </span>
                   )}
                 </div>
@@ -1468,7 +1454,7 @@ function SchoolBusSchoolsPageContent() {
     },
     {
       key: 'school',
-      header: 'Schools',
+      header: 'Trường học',
       render: (pp) => {
         const schools = pp.schools || [];
         if (schools.length === 0)
@@ -1545,7 +1531,7 @@ function SchoolBusSchoolsPageContent() {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: 'Thao tác',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (pp) => (
@@ -1604,8 +1590,8 @@ function SchoolBusSchoolsPageContent() {
           onChange={(val) => setSchoolStatusFilter(val || 'ALL')}
           options={[
             { label: 'All status', value: 'ALL' },
-            { label: 'Active', value: 'ACTIVE' },
-            { label: 'Inactive', value: 'INACTIVE' },
+            { label: 'Đang hoạt động', value: 'ACTIVE' },
+            { label: 'Ngừng hoạt động', value: 'INACTIVE' },
           ]}
         />
       </div>
@@ -1745,8 +1731,8 @@ function SchoolBusSchoolsPageContent() {
       {!selectedSchoolId ? (
         <div className='px-6 py-8'>
           <SchoolBusEmptyState
-            title='No school selected'
-            description='Select a school from the dropdown above to manage its linked pickup points.'
+            title='Chưa chọn trường'
+            description='Chọn trường từ danh sách phía trên để quản lý các điểm đón/trả đã liên kết.'
             icon={Link2}
             className='min-h-[220px]'
           />
@@ -1756,13 +1742,13 @@ function SchoolBusSchoolsPageContent() {
           <SchoolBusEmptyState
             title={
               linkedPickupPoints.length === 0
-                ? 'No pickup points linked yet'
-                : 'No matching linked pickup points'
+                ? 'Chưa có điểm đón/trảs linked yet'
+                : 'Không có điểm liên kết phù hợp'
             }
             description={
               linkedPickupPoints.length === 0
                 ? 'Link a pickup point to this school to make request planning actionable.'
-                : 'Try adjusting your search criteria.'
+                : 'Hãy thử điều chỉnh tiêu chí tìm kiếm.'
             }
             icon={Link2}
             className='min-h-[220px]'
@@ -1790,7 +1776,7 @@ function SchoolBusSchoolsPageContent() {
                         className='text-[11px] text-slate-400 mt-0.5 truncate max-w-md'
                         title={link.pickupPointAddress || undefined}
                       >
-                        {link.pickupPointAddress || 'No address'}
+                        {link.pickupPointAddress || 'Chưa có địa chỉ'}
                       </p>
                     </div>
                   </div>
@@ -1850,7 +1836,7 @@ function SchoolBusSchoolsPageContent() {
           <SchoolBusBreadcrumb
             items={[
               { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Schools', current: true },
+              { label: 'Trường học', current: true },
             ]}
           />
         }
@@ -1883,7 +1869,7 @@ function SchoolBusSchoolsPageContent() {
           {/* Stats */}
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
             <SchoolBusMetricCard
-              label='Schools'
+              label='Trường học'
               value={schools.length}
               icon={GraduationCap}
               tone='school'
@@ -1911,7 +1897,7 @@ function SchoolBusSchoolsPageContent() {
           {/* Unified Table view */}
           <SchoolBusDataTable<any>
             tabs={[
-              { key: 'schools', label: 'Schools', count: schools.length },
+              { key: 'schools', label: 'Trường học', count: schools.length },
               {
                 key: 'pickup-points',
                 label: 'Pickup points',
@@ -1993,44 +1979,6 @@ function SchoolBusSchoolsPageContent() {
           isLoading={creatingPickup || updatingPickup}
           onSubmit={handleSavePickupPoint}
         />
-        <SchoolBusReadOnlyDetailDialog
-          open={Boolean(viewingSchoolId)}
-          onOpenChange={(open) => {
-            if (!open) setViewingSchoolId(null);
-          }}
-          title='School detail'
-          description='Read-only school information loaded from the detail API.'
-          isLoading={loadingViewingSchool}
-          isError={viewingSchoolError}
-          sections={[
-            {
-              title: 'School information',
-              fields: [
-                { label: 'School code', value: viewingSchool?.code },
-                { label: 'School name', value: viewingSchool?.name },
-                {
-                  label: 'Status',
-                  value:
-                    viewingSchool?.isActive === false ? 'Inactive' : 'Active',
-                },
-                { label: 'Contact phone', value: viewingSchool?.contactPhone },
-                { label: 'Contact email', value: viewingSchool?.contactEmail },
-                {
-                  label: 'Address',
-                  value: viewingSchool?.address,
-                  fullWidth: true,
-                },
-              ],
-            },
-            {
-              title: 'Coordinates',
-              fields: [
-                { label: 'Latitude', value: viewingSchool?.latitude },
-                { label: 'Longitude', value: viewingSchool?.longitude },
-              ],
-            },
-          ]}
-        />
         <SchoolBusDeleteDialog
           open={Boolean(deleteTarget)}
           onOpenChange={(open) => {
@@ -2038,8 +1986,8 @@ function SchoolBusSchoolsPageContent() {
           }}
           title={
             deleteTarget?.type === 'school'
-              ? 'Delete school'
-              : 'Delete pickup point'
+              ? 'Xóa trường'
+              : 'Xóa điểm đón/trả'
           }
           description={
             deleteTarget?.type === 'school'

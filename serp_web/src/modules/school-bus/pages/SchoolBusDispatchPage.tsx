@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
@@ -42,7 +42,7 @@ import {
 
 const routeStatusMap: Record<string, { label: string; className: string }> = {
   PUBLISHED: {
-    label: 'Published',
+    label: 'Đã phát hành',
     className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50',
   },
   TRIP_CREATED: {
@@ -63,12 +63,12 @@ const routeStatusMap: Record<string, { label: string; className: string }> = {
     className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50',
   },
   COMPLETED: {
-    label: 'Completed',
+    label: 'Hoàn thành',
     className:
       'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
   },
   CANCELLED: {
-    label: 'Cancelled',
+    label: 'Đã hủy',
     className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50',
   },
 };
@@ -161,7 +161,7 @@ export function SchoolBusDispatchPage() {
         <SchoolBusBreadcrumb
           items={[
             { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-            { label: 'Dispatch', current: true },
+            { label: 'Điều phối', current: true },
           ]}
         />
       }
@@ -225,12 +225,12 @@ export function SchoolBusDispatchPage() {
 
             {isLoading ? (
               <p className='text-sm text-slate-500 animate-pulse py-4'>
-                Loading routes...
+                Đang tải danh sách tuyến...
               </p>
             ) : prioritizedRoutes.length === 0 ? (
               <SchoolBusEmptyState
-                title='No routes available'
-                description='Create or publish route plans before dispatch.'
+                title='Chưa có tuyến khả dụng'
+                description='Hãy tạo hoặc phát hành kế hoạch tuyến trước khi điều phối.'
                 icon={Route}
               />
             ) : (
@@ -301,7 +301,7 @@ export function SchoolBusDispatchPage() {
                       </div>
                     </div>
 
-                    {/* Start/End Locations */}
+                    {/* Start/Điểm kết thúcs */}
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs'>
                       <div className='flex items-start gap-2 min-w-0'>
                         <div className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 mt-0.5'>
@@ -312,7 +312,7 @@ export function SchoolBusDispatchPage() {
                             Start Point
                           </p>
                           <p className='font-semibold text-slate-800 truncate mt-0.5'>
-                            {route.startLocationName || 'Not set'}
+                            {route.startLocationName || 'Chưa thiết lập'}
                           </p>
                         </div>
                       </div>
@@ -325,7 +325,7 @@ export function SchoolBusDispatchPage() {
                             End Point
                           </p>
                           <p className='font-semibold text-slate-800 truncate mt-0.5'>
-                            {route.endLocationName || 'Not set'}
+                            {route.endLocationName || 'Chưa thiết lập'}
                           </p>
                         </div>
                       </div>
@@ -341,7 +341,7 @@ export function SchoolBusDispatchPage() {
                             : 'bg-amber-50 text-amber-700 border-amber-100'
                         )}
                       >
-                        {hasBus ? 'OK Bus assigned' : 'Warning: Missing bus'}
+                        {hasBus ? 'Đã phân công xe' : 'Thiếu xe'}
                       </span>
                       <span
                         className={cn(
@@ -352,8 +352,8 @@ export function SchoolBusDispatchPage() {
                         )}
                       >
                         {hasDriver
-                          ? 'OK Driver assigned'
-                          : 'Warning: Missing driver'}
+                          ? 'Đã phân công tài xế'
+                          : 'Thiếu tài xế'}
                       </span>
                       <span
                         className={cn(
@@ -364,8 +364,8 @@ export function SchoolBusDispatchPage() {
                         )}
                       >
                         {hasAttendant
-                          ? 'OK Attendant assigned'
-                          : 'Warning: Missing attendant'}
+                          ? 'Đã phân công phụ xe'
+                          : 'Thiếu phụ xe'}
                       </span>
                     </div>
 
@@ -373,20 +373,20 @@ export function SchoolBusDispatchPage() {
                     <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 pt-3'>
                       <div className='flex flex-wrap gap-4 text-xs text-slate-500'>
                         <span>
-                          Distance:{' '}
+                          Khoảng cách:{' '}
                           <strong className='text-slate-700'>
                             {route.plannedDistanceKm || 0} km
                           </strong>
                         </span>
                         <span>
-                          Duration:{' '}
+                          Thời lượng:{' '}
                           <strong className='text-slate-700'>
                             {route.plannedDurationMin || 0} mins
                           </strong>
                         </span>
                         {route.startedAt && (
                           <span>
-                            Started:{' '}
+                            Bắt đầu:{' '}
                             <strong className='text-slate-700'>
                               {formatDateTime(route.startedAt)}
                             </strong>
@@ -425,7 +425,7 @@ export function SchoolBusDispatchPage() {
                               href={`/school-bus/dispatch/${route.id}?assign=true`}
                             >
                               <UserCog className='h-3.5 w-3.5' />
-                              Manage assignment
+                              Quản lý phân công
                             </Link>
                           </Button>
                         )}
@@ -436,7 +436,7 @@ export function SchoolBusDispatchPage() {
                         >
                           <Link href={`/school-bus/dispatch/${route.id}`}>
                             <Eye className='h-3.5 w-3.5' />
-                            View details
+                            Xem chi tiết
                           </Link>
                         </Button>
                         <Button
@@ -448,7 +448,7 @@ export function SchoolBusDispatchPage() {
                             href={`/school-bus/dispatch/planning?sessionId=${route.planningSessionId}&routeId=${route.id}`}
                           >
                             <Sparkles className='h-3.5 w-3.5' />
-                            Open planning
+                            Mở lập kế hoạch
                           </Link>
                         </Button>
                       </div>
@@ -477,7 +477,7 @@ export function SchoolBusDispatchPage() {
             <div className='flex flex-col gap-1 pb-2 border-b border-slate-100'>
               <h2 className='text-lg font-bold text-slate-950 flex items-center gap-2'>
                 <Map className='h-5 w-5 text-emerald-600' />
-                Route preview map
+                Bản đồ xem trước tuyến
               </h2>
               <p className='text-xs text-slate-500'>
                 Selected route rendered with fixed start, stops, fixed end, and
@@ -491,10 +491,10 @@ export function SchoolBusDispatchPage() {
                   <Loader2 className='h-6 w-6 animate-spin' />
                 </div>
                 <h3 className='text-sm font-semibold text-slate-800'>
-                  Loading route preview...
+                  Đang tải xem trước tuyến...
                 </h3>
                 <p className='text-xs text-slate-500 max-w-[260px] mt-1'>
-                  Preparing stops and map path for the selected route.
+                  Đang chuẩn bị điểm dừng và đường đi cho tuyến đang chọn.
                 </p>
                 <div className='mt-6 w-full max-w-sm space-y-2'>
                   <div className='h-3 rounded-full bg-slate-200/80 animate-pulse' />
@@ -508,7 +508,7 @@ export function SchoolBusDispatchPage() {
                   <div className='absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]'>
                     <div className='flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm'>
                       <Loader2 className='h-4 w-4 animate-spin text-[#C81E3A]' />
-                      Updating route preview...
+                      Đang cập nhật xem trước tuyến...
                     </div>
                   </div>
                 )}
@@ -527,10 +527,10 @@ export function SchoolBusDispatchPage() {
                   legend={<SchoolBusMapLegend />}
                   panel={
                     <div className='space-y-4 p-4 min-w-[280px]'>
-                      {/* Route Summary */}
+                      {/* Tóm tắt tuyến */}
                       <div>
                         <h3 className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5'>
-                          Route Summary
+                          Tóm tắt tuyến
                         </h3>
                         <div className='space-y-2 text-xs'>
                           <div className='flex items-start gap-2 min-w-0'>
@@ -539,7 +539,7 @@ export function SchoolBusDispatchPage() {
                             </div>
                             <div className='min-w-0'>
                               <p className='text-[10px] font-semibold text-slate-400 leading-none'>
-                                Start Location
+                                Điểm bắt đầu
                               </p>
                               <p
                                 className='font-medium text-slate-700 truncate mt-0.5'
@@ -548,7 +548,7 @@ export function SchoolBusDispatchPage() {
                                 }
                               >
                                 {routePreviewData.route.startLocationName ||
-                                  'Not set'}
+                                  'Chưa thiết lập'}
                               </p>
                             </div>
                           </div>
@@ -559,7 +559,7 @@ export function SchoolBusDispatchPage() {
                             </div>
                             <div className='min-w-0'>
                               <p className='text-[10px] font-semibold text-slate-400 leading-none'>
-                                End Location
+                                Điểm kết thúc
                               </p>
                               <p
                                 className='font-medium text-slate-700 truncate mt-0.5'
@@ -568,7 +568,7 @@ export function SchoolBusDispatchPage() {
                                 }
                               >
                                 {routePreviewData.route.endLocationName ||
-                                  'Not set'}
+                                  'Chưa thiết lập'}
                               </p>
                             </div>
                           </div>
@@ -656,7 +656,7 @@ export function SchoolBusDispatchPage() {
               <div className='flex flex-col items-center justify-center p-12 text-center flex-1 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 min-h-[400px]'>
                 <Map className='h-12 w-12 text-slate-300 stroke-[1.5] mb-3' />
                 <h3 className='text-sm font-semibold text-slate-800'>
-                  Select a route
+                  Chọn tuyến
                 </h3>
                 <p className='text-xs text-slate-500 max-w-[240px] mt-1'>
                   Choose a route from the execution board to preview its path.

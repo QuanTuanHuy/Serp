@@ -55,7 +55,7 @@ export function SchoolBusDeleteDialog({
             disabled={isLoading}
             onClick={onConfirm}
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? 'Đang xóa...' : 'Xóa'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

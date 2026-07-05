@@ -76,7 +76,7 @@ export function SchoolBusRequestFormPage({
       toast.success(response.message || 'Transport request saved');
       router.push(`/school-bus/requests/${response.data.id}`);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save transport request');
+      toast.error(error?.data?.message || 'Không thể lưu yêu cầu xe bus');
     }
   };
 
@@ -100,11 +100,11 @@ export function SchoolBusRequestFormPage({
     return (
       <SchoolBusPageShell
         title='Edit Transport Request'
-        description='Loading request details...'
+        description='Đang tải chi tiết yêu cầus...'
         breadcrumb={breadcrumb}
       >
         <SchoolBusEmptyState
-          title='Loading request'
+          title='Đang tải yêu cầu'
           description='Fetching the current request snapshot for editing.'
         />
       </SchoolBusPageShell>
@@ -127,7 +127,7 @@ export function SchoolBusRequestFormPage({
         schools={schoolsData?.data || []}
         students={students}
         isLoading={creating || updating}
-        submitLabel={isEditMode ? 'Update request' : 'Create request'}
+        submitLabel={isEditMode ? 'Cập nhật yêu cầu' : 'Tạo yêu cầu'}
         isParentRole={access.isParentOnly}
         currentParentId={currentParentId}
         onCancel={() =>

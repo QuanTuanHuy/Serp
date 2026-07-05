@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
@@ -93,7 +93,7 @@ export function SchoolBusRouteDetailPage({
       toast.success(response.message || 'Route assigned');
       setAssignmentOpen(false);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to assign route');
+      toast.error(error?.data?.message || 'Không thể phân công tuyến');
     }
   };
 
@@ -102,7 +102,7 @@ export function SchoolBusRouteDetailPage({
       const response = await createTripFromRoute(routeId).unwrap();
       toast.success(response.message || 'Trip created from route');
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to create trip');
+      toast.error(error?.data?.message || 'Không thể tạo chuyến');
     }
   };
 
@@ -110,10 +110,10 @@ export function SchoolBusRouteDetailPage({
     return (
       <SchoolBusPageShell
         title='Route detail'
-        description='Loading route detail...'
+        description='Đang tải chi tiết tuyến...'
       >
         <SchoolBusEmptyState
-          title='Loading route detail'
+          title='Đang tải chi tiết tuyến'
           description='Fetching route, stop, and assignment data.'
         />
       </SchoolBusPageShell>
@@ -151,12 +151,12 @@ export function SchoolBusRouteDetailPage({
   const friendlyStatusLabel = (status: string) => {
     const s = status.toUpperCase();
     if (s === 'TRIP_CREATED') return 'Trip created';
-    if (s === 'PUBLISHED') return 'Published';
+    if (s === 'PUBLISHED') return 'Đã phát hành';
     if (s === 'PLANNED') return 'Planned';
     if (s === 'ASSIGNED') return 'Assigned';
     if (s === 'IN_PROGRESS') return 'In progress';
-    if (s === 'COMPLETED') return 'Completed';
-    if (s === 'CANCELLED') return 'Cancelled';
+    if (s === 'COMPLETED') return 'Hoàn thành';
+    if (s === 'CANCELLED') return 'Đã hủy';
     return status;
   };
 
@@ -185,7 +185,7 @@ export function SchoolBusRouteDetailPage({
               onClick={() => setAssignmentOpen(true)}
             >
               <UserCog className='h-4 w-4' />
-              {hasBusReservation ? 'Manage resources' : 'Assign resources'}
+              {hasBusReservation ? 'Manage resources' : 'Phân công nguồn lực'}
             </Button>
             <Button variant='outline' className='rounded-full' asChild>
               <Link
@@ -202,7 +202,7 @@ export function SchoolBusRouteDetailPage({
                 disabled={creatingTrip}
               >
                 <BusFront className='h-4 w-4 mr-1' />
-                {creatingTrip ? 'Creating...' : 'Create trip'}
+                {creatingTrip ? 'Đang tạo...' : 'Tạo chuyến'}
               </Button>
             ) : null}
           </>
@@ -211,8 +211,8 @@ export function SchoolBusRouteDetailPage({
         {/* Status Strip */}
         <div className='grid grid-cols-2 md:grid-cols-5 gap-4 mb-6'>
           <StatusCard
-            label='Planning'
-            value={route.status === 'DRAFT' ? 'Draft' : 'Complete'}
+            label='Lập kế hoạch'
+            value={route.status === 'DRAFT' ? 'Nháp' : 'Complete'}
             status={route.status === 'DRAFT' ? 'warning' : 'success'}
           />
           <StatusCard
@@ -260,13 +260,13 @@ export function SchoolBusRouteDetailPage({
         <div className='grid gap-6 xl:grid-cols-[0.95fr_1.05fr] items-start'>
           {/* Left Column */}
           <div className='flex flex-col gap-6'>
-            {/* Route Summary compact card */}
+            {/* Tóm tắt tuyến compact card */}
             <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
               <div className='flex items-center justify-between pb-2.5 border-b border-slate-100'>
                 <div className='flex items-center gap-2'>
                   <Route className='h-4.5 w-4.5 text-indigo-600 shrink-0' />
                   <h3 className='font-bold text-slate-900 text-sm'>
-                    Route Summary
+                    Tóm tắt tuyến
                   </h3>
                 </div>
                 <span className='rounded-full px-2.5 py-0.5 text-[10px] font-extrabold border shadow-none bg-slate-50 border-slate-200 text-slate-600 uppercase tracking-wider'>
@@ -276,7 +276,7 @@ export function SchoolBusRouteDetailPage({
 
               <div className='grid grid-cols-2 gap-y-4 gap-x-6 text-xs'>
                 <SummaryItem
-                  label='School'
+                  label='Trường học'
                   value={route.schoolName}
                   icon={GraduationCap}
                 />
@@ -310,7 +310,7 @@ export function SchoolBusRouteDetailPage({
                   icon={MapPin}
                 />
                 <SummaryItem
-                  label='Depot'
+                  label='Bãi xe'
                   value={
                     route.startDepotName ||
                     (route.startLocationType === 'DEPOT'
@@ -338,8 +338,8 @@ export function SchoolBusRouteDetailPage({
                   icon={Clock3}
                 />
                 <SummaryItem
-                  label='Bus'
-                  value={selectedBusPlate || 'No bus selected'}
+                  label='Xe'
+                  value={selectedBusPlate || 'Chưa có xe selected'}
                   icon={BusFront}
                 />
                 <SummaryItem
@@ -352,7 +352,7 @@ export function SchoolBusRouteDetailPage({
                   icon={Users}
                 />
                 <SummaryItem
-                  label='Students'
+                  label='Học sinh'
                   value={
                     selectedBusCapacity != null
                       ? `${plannedStudentCount}/${selectedBusCapacity}`
@@ -366,13 +366,13 @@ export function SchoolBusRouteDetailPage({
                   icon={Route}
                 />
                 <SummaryItem
-                  label='Driver'
-                  value={driverName || 'No driver'}
+                  label='Tài xế'
+                  value={driverName || 'Chưa có tài xế'}
                   icon={UserCog}
                 />
                 <SummaryItem
-                  label='Attendant'
-                  value={attendantName || 'No attendant'}
+                  label='Phụ xe'
+                  value={attendantName || 'Chưa có phụ xe'}
                   icon={UserCog}
                 />
                 <SummaryItem
@@ -418,12 +418,12 @@ export function SchoolBusRouteDetailPage({
                   type='bus'
                 />
                 <AssignmentRow
-                  label='Driver'
+                  label='Tài xế'
                   value={driverName}
                   type='driver'
                 />
                 <AssignmentRow
-                  label='Attendant'
+                  label='Phụ xe'
                   value={attendantName}
                   type='attendant'
                 />
@@ -440,7 +440,7 @@ export function SchoolBusRouteDetailPage({
                   onClick={() => setAssignmentOpen(true)}
                 >
                   <UserCog className='h-3.5 w-3.5 mr-1.5' />
-                  {isAssigned ? 'Manage assignment' : 'Assign resources'}
+                  {isAssigned ? 'Quản lý phân công' : 'Phân công nguồn lực'}
                 </Button>
               </div>
             </div>
@@ -477,7 +477,7 @@ export function SchoolBusRouteDetailPage({
                         className='h-7 text-[10px] rounded-full border-slate-200 mt-2 font-semibold shadow-none'
                         onClick={() => setAssignmentOpen(true)}
                       >
-                        Assign resources
+                        Phân công nguồn lực
                       </Button>
                     ) : null
                   }
@@ -505,7 +505,7 @@ export function SchoolBusRouteDetailPage({
                         onClick={handleCreateTrip}
                         disabled={creatingTrip}
                       >
-                        {creatingTrip ? 'Creating...' : 'Create trip'}
+                        {creatingTrip ? 'Đang tạo...' : 'Tạo chuyến'}
                       </Button>
                     ) : null
                   }
@@ -618,7 +618,7 @@ export function SchoolBusRouteDetailPage({
 
               {detail.stops.length === 0 ? (
                 <SchoolBusEmptyState
-                  title='No stops generated yet'
+                  title='Chưa tạo điểm dừng'
                   description='Generate a route plan to materialize the stop sequence.'
                   icon={Route}
                 />
@@ -671,12 +671,12 @@ export function SchoolBusRouteDetailPage({
                                 )}
                               >
                                 {isStart
-                                  ? 'Depot'
+                                  ? 'Bãi xe'
                                   : isEnd
-                                    ? 'School'
+                                    ? 'Trường học'
                                     : isDropoff
                                       ? 'Drop-off'
-                                      : 'Pickup'}
+                                      : 'Điểm đón'}
                               </span>
                               <span>-</span>
                               <span>

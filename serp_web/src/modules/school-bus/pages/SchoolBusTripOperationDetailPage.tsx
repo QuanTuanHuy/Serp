@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -84,14 +84,14 @@ function stopTypeLabel(stop: TripAttendanceStopItem): string {
       ? 'School - End terminal'
       : 'Depot - End terminal';
   }
-  if (stopPurpose === 'PICKUP') return 'Pickup stop';
-  if (stopPurpose === 'DROPOFF') return 'Drop-off stop';
+  if (stopPurpose === 'PICKUP') return 'Điểm đón';
+  if (stopPurpose === 'DROPOFF') return 'Điểm trả';
   return locationType || 'Stop';
 }
 
 const statusMap: Record<string, { label: string; className: string }> = {
   CREATED: {
-    label: 'Created',
+    label: 'Đã tạo',
     className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
   },
   PLANNED: {
@@ -103,12 +103,12 @@ const statusMap: Record<string, { label: string; className: string }> = {
     className: 'border-blue-200 bg-blue-55 text-blue-700 hover:bg-blue-55',
   },
   COMPLETED: {
-    label: 'Completed',
+    label: 'Hoàn thành',
     className:
       'border-emerald-250 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
   },
   CANCELLED: {
-    label: 'Cancelled',
+    label: 'Đã hủy',
     className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50',
   },
   PAUSED: {
@@ -117,7 +117,7 @@ const statusMap: Record<string, { label: string; className: string }> = {
   },
   // Stop statuses:
   PENDING: {
-    label: 'Pending',
+    label: 'Đang chờ',
     className: 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-50',
   },
   ARRIVED: {
@@ -797,7 +797,7 @@ export function SchoolBusTripOperationDetailPage({
             items={
               access.isParentOnly
                 ? [
-                    { label: 'School Bus', href: '/school-bus/dashboard' },
+                    { label: 'Xe bus trường học', href: '/school-bus/dashboard' },
                     {
                       label: 'Student Trip Tracking',
                       href: '/school-bus/trips',
@@ -979,7 +979,7 @@ export function SchoolBusTripOperationDetailPage({
                       Driver
                     </span>
                     <span className='font-bold text-slate-800 truncate mt-0.5'>
-                      {manifest.driverName || 'No driver assigned'}
+                      {manifest.driverName || 'Chưa có tài xế assigned'}
                     </span>
                   </div>
                 </div>
@@ -1648,7 +1648,7 @@ export function SchoolBusTripOperationDetailPage({
                 </div>
               ) : (
                 <SchoolBusEmptyState
-                  title='No stops mapped'
+                  title='Chưa có điểm dừng mapped'
                   description='Execution stops sequence is missing.'
                   icon={MapPin}
                 />
@@ -1663,7 +1663,7 @@ export function SchoolBusTripOperationDetailPage({
             </p>
             {sortedEvents.length === 0 ? (
               <SchoolBusEmptyState
-                title='No events logged yet'
+                title='Chưa ghi nhận sự kiện'
                 description='Attendance and lifecycle action logs will appear here as they are processed.'
                 icon={Bell}
               />
@@ -1878,13 +1878,13 @@ export function SchoolBusTripOperationDetailPage({
             <div className='flex-1 overflow-y-auto min-h-0 pr-1'>
               {loadingDrawerStudents ? (
                 <div className='py-12 text-center text-slate-400 text-xs font-semibold'>
-                  Loading student records...
+                  Đang tải danh sách học sinh...
                 </div>
               ) : selectedStop ? (
                 /* Stop Specific Student List */
                 studentsAtStop.length === 0 ? (
                   <div className='py-12 text-center text-slate-400 text-xs font-semibold'>
-                    No students mapped to this stop direction matching your
+                    Không có học sinh phù hợp với chiều điểm dừng và bộ lọc
                     search.
                   </div>
                 ) : (
@@ -2025,7 +2025,7 @@ export function SchoolBusTripOperationDetailPage({
                   if (filteredStudents.length === 0) {
                     return (
                       <div className='py-12 text-center text-slate-400 text-xs font-semibold'>
-                        No student records found.
+                        Không tìm thấy bản ghi học sinh.
                       </div>
                     );
                   }

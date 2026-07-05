@@ -59,7 +59,7 @@ export function DashboardLineChart({
       <div className='flex-1 min-h-[220px] relative flex items-center justify-center'>
         {!hasData ? (
           <div className='text-sm italic text-muted-foreground'>
-            No trip data available
+            Chưa có dữ liệu chuyến
           </div>
         ) : (
           <ResponsiveContainer width='100%' height='100%'>

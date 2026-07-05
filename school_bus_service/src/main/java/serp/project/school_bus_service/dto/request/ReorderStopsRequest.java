@@ -10,7 +10,7 @@ import java.util.List;
 @Setter
 public class ReorderStopsRequest extends BaseCommandRequest {
 
-    @NotEmpty(message = "orderedStopIds is required")
+    @NotEmpty(message = "Vui lòng chọn thứ tự điểm dừng")
     private List<Long> orderedStopIds;
 }
 

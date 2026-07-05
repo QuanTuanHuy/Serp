@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import {
@@ -155,7 +155,7 @@ export function SchoolBusStudentsPage() {
       setDialogOpen(false);
       setEditingStudentId(null);
     } catch {
-      toast.error('Failed to save student');
+      toast.error('Không thể lưu học sinh');
     }
   };
 
@@ -166,14 +166,14 @@ export function SchoolBusStudentsPage() {
       toast.success(response.message || 'Student deleted');
       setDeletingStudent(null);
     } catch {
-      toast.error('Failed to delete student');
+      toast.error('Không thể xóa học sinh');
     }
   };
 
   const studentColumns: SchoolBusTableColumn<SchoolBusStudent>[] = [
     {
       key: 'student',
-      header: 'Student',
+      header: 'Học sinh',
       className: 'pl-6',
       headerClassName: 'pl-6',
       render: (student) => (
@@ -191,13 +191,13 @@ export function SchoolBusStudentsPage() {
                   {student.studentCode}
                 </span>
               ) : (
-                <span className='text-slate-400'>No code</span>
+                <span className='text-slate-400'>Chưa có mã</span>
               )}
               <span className='text-slate-300'>-</span>
               <span>
                 {[student.grade, student.className]
                   .filter(Boolean)
-                  .join(' / ') || 'No grade'}
+                  .join(' / ') || 'Chưa có khối/lớp'}
               </span>
             </p>
           </div>
@@ -206,7 +206,7 @@ export function SchoolBusStudentsPage() {
     },
     {
       key: 'school',
-      header: 'School',
+      header: 'Trường học',
       render: (student) => (
         <span className='font-medium text-slate-700'>
           {student.schoolName || 'Not available'}
@@ -241,7 +241,7 @@ export function SchoolBusStudentsPage() {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       render: (student) => (
         <SchoolBusStatusBadge
           status={student.isActive ? 'ACTIVE' : 'INACTIVE'}
@@ -250,7 +250,7 @@ export function SchoolBusStudentsPage() {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: 'Thao tác',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (student) => (
@@ -338,7 +338,7 @@ export function SchoolBusStudentsPage() {
         placeholder='All statuses'
         options={[
           {
-            label: 'Active',
+            label: 'Đang hoạt động',
             value: 'active',
             badge: (
               <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
@@ -347,7 +347,7 @@ export function SchoolBusStudentsPage() {
             ),
           },
           {
-            label: 'Inactive',
+            label: 'Ngừng hoạt động',
             value: 'inactive',
             badge: (
               <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
@@ -364,13 +364,13 @@ export function SchoolBusStudentsPage() {
   return (
     <>
       <SchoolBusPageShell
-        title='Students'
+        title='Học sinh'
         description='Operational student directory powering route planning, requests, and attendance.'
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
               { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Students', current: true },
+              { label: 'Học sinh', current: true },
             ]}
           />
         }
@@ -399,13 +399,13 @@ export function SchoolBusStudentsPage() {
             )}
           >
             <SchoolBusMetricCard
-              label='Students'
+              label='Học sinh'
               value={students.length}
               icon={User}
               tone='student'
             />
             <SchoolBusMetricCard
-              label='Schools'
+              label='Trường học'
               value={uniqueSchools}
               icon={GraduationCap}
               tone='school'
@@ -439,13 +439,13 @@ export function SchoolBusStudentsPage() {
             emptyIcon={User}
             emptyTitle={
               students.length === 0
-                ? 'No students yet'
-                : 'No students match your filters'
+                ? 'Chưa có học sinh'
+                : 'Không có học sinh phù hợp với bộ lọc'
             }
             emptyDescription={
               students.length === 0
-                ? 'Create students and link them to parents and transport defaults.'
-                : 'Try adjusting your search query or clear the active filters.'
+                ? 'Hãy tạo học sinh và liên kết với phụ huynh, điểm đón/trả mặc định.'
+                : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
             }
           />
         </div>
@@ -480,7 +480,7 @@ export function SchoolBusStudentsPage() {
             fields: [
               { label: 'Student name', value: viewingStudent?.fullName },
               { label: 'Student code', value: viewingStudent?.studentCode },
-              { label: 'School', value: viewingStudent?.schoolName },
+              { label: 'Trường học', value: viewingStudent?.schoolName },
               {
                 label: 'Grade / class',
                 value:
@@ -491,16 +491,16 @@ export function SchoolBusStudentsPage() {
               { label: 'Date of birth', value: viewingStudent?.dateOfBirth },
               { label: 'Gender', value: viewingStudent?.gender },
               {
-                label: 'Status',
+                label: 'Trạng thái',
                 value:
-                  viewingStudent?.isActive === false ? 'Inactive' : 'Active',
+                  viewingStudent?.isActive === false ? 'Ngừng hoạt động' : 'Đang hoạt động',
               },
             ],
           },
           {
             title: 'Parent and transport defaults',
             fields: [
-              { label: 'Parent', value: viewingStudent?.parentProfileName },
+              { label: 'Phụ huynh', value: viewingStudent?.parentProfileName },
               {
                 label: 'Default pickup point',
                 value: viewingStudent?.pickupPointName,
@@ -529,7 +529,7 @@ export function SchoolBusStudentsPage() {
         onOpenChange={(open) => {
           if (!open) setDeletingStudent(null);
         }}
-        title='Delete student'
+        title='Xóa học sinh'
         description='This will soft-delete the student record from active school-bus operations.'
         isLoading={deleting}
         onConfirm={handleDelete}

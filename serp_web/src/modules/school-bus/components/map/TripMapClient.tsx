@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect } from 'react';
 import { Marker, Polyline, Popup, useMap } from 'react-leaflet';
@@ -227,13 +227,13 @@ export default function TripMapClient({
           // Stop purpose helper
           const purposeLabel =
             stop.stopPurpose === 'START_TERMINAL'
-              ? 'Start terminal'
+              ? 'Điểm đầu tuyến'
               : stop.stopPurpose === 'END_TERMINAL'
-                ? 'End terminal'
+                ? 'Điểm cuối tuyến'
                 : stop.stopPurpose === 'PICKUP'
-                  ? 'Pickup stop'
+                  ? 'Điểm đón'
                   : stop.stopPurpose === 'DROPOFF'
-                    ? 'Drop-off stop'
+                    ? 'Điểm trả'
                     : 'Stop';
 
           return (
