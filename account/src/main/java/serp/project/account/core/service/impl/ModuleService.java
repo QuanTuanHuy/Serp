@@ -9,8 +9,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import serp.project.account.core.domain.enums.ModuleType;
 import serp.project.account.core.domain.constant.CacheConstants;
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.request.CreateModuleDto;
@@ -184,7 +187,10 @@ public class ModuleService implements IModuleService {
     }
 
     private void clearCacheAllModules() {
-        asyncTaskExecutor.execute(() -> cachePort.deleteFromCache(CacheConstants.ALL_MODULES));
+        asyncTaskExecutor.execute(() -> {
+            cachePort.deleteFromCache(CacheConstants.ALL_MODULES);
+            cachePort.deleteAllByPattern(CacheConstants.PAGINATED_MODULES_PATTERN);
+        });
     }
 
     @Override
@@ -196,4 +202,44 @@ public class ModuleService implements IModuleService {
     public Long countAvailableModules() {
         return modulePort.countModulesByStatus(ModuleStatus.ACTIVE);
     }
+
+    @Override
+    public Pair<List<ModuleEntity>, Long> getModulesPaginated(
+            String search,
+            ModuleStatus status,
+            ModuleType moduleType,
+            Pageable pageable) {
+        
+        boolean isCacheable = (search == null || search.trim().isEmpty())
+                && status == null
+                && moduleType == null;
+
+        String cacheKey = null;
+        if (isCacheable) {
+            cacheKey = String.format(CacheConstants.PAGINATED_MODULES_KEY_FORMAT, pageable.getPageNumber(), pageable.getPageSize());
+            try {
+                var cached = cachePort.getFromCache(cacheKey, PaginatedModulesCache.class);
+                if (cached != null) {
+                    return Pair.of(cached.modules(), cached.total());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to read paginated modules from cache: {}", e.getMessage());
+            }
+        }
+
+        var result = modulePort.getModulesPaginated(search, status, moduleType, pageable);
+
+        if (isCacheable && cacheKey != null) {
+            try {
+                var cacheData = new PaginatedModulesCache(result.getFirst(), result.getSecond());
+                cachePort.setToCache(cacheKey, cacheData, CacheConstants.DEFAULT_EXPIRATION);
+            } catch (Exception e) {
+                log.warn("Failed to write paginated modules to cache: {}", e.getMessage());
+            }
+        }
+
+        return result;
+    }
+
+    public record PaginatedModulesCache(List<ModuleEntity> modules, long total) {}
 }

@@ -10,4 +10,6 @@ public class CacheConstants {
 
     public static final String ALL_ROLES = "account:roles:all";
     public static final String ALL_MODULES = "account:modules:all";
+    public static final String PAGINATED_MODULES_PATTERN = "account:modules:paginated:*";
+    public static final String PAGINATED_MODULES_KEY_FORMAT = "account:modules:paginated:%d:%d";
 }

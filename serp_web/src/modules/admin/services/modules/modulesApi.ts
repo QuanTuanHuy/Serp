@@ -7,6 +7,23 @@ import { api } from '@/lib/store/api';
 import type { Module } from '../../types';
 import { createDataTransform } from '@/lib/store/api/utils';
 
+export interface ModuleQueryParams {
+  page: number; // 0-based page index
+  pageSize: number;
+  search?: string;
+  status?: string;
+  moduleType?: string;
+  sortBy?: string;
+  sortDirection?: string;
+}
+
+export interface PaginatedModulesResponse {
+  items: Module[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+}
+
 export const modulesApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getModules: builder.query<Module[], void>({
@@ -19,6 +36,25 @@ export const modulesApi = api.injectEndpoints({
         result
           ? [
               ...result.map(({ id }) => ({
+                type: 'admin/Module' as const,
+                id,
+              })),
+              { type: 'admin/Module', id: 'LIST' },
+            ]
+          : [{ type: 'admin/Module', id: 'LIST' }],
+    }),
+
+    getModulesV2: builder.query<PaginatedModulesResponse, ModuleQueryParams>({
+      query: (params) => ({
+        url: '/modules/v2',
+        method: 'GET',
+        params,
+      }),
+      transformResponse: createDataTransform<PaginatedModulesResponse>(),
+      providesTags: (result) =>
+        result?.items
+          ? [
+              ...result.items.map(({ id }) => ({
                 type: 'admin/Module' as const,
                 id,
               })),
@@ -70,6 +106,7 @@ export const modulesApi = api.injectEndpoints({
 
 export const {
   useGetModulesQuery,
+  useGetModulesV2Query,
   useGetModuleByIdQuery,
   useCreateModuleMutation,
   useUpdateModuleMutation,

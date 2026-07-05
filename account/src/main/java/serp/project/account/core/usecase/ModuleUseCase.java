@@ -13,11 +13,14 @@ import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
 import serp.project.account.core.domain.dto.request.CreateModuleDto;
 import serp.project.account.core.domain.dto.request.UpdateModuleDto;
+import serp.project.account.core.domain.dto.request.GetModulesParams;
 import serp.project.account.core.service.IModuleService;
 import serp.project.account.core.service.IRoleService;
 import serp.project.account.core.service.IUserModuleAccessService;
 import serp.project.account.infrastructure.store.mapper.UserModuleAccessMapper;
+import org.springframework.data.util.Pair;
 import serp.project.account.kernel.utils.ResponseUtils;
+import serp.project.account.kernel.utils.PaginationUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +33,8 @@ public class ModuleUseCase {
     private final ResponseUtils responseUtils;
 
     private final UserModuleAccessMapper userModuleAccessMapper;
+
+    private final PaginationUtils paginationUtils;
 
     @Transactional(rollbackFor = Exception.class)
     public GeneralResponse<?> createModule(CreateModuleDto request) {
@@ -103,6 +108,29 @@ public class ModuleUseCase {
         } catch (Exception e) {
             log.error("Error getting roles in module: {}", e.getMessage());
             return responseUtils.internalServerError(Constants.ErrorMessage.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public GeneralResponse<?> getModulesPaginated(GetModulesParams params) {
+        try {
+            var pageable = paginationUtils.getPageable(params);
+            var result = moduleService.getModulesPaginated(
+                    params.getSearch(),
+                    params.getStatus(),
+                    params.getModuleType(),
+                    pageable
+            );
+            
+            var responseData = paginationUtils.getResponse(
+                    result.getSecond(),
+                    params.getPage(),
+                    params.getPageSize(),
+                    result.getFirst()
+            );
+            return responseUtils.success(responseData);
+        } catch (Exception e) {
+            log.error("Error retrieving paginated modules: {}", e.getMessage());
+            throw e;
         }
     }
 }

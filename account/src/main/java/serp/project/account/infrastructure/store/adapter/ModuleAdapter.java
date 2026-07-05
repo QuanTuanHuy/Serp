@@ -7,11 +7,14 @@ package serp.project.account.infrastructure.store.adapter;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
+import serp.project.account.core.domain.enums.ModuleType;
 import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.core.domain.enums.ModuleStatus;
 import serp.project.account.core.port.store.IModulePort;
@@ -81,5 +84,15 @@ public class ModuleAdapter implements IModulePort {
         var modules = moduleMapper.toEntityList(moduleRepository.searchModules(search, pageable));
         Long total = moduleRepository.countSearchModules(search);
         return Pair.of(modules, total != null ? total : 0L);
+    }
+
+    @Override
+    public Pair<List<ModuleEntity>, Long> getModulesPaginated(
+            String search,
+            ModuleStatus status,
+            ModuleType moduleType,
+            Pageable pageable) {
+        var page = moduleRepository.findAllPaginated(search, status, moduleType, pageable);
+        return Pair.of(moduleMapper.toEntityList(page.getContent()), page.getTotalElements());
     }
 }
