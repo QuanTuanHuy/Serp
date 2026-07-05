@@ -105,33 +105,37 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Results ({data?.totalItems ?? 0})</CardTitle>
+        <CardTitle>Kết quả ({data?.totalItems ?? 0})</CardTitle>
       </CardHeader>
       <CardContent>
         {!canViewOrders ? (
           <p className='text-muted-foreground'>
-            You do not have permission to access order data.
+            Bạn không có quyền truy cập dữ liệu đơn hàng.
           </p>
         ) : isLoading ? (
           <div className='flex items-center gap-2 text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Loading orders...
+            Đang tải đơn hàng...
           </div>
         ) : data && data.items.length > 0 ? (
           <div className='space-y-4'>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className='min-w-[180px]'>Order</TableHead>
-                  <TableHead className='min-w-[200px]'>Status</TableHead>
-                  <TableHead className='min-w-[180px]'>Pickup method</TableHead>
-                  <TableHead className='min-w-[260px]'>Sender</TableHead>
-                  <TableHead className='min-w-[260px]'>Receiver</TableHead>
-                  <TableHead className='min-w-[160px]'>Post office</TableHead>
-                  <TableHead className='min-w-[220px]'>Pickup window</TableHead>
-                  <TableHead className='min-w-[180px]'>Updated</TableHead>
+                  <TableHead className='min-w-[180px]'>Đơn hàng</TableHead>
+                  <TableHead className='min-w-[200px]'>Trạng thái</TableHead>
+                  <TableHead className='min-w-[180px]'>
+                    Phương thức lấy hàng
+                  </TableHead>
+                  <TableHead className='min-w-[260px]'>Người gửi</TableHead>
+                  <TableHead className='min-w-[260px]'>Người nhận</TableHead>
+                  <TableHead className='min-w-[160px]'>Bưu cục</TableHead>
+                  <TableHead className='min-w-[220px]'>
+                    Khung giờ lấy hàng
+                  </TableHead>
+                  <TableHead className='min-w-[180px]'>Cập nhật</TableHead>
                   <TableHead className='sticky right-0 z-20 border-l bg-card text-right'>
-                    Actions
+                    Thao tác
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -164,7 +168,7 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                       <TableCell className='whitespace-normal'>
                         <p className='font-medium'>{order.orderCode}</p>
                         <p className='text-xs text-muted-foreground'>
-                          Customer: {order.customerOrderCode || '--'}
+                          Mã khách hàng: {order.customerOrderCode || '--'}
                         </p>
                       </TableCell>
                       <TableCell className='whitespace-normal'>
@@ -173,7 +177,7 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                             {formatStatusLabel(order.status)}
                           </Badge>
                           <Badge variant='outline'>
-                            {order.isConfirm ? 'Confirmed' : 'Pending'}
+                            {order.isConfirm ? 'Đã xác nhận' : 'Chờ xác nhận'}
                           </Badge>
                         </div>
                       </TableCell>
@@ -203,14 +207,13 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                       </TableCell>
                       <TableCell className='whitespace-normal text-xs text-muted-foreground'>
                         <p>{formatDateTime(order.updatedAt)}</p>
-                        <p>By: {order.updatedBy || order.createdBy || '--'}</p>
                       </TableCell>
                       <TableCell className='sticky right-0 z-10 border-l bg-background text-right group-hover:bg-muted/50'>
                         <div className='flex items-center justify-end gap-1'>
                           <Button
                             size='icon'
                             variant='outline'
-                            title='View details'
+                            title='Xem chi tiết'
                             onClick={() => onViewDetail(order.id)}
                             disabled={isLoadingDetail}
                             className='h-8 w-8'
@@ -220,7 +223,7 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                             ) : (
                               <Eye className='h-3.5 w-3.5' />
                             )}
-                            <span className='sr-only'>View details</span>
+                            <span className='sr-only'>Xem chi tiết</span>
                           </Button>
 
                           {canUpdateDraft ? (
@@ -228,33 +231,33 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                               <Button
                                 size='icon'
                                 variant='outline'
-                                title='Edit order'
+                                title='Sửa đơn hàng'
                                 onClick={() => onEdit(order)}
                                 disabled={isLoadingDetail}
                                 className='h-8 w-8'
                               >
                                 <Pencil className='h-3.5 w-3.5' />
-                                <span className='sr-only'>Edit order</span>
+                                <span className='sr-only'>Sửa đơn hàng</span>
                               </Button>
                               <Button
                                 size='icon'
                                 variant='outline'
-                                title='Cancel order'
+                                title='Hủy đơn hàng'
                                 onClick={() => onRequestCancel(order)}
                                 className='h-8 w-8'
                               >
                                 <XCircle className='h-3.5 w-3.5' />
-                                <span className='sr-only'>Cancel order</span>
+                                <span className='sr-only'>Hủy đơn hàng</span>
                               </Button>
                               <Button
                                 size='icon'
                                 variant='destructive'
-                                title='Delete order'
+                                title='Xóa đơn hàng'
                                 onClick={() => onRequestDelete(order)}
                                 className='h-8 w-8'
                               >
                                 <Trash2 className='h-3.5 w-3.5' />
-                                <span className='sr-only'>Delete order</span>
+                                <span className='sr-only'>Xóa đơn hàng</span>
                               </Button>
                             </>
                           ) : null}
@@ -263,7 +266,7 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                             <Button
                               size='icon'
                               variant='outline'
-                              title='Confirm order'
+                              title='Xác nhận đơn hàng'
                               onClick={() => onConfirm(order)}
                               disabled={isConfirming}
                               className='h-8 w-8'
@@ -273,7 +276,7 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                               ) : (
                                 <CheckCircle2 className='h-3.5 w-3.5' />
                               )}
-                              <span className='sr-only'>Confirm order</span>
+                              <span className='sr-only'>Xác nhận đơn hàng</span>
                             </Button>
                           ) : null}
 
@@ -281,7 +284,7 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                             <Button
                               size='icon'
                               variant='outline'
-                              title='View suggested post offices'
+                              title='Xem bưu cục gợi ý'
                               onClick={() => onOpenDropOffSuggestions(order)}
                               disabled={isLoadingSuggestions}
                               className='h-8 w-8'
@@ -291,9 +294,7 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                               ) : (
                                 <Building2 className='h-3.5 w-3.5' />
                               )}
-                              <span className='sr-only'>
-                                View suggested post offices
-                              </span>
+                              <span className='sr-only'>Xem bưu cục gợi ý</span>
                             </Button>
                           ) : null}
 
@@ -301,13 +302,13 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                             <Button
                               size='icon'
                               variant='outline'
-                              title='Confirm drop-off at post office'
+                              title='Xác nhận gửi tại bưu cục'
                               onClick={() => onOpenManagerDropOffConfirm(order)}
                               className='h-8 w-8'
                             >
                               <CheckCircle2 className='h-3.5 w-3.5' />
                               <span className='sr-only'>
-                                Confirm drop-off at post office
+                                Xác nhận gửi tại bưu cục
                               </span>
                             </Button>
                           ) : null}
@@ -325,22 +326,22 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
                 onClick={onPreviousPage}
                 disabled={!data.hasPrevious || isFetching}
               >
-                Previous
+                Trang trước
               </Button>
               <span className='text-sm text-muted-foreground'>
-                Page {data.currentPage + 1} / {Math.max(data.totalPages, 1)}
+                Trang {data.currentPage + 1} / {Math.max(data.totalPages, 1)}
               </span>
               <Button
                 variant='outline'
                 onClick={onNextPage}
                 disabled={!data.hasNext || isFetching}
               >
-                Next
+                Trang sau
               </Button>
             </div>
           </div>
         ) : (
-          <p className='text-muted-foreground'>No orders found.</p>
+          <p className='text-muted-foreground'>Không tìm thấy đơn hàng nào.</p>
         )}
       </CardContent>
     </Card>

@@ -92,21 +92,21 @@ const stageOrder: JourneyStageKey[] = [
 ];
 
 const stageTitles: Record<JourneyStageKey, string> = {
-  confirmed: 'Order confirmed',
-  pickup: 'Pickup',
-  facility: 'Post office / hub',
-  transit: 'Line-haul transit',
-  delivery: 'Delivery',
-  exception: 'Exception',
+  confirmed: 'Đơn hàng đã xác nhận',
+  pickup: 'Lấy hàng',
+  facility: 'Bưu cục / trung tâm',
+  transit: 'Vận chuyển liên tuyến',
+  delivery: 'Giao hàng',
+  exception: 'Sự cố',
 };
 
 const stageDescriptions: Record<JourneyStageKey, string> = {
-  confirmed: 'Waiting for confirmation data.',
-  pickup: 'Waiting for pickup data.',
-  facility: 'Waiting for facility scan data.',
-  transit: 'Waiting for transit data.',
-  delivery: 'Waiting for delivery data.',
-  exception: 'No cancellation or failure recorded.',
+  confirmed: 'Đang chờ dữ liệu xác nhận.',
+  pickup: 'Đang chờ dữ liệu lấy hàng.',
+  facility: 'Đang chờ dữ liệu quét tại bưu cục.',
+  transit: 'Đang chờ dữ liệu vận chuyển.',
+  delivery: 'Đang chờ dữ liệu giao hàng.',
+  exception: 'Chưa ghi nhận hủy hoặc thất bại.',
 };
 
 const getTimelineStatus = (
@@ -232,7 +232,9 @@ const getEventDescription = (item?: FirstMileOrderTimelineItem): string => {
   }
 
   const status = getTimelineStatus(item);
-  return status ? formatStatusLabel(status as FirstMileOrderStatus) : 'Updated';
+  return status
+    ? formatStatusLabel(status as FirstMileOrderStatus)
+    : 'Đã cập nhật';
 };
 
 const buildJourneyStages = (
@@ -257,7 +259,7 @@ const buildJourneyStages = (
     latestEventByStage.set('confirmed', {
       orderStatus: 'CREATED',
       eventTime: order.updatedAt || order.createdAt,
-      description: 'Order confirmation has been recorded.',
+      description: 'Đã ghi nhận xác nhận đơn hàng.',
       recordedBy: order.updatedBy || order.createdBy,
     });
   }
@@ -325,7 +327,7 @@ const buildTrackingMapPoints = (
   if (order && senderCoordinate) {
     points.push({
       id: 'sender',
-      label: 'Sender',
+      label: 'Người gửi',
       description: buildOrderAddressLabel(
         order.senderName,
         order.senderPhone,
@@ -347,7 +349,7 @@ const buildTrackingMapPoints = (
     const stage = getEventStage(item);
     points.push({
       id: `${item.id ?? index}`,
-      label: stage ? stageTitles[stage] : 'Tracking event',
+      label: stage ? stageTitles[stage] : 'Sự kiện theo dõi',
       description: [
         getEventDescription(item),
         getActorLabel(item),
@@ -373,7 +375,7 @@ const buildTrackingMapPoints = (
   if (order && receiverCoordinate) {
     points.push({
       id: 'receiver',
-      label: 'Receiver',
+      label: 'Người nhận',
       description: buildOrderAddressLabel(
         order.receiverName,
         order.receiverPhone,
@@ -478,7 +480,7 @@ export const OrderTrackingPage: React.FC = () => {
         setSelectedOrder(orderDetail);
         setTimeline(orderTimeline);
       } catch (error) {
-        notification.error('Failed to load order journey.', {
+        notification.error('Không thể tải hành trình đơn hàng.', {
           description: getErrorMessage(error),
         });
         setSelectedOrder(null);
@@ -497,7 +499,7 @@ export const OrderTrackingPage: React.FC = () => {
     setShouldSelectSearchResult(false);
 
     if (orders.length === 0) {
-      notification.error('No order found for this code.');
+      notification.error('Không tìm thấy đơn hàng với mã này.');
       return;
     }
 
@@ -517,7 +519,7 @@ export const OrderTrackingPage: React.FC = () => {
 
     const nextSearch = searchText.trim();
     if (!nextSearch) {
-      notification.error('Enter an order code before tracking.');
+      notification.error('Vui lòng nhập mã đơn hàng trước khi tra cứu.');
       return;
     }
 
@@ -538,9 +540,9 @@ export const OrderTrackingPage: React.FC = () => {
     <div className='space-y-6'>
       <div className='flex flex-col gap-3 md:flex-row md:items-end md:justify-between'>
         <div className='space-y-1'>
-          <h1 className='text-2xl font-bold'>Order Tracking</h1>
+          <h1 className='text-2xl font-bold'>Tra cứu đơn hàng</h1>
           <p className='text-sm text-muted-foreground'>
-            Follow pickup, facility, transit, and delivery milestones.
+            Theo dõi các mốc lấy hàng, bưu cục, vận chuyển và giao hàng.
           </p>
         </div>
         <form
@@ -548,11 +550,11 @@ export const OrderTrackingPage: React.FC = () => {
           onSubmit={handleTrackOrder}
         >
           <div className='grid flex-1 gap-1.5'>
-            <Label htmlFor='order-tracking-code'>Order code</Label>
+            <Label htmlFor='order-tracking-code'>Mã đơn hàng</Label>
             <Input
               id='order-tracking-code'
               value={searchText}
-              placeholder='Order or customer order code'
+              placeholder='Mã đơn hàng hoặc mã khách hàng'
               onChange={(event) => setSearchText(event.target.value)}
             />
           </div>
@@ -566,7 +568,7 @@ export const OrderTrackingPage: React.FC = () => {
             ) : (
               <Search className='h-4 w-4' />
             )}
-            Track
+            Tra cứu
           </Button>
         </form>
       </div>
@@ -574,33 +576,33 @@ export const OrderTrackingPage: React.FC = () => {
       <div className='grid gap-4 xl:grid-cols-[minmax(320px,420px)_1fr]'>
         <Card>
           <CardHeader>
-            <CardTitle>Orders</CardTitle>
+            <CardTitle>Đơn hàng</CardTitle>
             <CardDescription>
-              Select an order to view the current journey.
+              Chọn một đơn hàng để xem hành trình hiện tại.
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
             {orderListQuery.isLoading ? (
               <div className='flex items-center gap-2 text-sm text-muted-foreground'>
                 <Loader2 className='h-4 w-4 animate-spin' />
-                Loading orders...
+                Đang tải đơn hàng...
               </div>
             ) : orderListQuery.isError ? (
               <div className='flex items-center gap-2 text-sm text-destructive'>
                 <AlertCircle className='h-4 w-4' />
-                Failed to load orders.
+                Không thể tải danh sách đơn hàng.
               </div>
             ) : orders.length === 0 ? (
               <p className='text-sm text-muted-foreground'>
-                No orders matched the current search.
+                Không có đơn hàng nào khớp với tìm kiếm hiện tại.
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className='text-right'>Action</TableHead>
+                    <TableHead>Đơn hàng</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead className='text-right'>Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -632,7 +634,7 @@ export const OrderTrackingPage: React.FC = () => {
                           disabled={isLoadingSelection}
                           onClick={() => void loadTrackingData(order.id)}
                         >
-                          View
+                          Xem
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -651,7 +653,7 @@ export const OrderTrackingPage: React.FC = () => {
                   <CardTitle>
                     {selectedOrder
                       ? selectedOrder.orderCode
-                      : 'Journey overview'}
+                      : 'Tổng quan hành trình'}
                   </CardTitle>
                   <CardDescription>
                     {selectedOrder
@@ -660,7 +662,7 @@ export const OrderTrackingPage: React.FC = () => {
                           selectedOrder.senderPhone,
                           selectedOrder.senderAddressDetail
                         )
-                      : 'No order selected.'}
+                      : 'Chưa chọn đơn hàng.'}
                   </CardDescription>
                 </div>
                 {selectedOrder ? (
@@ -674,18 +676,18 @@ export const OrderTrackingPage: React.FC = () => {
               {isLoadingSelection ? (
                 <div className='flex min-h-[240px] items-center justify-center gap-2 text-muted-foreground'>
                   <Loader2 className='h-4 w-4 animate-spin' />
-                  Loading journey...
+                  Đang tải hành trình...
                 </div>
               ) : !selectedOrder ? (
                 <div className='flex min-h-[240px] items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground'>
-                  Select an order to show tracking data.
+                  Chọn một đơn hàng để hiển thị dữ liệu theo dõi.
                 </div>
               ) : (
                 <div className='space-y-4'>
                   <div className='grid gap-3 md:grid-cols-3'>
                     <div className='rounded-md border p-3'>
                       <p className='text-xs text-muted-foreground'>
-                        Customer order
+                        Mã khách hàng
                       </p>
                       <p className='font-medium'>
                         {selectedOrder.customerOrderCode || '--'}
@@ -693,14 +695,14 @@ export const OrderTrackingPage: React.FC = () => {
                     </div>
                     <div className='rounded-md border p-3'>
                       <p className='text-xs text-muted-foreground'>
-                        Pickup method
+                        Phương thức lấy hàng
                       </p>
                       <p className='font-medium'>
                         {formatPickupMethodLabel(selectedOrder.pickupMethod)}
                       </p>
                     </div>
                     <div className='rounded-md border p-3'>
-                      <p className='text-xs text-muted-foreground'>Updated</p>
+                      <p className='text-xs text-muted-foreground'>Cập nhật</p>
                       <p className='font-medium'>
                         {formatDateTime(selectedOrder.updatedAt)}
                       </p>
@@ -738,12 +740,12 @@ export const OrderTrackingPage: React.FC = () => {
                                 </div>
                                 <Badge variant='outline'>
                                   {stage.status === 'exception'
-                                    ? 'Exception'
+                                    ? 'Sự cố'
                                     : stage.status === 'done'
-                                      ? 'Completed'
+                                      ? 'Hoàn tất'
                                       : stage.status === 'active'
-                                        ? 'Current'
-                                        : 'Pending'}
+                                        ? 'Đang diễn ra'
+                                        : 'Chờ xử lý'}
                                 </Badge>
                               </div>
                               <div className='mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2'>
@@ -773,13 +775,13 @@ export const OrderTrackingPage: React.FC = () => {
                     <div className='rounded-md border p-4'>
                       <div className='mb-4'>
                         <h2 className='text-base font-semibold'>
-                          Timeline events
+                          Các sự kiện theo dõi
                         </h2>
                       </div>
                       <div className='space-y-3'>
                         {timeline.length === 0 ? (
                           <p className='text-sm text-muted-foreground'>
-                            No timeline events yet.
+                            Chưa có sự kiện theo dõi nào.
                           </p>
                         ) : (
                           timeline.map((item, index) => (

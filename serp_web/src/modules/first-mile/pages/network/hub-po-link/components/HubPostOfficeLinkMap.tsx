@@ -81,11 +81,11 @@ function buildHubPopup(hub: HubPostOfficeMapHub): string {
       : '--';
 
   return `<div style="min-width:240px;max-width:320px;font-size:12px;line-height:1.45"><strong style="display:block;margin-bottom:8px;font-size:13px;color:#0f172a">${escapeHtml(hub.name)}</strong><div style="display:grid;gap:5px">${[
-    buildPopupRow('Type', 'Hub'),
-    buildPopupRow('Code', hub.code),
-    buildPopupRow('Address', hub.address),
-    buildPopupRow('Coordinates', coordinates),
-    buildPopupRow('Status', hub.status),
+    buildPopupRow('Loại', 'Hub'),
+    buildPopupRow('Mã', hub.code),
+    buildPopupRow('Địa chỉ', hub.address),
+    buildPopupRow('Tọa độ', coordinates),
+    buildPopupRow('Trạng thái', hub.status),
   ].join('')}</div></div>`;
 }
 
@@ -96,11 +96,11 @@ function buildPostOfficePopup(point: HubPostOfficeMapPoint): string {
       : '--';
 
   return `<div style="min-width:240px;max-width:320px;font-size:12px;line-height:1.45"><strong style="display:block;margin-bottom:8px;font-size:13px;color:#0f172a">${escapeHtml(point.name)}</strong><div style="display:grid;gap:5px">${[
-    buildPopupRow('Type', 'Post office'),
-    buildPopupRow('Code', point.code),
-    buildPopupRow('Address', point.address),
-    buildPopupRow('Coordinates', coordinates),
-    buildPopupRow('Status', point.status),
+    buildPopupRow('Loại', 'Bưu cục'),
+    buildPopupRow('Mã', point.code),
+    buildPopupRow('Địa chỉ', point.address),
+    buildPopupRow('Tọa độ', coordinates),
+    buildPopupRow('Trạng thái', point.status),
   ].join('')}</div></div>`;
 }
 
@@ -273,9 +273,9 @@ export function HubPostOfficeLinkMap({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>Link map</CardTitle>
+        <CardTitle>Bản đồ liên kết</CardTitle>
         <CardDescription>
-          Visual lines show post offices currently assigned to the selected hub.
+          Các đường nối thể hiện bưu cục hiện được gán cho hub đã chọn.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -287,20 +287,20 @@ export function HubPostOfficeLinkMap({
 
           <div className='pointer-events-none absolute left-3 top-3 rounded-md border bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-sm'>
             {loading
-              ? 'Loading links...'
-              : `${geocodedPostOfficeCount} mapped markers`}
+              ? 'Đang tải liên kết...'
+              : `${geocodedPostOfficeCount} điểm đánh dấu có tọa độ`}
           </div>
 
           {!loading && !hub ? (
             <div className='pointer-events-none absolute inset-x-3 bottom-3 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm'>
-              Select a hub to view linked post offices.
+              Chọn hub để xem các bưu cục liên kết.
             </div>
           ) : null}
 
           {!loading && hub && !hasMapContent ? (
             <div className='pointer-events-none absolute inset-x-3 bottom-3 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm'>
-              This hub needs coordinates and at least one geocoded linked post
-              office before lines can be drawn.
+              Hub này cần có tọa độ và ít nhất một bưu cục liên kết có tọa độ
+              để vẽ đường nối.
             </div>
           ) : null}
         </div>

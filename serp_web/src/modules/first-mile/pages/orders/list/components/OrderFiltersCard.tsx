@@ -70,19 +70,19 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
   formatStatusLabel,
 }) => {
   const statusFilterOptions = [
-    { value: 'ALL', label: 'All statuses' },
+    { value: 'ALL', label: 'Tất cả trạng thái' },
     ...statusOptions.map((statusOption) => ({
       value: statusOption,
       label: formatStatusLabel(statusOption),
     })),
   ];
   const confirmFilterOptions = [
-    { value: 'ALL', label: 'All' },
-    { value: 'YES', label: 'Confirmed' },
-    { value: 'NO', label: 'Not confirmed' },
+    { value: 'ALL', label: 'Tất cả' },
+    { value: 'YES', label: 'Đã xác nhận' },
+    { value: 'NO', label: 'Chưa xác nhận' },
   ];
   const postOfficeFilterOptions = [
-    { value: ALL_POST_OFFICES_VALUE, label: 'All post offices' },
+    { value: ALL_POST_OFFICES_VALUE, label: 'Tất cả bưu cục' },
     ...postOffices.map((postOffice) => ({
       value: postOffice.code,
       label: `${postOffice.code} - ${postOffice.name}`,
@@ -92,7 +92,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
   const advancedFilters = (
     <>
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-order-code'>Order code</Label>
+        <Label htmlFor='order-filter-order-code'>Mã đơn hàng</Label>
         <Input
           id='order-filter-order-code'
           value={filterFormValues.orderCode}
@@ -106,7 +106,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
 
       <div className='space-y-2'>
         <Label htmlFor='order-filter-customer-order-code'>
-          Customer order code
+          Mã đơn của khách hàng
         </Label>
         <Input
           id='order-filter-customer-order-code'
@@ -119,7 +119,9 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
       </div>
 
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-sender-phone'>Sender phone</Label>
+        <Label htmlFor='order-filter-sender-phone'>
+          Số điện thoại người gửi
+        </Label>
         <Input
           id='order-filter-sender-phone'
           value={filterFormValues.senderPhone}
@@ -131,7 +133,9 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
       </div>
 
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-receiver-phone'>Receiver phone</Label>
+        <Label htmlFor='order-filter-receiver-phone'>
+          Số điện thoại người nhận
+        </Label>
         <Input
           id='order-filter-receiver-phone'
           value={filterFormValues.receiverPhone}
@@ -143,7 +147,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
       </div>
 
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-origin-po'>Origin post office</Label>
+        <Label htmlFor='order-filter-origin-po'>Bưu cục gốc</Label>
         <TmsCombobox
           id='order-filter-origin-po'
           value={
@@ -156,17 +160,15 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
             )
           }
           options={postOfficeFilterOptions}
-          placeholder='All post offices'
-          emptyText='No post offices found'
+          placeholder='Tất cả bưu cục'
+          emptyText='Không tìm thấy bưu cục'
           disabled={!canViewOrders || isLoadingPostOffices}
           loading={isLoadingPostOffices}
         />
       </div>
 
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-destination-po'>
-          Destination post office
-        </Label>
+        <Label htmlFor='order-filter-destination-po'>Bưu cục đích</Label>
         <TmsCombobox
           id='order-filter-destination-po'
           value={
@@ -179,15 +181,15 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
             )
           }
           options={postOfficeFilterOptions}
-          placeholder='All post offices'
-          emptyText='No post offices found'
+          placeholder='Tất cả bưu cục'
+          emptyText='Không tìm thấy bưu cục'
           disabled={!canViewOrders || isLoadingPostOffices}
           loading={isLoadingPostOffices}
         />
       </div>
 
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-is-confirm'>Confirmed</Label>
+        <Label htmlFor='order-filter-is-confirm'>Xác nhận</Label>
         <TmsCombobox
           id='order-filter-is-confirm'
           value={filterFormValues.isConfirm}
@@ -195,14 +197,14 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
             onFilterFieldChange('isConfirm', value as TriStateFilter)
           }
           options={confirmFilterOptions}
-          placeholder='All'
-          emptyText='No options found'
+          placeholder='Tất cả'
+          emptyText='Không tìm thấy lựa chọn'
           disabled={!canViewOrders}
         />
       </div>
 
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-created-from'>Created from</Label>
+        <Label htmlFor='order-filter-created-from'>Tạo từ</Label>
         <Input
           id='order-filter-created-from'
           type='datetime-local'
@@ -215,7 +217,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
       </div>
 
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-created-to'>Created to</Label>
+        <Label htmlFor='order-filter-created-to'>Tạo đến</Label>
         <Input
           id='order-filter-created-to'
           type='datetime-local'
@@ -228,7 +230,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
       </div>
 
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-pickup-from'>Pickup from</Label>
+        <Label htmlFor='order-filter-pickup-from'>Lấy hàng từ</Label>
         <Input
           id='order-filter-pickup-from'
           type='datetime-local'
@@ -241,7 +243,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
       </div>
 
       <div className='space-y-2'>
-        <Label htmlFor='order-filter-pickup-to'>Pickup to</Label>
+        <Label htmlFor='order-filter-pickup-to'>Lấy hàng đến</Label>
         <Input
           id='order-filter-pickup-to'
           type='datetime-local'
@@ -260,7 +262,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
       <Card className='gap-3 py-5'>
         <CardHeader className='px-5 py-0'>
           <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-            <CardTitle className='text-base'>Search & filters</CardTitle>
+            <CardTitle className='text-base'>Tìm kiếm và bộ lọc</CardTitle>
             <Button
               type='button'
               variant='outline'
@@ -270,7 +272,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
               className='w-full justify-center sm:w-auto'
             >
               <SlidersHorizontal className='mr-2 h-4 w-4' />
-              Advanced
+              Nâng cao
               {advancedFieldCount > 0 ? (
                 <Badge variant='secondary' className='ml-2 h-5 px-1.5 text-xs'>
                   {advancedFieldCount}
@@ -286,7 +288,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
             className='grid gap-3 md:grid-cols-[minmax(280px,1fr)_220px] xl:grid-cols-[minmax(320px,1fr)_220px_auto]'
           >
             <div className='space-y-2'>
-              <Label htmlFor='order-filter-keyword'>Keyword</Label>
+              <Label htmlFor='order-filter-keyword'>Từ khóa</Label>
               <div className='relative'>
                 <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
                 <Input
@@ -296,14 +298,14 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
                   onChange={(event) =>
                     onFilterFieldChange('keyword', event.target.value)
                   }
-                  placeholder='Order code, customer code, names, phones...'
+                  placeholder='Mã đơn hàng, mã khách hàng, tên, số điện thoại...'
                   disabled={!canViewOrders}
                 />
               </div>
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='order-filter-status'>Status</Label>
+              <Label htmlFor='order-filter-status'>Trạng thái</Label>
               <TmsCombobox
                 id='order-filter-status'
                 value={filterFormValues.status}
@@ -311,15 +313,15 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
                   onFilterFieldChange('status', value as OrderStatusFilter)
                 }
                 options={statusFilterOptions}
-                placeholder='All statuses'
-                emptyText='No statuses found'
+                placeholder='Tất cả trạng thái'
+                emptyText='Không tìm thấy trạng thái'
                 disabled={!canViewOrders}
               />
             </div>
 
             <div className='flex flex-wrap items-end gap-2 md:col-span-2 xl:col-span-1 xl:justify-end'>
               <Button type='submit' size='sm' disabled={!canViewOrders}>
-                Apply
+                Áp dụng
               </Button>
               <Button
                 type='button'
@@ -328,7 +330,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
                 onClick={onClearFilters}
                 disabled={!canViewOrders}
               >
-                Clear
+                Xóa bộ lọc
               </Button>
               <Button
                 type='button'
@@ -340,7 +342,7 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
                 <RefreshCw
                   className={cn('mr-2 h-4 w-4', isFetching && 'animate-spin')}
                 />
-                Refresh
+                Làm mới
               </Button>
             </div>
           </form>
@@ -354,10 +356,10 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
         <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-4xl'>
           <form onSubmit={onApplyFilters} className='space-y-5'>
             <DialogHeader>
-              <DialogTitle>Advanced filters</DialogTitle>
+              <DialogTitle>Bộ lọc nâng cao</DialogTitle>
               <DialogDescription>
-                Narrow orders by exact identifiers, post office assignments,
-                confirmation state, and time windows.
+                Lọc đơn hàng theo mã chính xác, bưu cục được gán, trạng thái xác
+                nhận và khoảng thời gian.
               </DialogDescription>
             </DialogHeader>
 
@@ -372,10 +374,10 @@ export const OrderFiltersCard: React.FC<OrderFiltersCardProps> = ({
                 onClick={onClearFilters}
                 disabled={!canViewOrders}
               >
-                Clear all
+                Xóa tất cả
               </Button>
               <Button type='submit' disabled={!canViewOrders}>
-                Apply filters
+                Áp dụng bộ lọc
               </Button>
             </DialogFooter>
           </form>

@@ -69,7 +69,7 @@ function formatDateTime(value?: string): string {
     return '--';
   }
 
-  return new Date(value).toLocaleString('en-US');
+  return new Date(value).toLocaleString('vi-VN');
 }
 
 function buildHubLabel(hub: Hub): string {
@@ -78,6 +78,19 @@ function buildHubLabel(hub: Hub): string {
 
 function buildPostOfficeLabel(postOffice: PostOffice): string {
   return `${postOffice.code} - ${postOffice.name}`;
+}
+
+function formatStatusLabel(status?: string): string {
+  if (!status) {
+    return '--';
+  }
+  if (status === 'ACTIVE') {
+    return 'Đang hoạt động';
+  }
+  if (status === 'INACTIVE') {
+    return 'Ngừng hoạt động';
+  }
+  return status;
 }
 
 function toMapHub(hub?: Hub): HubPostOfficeMapHub | undefined {
@@ -92,7 +105,7 @@ function toMapHub(hub?: Hub): HubPostOfficeMapHub | undefined {
     address: hub.addressDetail,
     latitude: hub.latitude,
     longitude: hub.longitude,
-    status: hub.status,
+    status: formatStatusLabel(hub.status),
   };
 }
 
@@ -103,7 +116,7 @@ function toMapPostOffice(row: HubPostOfficeLinkRow): HubPostOfficeMapPoint {
     address: row.postOffice?.addressDetail,
     latitude: row.postOffice?.latitude,
     longitude: row.postOffice?.longitude,
-    status: row.postOffice?.status,
+    status: formatStatusLabel(row.postOffice?.status),
   };
 }
 
@@ -282,12 +295,12 @@ export function HubPostOfficeLinkPage() {
 
   const openAssignDialog = () => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can create hub post office links.');
+      notification.error('Chỉ TMS_ADMIN được tạo liên kết hub-bưu cục.');
       return;
     }
 
     if (!selectedHub) {
-      notification.error('Select a hub before creating a link.');
+      notification.error('Vui lòng chọn hub trước khi tạo liên kết.');
       return;
     }
 
@@ -302,12 +315,12 @@ export function HubPostOfficeLinkPage() {
     }
 
     if (!postOfficeCodeToAssign) {
-      notification.error('Select a post office to link.');
+      notification.error('Vui lòng chọn bưu cục để liên kết.');
       return;
     }
 
     if (linkedCodes.has(postOfficeCodeToAssign)) {
-      notification.error('This post office is already linked to the hub.');
+      notification.error('Bưu cục này đã được liên kết với hub.');
       return;
     }
 
@@ -317,14 +330,14 @@ export function HubPostOfficeLinkPage() {
         request: { post_office_code: postOfficeCodeToAssign },
       }).unwrap();
 
-      notification.success('Hub post office link created successfully.');
+      notification.success('Đã tạo liên kết hub-bưu cục.');
       setAssignDialogOpen(false);
       setAssignSearchKeyword('');
       setPostOfficeCodeToAssign('');
       setSelectedPostOfficeCode(postOfficeCodeToAssign);
       void refetchLinks();
     } catch (error) {
-      notification.error('Failed to create hub post office link.', {
+      notification.error('Tạo liên kết hub-bưu cục thất bại.', {
         description: getErrorMessage(error),
       });
     }
@@ -332,7 +345,7 @@ export function HubPostOfficeLinkPage() {
 
   const openEditDialog = (row: HubPostOfficeLinkRow) => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can update hub post office links.');
+      notification.error('Chỉ TMS_ADMIN được cập nhật liên kết hub-bưu cục.');
       return;
     }
 
@@ -347,7 +360,7 @@ export function HubPostOfficeLinkPage() {
 
     const nextHubId = Number(editTargetHubId);
     if (!Number.isInteger(nextHubId) || nextHubId <= 0) {
-      notification.error('Select the destination hub.');
+      notification.error('Vui lòng chọn hub đích.');
       return;
     }
 
@@ -365,7 +378,7 @@ export function HubPostOfficeLinkPage() {
         request: { post_office_code: editTarget.mapping.postOfficeCode },
       }).unwrap();
 
-      notification.success('Hub post office link moved successfully.');
+      notification.success('Đã chuyển liên kết hub-bưu cục.');
       setEditTarget(null);
       setEditTargetHubId('');
       setSelectedPostOfficeCode('');
@@ -378,14 +391,14 @@ export function HubPostOfficeLinkPage() {
             request: { post_office_code: editTarget.mapping.postOfficeCode },
           }).unwrap();
         } catch {
-          notification.error('Failed to restore the original link.', {
+          notification.error('Khôi phục liên kết ban đầu thất bại.', {
             description:
-              'The destination hub rejected the move and the rollback also failed.',
+              'Hub đích từ chối thao tác chuyển và rollback cũng thất bại.',
           });
         }
       }
 
-      notification.error('Failed to move hub post office link.', {
+      notification.error('Chuyển liên kết hub-bưu cục thất bại.', {
         description: getErrorMessage(error),
       });
     }
@@ -402,14 +415,14 @@ export function HubPostOfficeLinkPage() {
         postOfficeCode: deleteTarget.mapping.postOfficeCode,
       }).unwrap();
 
-      notification.success('Hub post office link removed successfully.');
+      notification.success('Đã xóa liên kết hub-bưu cục.');
       setDeleteTarget(null);
       if (selectedPostOfficeCode === deleteTarget.mapping.postOfficeCode) {
         setSelectedPostOfficeCode('');
       }
       void refetchLinks();
     } catch (error) {
-      notification.error('Failed to remove hub post office link.', {
+      notification.error('Xóa liên kết hub-bưu cục thất bại.', {
         description: getErrorMessage(error),
       });
     }
@@ -424,10 +437,12 @@ export function HubPostOfficeLinkPage() {
       <div className='space-y-6'>
         <div className='flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between'>
           <div className='space-y-2'>
-            <h1 className='text-2xl font-bold tracking-tight'>Hub-PO Links</h1>
+            <h1 className='text-2xl font-bold tracking-tight'>
+              Liên kết hub-bưu cục
+            </h1>
             <p className='text-muted-foreground'>
-              Manage post office assignments to second-mile hubs from one
-              network view.
+              Quản lý bưu cục được gán cho hub chặng giữa trên cùng một màn
+              hình mạng lưới.
             </p>
           </div>
 
@@ -435,26 +450,25 @@ export function HubPostOfficeLinkPage() {
             {!isTmsAdmin ? (
               <Badge variant='outline' className='gap-1'>
                 <ShieldAlert className='h-3.5 w-3.5' />
-                View only (write actions require TMS_ADMIN)
+                Chỉ xem (thao tác ghi yêu cầu TMS_ADMIN)
               </Badge>
             ) : null}
             <Button variant='outline' onClick={handleRefresh}>
               <RefreshCw className='h-4 w-4' />
-              Refresh
+              Làm mới
             </Button>
             <Button onClick={openAssignDialog} disabled={!selectedHub}>
               <Plus className='h-4 w-4' />
-              New Link
+              Tạo liên kết
             </Button>
           </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Network scope</CardTitle>
+            <CardTitle>Phạm vi mạng lưới</CardTitle>
             <CardDescription>
-              Select a hub to inspect, create, move, or remove linked post
-              offices.
+              Chọn hub để xem, tạo, chuyển hoặc xóa các bưu cục liên kết.
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
@@ -467,9 +481,9 @@ export function HubPostOfficeLinkPage() {
                   onValueChange={setSelectedHubId}
                   options={hubOptions}
                   placeholder={
-                    isFetchingHubs ? 'Loading hubs...' : 'Select hub'
+                    isFetchingHubs ? 'Đang tải hub...' : 'Chọn hub'
                   }
-                  emptyText='No hubs found'
+                  emptyText='Không tìm thấy hub'
                   loading={isFetchingHubs}
                 />
               </div>
@@ -477,30 +491,34 @@ export function HubPostOfficeLinkPage() {
               <Button variant='outline' asChild>
                 <Link href='/first-mile/network/hub'>
                   <Building2 className='h-4 w-4' />
-                  Hubs
+                  Hub
                 </Link>
               </Button>
               <Button variant='outline' asChild>
                 <Link href='/first-mile/network/post-office'>
                   <MapPin className='h-4 w-4' />
-                  Post Offices
+                  Bưu cục
                 </Link>
               </Button>
             </div>
 
             <div className='grid gap-3 md:grid-cols-3'>
               <div className='rounded-md border p-3'>
-                <p className='text-sm text-muted-foreground'>Selected hub</p>
+                <p className='text-sm text-muted-foreground'>Hub đã chọn</p>
                 <p className='mt-1 truncate font-medium'>
                   {selectedHub ? buildHubLabel(selectedHub) : '--'}
                 </p>
               </div>
               <div className='rounded-md border p-3'>
-                <p className='text-sm text-muted-foreground'>Linked POs</p>
+                <p className='text-sm text-muted-foreground'>
+                  Bưu cục liên kết
+                </p>
                 <p className='mt-1 font-medium'>{totalLinkedItems}</p>
               </div>
               <div className='rounded-md border p-3'>
-                <p className='text-sm text-muted-foreground'>Geocoded links</p>
+                <p className='text-sm text-muted-foreground'>
+                  Liên kết có tọa độ
+                </p>
                 <p className='mt-1 font-medium'>{geocodedLinkCount}</p>
               </div>
             </div>
@@ -518,9 +536,10 @@ export function HubPostOfficeLinkPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Selected link</CardTitle>
+              <CardTitle>Liên kết đã chọn</CardTitle>
               <CardDescription>
-                Click a map marker or row to inspect a specific assignment.
+                Chọn điểm đánh dấu trên bản đồ hoặc một dòng để xem chi tiết
+                liên kết.
               </CardDescription>
             </CardHeader>
             <CardContent className='space-y-4'>
@@ -534,7 +553,7 @@ export function HubPostOfficeLinkPage() {
                       </p>
                     </div>
                     <div>
-                      <p className='text-muted-foreground'>Post office</p>
+                      <p className='text-muted-foreground'>Bưu cục</p>
                       <p className='font-medium'>
                         {selectedRow.postOffice
                           ? buildPostOfficeLabel(selectedRow.postOffice)
@@ -542,7 +561,7 @@ export function HubPostOfficeLinkPage() {
                       </p>
                     </div>
                     <div>
-                      <p className='text-muted-foreground'>Created</p>
+                      <p className='text-muted-foreground'>Ngày tạo</p>
                       <p className='font-medium'>
                         {formatDateTime(selectedRow.mapping.createdAt)}
                       </p>
@@ -555,8 +574,8 @@ export function HubPostOfficeLinkPage() {
                       }
                     >
                       {hasPostOfficeLocation(selectedRow.postOffice)
-                        ? 'Map ready'
-                        : 'Missing coordinates'}
+                        ? 'Đủ tọa độ'
+                        : 'Thiếu tọa độ'}
                     </Badge>
                   </div>
 
@@ -567,7 +586,7 @@ export function HubPostOfficeLinkPage() {
                       onClick={() => setDetailDialogOpen(true)}
                     >
                       <Eye className='h-4 w-4' />
-                      View
+                      Xem
                     </Button>
                     <Button
                       variant='outline'
@@ -576,7 +595,7 @@ export function HubPostOfficeLinkPage() {
                       disabled={!isTmsAdmin}
                     >
                       <Pencil className='h-4 w-4' />
-                      Move
+                      Chuyển
                     </Button>
                     <Button
                       variant='destructive'
@@ -585,7 +604,7 @@ export function HubPostOfficeLinkPage() {
                       disabled={!isTmsAdmin}
                     >
                       <Trash2 className='h-4 w-4' />
-                      Remove
+                      Xóa
                     </Button>
                   </div>
                 </>
@@ -594,10 +613,10 @@ export function HubPostOfficeLinkPage() {
                   <Unlink className='h-9 w-9' />
                   <div>
                     <p className='font-medium text-foreground'>
-                      No link selected
+                      Chưa chọn liên kết
                     </p>
                     <p className='mt-1 text-sm'>
-                      Select a linked post office from the map or list.
+                      Chọn bưu cục liên kết từ bản đồ hoặc danh sách.
                     </p>
                   </div>
                 </div>
@@ -610,16 +629,16 @@ export function HubPostOfficeLinkPage() {
           <CardHeader>
             <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
               <div>
-                <CardTitle>Linked post offices</CardTitle>
+                <CardTitle>Bưu cục đã liên kết</CardTitle>
                 <CardDescription>
-                  View, move, or remove post offices connected to the selected
-                  hub.
+                  Xem, chuyển hoặc xóa các bưu cục đang kết nối với hub đã
+                  chọn.
                 </CardDescription>
               </div>
               {isFetchingLinks ? (
                 <Badge variant='outline' className='gap-1'>
                   <Loader2 className='h-3.5 w-3.5 animate-spin' />
-                  Loading
+                  Đang tải
                 </Badge>
               ) : null}
             </div>
@@ -627,11 +646,11 @@ export function HubPostOfficeLinkPage() {
           <CardContent className='space-y-4'>
             {!selectedHub ? (
               <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
-                Select a hub to load post office links.
+                Chọn hub để tải danh sách bưu cục liên kết.
               </div>
             ) : linkedRows.length === 0 && !isFetchingLinks ? (
               <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
-                No post offices are linked to this hub yet.
+                Hub này chưa có bưu cục liên kết.
               </div>
             ) : (
               <div className='space-y-2'>
@@ -670,7 +689,7 @@ export function HubPostOfficeLinkPage() {
                           </div>
                           <p className='line-clamp-2 text-sm text-muted-foreground'>
                             {row.postOffice?.addressDetail ||
-                              'Post office details are not loaded in the current lookup window.'}
+                              'Chi tiết bưu cục chưa được tải trong vùng tra cứu hiện tại.'}
                           </p>
                         </div>
 
@@ -688,7 +707,7 @@ export function HubPostOfficeLinkPage() {
                             }}
                           >
                             <Eye className='h-4 w-4' />
-                            View
+                            Xem
                           </Button>
                           <Button
                             type='button'
@@ -701,7 +720,7 @@ export function HubPostOfficeLinkPage() {
                             }}
                           >
                             <ArrowRightLeft className='h-4 w-4' />
-                            Move
+                            Chuyển
                           </Button>
                           <Button
                             type='button'
@@ -714,7 +733,7 @@ export function HubPostOfficeLinkPage() {
                             }}
                           >
                             <Trash2 className='h-4 w-4' />
-                            Remove
+                            Xóa
                           </Button>
                         </div>
                       </div>
@@ -727,7 +746,7 @@ export function HubPostOfficeLinkPage() {
             {(linkData?.hasNext || linkData?.hasPrevious) && (
               <div className='flex items-center justify-between border-t pt-4'>
                 <div className='text-sm text-muted-foreground'>
-                  Page {linkPage + 1}
+                  Trang {linkPage + 1}
                 </div>
                 <div className='flex gap-2'>
                   <Button
@@ -736,7 +755,7 @@ export function HubPostOfficeLinkPage() {
                     disabled={!linkData?.hasPrevious || isFetchingLinks}
                     onClick={() => setLinkPage((prev) => Math.max(0, prev - 1))}
                   >
-                    Previous
+                    Trước
                   </Button>
                   <Button
                     variant='outline'
@@ -744,7 +763,7 @@ export function HubPostOfficeLinkPage() {
                     disabled={!linkData?.hasNext || isFetchingLinks}
                     onClick={() => setLinkPage((prev) => prev + 1)}
                   >
-                    Next
+                    Sau
                   </Button>
                 </div>
               </div>
@@ -765,17 +784,17 @@ export function HubPostOfficeLinkPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create hub post office link</DialogTitle>
+            <DialogTitle>Tạo liên kết hub-bưu cục</DialogTitle>
             <DialogDescription>
-              Link a post office to {selectedHub?.name || 'the selected hub'}.
+              Liên kết bưu cục với {selectedHub?.name || 'hub đã chọn'}.
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-4'>
             <div className='space-y-2'>
-              <Label htmlFor='hub-po-assign-search'>Search post office</Label>
+              <Label htmlFor='hub-po-assign-search'>Tìm bưu cục</Label>
               <Input
                 id='hub-po-assign-search'
-                placeholder='Code, name, or address'
+                placeholder='Mã, tên hoặc địa chỉ'
                 value={assignSearchKeyword}
                 onChange={(event) => {
                   setAssignSearchKeyword(event.target.value);
@@ -785,7 +804,7 @@ export function HubPostOfficeLinkPage() {
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-po-assign-post-office'>Post office</Label>
+              <Label htmlFor='hub-po-assign-post-office'>Bưu cục</Label>
               <TmsCombobox
                 id='hub-po-assign-post-office'
                 value={postOfficeCodeToAssign}
@@ -793,10 +812,10 @@ export function HubPostOfficeLinkPage() {
                 options={assignPostOfficeOptions}
                 placeholder={
                   isFetchingAssignOptions
-                    ? 'Loading post offices...'
-                    : 'Select post office'
+                    ? 'Đang tải bưu cục...'
+                    : 'Chọn bưu cục'
                 }
-                emptyText='No unlinked post offices found'
+                emptyText='Không tìm thấy bưu cục chưa liên kết'
                 loading={isFetchingAssignOptions}
               />
             </div>
@@ -806,13 +825,13 @@ export function HubPostOfficeLinkPage() {
                 variant='outline'
                 onClick={() => setAssignDialogOpen(false)}
               >
-                Cancel
+                Hủy
               </Button>
               <Button
                 onClick={() => void handleAssignPostOffice()}
                 disabled={!postOfficeCodeToAssign || isAssigning}
               >
-                {isAssigning ? 'Creating...' : 'Create Link'}
+                {isAssigning ? 'Đang tạo...' : 'Tạo liên kết'}
               </Button>
             </div>
           </div>
@@ -830,14 +849,14 @@ export function HubPostOfficeLinkPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Move hub post office link</DialogTitle>
+            <DialogTitle>Chuyển liên kết hub-bưu cục</DialogTitle>
             <DialogDescription>
-              Move this post office from the current hub to another hub.
+              Chuyển bưu cục này từ hub hiện tại sang hub khác.
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-4'>
             <div className='rounded-md border p-3 text-sm'>
-              <p className='text-muted-foreground'>Post office</p>
+              <p className='text-muted-foreground'>Bưu cục</p>
               <p className='mt-1 font-medium'>
                 {editTarget?.postOffice
                   ? buildPostOfficeLabel(editTarget.postOffice)
@@ -846,26 +865,28 @@ export function HubPostOfficeLinkPage() {
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-po-move-target-hub'>Destination hub</Label>
+              <Label htmlFor='hub-po-move-target-hub'>Hub đích</Label>
               <TmsCombobox
                 id='hub-po-move-target-hub'
                 value={editTargetHubId}
                 onValueChange={setEditTargetHubId}
                 options={targetHubOptions}
-                placeholder='Select destination hub'
-                emptyText='No other hubs found'
+                placeholder='Chọn hub đích'
+                emptyText='Không tìm thấy hub khác'
               />
             </div>
 
             <div className='flex justify-end gap-2 border-t pt-4'>
               <Button variant='outline' onClick={() => setEditTarget(null)}>
-                Cancel
+                Hủy
               </Button>
               <Button
                 onClick={() => void handleMoveLink()}
                 disabled={!editTargetHubId || isRemoving || isAssigning}
               >
-                {isRemoving || isAssigning ? 'Moving...' : 'Move Link'}
+                {isRemoving || isAssigning
+                  ? 'Đang chuyển...'
+                  : 'Chuyển liên kết'}
               </Button>
             </div>
           </div>
@@ -875,9 +896,9 @@ export function HubPostOfficeLinkPage() {
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent className='max-w-2xl'>
           <DialogHeader>
-            <DialogTitle>Hub post office link details</DialogTitle>
+            <DialogTitle>Chi tiết liên kết hub-bưu cục</DialogTitle>
             <DialogDescription>
-              Read-only details for the selected hub post office assignment.
+              Thông tin chỉ đọc của liên kết hub-bưu cục đã chọn.
             </DialogDescription>
           </DialogHeader>
           {selectedRow ? (
@@ -889,7 +910,7 @@ export function HubPostOfficeLinkPage() {
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Post office</p>
+                <p className='text-muted-foreground'>Bưu cục</p>
                 <p className='font-medium'>
                   {selectedRow.postOffice
                     ? buildPostOfficeLabel(selectedRow.postOffice)
@@ -897,25 +918,25 @@ export function HubPostOfficeLinkPage() {
                 </p>
               </div>
               <div className='sm:col-span-2'>
-                <p className='text-muted-foreground'>Address</p>
+                <p className='text-muted-foreground'>Địa chỉ</p>
                 <p className='font-medium'>
                   {selectedRow.postOffice?.addressDetail || '--'}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Post office status</p>
+                <p className='text-muted-foreground'>Trạng thái bưu cục</p>
                 <p className='font-medium'>
-                  {selectedRow.postOffice?.status || '--'}
+                  {formatStatusLabel(selectedRow.postOffice?.status)}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Created</p>
+                <p className='text-muted-foreground'>Ngày tạo</p>
                 <p className='font-medium'>
                   {formatDateTime(selectedRow.mapping.createdAt)}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Coordinates</p>
+                <p className='text-muted-foreground'>Tọa độ</p>
                 <p className='font-medium'>
                   {hasPostOfficeLocation(selectedRow.postOffice)
                     ? `${selectedRow.postOffice?.latitude}, ${selectedRow.postOffice?.longitude}`
@@ -923,7 +944,7 @@ export function HubPostOfficeLinkPage() {
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Mapping ID</p>
+                <p className='text-muted-foreground'>ID liên kết</p>
                 <p className='font-medium'>{selectedRow.mapping.id || '--'}</p>
               </div>
             </div>
@@ -938,14 +959,14 @@ export function HubPostOfficeLinkPage() {
             setDeleteTarget(null);
           }
         }}
-        title='Remove hub post office link'
+        title='Xóa liên kết hub-bưu cục'
         description={
           deleteTarget
-            ? `This will remove ${deleteTarget.mapping.postOfficeCode} from ${selectedHub?.code || 'the selected hub'}.`
-            : 'This action cannot be undone.'
+            ? `Thao tác này sẽ xóa ${deleteTarget.mapping.postOfficeCode} khỏi ${selectedHub?.code || 'hub đã chọn'}.`
+            : 'Không thể hoàn tác thao tác này.'
         }
-        confirmText='Remove'
-        cancelText='Cancel'
+        confirmText='Xóa'
+        cancelText='Hủy'
         onConfirm={handleRemoveLink}
         isLoading={isRemoving}
         variant='destructive'

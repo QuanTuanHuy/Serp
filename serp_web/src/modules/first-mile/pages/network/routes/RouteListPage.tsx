@@ -6,7 +6,15 @@
 'use client';
 
 import React from 'react';
-import { Plus, RefreshCw, Search, ShieldAlert, Trash2, X } from 'lucide-react';
+import {
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  Trash2,
+  X,
+} from 'lucide-react';
 
 import { getErrorMessage, useAppSelector } from '@/lib/store';
 import {
@@ -24,6 +32,9 @@ import {
   DialogTitle,
   Input,
   Label,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Table,
   TableBody,
   TableCell,
@@ -90,6 +101,16 @@ type RouteDestinationFilter =
   | typeof ALL_FILTER_VALUE
   | SecondMileRouteDestinationType;
 type RouteOriginFilter = typeof ALL_FILTER_VALUE | SecondMileRouteEndpointType;
+type RouteTableFilterKey =
+  | 'routeCode'
+  | 'routeName'
+  | 'origin'
+  | 'destination'
+  | 'destinationType'
+  | 'vehicle'
+  | 'departure'
+  | 'metrics'
+  | 'status';
 
 const DEFAULT_FORM: RouteFormState = {
   routeCode: '',
@@ -112,8 +133,8 @@ const ROUTE_STATUS_OPTIONS: Array<{
   value: SecondMileRouteStatus;
   label: string;
 }> = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'ACTIVE', label: 'Đang hoạt động' },
+  { value: 'INACTIVE', label: 'Ngừng hoạt động' },
 ];
 
 const ROUTE_DESTINATION_OPTIONS: Array<{
@@ -121,7 +142,7 @@ const ROUTE_DESTINATION_OPTIONS: Array<{
   label: string;
 }> = [
   { value: 'HUB', label: 'Hub' },
-  { value: 'POST_OFFICE', label: 'Post office' },
+  { value: 'POST_OFFICE', label: 'Bưu cục' },
 ];
 
 const ROUTE_ENDPOINT_OPTIONS: Array<{
@@ -129,7 +150,7 @@ const ROUTE_ENDPOINT_OPTIONS: Array<{
   label: string;
 }> = [
   { value: 'HUB', label: 'Hub' },
-  { value: 'POST_OFFICE', label: 'Post office' },
+  { value: 'POST_OFFICE', label: 'Bưu cục' },
 ];
 
 function getStatusBadgeVariant(
@@ -183,10 +204,10 @@ function validateOptionalNonNegativeNumber(
   }
   const numeric = Number(trimmed);
   if (!Number.isFinite(numeric)) {
-    return `${label} must be a valid number.`;
+    return `${label} phải là số hợp lệ.`;
   }
   if (numeric < 0) {
-    return `${label} cannot be negative.`;
+    return `${label} không được âm.`;
   }
   return null;
 }
@@ -201,19 +222,19 @@ function validateOptionalNonNegativeInteger(
   }
   const trimmed = value.trim();
   if (trimmed && !Number.isInteger(Number(trimmed))) {
-    return `${label} must be a whole number.`;
+    return `${label} phải là số nguyên.`;
   }
   return null;
 }
 
 function formatStatusLabel(status: SecondMileRouteStatus): string {
-  return status === 'ACTIVE' ? 'Active' : 'Inactive';
+  return status === 'ACTIVE' ? 'Đang hoạt động' : 'Ngừng hoạt động';
 }
 
 function formatDestinationTypeLabel(
   destinationType: SecondMileRouteDestinationType
 ): string {
-  return destinationType === 'HUB' ? 'Hub' : 'Post office';
+  return destinationType === 'HUB' ? 'Hub' : 'Bưu cục';
 }
 
 function formatRouteMetric(value?: number, suffix?: string): string {
@@ -257,6 +278,8 @@ export function RouteListPage() {
   );
 
   const [page, setPage] = React.useState(0);
+  const [routeCodeInput, setRouteCodeInput] = React.useState('');
+  const [routeCode, setRouteCode] = React.useState<string | undefined>();
   const [searchInput, setSearchInput] = React.useState('');
   const [keyword, setKeyword] = React.useState<string | undefined>();
   const [selectedStatus, setSelectedStatus] = React.useState<
@@ -276,6 +299,10 @@ export function RouteListPage() {
     setSelectedDestinationPostOfficeCode,
   ] = React.useState('');
   const [selectedVehicleId, setSelectedVehicleId] = React.useState('');
+  const [departureFilter, setDepartureFilter] = React.useState('');
+  const [metricFilter, setMetricFilter] = React.useState('');
+  const [openTableFilter, setOpenTableFilter] =
+    React.useState<RouteTableFilterKey | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<
     number | undefined
   >();
@@ -289,6 +316,11 @@ export function RouteListPage() {
     React.useState<RouteFormState>(DEFAULT_FORM);
   const [deleteTarget, setDeleteTarget] =
     React.useState<SecondMileRoute | null>(null);
+
+  const routeCodeFilterRef = React.useRef<HTMLInputElement>(null);
+  const routeNameFilterRef = React.useRef<HTMLInputElement>(null);
+  const departureFilterRef = React.useRef<HTMLInputElement>(null);
+  const metricFilterRef = React.useRef<HTMLInputElement>(null);
 
   const selectedOriginHubNumericId =
     parseOptionalPositiveInteger(selectedOriginHubId);
@@ -317,6 +349,7 @@ export function RouteListPage() {
       page,
       size: PAGE_SIZE,
       keyword,
+      routeCode,
       originType:
         selectedOriginType === ALL_FILTER_VALUE
           ? undefined
@@ -414,15 +447,15 @@ export function RouteListPage() {
   const formVehicles = formVehiclesData?.items ?? [];
   const routes = routesData?.items ?? [];
   const statusFilterOptions = [
-    { value: ALL_FILTER_VALUE, label: 'All statuses' },
+    { value: ALL_FILTER_VALUE, label: 'Tất cả trạng thái' },
     ...ROUTE_STATUS_OPTIONS,
   ];
   const destinationTypeFilterOptions = [
-    { value: ALL_FILTER_VALUE, label: 'All destinations' },
+    { value: ALL_FILTER_VALUE, label: 'Tất cả điểm đến' },
     ...ROUTE_DESTINATION_OPTIONS,
   ];
   const originTypeFilterOptions = [
-    { value: ALL_FILTER_VALUE, label: 'All origins' },
+    { value: ALL_FILTER_VALUE, label: 'Tất cả điểm xuất phát' },
     ...ROUTE_ENDPOINT_OPTIONS,
   ];
   const formDestinationTypeOptions =
@@ -483,7 +516,7 @@ export function RouteListPage() {
   const getDriverLabel = (vehicle: SecondMileVehicle) => {
     const assignedStaffId = vehicle.assignedStaffId;
     if (assignedStaffId === undefined || assignedStaffId === null) {
-      return 'No driver';
+      return 'Chưa có tài xế';
     }
     const assignment = driverAssignmentByStaffId[assignedStaffId];
     return (
@@ -491,7 +524,7 @@ export function RouteListPage() {
       assignment?.staffCode ||
       vehicle.assignedStaffFullName ||
       vehicle.assignedStaffCode ||
-      `Driver #${assignedStaffId}`
+      `Tài xế #${assignedStaffId}`
     );
   };
 
@@ -516,7 +549,7 @@ export function RouteListPage() {
   });
   const formVehicleComboboxOptions = [
     ...(formValues.originType === 'HUB' && formValues.destinationType === 'HUB'
-      ? [{ value: NO_VEHICLE_VALUE, label: 'No vehicle' }]
+      ? [{ value: NO_VEHICLE_VALUE, label: 'Không gán xe' }]
       : []),
     ...formVehicles
       .filter(
@@ -561,7 +594,7 @@ export function RouteListPage() {
       return '-';
     }
     const vehicle = vehicleById[vehicleId];
-    return vehicle ? vehicle.licensePlate : `Vehicle #${vehicleId}`;
+    return vehicle ? vehicle.licensePlate : `Xe #${vehicleId}`;
   };
 
   const getDestinationLabel = (route: SecondMileRoute) => {
@@ -571,10 +604,37 @@ export function RouteListPage() {
     return getPostOfficeLabel(route.destinationPostOfficeCode);
   };
 
+  const getRouteMetricLabel = React.useCallback(
+    (route: SecondMileRoute) =>
+      `${formatRouteMetric(route.estimatedDistanceKm, 'km')} / ${formatRouteMetric(
+        route.estimatedDurationMinutes,
+        'phút'
+      )}`,
+    []
+  );
+
+  const displayRoutes = React.useMemo(() => {
+    const departureKeyword = departureFilter.trim().toLowerCase();
+    const metricKeyword = metricFilter.trim().toLowerCase();
+
+    return routes.filter((route) => {
+      const departureMatches =
+        !departureKeyword ||
+        (route.fixedDepartureTime || '-')
+          .toLowerCase()
+          .includes(departureKeyword);
+      const metricMatches =
+        !metricKeyword ||
+        getRouteMetricLabel(route).toLowerCase().includes(metricKeyword);
+
+      return departureMatches && metricMatches;
+    });
+  }, [departureFilter, getRouteMetricLabel, metricFilter, routes]);
+
   const mapLines = React.useMemo<RouteMapLine[]>(() => {
     const lines: RouteMapLine[] = [];
 
-    for (const route of routes) {
+    for (const route of displayRoutes) {
       const originHub =
         route.originType === 'HUB' && route.originHubId
           ? hubById[route.originHubId]
@@ -659,7 +719,7 @@ export function RouteListPage() {
     }
 
     return lines;
-  }, [hubById, postOfficeByCode, routes]);
+  }, [displayRoutes, hubById, postOfficeByCode]);
 
   const updateField = <K extends keyof RouteFormState>(
     key: K,
@@ -713,6 +773,8 @@ export function RouteListPage() {
   };
 
   const clearRouteFilters = () => {
+    setRouteCodeInput('');
+    setRouteCode(undefined);
     setSearchInput('');
     setKeyword(undefined);
     setSelectedStatus(ALL_FILTER_VALUE);
@@ -723,8 +785,136 @@ export function RouteListPage() {
     setSelectedDestinationHubId('');
     setSelectedDestinationPostOfficeCode('');
     setSelectedVehicleId('');
+    setDepartureFilter('');
+    setMetricFilter('');
     setPage(0);
   };
+
+  const handleTableFilterSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setRouteCode(routeCodeInput.trim() || undefined);
+    setKeyword(searchInput.trim() || undefined);
+    setPage(0);
+    setOpenTableFilter(null);
+  };
+
+  React.useEffect(() => {
+    if (openTableFilter === 'routeCode') {
+      routeCodeFilterRef.current?.focus();
+      routeCodeFilterRef.current?.select();
+    }
+    if (openTableFilter === 'routeName') {
+      routeNameFilterRef.current?.focus();
+      routeNameFilterRef.current?.select();
+    }
+    if (openTableFilter === 'departure') {
+      departureFilterRef.current?.focus();
+      departureFilterRef.current?.select();
+    }
+    if (openTableFilter === 'metrics') {
+      metricFilterRef.current?.focus();
+      metricFilterRef.current?.select();
+    }
+  }, [openTableFilter]);
+
+  const isRouteCodeFilterActive = Boolean(routeCodeInput.trim() || routeCode);
+  const isRouteNameFilterActive = Boolean(searchInput.trim() || keyword);
+  const isOriginFilterActive =
+    selectedOriginType !== ALL_FILTER_VALUE ||
+    Boolean(selectedOriginHubId) ||
+    Boolean(selectedOriginPostOfficeCode);
+  const isDestinationTypeFilterActive =
+    selectedDestinationType !== ALL_FILTER_VALUE;
+  const isDestinationFilterActive =
+    Boolean(selectedDestinationHubId) ||
+    Boolean(selectedDestinationPostOfficeCode);
+  const isVehicleFilterActive = Boolean(selectedVehicleId);
+  const isDepartureFilterActive = Boolean(departureFilter.trim());
+  const isMetricFilterActive = Boolean(metricFilter.trim());
+  const isStatusFilterActive = selectedStatus !== ALL_FILTER_VALUE;
+
+  const renderTextTableFilter = ({
+    filterKey,
+    title,
+    buttonTitle,
+    inputRef,
+    value,
+    onChange,
+    onClear,
+    placeholder,
+    isActive,
+  }: {
+    filterKey: RouteTableFilterKey;
+    title: string;
+    buttonTitle: string;
+    inputRef: React.RefObject<HTMLInputElement | null>;
+    value: string;
+    onChange: (value: string) => void;
+    onClear: () => void;
+    placeholder: string;
+    isActive: boolean;
+  }) => (
+    <Popover
+      open={openTableFilter === filterKey}
+      onOpenChange={(open) => setOpenTableFilter(open ? filterKey : null)}
+    >
+      <div className='flex items-center gap-1'>
+        <span>{title}</span>
+        <PopoverTrigger asChild>
+          <Button
+            type='button'
+            variant={isActive ? 'outline' : 'ghost'}
+            size='icon'
+            className='size-7'
+            title={buttonTitle}
+            aria-label={buttonTitle}
+          >
+            <Search className='h-4 w-4' />
+          </Button>
+        </PopoverTrigger>
+      </div>
+      <PopoverContent align='start' sideOffset={8} className='w-72 p-3'>
+        <form
+          className='flex items-center gap-2'
+          onSubmit={handleTableFilterSubmit}
+        >
+          <Input
+            ref={inputRef}
+            className='h-9 bg-background'
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            disabled={isFetching}
+          />
+          <Button
+            type='submit'
+            variant='outline'
+            size='icon'
+            className='size-9 shrink-0'
+            disabled={isFetching}
+            title='Tìm kiếm'
+            aria-label={buttonTitle}
+          >
+            <Search className='h-4 w-4' />
+          </Button>
+          {isActive ? (
+            <Button
+              type='button'
+              variant='ghost'
+              size='icon'
+              className='size-9 shrink-0'
+              disabled={isFetching}
+              onClick={onClear}
+              title='Xóa tìm kiếm'
+              aria-label={`Xóa ${buttonTitle.toLowerCase()}`}
+            >
+              <X className='h-4 w-4' />
+            </Button>
+          ) : null}
+        </form>
+      </PopoverContent>
+    </Popover>
+  );
 
   const openCreateDialog = () => {
     setFormMode('create');
@@ -741,16 +931,16 @@ export function RouteListPage() {
   };
 
   const validateForm = (values: RouteFormState): string | null => {
-    if (!values.routeCode.trim()) return 'Route code is required.';
-    if (!values.routeName.trim()) return 'Route name is required.';
+    if (!values.routeCode.trim()) return 'Vui lòng nhập mã tuyến.';
+    if (!values.routeName.trim()) return 'Vui lòng nhập tên tuyến.';
     if (values.originType === 'HUB' && !values.originHubId) {
-      return 'Origin hub is required.';
+      return 'Vui lòng chọn hub xuất phát.';
     }
     if (
       values.originType === 'POST_OFFICE' &&
       !values.originPostOfficeCode.trim()
     ) {
-      return 'Origin post office is required.';
+      return 'Vui lòng chọn bưu cục xuất phát.';
     }
     const originHubId = parseOptionalPositiveInteger(values.originHubId);
     const destinationHubId = parseOptionalPositiveInteger(
@@ -763,10 +953,10 @@ export function RouteListPage() {
       values.originType === 'POST_OFFICE' &&
       values.destinationType !== 'HUB'
     ) {
-      return 'Post office origin routes must target a hub.';
+      return 'Tuyến xuất phát từ bưu cục phải có điểm đến là hub.';
     }
     if (values.destinationType === 'HUB' && !values.destinationHubId) {
-      return 'Destination hub is required.';
+      return 'Vui lòng chọn hub đích.';
     }
     if (
       values.destinationType === 'HUB' &&
@@ -774,7 +964,7 @@ export function RouteListPage() {
       destinationHubId !== undefined &&
       originHubId === destinationHubId
     ) {
-      return 'Origin hub and destination hub must be different.';
+      return 'Hub xuất phát và hub đích phải khác nhau.';
     }
     if (values.originType === 'POST_OFFICE' && destinationHubId !== undefined) {
       const originPostOffice =
@@ -783,33 +973,33 @@ export function RouteListPage() {
         originPostOffice?.hubId !== undefined &&
         originPostOffice.hubId !== destinationHubId
       ) {
-        return 'Destination hub must match the origin post office hub.';
+        return 'Hub đích phải khớp với hub của bưu cục xuất phát.';
       }
     }
     if (
       values.destinationType === 'POST_OFFICE' &&
       !values.destinationPostOfficeCode.trim()
     ) {
-      return 'Destination post office is required.';
+      return 'Vui lòng chọn bưu cục đích.';
     }
     if (values.destinationType === 'POST_OFFICE' && !values.vehicleId) {
-      return 'Vehicle is required for hub-post office routes.';
+      return 'Tuyến từ hub đến bưu cục cần chọn xe.';
     }
     if (values.originType === 'POST_OFFICE' && !values.vehicleId) {
-      return 'Vehicle is required for post office-hub routes.';
+      return 'Tuyến từ bưu cục đến hub cần chọn xe.';
     }
     if (
       values.originType === 'HUB' &&
       values.destinationType === 'POST_OFFICE'
     ) {
       if (isFetchingMappedPostOffices) {
-        return 'Post office mappings are still loading.';
+        return 'Danh sách bưu cục liên kết đang được tải.';
       }
       const mappedCodes = new Set(
         mappedPostOffices.map((mapping) => mapping.postOfficeCode)
       );
       if (!mappedCodes.has(values.destinationPostOfficeCode.trim())) {
-        return 'Destination post office must be mapped to the origin hub.';
+        return 'Bưu cục đích phải được liên kết với hub xuất phát.';
       }
     }
     if (vehicleId !== undefined) {
@@ -821,28 +1011,28 @@ export function RouteListPage() {
           operatingHubId !== undefined &&
           selectedVehicle.hubId !== operatingHubId
         ) {
-          return 'Vehicle must belong to the operating hub.';
+          return 'Xe phải thuộc hub vận hành.';
         }
         if (selectedVehicle.status !== 'ACTIVE') {
-          return 'Vehicle must be active.';
+          return 'Xe phải đang hoạt động.';
         }
         if (
           selectedVehicle.assignedStaffId === undefined ||
           selectedVehicle.assignedStaffId === null
         ) {
-          return 'Vehicle must have an assigned driver.';
+          return 'Xe phải có tài xế được phân công.';
         }
       }
     }
     const distanceError = validateOptionalNonNegativeNumber(
-      'Distance',
+      'Khoảng cách',
       values.estimatedDistanceKm
     );
     if (distanceError) {
       return distanceError;
     }
     const durationError = validateOptionalNonNegativeInteger(
-      'Duration',
+      'Thời lượng',
       values.estimatedDurationMinutes
     );
     if (durationError) {
@@ -899,10 +1089,10 @@ export function RouteListPage() {
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
             <ShieldAlert className='h-5 w-5' />
-            Access denied
+            Không có quyền truy cập
           </CardTitle>
           <CardDescription>
-            Route management requires TMS_ADMIN role.
+            Quản lý tuyến yêu cầu vai trò TMS_ADMIN.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -914,193 +1104,24 @@ export function RouteListPage() {
       <div className='space-y-6'>
         <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
           <div>
-            <h1 className='text-2xl font-bold tracking-tight'>Routes</h1>
+            <h1 className='text-2xl font-bold tracking-tight'>
+              Tuyến vận chuyển
+            </h1>
             <p className='text-muted-foreground'>
-              Fixed transport routes between hubs and post offices.
+              Quản lý tuyến vận chuyển cố định giữa hub và bưu cục.
             </p>
           </div>
           <div className='flex gap-2'>
             <Button variant='outline' onClick={() => void refetch()}>
               <RefreshCw className='mr-2 h-4 w-4' />
-              Refresh
+              Làm mới
             </Button>
             <Button onClick={openCreateDialog}>
               <Plus className='mr-2 h-4 w-4' />
-              New route
+              Tạo tuyến
             </Button>
           </div>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Filters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              className='grid gap-3 md:grid-cols-2 xl:grid-cols-8'
-              onSubmit={(event) => {
-                event.preventDefault();
-                setPage(0);
-                setKeyword(searchInput.trim() || undefined);
-              }}
-            >
-              <div className='relative md:col-span-2 xl:col-span-2'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  className='pl-10'
-                  value={searchInput}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  placeholder='Route code or name...'
-                />
-              </div>
-              <TmsCombobox
-                id='route-filter-status'
-                value={selectedStatus}
-                onValueChange={(value) => {
-                  setSelectedStatus(
-                    value as typeof ALL_FILTER_VALUE | SecondMileRouteStatus
-                  );
-                  setPage(0);
-                }}
-                options={statusFilterOptions}
-                placeholder='All statuses'
-                emptyText='No statuses found'
-                className='w-full'
-              />
-              <TmsCombobox
-                id='route-filter-origin-type'
-                value={selectedOriginType}
-                onValueChange={(value) => {
-                  setSelectedOriginType(value as RouteOriginFilter);
-                  setSelectedOriginHubId('');
-                  setSelectedOriginPostOfficeCode('');
-                  setSelectedVehicleId('');
-                  setPage(0);
-                }}
-                options={originTypeFilterOptions}
-                placeholder='All origins'
-                emptyText='No origin types found'
-                className='w-full'
-              />
-              {selectedOriginType === 'POST_OFFICE' ? (
-                <TmsCombobox
-                  id='route-filter-origin-post-office'
-                  value={selectedOriginPostOfficeCode}
-                  onValueChange={(value) => {
-                    setSelectedOriginPostOfficeCode(value);
-                    setPage(0);
-                  }}
-                  options={postOfficeFilterOptions}
-                  placeholder='Origin post office'
-                  emptyText='No post offices found'
-                  clearable
-                  className='w-full'
-                />
-              ) : (
-                <TmsCombobox
-                  id='route-filter-origin-hub'
-                  value={selectedOriginHubId}
-                  onValueChange={(value) => {
-                    setSelectedOriginHubId(value);
-                    setSelectedVehicleId('');
-                    setPage(0);
-                  }}
-                  options={hubComboboxOptions}
-                  placeholder='Origin hub'
-                  emptyText='No hubs found'
-                  clearable
-                  className='w-full'
-                />
-              )}
-              <TmsCombobox
-                id='route-filter-destination-type'
-                value={selectedDestinationType}
-                onValueChange={(value) => {
-                  setSelectedDestinationType(value as RouteDestinationFilter);
-                  setSelectedDestinationHubId('');
-                  setSelectedDestinationPostOfficeCode('');
-                  setPage(0);
-                }}
-                options={destinationTypeFilterOptions}
-                placeholder='All destinations'
-                emptyText='No destination types found'
-                className='w-full'
-              />
-              {selectedDestinationType === 'HUB' ? (
-                <TmsCombobox
-                  id='route-filter-destination-hub'
-                  value={selectedDestinationHubId}
-                  onValueChange={(value) => {
-                    setSelectedDestinationHubId(value);
-                    setPage(0);
-                  }}
-                  options={hubComboboxOptions}
-                  placeholder='Destination hub'
-                  emptyText='No hubs found'
-                  clearable
-                  className='w-full'
-                />
-              ) : selectedDestinationType === 'POST_OFFICE' ? (
-                <TmsCombobox
-                  id='route-filter-destination-post-office'
-                  value={selectedDestinationPostOfficeCode}
-                  onValueChange={(value) => {
-                    setSelectedDestinationPostOfficeCode(value);
-                    setPage(0);
-                  }}
-                  options={postOfficeFilterOptions}
-                  placeholder='Destination post office'
-                  emptyText='No post offices found'
-                  clearable
-                  className='w-full'
-                />
-              ) : (
-                <TmsCombobox
-                  id='route-filter-vehicle'
-                  value={selectedVehicleId}
-                  onValueChange={(value) => {
-                    setSelectedVehicleId(value);
-                    setPage(0);
-                  }}
-                  options={routeVehicleFilterOptions}
-                  placeholder='Vehicle'
-                  emptyText='No vehicles found'
-                  clearable
-                  className='w-full'
-                />
-              )}
-              {selectedDestinationType !== ALL_FILTER_VALUE && (
-                <TmsCombobox
-                  id='route-filter-vehicle'
-                  value={selectedVehicleId}
-                  onValueChange={(value) => {
-                    setSelectedVehicleId(value);
-                    setPage(0);
-                  }}
-                  options={routeVehicleFilterOptions}
-                  placeholder='Vehicle'
-                  emptyText='No vehicles found'
-                  clearable
-                  className='w-full'
-                />
-              )}
-              <div className='flex gap-2 md:col-span-2 xl:col-span-7 xl:justify-end'>
-                <Button type='submit'>
-                  <Search className='mr-2 h-4 w-4' />
-                  Search
-                </Button>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={clearRouteFilters}
-                >
-                  <X className='mr-2 h-4 w-4' />
-                  Reset
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
 
         <SecondMileRoutesMap
           lines={mapLines}
@@ -1109,40 +1130,532 @@ export function RouteListPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Route list</CardTitle>
+            <CardTitle>Danh sách tuyến</CardTitle>
             <CardDescription>
-              Click a row to highlight that route on map.
+              Chọn một dòng để làm nổi bật tuyến trên bản đồ.
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
             <div className='overflow-x-auto'>
-              <Table>
+              <Table className='min-w-[1380px]'>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Route code</TableHead>
-                    <TableHead>Route name</TableHead>
-                    <TableHead>Origin</TableHead>
-                    <TableHead>Destination type</TableHead>
-                    <TableHead>Destination</TableHead>
-                    <TableHead>Assigned vehicle</TableHead>
-                    <TableHead>Departure</TableHead>
-                    <TableHead>Distance / duration</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className='text-right'>Actions</TableHead>
+                    <TableHead className='w-[150px]'>
+                      {renderTextTableFilter({
+                        filterKey: 'routeCode',
+                        title: 'Mã hành trình',
+                        buttonTitle: 'Tìm mã hành trình',
+                        inputRef: routeCodeFilterRef,
+                        value: routeCodeInput,
+                        onChange: setRouteCodeInput,
+                        onClear: () => {
+                          setRouteCodeInput('');
+                          setRouteCode(undefined);
+                          setPage(0);
+                        },
+                        placeholder: 'Tìm mã hành trình...',
+                        isActive: isRouteCodeFilterActive,
+                      })}
+                    </TableHead>
+                    <TableHead className='w-[220px]'>
+                      {renderTextTableFilter({
+                        filterKey: 'routeName',
+                        title: 'Tên hành trình',
+                        buttonTitle: 'Tìm tên hành trình',
+                        inputRef: routeNameFilterRef,
+                        value: searchInput,
+                        onChange: setSearchInput,
+                        onClear: () => {
+                          setSearchInput('');
+                          setKeyword(undefined);
+                          setPage(0);
+                        },
+                        placeholder: 'Tìm tên hành trình...',
+                        isActive: isRouteNameFilterActive,
+                      })}
+                    </TableHead>
+                    <TableHead className='w-[240px]'>
+                      <Popover
+                        open={openTableFilter === 'origin'}
+                        onOpenChange={(open) =>
+                          setOpenTableFilter(open ? 'origin' : null)
+                        }
+                      >
+                        <div className='flex items-center gap-1'>
+                          <span>Nguồn</span>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type='button'
+                              variant={
+                                isOriginFilterActive ? 'outline' : 'ghost'
+                              }
+                              size='icon'
+                              className='size-7'
+                              title='Lọc nguồn'
+                              aria-label='Lọc nguồn'
+                            >
+                              <Search className='h-4 w-4' />
+                            </Button>
+                          </PopoverTrigger>
+                        </div>
+                        <PopoverContent
+                          align='start'
+                          sideOffset={8}
+                          className='w-80 p-3'
+                        >
+                          <form
+                            className='space-y-3'
+                            onSubmit={handleTableFilterSubmit}
+                          >
+                            <TmsCombobox
+                              id='route-table-filter-origin-type'
+                              value={selectedOriginType}
+                              onValueChange={(value) => {
+                                setSelectedOriginType(
+                                  value as RouteOriginFilter
+                                );
+                                setSelectedOriginHubId('');
+                                setSelectedOriginPostOfficeCode('');
+                                setSelectedVehicleId('');
+                              }}
+                              options={originTypeFilterOptions}
+                              placeholder='Tất cả nguồn'
+                              emptyText='Không tìm thấy loại nguồn'
+                              disabled={isFetching}
+                            />
+                            {selectedOriginType === 'POST_OFFICE' ? (
+                              <TmsCombobox
+                                id='route-table-filter-origin-post-office'
+                                value={selectedOriginPostOfficeCode}
+                                onValueChange={setSelectedOriginPostOfficeCode}
+                                options={postOfficeFilterOptions}
+                                placeholder='Bưu cục nguồn'
+                                emptyText='Không tìm thấy bưu cục'
+                                clearable
+                                disabled={isFetching}
+                              />
+                            ) : (
+                              <TmsCombobox
+                                id='route-table-filter-origin-hub'
+                                value={selectedOriginHubId}
+                                onValueChange={(value) => {
+                                  setSelectedOriginHubId(value);
+                                  setSelectedVehicleId('');
+                                }}
+                                options={hubComboboxOptions}
+                                placeholder='Hub nguồn'
+                                emptyText='Không tìm thấy hub'
+                                clearable
+                                disabled={isFetching}
+                              />
+                            )}
+                            <div className='flex justify-end gap-2'>
+                              {isOriginFilterActive ? (
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='sm'
+                                  disabled={isFetching}
+                                  onClick={() => {
+                                    setSelectedOriginType(ALL_FILTER_VALUE);
+                                    setSelectedOriginHubId('');
+                                    setSelectedOriginPostOfficeCode('');
+                                    setSelectedVehicleId('');
+                                    setPage(0);
+                                  }}
+                                >
+                                  Xóa
+                                </Button>
+                              ) : null}
+                              <Button
+                                type='submit'
+                                variant='outline'
+                                size='sm'
+                                disabled={isFetching}
+                              >
+                                Tìm kiếm
+                              </Button>
+                            </div>
+                          </form>
+                        </PopoverContent>
+                      </Popover>
+                    </TableHead>
+                    <TableHead className='w-[160px]'>
+                      <Popover
+                        open={openTableFilter === 'destinationType'}
+                        onOpenChange={(open) =>
+                          setOpenTableFilter(open ? 'destinationType' : null)
+                        }
+                      >
+                        <div className='flex items-center gap-1'>
+                          <span>Loại đích</span>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type='button'
+                              variant={
+                                isDestinationTypeFilterActive
+                                  ? 'outline'
+                                  : 'ghost'
+                              }
+                              size='icon'
+                              className='size-7'
+                              title='Lọc loại đích'
+                              aria-label='Lọc loại đích'
+                            >
+                              <Search className='h-4 w-4' />
+                            </Button>
+                          </PopoverTrigger>
+                        </div>
+                        <PopoverContent
+                          align='start'
+                          sideOffset={8}
+                          className='w-64 p-3'
+                        >
+                          <form
+                            className='space-y-3'
+                            onSubmit={handleTableFilterSubmit}
+                          >
+                            <TmsCombobox
+                              id='route-table-filter-destination-type'
+                              value={selectedDestinationType}
+                              onValueChange={(value) => {
+                                setSelectedDestinationType(
+                                  value as RouteDestinationFilter
+                                );
+                                setSelectedDestinationHubId('');
+                                setSelectedDestinationPostOfficeCode('');
+                              }}
+                              options={destinationTypeFilterOptions}
+                              placeholder='Tất cả loại đích'
+                              emptyText='Không tìm thấy loại đích'
+                              disabled={isFetching}
+                            />
+                            <div className='flex justify-end gap-2'>
+                              {isDestinationTypeFilterActive ? (
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='sm'
+                                  disabled={isFetching}
+                                  onClick={() => {
+                                    setSelectedDestinationType(
+                                      ALL_FILTER_VALUE
+                                    );
+                                    setSelectedDestinationHubId('');
+                                    setSelectedDestinationPostOfficeCode('');
+                                    setPage(0);
+                                  }}
+                                >
+                                  Xóa
+                                </Button>
+                              ) : null}
+                              <Button
+                                type='submit'
+                                variant='outline'
+                                size='sm'
+                                disabled={isFetching}
+                              >
+                                Tìm kiếm
+                              </Button>
+                            </div>
+                          </form>
+                        </PopoverContent>
+                      </Popover>
+                    </TableHead>
+                    <TableHead className='w-[240px]'>
+                      <Popover
+                        open={openTableFilter === 'destination'}
+                        onOpenChange={(open) =>
+                          setOpenTableFilter(open ? 'destination' : null)
+                        }
+                      >
+                        <div className='flex items-center gap-1'>
+                          <span>Đích</span>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type='button'
+                              variant={
+                                isDestinationFilterActive ? 'outline' : 'ghost'
+                              }
+                              size='icon'
+                              className='size-7'
+                              title='Lọc đích'
+                              aria-label='Lọc đích'
+                            >
+                              <Search className='h-4 w-4' />
+                            </Button>
+                          </PopoverTrigger>
+                        </div>
+                        <PopoverContent
+                          align='start'
+                          sideOffset={8}
+                          className='w-80 p-3'
+                        >
+                          <form
+                            className='space-y-3'
+                            onSubmit={handleTableFilterSubmit}
+                          >
+                            <TmsCombobox
+                              id='route-table-filter-destination-kind'
+                              value={selectedDestinationType}
+                              onValueChange={(value) => {
+                                setSelectedDestinationType(
+                                  value as RouteDestinationFilter
+                                );
+                                setSelectedDestinationHubId('');
+                                setSelectedDestinationPostOfficeCode('');
+                              }}
+                              options={destinationTypeFilterOptions}
+                              placeholder='Chọn loại đích'
+                              emptyText='Không tìm thấy loại đích'
+                              disabled={isFetching}
+                            />
+                            {selectedDestinationType === 'POST_OFFICE' ? (
+                              <TmsCombobox
+                                id='route-table-filter-destination-post-office'
+                                value={selectedDestinationPostOfficeCode}
+                                onValueChange={
+                                  setSelectedDestinationPostOfficeCode
+                                }
+                                options={postOfficeFilterOptions}
+                                placeholder='Bưu cục đích'
+                                emptyText='Không tìm thấy bưu cục'
+                                clearable
+                                disabled={isFetching}
+                              />
+                            ) : (
+                              <TmsCombobox
+                                id='route-table-filter-destination-hub'
+                                value={selectedDestinationHubId}
+                                onValueChange={setSelectedDestinationHubId}
+                                options={hubComboboxOptions}
+                                placeholder='Hub đích'
+                                emptyText='Không tìm thấy hub'
+                                clearable
+                                disabled={isFetching}
+                              />
+                            )}
+                            <div className='flex justify-end gap-2'>
+                              {isDestinationFilterActive ? (
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='sm'
+                                  disabled={isFetching}
+                                  onClick={() => {
+                                    setSelectedDestinationHubId('');
+                                    setSelectedDestinationPostOfficeCode('');
+                                    setPage(0);
+                                  }}
+                                >
+                                  Xóa
+                                </Button>
+                              ) : null}
+                              <Button
+                                type='submit'
+                                variant='outline'
+                                size='sm'
+                                disabled={isFetching}
+                              >
+                                Tìm kiếm
+                              </Button>
+                            </div>
+                          </form>
+                        </PopoverContent>
+                      </Popover>
+                    </TableHead>
+                    <TableHead className='w-[180px]'>
+                      <Popover
+                        open={openTableFilter === 'vehicle'}
+                        onOpenChange={(open) =>
+                          setOpenTableFilter(open ? 'vehicle' : null)
+                        }
+                      >
+                        <div className='flex items-center gap-1'>
+                          <span>Phương tiện</span>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type='button'
+                              variant={
+                                isVehicleFilterActive ? 'outline' : 'ghost'
+                              }
+                              size='icon'
+                              className='size-7'
+                              title='Lọc phương tiện'
+                              aria-label='Lọc phương tiện'
+                            >
+                              <Search className='h-4 w-4' />
+                            </Button>
+                          </PopoverTrigger>
+                        </div>
+                        <PopoverContent
+                          align='start'
+                          sideOffset={8}
+                          className='w-72 p-3'
+                        >
+                          <form
+                            className='space-y-3'
+                            onSubmit={handleTableFilterSubmit}
+                          >
+                            <TmsCombobox
+                              id='route-table-filter-vehicle'
+                              value={selectedVehicleId}
+                              onValueChange={setSelectedVehicleId}
+                              options={routeVehicleFilterOptions}
+                              placeholder='Chọn phương tiện'
+                              emptyText='Không tìm thấy phương tiện'
+                              clearable
+                              disabled={isFetching}
+                            />
+                            <div className='flex justify-end gap-2'>
+                              {isVehicleFilterActive ? (
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='sm'
+                                  disabled={isFetching}
+                                  onClick={() => {
+                                    setSelectedVehicleId('');
+                                    setPage(0);
+                                  }}
+                                >
+                                  Xóa
+                                </Button>
+                              ) : null}
+                              <Button
+                                type='submit'
+                                variant='outline'
+                                size='sm'
+                                disabled={isFetching}
+                              >
+                                Tìm kiếm
+                              </Button>
+                            </div>
+                          </form>
+                        </PopoverContent>
+                      </Popover>
+                    </TableHead>
+                    <TableHead className='w-[150px]'>
+                      {renderTextTableFilter({
+                        filterKey: 'departure',
+                        title: 'Giờ đi',
+                        buttonTitle: 'Tìm giờ đi',
+                        inputRef: departureFilterRef,
+                        value: departureFilter,
+                        onChange: setDepartureFilter,
+                        onClear: () => setDepartureFilter(''),
+                        placeholder: 'Tìm giờ đi...',
+                        isActive: isDepartureFilterActive,
+                      })}
+                    </TableHead>
+                    <TableHead className='w-[210px]'>
+                      {renderTextTableFilter({
+                        filterKey: 'metrics',
+                        title: 'Khoảng cách / thời gian',
+                        buttonTitle: 'Tìm khoảng cách hoặc thời gian',
+                        inputRef: metricFilterRef,
+                        value: metricFilter,
+                        onChange: setMetricFilter,
+                        onClear: () => setMetricFilter(''),
+                        placeholder: 'Tìm khoảng cách hoặc thời gian...',
+                        isActive: isMetricFilterActive,
+                      })}
+                    </TableHead>
+                    <TableHead className='w-[160px]'>
+                      <Popover
+                        open={openTableFilter === 'status'}
+                        onOpenChange={(open) =>
+                          setOpenTableFilter(open ? 'status' : null)
+                        }
+                      >
+                        <div className='flex items-center gap-1'>
+                          <span>Trạng thái</span>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type='button'
+                              variant={
+                                isStatusFilterActive ? 'outline' : 'ghost'
+                              }
+                              size='icon'
+                              className='size-7'
+                              title='Lọc trạng thái'
+                              aria-label='Lọc trạng thái'
+                            >
+                              <Search className='h-4 w-4' />
+                            </Button>
+                          </PopoverTrigger>
+                        </div>
+                        <PopoverContent
+                          align='start'
+                          sideOffset={8}
+                          className='w-64 p-3'
+                        >
+                          <form
+                            className='space-y-3'
+                            onSubmit={handleTableFilterSubmit}
+                          >
+                            <TmsCombobox
+                              id='route-table-filter-status'
+                              value={selectedStatus}
+                              onValueChange={(value) =>
+                                setSelectedStatus(
+                                  value as
+                                    | typeof ALL_FILTER_VALUE
+                                    | SecondMileRouteStatus
+                                )
+                              }
+                              options={statusFilterOptions}
+                              placeholder='Tất cả trạng thái'
+                              emptyText='Không tìm thấy trạng thái'
+                              disabled={isFetching}
+                            />
+                            <div className='flex justify-end gap-2'>
+                              {isStatusFilterActive ? (
+                                <Button
+                                  type='button'
+                                  variant='ghost'
+                                  size='sm'
+                                  disabled={isFetching}
+                                  onClick={() => {
+                                    setSelectedStatus(ALL_FILTER_VALUE);
+                                    setPage(0);
+                                  }}
+                                >
+                                  Xóa
+                                </Button>
+                              ) : null}
+                              <Button
+                                type='submit'
+                                variant='outline'
+                                size='sm'
+                                disabled={isFetching}
+                              >
+                                Tìm kiếm
+                              </Button>
+                            </div>
+                          </form>
+                        </PopoverContent>
+                      </Popover>
+                    </TableHead>
+                    <TableHead className='w-[96px] text-right'>
+                      <span className='sr-only'>Thao tác</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {routes.length === 0 ? (
+                  {displayRoutes.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={10}
                         className='py-8 text-center text-muted-foreground'
                       >
-                        {isFetching ? 'Loading routes...' : 'No routes found'}
+                        {isFetching
+                          ? 'Đang tải tuyến...'
+                          : 'Không tìm thấy tuyến'}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    routes.map((route) => (
+                    displayRoutes.map((route) => (
                       <TableRow
                         key={route.id}
                         className='cursor-pointer'
@@ -1165,7 +1678,7 @@ export function RouteListPage() {
                           {formatRouteMetric(route.estimatedDistanceKm, 'km')} /{' '}
                           {formatRouteMetric(
                             route.estimatedDurationMinutes,
-                            'min'
+                            'phút'
                           )}
                         </TableCell>
                         <TableCell>
@@ -1177,17 +1690,21 @@ export function RouteListPage() {
                           <div className='flex justify-end gap-2'>
                             <Button
                               variant='outline'
-                              size='sm'
+                              size='icon'
+                              title='Sửa hành trình'
+                              aria-label='Sửa hành trình'
                               onClick={(event) => {
                                 event.stopPropagation();
                                 openEditDialog(route);
                               }}
                             >
-                              Edit
+                              <Pencil className='h-4 w-4' />
                             </Button>
                             <Button
                               variant='destructive'
-                              size='sm'
+                              size='icon'
+                              title='Xóa hành trình'
+                              aria-label='Xóa hành trình'
                               onClick={(event) => {
                                 event.stopPropagation();
                                 setDeleteTarget(route);
@@ -1207,7 +1724,7 @@ export function RouteListPage() {
             {(routesData?.hasNext || routesData?.hasPrevious) && (
               <div className='flex items-center justify-between border-t pt-3'>
                 <div className='text-sm text-muted-foreground'>
-                  Page {(routesData?.currentPage ?? 0) + 1} /{' '}
+                  Trang {(routesData?.currentPage ?? 0) + 1} /{' '}
                   {routesData?.totalPages ?? 1}
                 </div>
                 <div className='flex gap-2'>
@@ -1217,7 +1734,7 @@ export function RouteListPage() {
                     disabled={!routesData?.hasPrevious}
                     onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
                   >
-                    Previous
+                    Trước
                   </Button>
                   <Button
                     variant='outline'
@@ -1225,7 +1742,7 @@ export function RouteListPage() {
                     disabled={!routesData?.hasNext}
                     onClick={() => setPage((prev) => prev + 1)}
                   >
-                    Next
+                    Sau
                   </Button>
                 </div>
               </div>
@@ -1248,10 +1765,10 @@ export function RouteListPage() {
         <DialogContent className='max-h-[85vh] max-w-5xl overflow-y-auto'>
           <DialogHeader>
             <DialogTitle>
-              {formMode === 'create' ? 'Create route' : 'Update route'}
+              {formMode === 'create' ? 'Tạo tuyến' : 'Cập nhật tuyến'}
             </DialogTitle>
             <DialogDescription>
-              Configure a fixed line for second-mile transport.
+              Cấu hình tuyến cố định cho vận chuyển chặng giữa.
             </DialogDescription>
           </DialogHeader>
 
@@ -1271,20 +1788,20 @@ export function RouteListPage() {
                   await createRoute(
                     body as SecondMileCreateRouteRequest
                   ).unwrap();
-                  notification.success('Route created.');
+                  notification.success('Đã tạo tuyến.');
                   if (page !== 0) setPage(0);
                 } else if (editingRouteId !== null) {
                   await updateRoute({
                     id: editingRouteId,
                     body: body as SecondMileUpdateRouteRequest,
                   }).unwrap();
-                  notification.success('Route updated.');
+                  notification.success('Đã cập nhật tuyến.');
                 }
                 setIsFormOpen(false);
                 setEditingRouteId(null);
                 void refetch();
               } catch (errorCreateUpdate) {
-                notification.error('Save failed.', {
+                notification.error('Lưu tuyến thất bại.', {
                   description: getErrorMessage(errorCreateUpdate),
                 });
               }
@@ -1292,7 +1809,7 @@ export function RouteListPage() {
           >
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
               <div className='space-y-2'>
-                <Label htmlFor='route-code'>Route code</Label>
+                <Label htmlFor='route-code'>Mã tuyến</Label>
                 <Input
                   id='route-code'
                   value={formValues.routeCode}
@@ -1302,7 +1819,7 @@ export function RouteListPage() {
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='route-name'>Route name</Label>
+                <Label htmlFor='route-name'>Tên tuyến</Label>
                 <Input
                   id='route-name'
                   value={formValues.routeName}
@@ -1312,7 +1829,7 @@ export function RouteListPage() {
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='route-origin-type'>Origin type</Label>
+                <Label htmlFor='route-origin-type'>Loại điểm xuất phát</Label>
                 <TmsCombobox
                   id='route-origin-type'
                   value={formValues.originType}
@@ -1320,39 +1837,39 @@ export function RouteListPage() {
                     updateOriginType(value as SecondMileRouteEndpointType)
                   }
                   options={ROUTE_ENDPOINT_OPTIONS}
-                  placeholder='Select origin type'
-                  emptyText='No origin types found'
+                  placeholder='Chọn loại điểm xuất phát'
+                  emptyText='Không tìm thấy loại điểm xuất phát'
                 />
               </div>
               {formValues.originType === 'HUB' ? (
                 <div className='space-y-2'>
-                  <Label htmlFor='route-origin-hub'>Origin hub</Label>
+                  <Label htmlFor='route-origin-hub'>Hub xuất phát</Label>
                   <TmsCombobox
                     id='route-origin-hub'
                     value={formValues.originHubId}
                     onValueChange={updateOriginHub}
                     options={hubComboboxOptions}
-                    placeholder='Select origin hub'
-                    emptyText='No hubs found'
+                    placeholder='Chọn hub xuất phát'
+                    emptyText='Không tìm thấy hub'
                   />
                 </div>
               ) : (
                 <div className='space-y-2'>
                   <Label htmlFor='route-origin-post-office'>
-                    Origin post office
+                    Bưu cục xuất phát
                   </Label>
                   <TmsCombobox
                     id='route-origin-post-office'
                     value={formValues.originPostOfficeCode}
                     onValueChange={updateOriginPostOffice}
                     options={postOfficeFilterOptions}
-                    placeholder='Select origin post office'
-                    emptyText='No post offices found'
+                    placeholder='Chọn bưu cục xuất phát'
+                    emptyText='Không tìm thấy bưu cục'
                   />
                 </div>
               )}
               <div className='space-y-2'>
-                <Label htmlFor='route-destination-type'>Destination type</Label>
+                <Label htmlFor='route-destination-type'>Loại điểm đến</Label>
                 <TmsCombobox
                   id='route-destination-type'
                   value={formValues.destinationType}
@@ -1362,13 +1879,13 @@ export function RouteListPage() {
                     )
                   }
                   options={formDestinationTypeOptions}
-                  placeholder='Select destination type'
-                  emptyText='No destination types found'
+                  placeholder='Chọn loại điểm đến'
+                  emptyText='Không tìm thấy loại điểm đến'
                 />
               </div>
               {formValues.destinationType === 'HUB' ? (
                 <div className='space-y-2 md:col-span-2'>
-                  <Label htmlFor='route-destination-hub'>Destination hub</Label>
+                  <Label htmlFor='route-destination-hub'>Hub đích</Label>
                   <TmsCombobox
                     id='route-destination-hub'
                     value={formValues.destinationHubId}
@@ -1376,12 +1893,12 @@ export function RouteListPage() {
                       updateField('destinationHubId', value)
                     }
                     options={destinationHubComboboxOptions}
-                    placeholder='Select destination hub'
+                    placeholder='Chọn hub đích'
                     emptyText={
                       formValues.originType === 'POST_OFFICE' ||
                       formValues.originHubId
-                        ? 'No destination hubs found'
-                        : 'Select origin hub first'
+                        ? 'Không tìm thấy hub đích'
+                        : 'Chọn hub xuất phát trước'
                     }
                     disabled={
                       formValues.originType === 'HUB' && !formValues.originHubId
@@ -1391,7 +1908,7 @@ export function RouteListPage() {
               ) : (
                 <div className='space-y-2 md:col-span-2'>
                   <Label htmlFor='route-destination-post-office'>
-                    Destination post office
+                    Bưu cục đích
                   </Label>
                   <TmsCombobox
                     id='route-destination-post-office'
@@ -1402,13 +1919,13 @@ export function RouteListPage() {
                     options={mappedPostOfficeComboboxOptions}
                     placeholder={
                       formValues.originHubId
-                        ? 'Select mapped post office'
-                        : 'Select origin hub first'
+                        ? 'Chọn bưu cục đã liên kết'
+                        : 'Chọn hub xuất phát trước'
                     }
                     emptyText={
                       formValues.originHubId
-                        ? 'No mapped post offices found'
-                        : 'Select origin hub first'
+                        ? 'Không tìm thấy bưu cục đã liên kết'
+                        : 'Chọn hub xuất phát trước'
                     }
                     disabled={!formValues.originHubId}
                     loading={isFetchingMappedPostOffices}
@@ -1419,8 +1936,8 @@ export function RouteListPage() {
                 <Label htmlFor='route-vehicle'>
                   {formValues.originType === 'POST_OFFICE' ||
                   formValues.destinationType === 'POST_OFFICE'
-                    ? 'Vehicle *'
-                    : 'Vehicle'}
+                    ? 'Xe *'
+                    : 'Xe'}
                 </Label>
                 <TmsCombobox
                   id='route-vehicle'
@@ -1441,15 +1958,15 @@ export function RouteListPage() {
                   placeholder={
                     formValues.originType === 'POST_OFFICE' ||
                     formValues.destinationType === 'POST_OFFICE'
-                      ? 'Select vehicle'
-                      : 'Optional vehicle'
+                      ? 'Chọn xe'
+                      : 'Xe tùy chọn'
                   }
                   emptyText={
                     formOperatingHubNumericId
-                      ? 'No active driver-backed vehicles found'
+                      ? 'Không tìm thấy xe hoạt động đã gán tài xế'
                       : formValues.originType === 'POST_OFFICE'
-                        ? 'Select destination hub first'
-                        : 'Select origin hub first'
+                        ? 'Chọn hub đích trước'
+                        : 'Chọn hub xuất phát trước'
                   }
                   disabled={!formOperatingHubNumericId}
                   loading={
@@ -1458,7 +1975,7 @@ export function RouteListPage() {
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='route-status'>Status</Label>
+                <Label htmlFor='route-status'>Trạng thái</Label>
                 <TmsCombobox
                   id='route-status'
                   value={formValues.status}
@@ -1466,12 +1983,12 @@ export function RouteListPage() {
                     updateField('status', value as SecondMileRouteStatus)
                   }
                   options={ROUTE_STATUS_OPTIONS}
-                  placeholder='Select status'
-                  emptyText='No statuses found'
+                  placeholder='Chọn trạng thái'
+                  emptyText='Không tìm thấy trạng thái'
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='distance'>Distance (km)</Label>
+                <Label htmlFor='distance'>Khoảng cách (km)</Label>
                 <Input
                   id='distance'
                   type='number'
@@ -1481,11 +1998,11 @@ export function RouteListPage() {
                   onChange={(event) =>
                     updateField('estimatedDistanceKm', event.target.value)
                   }
-                  placeholder='Optional'
+                  placeholder='Tùy chọn'
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='duration'>Duration (minutes)</Label>
+                <Label htmlFor='duration'>Thời lượng (phút)</Label>
                 <Input
                   id='duration'
                   type='number'
@@ -1495,11 +2012,11 @@ export function RouteListPage() {
                   onChange={(event) =>
                     updateField('estimatedDurationMinutes', event.target.value)
                   }
-                  placeholder='Optional'
+                  placeholder='Tùy chọn'
                 />
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='departure-time'>Fixed departure time</Label>
+                <Label htmlFor='departure-time'>Giờ xuất phát cố định</Label>
                 <Input
                   id='departure-time'
                   type='time'
@@ -1510,7 +2027,7 @@ export function RouteListPage() {
                 />
               </div>
               <div className='space-y-2 md:col-span-2 xl:col-span-3'>
-                <Label htmlFor='note'>Note</Label>
+                <Label htmlFor='note'>Ghi chú</Label>
                 <Textarea
                   id='note'
                   value={formValues.note}
@@ -1525,19 +2042,19 @@ export function RouteListPage() {
                 variant='outline'
                 onClick={() => setIsFormOpen(false)}
               >
-                Cancel
+                Hủy
               </Button>
               <Button
                 type='submit'
                 disabled={isSavingRoute || isRouteFormDependencyLoading}
               >
                 {isSavingRoute
-                  ? 'Saving...'
+                  ? 'Đang lưu...'
                   : isRouteFormDependencyLoading
-                    ? 'Loading data...'
+                    ? 'Đang tải dữ liệu...'
                     : formMode === 'create'
-                      ? 'Create route'
-                      : 'Update route'}
+                      ? 'Tạo tuyến'
+                      : 'Cập nhật tuyến'}
               </Button>
             </div>
           </form>
@@ -1551,13 +2068,13 @@ export function RouteListPage() {
             setDeleteTarget(null);
           }
         }}
-        title='Delete route'
+        title='Xóa tuyến'
         description={
           deleteTarget
-            ? `Delete route ${deleteTarget.routeCode} - ${deleteTarget.routeName}?`
+            ? `Xóa tuyến ${deleteTarget.routeCode} - ${deleteTarget.routeName}?`
             : undefined
         }
-        confirmText='Delete'
+        confirmText='Xóa'
         variant='destructive'
         isLoading={isDeleting}
         onConfirm={async () => {
@@ -1566,11 +2083,11 @@ export function RouteListPage() {
           }
           try {
             await deleteRoute(deleteTarget.id).unwrap();
-            notification.success('Route deleted.');
+            notification.success('Đã xóa tuyến.');
             setDeleteTarget(null);
             void refetch();
           } catch (deleteError) {
-            notification.error('Delete failed.', {
+            notification.error('Xóa tuyến thất bại.', {
               description: getErrorMessage(deleteError),
             });
           }

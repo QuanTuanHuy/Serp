@@ -157,7 +157,7 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
           fillOpacity: 0.9,
         })
         .bindPopup(
-          `<div style="font-size:12px;line-height:1.4"><strong>${escapeHtml(line.routeCode)}</strong><br/>${escapeHtml(line.origin.name)}<br/><span style="color:#64748b">Origin hub</span></div>`
+          `<div style="font-size:12px;line-height:1.4"><strong>${escapeHtml(line.routeCode)}</strong><br/>${escapeHtml(line.origin.name)}<br/><span style="color:#64748b">Điểm xuất phát</span></div>`
         )
         .addTo(layerGroup);
 
@@ -170,7 +170,7 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
           fillOpacity: 0.9,
         })
         .bindPopup(
-          `<div style="font-size:12px;line-height:1.4"><strong>${escapeHtml(line.routeName)}</strong><br/>${escapeHtml(line.destination.name)}<br/><span style="color:#64748b">Destination ${line.destination.type === 'HUB' ? 'hub' : 'post office'}</span></div>`
+          `<div style="font-size:12px;line-height:1.4"><strong>${escapeHtml(line.routeName)}</strong><br/>${escapeHtml(line.destination.name)}<br/><span style="color:#64748b">Điểm đến ${line.destination.type === 'HUB' ? 'hub' : 'bưu cục'}</span></div>`
         )
         .addTo(layerGroup);
     });
@@ -192,11 +192,11 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Route map</CardTitle>
+        <CardTitle>Bản đồ tuyến</CardTitle>
         <CardDescription>
           {lines.length > 0
-            ? `${lines.length} route${lines.length === 1 ? '' : 's'} with complete coordinates`
-            : 'No routes with complete coordinates to display.'}
+            ? `${lines.length} tuyến có đầy đủ tọa độ`
+            : 'Không có tuyến đủ tọa độ để hiển thị.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -207,8 +207,8 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
           />
           {lines.length === 0 && (
             <div className='pointer-events-none absolute inset-x-4 top-4 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm'>
-              Add origin and destination coordinates to preview route lines
-              here.
+              Bổ sung tọa độ điểm xuất phát và điểm đến để xem tuyến trên bản
+              đồ.
             </div>
           )}
         </div>

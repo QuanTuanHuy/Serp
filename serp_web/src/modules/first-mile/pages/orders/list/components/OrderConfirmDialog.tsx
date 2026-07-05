@@ -20,6 +20,7 @@ import type {
   FirstMileOrderDetail,
   OrderPaymentInitResponse,
 } from '../../../../types';
+import { formatStatusLabel } from '../orderPageModels';
 
 interface OrderConfirmDialogProps {
   open: boolean;
@@ -37,13 +38,37 @@ interface OrderConfirmDialogProps {
   onInitiatePayment: () => void;
 }
 
-const currencyFormatter = new Intl.NumberFormat('en-US');
+const currencyFormatter = new Intl.NumberFormat('vi-VN');
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null || !Number.isFinite(value)) {
     return '--';
   }
   return `${currencyFormatter.format(value)} VND`;
+};
+
+const formatFeePayerLabel = (value?: string | null): string => {
+  switch (value) {
+    case 'SENDER':
+      return 'Người gửi';
+    case 'RECEIVER':
+      return 'Người nhận';
+    default:
+      return value || '--';
+  }
+};
+
+const formatPaymentStatusLabel = (value?: string | null): string => {
+  switch (value) {
+    case 'PAID':
+      return 'Đã thanh toán';
+    case 'UNPAID':
+      return 'Chưa thanh toán';
+    case 'PENDING':
+      return 'Đang chờ thanh toán';
+    default:
+      return value || '--';
+  }
 };
 
 export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
@@ -78,44 +103,50 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>Confirm Order</DialogTitle>
+          <DialogTitle>Xác nhận đơn hàng</DialogTitle>
           <DialogDescription>
-            Review order details and shipping fee before confirmation.
+            Kiểm tra chi tiết đơn hàng và phí vận chuyển trước khi xác nhận.
           </DialogDescription>
         </DialogHeader>
 
         {!order ? (
           <div className='flex items-center gap-2 text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Loading order details...
+            Đang tải chi tiết đơn hàng...
           </div>
         ) : (
           <div className='space-y-4 text-sm'>
             <div className='grid gap-3 rounded-md border p-3 md:grid-cols-2'>
               <div>
-                <p className='text-muted-foreground'>Order code</p>
+                <p className='text-muted-foreground'>Mã đơn hàng</p>
                 <p className='font-medium'>{order.orderCode}</p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Status</p>
-                <p className='font-medium'>{order.status}</p>
+                <p className='text-muted-foreground'>Trạng thái</p>
+                <p className='font-medium'>{formatStatusLabel(order.status)}</p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Fee payer</p>
-                <p className='font-medium'>{order.feePayer || '--'}</p>
+                <p className='text-muted-foreground'>Bên trả phí</p>
+                <p className='font-medium'>
+                  {formatFeePayerLabel(order.feePayer)}
+                </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Shipping payment status</p>
-                <p className='font-medium'>{order.paymentStatus || '--'}</p>
+                <p className='text-muted-foreground'>
+                  Trạng thái thanh toán phí vận chuyển
+                </p>
+                <p className='font-medium'>
+                  {formatPaymentStatusLabel(order.paymentStatus)}
+                </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Sender</p>
+                <p className='text-muted-foreground'>Người gửi</p>
                 <p className='font-medium'>
                   {order.senderName || '--'} - {order.senderPhone || '--'}
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>Receiver</p>
+                <p className='text-muted-foreground'>Người nhận</p>
                 <p className='font-medium'>
                   {order.receiverName || '--'} - {order.receiverPhone || '--'}
                 </p>
@@ -125,7 +156,7 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
             <div className='rounded-md border p-3'>
               <div className='mb-3 flex items-center justify-between gap-2'>
                 <p className='font-semibold'>
-                  Shipping fee from billing service
+                  Phí vận chuyển từ dịch vụ billing
                 </p>
                 <Button
                   type='button'
@@ -137,35 +168,33 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
                   {isCalculatingFee ? (
                     <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                   ) : null}
-                  Recalculate
+                  Tính lại
                 </Button>
               </div>
 
               {isCalculatingFee ? (
                 <div className='flex items-center gap-2 text-muted-foreground'>
                   <Loader2 className='h-4 w-4 animate-spin' />
-                  Calculating shipping fee...
+                  Đang tính phí vận chuyển...
                 </div>
               ) : shippingFee ? (
                 <div className='grid gap-2 md:grid-cols-2'>
                   <p>
-                    Service: <strong>{shippingFee.serviceCode}</strong>
+                    Dịch vụ: <strong>{shippingFee.serviceCode}</strong>
                   </p>
                   <p>
-                    Route type: <strong>{shippingFee.routeType}</strong>
+                    Loại tuyến: <strong>{shippingFee.routeType}</strong>
                   </p>
-                  <p>Base fee: {formatCurrency(shippingFee.baseFee)}</p>
-                  <p>
-                    Surcharge fee: {formatCurrency(shippingFee.surchargeFee)}
-                  </p>
+                  <p>Phí cơ bản: {formatCurrency(shippingFee.baseFee)}</p>
+                  <p>Phí phụ thu: {formatCurrency(shippingFee.surchargeFee)}</p>
                   <p className='font-semibold'>
-                    Total fee: {formatCurrency(shippingFee.totalFee)}
+                    Tổng phí: {formatCurrency(shippingFee.totalFee)}
                   </p>
                 </div>
               ) : (
                 <p className='text-muted-foreground'>
-                  Unable to calculate shipping fee for this order. Please check
-                  order dimensions and weight.
+                  Không thể tính phí vận chuyển cho đơn hàng này. Vui lòng kiểm
+                  tra kích thước và khối lượng đơn hàng.
                 </p>
               )}
             </div>
@@ -174,8 +203,8 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
               <div className='flex flex-wrap items-center gap-2'>
                 <Badge variant={isSenderPayer ? 'default' : 'secondary'}>
                   {isSenderPayer
-                    ? 'Sender pays shipping fee'
-                    : 'Receiver pays shipping fee'}
+                    ? 'Người gửi trả phí vận chuyển'
+                    : 'Người nhận trả phí vận chuyển'}
                 </Badge>
                 {order.codAmount && order.codAmount > 0 ? (
                   <Badge variant='outline'>
@@ -184,39 +213,44 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
                 ) : null}
               </div>
               <p className='mt-2 text-xs text-muted-foreground'>
-                COD amount is always collected from receiver and is separate
-                from shipping fee.
+                Số tiền COD luôn được thu từ người nhận và tách biệt với phí vận
+                chuyển.
               </p>
             </div>
 
             {paymentRequired ? (
               <div className='rounded-md border p-3'>
-                <p className='font-semibold'>Sender payment flow</p>
+                <p className='font-semibold'>
+                  Quy trình thanh toán của người gửi
+                </p>
                 <p className='mt-1 text-xs text-muted-foreground'>
-                  Initiate payment and complete it on the payment page. This
-                  dialog will detect successful payment and confirm the order
-                  automatically.
+                  Khởi tạo thanh toán và hoàn tất trên trang thanh toán. Hộp
+                  thoại này sẽ tự nhận biết thanh toán thành công và xác nhận
+                  đơn hàng tự động.
                 </p>
 
                 {isAwaitingPaymentCompletion ? (
                   <div className='mt-2 flex items-center gap-2 text-xs text-muted-foreground'>
                     <Loader2 className='h-4 w-4 animate-spin' />
-                    Waiting for payment confirmation...
+                    Đang chờ xác nhận thanh toán...
                   </div>
                 ) : null}
                 {isProcessingPaymentWebhook ? (
                   <div className='mt-2 flex items-center gap-2 text-xs text-muted-foreground'>
                     <Loader2 className='h-4 w-4 animate-spin' />
-                    Payment was received. Waiting for webhook confirmation...
+                    Đã nhận thanh toán. Đang chờ xác nhận webhook...
                   </div>
                 ) : null}
 
                 {paymentInitResult ? (
                   <div className='mt-2 space-y-1 text-xs text-muted-foreground'>
-                    <p>Transaction: {paymentInitResult.appTransId}</p>
-                    <p>Status: {paymentInitResult.status || '--'}</p>
+                    <p>Giao dịch: {paymentInitResult.appTransId}</p>
+                    <p>Trạng thái: {paymentInitResult.status || '--'}</p>
                     {paymentInitResult.message ? (
-                      <p>Gateway message: {paymentInitResult.message}</p>
+                      <p>
+                        Thông báo từ cổng thanh toán:{' '}
+                        {paymentInitResult.message}
+                      </p>
                     ) : null}
                   </div>
                 ) : null}
@@ -245,8 +279,8 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                 ) : null}
                 {isAwaitingPaymentCompletion || isProcessingPaymentWebhook
-                  ? 'Processing payment...'
-                  : 'Pay shipping fee'}
+                  ? 'Đang xử lý thanh toán...'
+                  : 'Thanh toán phí vận chuyển'}
               </Button>
             </>
           ) : null}
@@ -259,7 +293,7 @@ export const OrderConfirmDialog: React.FC<OrderConfirmDialogProps> = ({
             {isConfirmingOrder ? (
               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
             ) : null}
-            Confirm order
+            Xác nhận đơn hàng
           </Button>
         </DialogFooter>
       </DialogContent>
