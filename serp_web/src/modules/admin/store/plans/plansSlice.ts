@@ -15,7 +15,7 @@ interface PlansUiState {
 }
 
 const initialState: PlansUiState = {
-  viewMode: 'table',
+  viewMode: 'grid',
   isDialogOpen: false,
   selectedPlanId: null,
 };
