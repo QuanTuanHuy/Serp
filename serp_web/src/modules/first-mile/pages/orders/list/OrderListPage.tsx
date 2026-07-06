@@ -31,7 +31,6 @@ import {
   useUpdateOrderMutation,
   useValidateOrderImportMutation,
 } from '../../../api';
-import type { TmsFilterMode } from '../../../components/list';
 import type {
   CalculateShippingFeeRequest,
   CalculateShippingFeeResponse,
@@ -52,7 +51,6 @@ import type {
 } from '../../../types';
 import {
   buildOrderListFilters,
-  countActiveOrderAdvancedFilters,
   DEFAULT_ORDER_FILTER_FORM,
   type OrderFilterFormState,
 } from './orderFilterModels';
@@ -62,7 +60,6 @@ import {
   OrderDetailDialog,
   OrderDropOffManagerConfirmCard,
   OrderDropOffSuggestionsDialog,
-  OrderFiltersCard,
   OrderFormDialog,
   OrderImportCard,
   OrderPageHeader,
@@ -141,7 +138,6 @@ export const OrderListPage: React.FC = () => {
   const notification = useNotification();
 
   const [page, setPage] = React.useState(0);
-  const [filterMode, setFilterMode] = React.useState<TmsFilterMode>('basic');
   const [filterFormValues, setFilterFormValues] =
     React.useState<OrderFilterFormState>(DEFAULT_ORDER_FILTER_FORM);
   const [appliedFilters, setAppliedFilters] =
@@ -258,11 +254,6 @@ export const OrderListPage: React.FC = () => {
     {
       skip: !canViewOrders,
     }
-  );
-
-  const advancedFieldCount = React.useMemo(
-    () => countActiveOrderAdvancedFilters(filterFormValues),
-    [filterFormValues]
   );
 
   const updateFilterField = React.useCallback(
@@ -535,11 +526,11 @@ export const OrderListPage: React.FC = () => {
   const isImportFlowBusy =
     isExportingTemplate || isValidatingImport || isImportingOrders;
 
-  const handleApplyFilters = (event: React.FormEvent) => {
-    event.preventDefault();
-
+  const handleApplyFilters = (
+    values: OrderFilterFormState = filterFormValues
+  ) => {
     try {
-      const nextFilters = buildOrderListFilters(filterFormValues);
+      const nextFilters = buildOrderListFilters(values);
       setPage(0);
       setAppliedFilters(nextFilters);
     } catch (error) {
@@ -552,8 +543,12 @@ export const OrderListPage: React.FC = () => {
   const handleClearFilters = () => {
     setFilterFormValues(DEFAULT_ORDER_FILTER_FORM);
     setAppliedFilters({});
-    setFilterMode('basic');
     setPage(0);
+  };
+
+  const handleTableFilterSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    handleApplyFilters();
   };
 
   const handleOpenCreateDialog = () => {
@@ -1746,25 +1741,6 @@ export const OrderListPage: React.FC = () => {
         />
       ) : null}
 
-      <OrderFiltersCard
-        canViewOrders={canViewOrders}
-        filterMode={filterMode}
-        filterFormValues={filterFormValues}
-        advancedFieldCount={advancedFieldCount}
-        statusOptions={ORDER_STATUS_OPTIONS}
-        postOffices={managerPostOfficeOptions}
-        isLoadingPostOffices={isFetchingManagerPostOffices}
-        isFetching={isFetching}
-        onFilterModeChange={setFilterMode}
-        onFilterFieldChange={updateFilterField}
-        onApplyFilters={handleApplyFilters}
-        onClearFilters={handleClearFilters}
-        onRefresh={() => {
-          void refetch();
-        }}
-        formatStatusLabel={formatStatusLabel}
-      />
-
       <OrderResultsCard
         canViewOrders={canViewOrders}
         canMutateOrders={canMutateOrders}
@@ -1772,9 +1748,19 @@ export const OrderListPage: React.FC = () => {
         data={data}
         isLoading={isLoading}
         isFetching={isFetching}
+        filterFormValues={filterFormValues}
+        statusOptions={ORDER_STATUS_OPTIONS}
+        postOffices={managerPostOfficeOptions}
+        isLoadingPostOffices={isFetchingManagerPostOffices}
         loadingOrderActionId={loadingOrderActionId}
         confirmingOrderId={confirmingOrderId}
         loadingDropOffSuggestionOrderId={loadingDropOffSuggestionOrderId}
+        onFilterFieldChange={updateFilterField}
+        onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
+        onRefresh={() => {
+          void refetch();
+        }}
         onViewDetail={(orderId) => {
           void handleOpenOrderDetail(orderId);
         }}

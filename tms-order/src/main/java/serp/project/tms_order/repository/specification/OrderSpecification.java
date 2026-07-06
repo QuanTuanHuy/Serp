@@ -54,10 +54,28 @@ public final class OrderSpecification {
                 ));
             }
 
+            if (hasText(filterRequest.getSenderKeyword())) {
+                String senderPattern = toLikePattern(filterRequest.getSenderKeyword());
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("senderName")), senderPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("senderPhone")), senderPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("senderAddressDetail")), senderPattern)
+                ));
+            }
+
             if (hasText(filterRequest.getSenderPhone())) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("senderPhone")),
                         toLikePattern(filterRequest.getSenderPhone())
+                ));
+            }
+
+            if (hasText(filterRequest.getReceiverKeyword())) {
+                String receiverPattern = toLikePattern(filterRequest.getReceiverKeyword());
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("receiverName")), receiverPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("receiverPhone")), receiverPattern),
+                        criteriaBuilder.like(criteriaBuilder.lower(root.get("receiverAddressDetail")), receiverPattern)
                 ));
             }
 
@@ -92,6 +110,10 @@ public final class OrderSpecification {
                 predicates.add(criteriaBuilder.equal(root.get("status"), filterRequest.getStatus()));
             }
 
+            if (filterRequest.getPickupMethod() != null) {
+                predicates.add(criteriaBuilder.equal(root.get("pickupMethod"), filterRequest.getPickupMethod()));
+            }
+
             if (filterRequest.getIsConfirm() != null) {
                 predicates.add(criteriaBuilder.equal(root.get("isConfirm"), filterRequest.getIsConfirm()));
             }
@@ -110,6 +132,14 @@ public final class OrderSpecification {
 
             if (filterRequest.getPickupTo() != null) {
                 predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("pickupTimeStart"), filterRequest.getPickupTo()));
+            }
+
+            if (filterRequest.getUpdatedFrom() != null) {
+                predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("updatedAt"), filterRequest.getUpdatedFrom()));
+            }
+
+            if (filterRequest.getUpdatedTo() != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("updatedAt"), filterRequest.getUpdatedTo()));
             }
 
             if (createdByUserId != null) {

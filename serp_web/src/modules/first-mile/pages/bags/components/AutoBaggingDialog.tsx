@@ -82,16 +82,16 @@ export function AutoBaggingDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-4xl'>
         <DialogHeader>
-          <DialogTitle>Auto plan bags</DialogTitle>
+          <DialogTitle>Tự động lập túi</DialogTitle>
           <DialogDescription>
-            Group inbound orders into new open bags.
+            Gom các đơn đã về hub gốc vào những túi đang mở mới.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmitPreview} className='space-y-4'>
           <div className='grid gap-4 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='auto-origin-hub'>Origin hub *</Label>
+              <Label htmlFor='auto-origin-hub'>Hub gốc *</Label>
               <TmsCombobox
                 id='auto-origin-hub'
                 value={values.originHubId}
@@ -103,14 +103,14 @@ export function AutoBaggingDialog({
                   onUpdateField('destinationPostOfficeCode', '');
                 }}
                 options={hubOptions}
-                placeholder='Select origin hub'
-                emptyText='No hubs found'
+                placeholder='Chọn hub gốc'
+                emptyText='Không tìm thấy hub'
                 disabled={isPlanning || isExecuting}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='auto-destination-type'>Destination type *</Label>
+              <Label htmlFor='auto-destination-type'>Loại điểm đến *</Label>
               <TmsCombobox
                 id='auto-destination-type'
                 value={values.destinationType}
@@ -123,15 +123,15 @@ export function AutoBaggingDialog({
                   onUpdateField('destinationPostOfficeCode', '');
                 }}
                 options={BAG_DESTINATION_TYPE_OPTIONS}
-                placeholder='Select destination type'
-                emptyText='No destination types found'
+                placeholder='Chọn loại điểm đến'
+                emptyText='Không tìm thấy loại điểm đến'
                 disabled={isPlanning || isExecuting}
               />
             </div>
 
             {values.destinationType === 'HUB' ? (
               <div className='space-y-2'>
-                <Label htmlFor='auto-destination-hub'>Destination hub *</Label>
+                <Label htmlFor='auto-destination-hub'>Hub đích *</Label>
                 <TmsCombobox
                   id='auto-destination-hub'
                   value={values.destinationHubId}
@@ -141,15 +141,15 @@ export function AutoBaggingDialog({
                   options={hubOptions.filter(
                     (hub) => hub.value !== values.originHubId
                   )}
-                  placeholder='Select destination hub'
-                  emptyText='No destination hubs found'
+                  placeholder='Chọn hub đích'
+                  emptyText='Không tìm thấy hub đích'
                   disabled={isPlanning || isExecuting}
                 />
               </div>
             ) : (
               <div className='space-y-2'>
                 <Label htmlFor='auto-destination-post-office'>
-                  Destination post office *
+                  Bưu cục đích *
                 </Label>
                 <TmsCombobox
                   id='auto-destination-post-office'
@@ -164,16 +164,16 @@ export function AutoBaggingDialog({
                   loading={isLoadingDestinationPostOffices}
                   placeholder={
                     values.originHubId
-                      ? 'Select destination post office'
-                      : 'Select origin hub first'
+                      ? 'Chọn bưu cục đích'
+                      : 'Chọn hub gốc trước'
                   }
-                  emptyText='No mapped post offices found'
+                  emptyText='Không tìm thấy bưu cục được liên kết'
                 />
               </div>
             )}
 
             <div className='space-y-2 md:col-span-2'>
-              <Label htmlFor='auto-order-codes'>Orders *</Label>
+              <Label htmlFor='auto-order-codes'>Đơn hàng *</Label>
               <AutoBaggingOrderMultiSelect
                 id='auto-order-codes'
                 orders={orders}
@@ -183,7 +183,7 @@ export function AutoBaggingDialog({
                 }
                 disabled={isPlanning || isExecuting}
                 loading={isOrdersLoading}
-                placeholder='Select orders'
+                placeholder='Chọn đơn hàng'
               />
             </div>
           </div>
@@ -193,10 +193,10 @@ export function AutoBaggingDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Bag code</TableHead>
-                    <TableHead>Orders</TableHead>
-                    <TableHead>Weight</TableHead>
-                    <TableHead>Volume</TableHead>
+                    <TableHead>Mã túi</TableHead>
+                    <TableHead>Đơn hàng</TableHead>
+                    <TableHead>Khối lượng</TableHead>
+                    <TableHead>Thể tích</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -206,7 +206,7 @@ export function AutoBaggingDialog({
                         colSpan={4}
                         className='h-20 text-center text-muted-foreground'
                       >
-                        No bag groups returned.
+                        Chưa có nhóm túi nào được trả về.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -237,11 +237,11 @@ export function AutoBaggingDialog({
               disabled={isPlanning || isExecuting}
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              Hủy
             </Button>
             <Button type='submit' variant='outline' disabled={isPlanning}>
               {isPlanning && <Loader2 className='h-4 w-4 animate-spin' />}
-              Preview
+              Xem trước
             </Button>
             <Button
               type='button'
@@ -251,7 +251,7 @@ export function AutoBaggingDialog({
               onClick={onExecute}
             >
               {isExecuting && <Loader2 className='h-4 w-4 animate-spin' />}
-              Execute
+              Thực hiện
             </Button>
           </DialogFooter>
         </form>

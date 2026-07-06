@@ -35,6 +35,7 @@ import serp.project.tms_order.dto.response.OrderConfirmationResponse;
 import serp.project.tms_order.dto.response.OrderDetailResponse;
 import serp.project.tms_order.dto.response.OrderTimelineResponse;
 import serp.project.tms_order.dto.response.ValidateImportFileDTO;
+import serp.project.tms_order.enums.OrderPickupMethod;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
@@ -95,13 +96,16 @@ public class OrderController {
             @RequestParam(required = false) String keyword,
             @RequestParam(name = "order_code", required = false) String orderCode,
             @RequestParam(name = "customer_order_code", required = false) String customerOrderCode,
+            @RequestParam(name = "sender_keyword", required = false) String senderKeyword,
             @RequestParam(name = "sender_phone", required = false) String senderPhone,
+            @RequestParam(name = "receiver_keyword", required = false) String receiverKeyword,
             @RequestParam(name = "receiver_phone", required = false) String receiverPhone,
             @RequestParam(name = "origin_post_office_code", required = false) String originPostOfficeCode,
             @RequestParam(name = "origin_post_office_codes", required = false) List<String> originPostOfficeCodes,
             @RequestParam(name = "destination_post_office_code", required = false) String destinationPostOfficeCode,
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(name = "statuses", required = false) List<OrderStatus> statuses,
+            @RequestParam(name = "pickup_method", required = false) OrderPickupMethod pickupMethod,
             @RequestParam(name = "is_confirm", required = false) Boolean isConfirm,
             @RequestParam(name = "created_from", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdFrom,
@@ -110,25 +114,38 @@ public class OrderController {
             @RequestParam(name = "pickup_from", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime pickupFrom,
             @RequestParam(name = "pickup_to", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime pickupTo
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime pickupTo,
+            @RequestParam(name = "updated_from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime updatedFrom,
+            @RequestParam(name = "updated_to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime updatedTo,
+            @RequestParam(name = "sort_by", required = false) String sortBy,
+            @RequestParam(name = "sort_direction", required = false) String sortDirection
     ) {
         Long tenantId = getCurrentTenantId();
         OrderFilterRequest filterRequest = OrderFilterRequest.builder()
                 .keyword(keyword)
                 .orderCode(orderCode)
                 .customerOrderCode(customerOrderCode)
+                .senderKeyword(senderKeyword)
                 .senderPhone(senderPhone)
+                .receiverKeyword(receiverKeyword)
                 .receiverPhone(receiverPhone)
                 .originPostOfficeCode(originPostOfficeCode)
                 .originPostOfficeCodes(originPostOfficeCodes)
                 .destinationPostOfficeCode(destinationPostOfficeCode)
                 .status(status)
                 .statuses(statuses)
+                .pickupMethod(pickupMethod)
                 .isConfirm(isConfirm)
                 .createdFrom(createdFrom)
                 .createdTo(createdTo)
                 .pickupFrom(pickupFrom)
                 .pickupTo(pickupTo)
+                .updatedFrom(updatedFrom)
+                .updatedTo(updatedTo)
+                .sortBy(sortBy)
+                .sortDirection(sortDirection)
                 .build();
 
         log.info("REST request to get TMS Order list for tenant {}", tenantId);

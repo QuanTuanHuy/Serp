@@ -27,18 +27,25 @@ public class OrderFilterNormalizer {
                 .keyword(OrderTextUtils.normalizeText(filterRequest.getKeyword()))
                 .orderCode(OrderTextUtils.normalizeText(filterRequest.getOrderCode()))
                 .customerOrderCode(OrderTextUtils.normalizeText(filterRequest.getCustomerOrderCode()))
+                .senderKeyword(OrderTextUtils.normalizeText(filterRequest.getSenderKeyword()))
                 .senderPhone(OrderTextUtils.normalizeText(filterRequest.getSenderPhone()))
+                .receiverKeyword(OrderTextUtils.normalizeText(filterRequest.getReceiverKeyword()))
                 .receiverPhone(OrderTextUtils.normalizeText(filterRequest.getReceiverPhone()))
                 .originPostOfficeCode(OrderTextUtils.normalizeText(filterRequest.getOriginPostOfficeCode()))
                 .originPostOfficeCodes(normalizeTextList(filterRequest.getOriginPostOfficeCodes()))
                 .destinationPostOfficeCode(OrderTextUtils.normalizeText(filterRequest.getDestinationPostOfficeCode()))
                 .status(filterRequest.getStatus())
                 .statuses(normalizeOrderStatuses(filterRequest))
+                .pickupMethod(filterRequest.getPickupMethod())
                 .isConfirm(filterRequest.getIsConfirm())
                 .createdFrom(filterRequest.getCreatedFrom())
                 .createdTo(filterRequest.getCreatedTo())
                 .pickupFrom(filterRequest.getPickupFrom())
                 .pickupTo(filterRequest.getPickupTo())
+                .updatedFrom(filterRequest.getUpdatedFrom())
+                .updatedTo(filterRequest.getUpdatedTo())
+                .sortBy(OrderTextUtils.normalizeText(filterRequest.getSortBy()))
+                .sortDirection(OrderTextUtils.normalizeText(filterRequest.getSortDirection()))
                 .build();
     }
 
@@ -52,6 +59,12 @@ public class OrderFilterNormalizer {
         if (filterRequest.getPickupFrom() != null
                 && filterRequest.getPickupTo() != null
                 && filterRequest.getPickupFrom().isAfter(filterRequest.getPickupTo())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (filterRequest.getUpdatedFrom() != null
+                && filterRequest.getUpdatedTo() != null
+                && filterRequest.getUpdatedFrom().isAfter(filterRequest.getUpdatedTo())) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
     }

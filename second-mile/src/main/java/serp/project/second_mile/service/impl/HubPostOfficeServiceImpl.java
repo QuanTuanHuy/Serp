@@ -5,6 +5,9 @@ Description: Part of Serp Project
 
 package serp.project.second_mile.service.impl;
 
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -62,18 +65,47 @@ public class HubPostOfficeServiceImpl implements HubPostOfficeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PageResponse<HubPostOfficeMappingResponse> listPostOfficeMappings(int page, int size) {
+        Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "postOfficeCode"));
+
+        Page<HubPostOfficeMapping> pageResult = hubPostOfficeMappingRepository.findByTenantId(tenantId, pageable);
+        Page<HubPostOfficeMappingResponse> mapped = pageResult.map(HubPostOfficeMappingMapper::toResponse);
+
+        return PageResponse.<HubPostOfficeMappingResponse>builder()
+                .items(mapped.getContent())
+                .page(mapped.getNumber())
+                .size(mapped.getSize())
+                .totalElements(mapped.getTotalElements())
+                .totalPages(mapped.getTotalPages())
+                .hasNext(mapped.hasNext())
+                .hasPrevious(mapped.hasPrevious())
+                .build();
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
-    public HubPostOfficeMappingResponse assignPostOfficeToHub(long hubId, AssignHubPostOfficeRequest request) {
+    public List<HubPostOfficeMappingResponse> assignPostOfficeToHub(long hubId, AssignHubPostOfficeRequest request) {
         Hub hub = getHubOrThrow(hubId);
         validateTenantAccess(hub);
         Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
 
-        String code = normalizePostOfficeCode(request.getPostOfficeCode());
-        if (code.isEmpty()) {
+        List<String> codes = resolvePostOfficeCodes(request);
+        if (codes.isEmpty()) {
             throw new AppException(ErrorCode.HUB_POST_OFFICE_CODE_INVALID);
         }
 
-        hubPostOfficeMappingRepository.deleteByTenantIdAndPostOfficeCode(tenantId, code);
+        return codes.stream()
+                .map(code -> assignOnePostOfficeToHub(hub, tenantId, code))
+                .map(HubPostOfficeMappingMapper::toResponse)
+                .toList();
+    }
+
+    private HubPostOfficeMapping assignOnePostOfficeToHub(Hub hub, Long tenantId, String code) {
+        if (hubPostOfficeMappingRepository.findByTenantIdAndPostOfficeCode(tenantId, code).isPresent()) {
+            throw new AppException(ErrorCode.DATA_INTEGRITY_VIOLATION);
+        }
 
         HubPostOfficeMapping mapping = HubPostOfficeMapping.builder()
                 .hub(hub)
@@ -93,7 +125,7 @@ public class HubPostOfficeServiceImpl implements HubPostOfficeService {
                 .postOfficeCode(codeForSync)
                 .build());
 
-        return HubPostOfficeMappingMapper.toResponse(saved);
+        return saved;
     }
 
     @Override
@@ -137,5 +169,16 @@ public class HubPostOfficeServiceImpl implements HubPostOfficeService {
             return "";
         }
         return raw.trim();
+    }
+
+    private static List<String> resolvePostOfficeCodes(AssignHubPostOfficeRequest request) {
+        Set<String> codes = new LinkedHashSet<>();
+        if (request.getPostOfficeCodes() != null) {
+            request.getPostOfficeCodes().stream()
+                    .map(HubPostOfficeServiceImpl::normalizePostOfficeCode)
+                    .filter(code -> !code.isEmpty())
+                    .forEach(codes::add);
+        }
+        return List.copyOf(codes);
     }
 }

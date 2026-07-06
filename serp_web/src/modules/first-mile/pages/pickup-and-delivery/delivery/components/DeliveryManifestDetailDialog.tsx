@@ -45,28 +45,43 @@ import type {
   DeliveryPaymentInitResponse,
   DeliveryManifestResponse,
   DeliveryManifestOrderResponse,
+  DeliveryManifestStatus,
   DeliveryOrderStatus,
 } from '../../../../types';
+
+const MANIFEST_STATUS_LABELS: Record<DeliveryManifestStatus, string> = {
+  CREATED: 'Đã tạo',
+  IN_PROGRESS: 'Đang giao',
+  COMPLETED: 'Hoàn tất',
+  CANCELLED: 'Đã hủy',
+};
 
 const ORDER_STATUS_CONFIG: Record<
   DeliveryOrderStatus,
   { label: string; color: string }
 > = {
-  PENDING: { label: 'Pending', color: 'bg-slate-100 text-slate-700' },
+  PENDING: { label: 'Đang chờ', color: 'bg-slate-100 text-slate-700' },
   OUT_FOR_DELIVERY: {
-    label: 'Out for Delivery',
+    label: 'Đang giao',
     color: 'bg-blue-100 text-blue-700',
   },
-  DELIVERED: { label: 'Delivered', color: 'bg-green-100 text-green-700' },
-  FAILED: { label: 'Failed', color: 'bg-red-100 text-red-700' },
-  RESCHEDULED: { label: 'Rescheduled', color: 'bg-amber-100 text-amber-700' },
-  RETURNED: { label: 'Returned', color: 'bg-purple-100 text-purple-700' },
+  DELIVERED: { label: 'Đã giao', color: 'bg-green-100 text-green-700' },
+  FAILED: { label: 'Thất bại', color: 'bg-red-100 text-red-700' },
+  RESCHEDULED: { label: 'Hẹn lại', color: 'bg-amber-100 text-amber-700' },
+  RETURNED: { label: 'Đã hoàn', color: 'bg-purple-100 text-purple-700' },
 };
 
 const DELIVERY_DEV_CHECKIN_STORAGE_KEY = 'serp.first-mile.delivery-dev-checkin';
 const PAYMENT_RESULT_MESSAGE_TYPE = 'SERP_PAYMENT_RESULT';
 const RECEIVER_FEE_PAYER = 'RECEIVER';
-const currencyFormatter = new Intl.NumberFormat('en-US');
+const currencyFormatter = new Intl.NumberFormat('vi-VN');
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  PAID: 'Đã thanh toán',
+  UNPAID: 'Chưa thanh toán',
+  PENDING: 'Đang chờ',
+  FAILED: 'Thất bại',
+};
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null || !Number.isFinite(value)) {
@@ -74,6 +89,9 @@ const formatCurrency = (value?: number | null): string => {
   }
   return `${currencyFormatter.format(value)} VND`;
 };
+
+const formatPaymentStatus = (status?: string | null): string =>
+  status ? (PAYMENT_STATUS_LABELS[status] ?? status) : '--';
 
 const getRequiredCodAmount = (
   order: DeliveryManifestOrderResponse | null
@@ -188,7 +206,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       await startDelivery({ id: current.id }).unwrap();
       onUpdated();
     } catch (error) {
-      notification.error('Failed to start delivery.', {
+      notification.error('Không thể bắt đầu giao hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -198,20 +216,20 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
     if (!activeOrder) return;
 
     if (!proofPhoto) {
-      notification.error('Please select a proof photo before check-in.');
+      notification.error('Vui lòng chọn ảnh bằng chứng trước khi check-in.');
       return;
     }
 
     const latitude = Number(deliveryLatitude);
     const longitude = Number(deliveryLongitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      notification.error('Please provide a valid delivery check-in location.');
+      notification.error('Vui lòng cung cấp vị trí check-in giao hàng hợp lệ.');
       return;
     }
 
     if (!isCustomerPaymentConfirmed(activeOrder)) {
       notification.error(
-        'Customer payment must be confirmed before delivery check-in.'
+        'Cần xác nhận thanh toán của khách trước khi check-in giao hàng.'
       );
       return;
     }
@@ -232,7 +250,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       resetForm();
       onUpdated();
     } catch (error) {
-      notification.error('Delivery check-in failed.', {
+      notification.error('Check-in giao hàng thất bại.', {
         description: getErrorMessage(error),
       });
     }
@@ -267,7 +285,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
         activeOrder.deliveryPaymentAppTransId?.trim();
 
       if (!resolvedAppTransId) {
-        notification.error('Payment transaction is missing.');
+        notification.error('Thiếu giao dịch thanh toán.');
         return;
       }
 
@@ -315,12 +333,12 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
         );
         await refetchManifest();
 
-        notification.success('Customer payment confirmed successfully.', {
-          description: 'You can now complete delivery check-in.',
+        notification.success('Đã xác nhận thanh toán của khách.', {
+          description: 'Bạn có thể hoàn tất check-in giao hàng.',
         });
       } catch (error) {
         lastHandledPaymentMessageKeyRef.current = null;
-        notification.error('Failed to confirm customer payment.', {
+        notification.error('Không thể xác nhận thanh toán của khách.', {
           description: getErrorMessage(error),
         });
       } finally {
@@ -344,7 +362,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
     }
 
     if (getRequiredCustomerPayment(activeOrder) <= 0) {
-      notification.error('This delivery does not require customer payment.');
+      notification.error('Đơn giao này không yêu cầu khách thanh toán.');
       return;
     }
 
@@ -376,7 +394,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       lastHandledPaymentMessageKeyRef.current = null;
 
       if (paymentResult.paymentStatus === 'PAID') {
-        notification.success('Customer payment is already confirmed.');
+        notification.success('Thanh toán của khách đã được xác nhận.');
         return;
       }
 
@@ -389,21 +407,21 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
 
         if (!paymentPopup) {
           setIsAwaitingPaymentCompletion(false);
-          notification.error('Popup was blocked by the browser.', {
+          notification.error('Trình duyệt đã chặn cửa sổ thanh toán.', {
             description:
-              'Allow popups for this site or use Verify payment after completing payment.',
+              'Vui lòng cho phép popup cho trang này hoặc dùng nút xác minh thanh toán sau khi hoàn tất.',
           });
           return;
         }
       }
 
-      notification.success('Payment request created.', {
+      notification.success('Đã tạo yêu cầu thanh toán.', {
         description:
-          'Complete payment in the opened window. This panel will verify payment automatically when it succeeds.',
+          'Hoàn tất thanh toán trong cửa sổ đã mở. Bảng này sẽ tự xác minh khi thanh toán thành công.',
       });
     } catch (error) {
       setIsAwaitingPaymentCompletion(false);
-      notification.error('Failed to initiate customer payment.', {
+      notification.error('Không thể khởi tạo thanh toán của khách.', {
         description: getErrorMessage(error),
       });
     }
@@ -523,7 +541,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       resetForm();
       onUpdated();
     } catch (error) {
-      notification.error('Failed to confirm delivery failure.', {
+      notification.error('Không thể xác nhận giao hàng thất bại.', {
         description: getErrorMessage(error),
       });
     }
@@ -540,7 +558,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       resetForm();
       onUpdated();
     } catch (error) {
-      notification.error('Failed to return order to sender.', {
+      notification.error('Không thể hoàn đơn về người gửi.', {
         description: getErrorMessage(error),
       });
     }
@@ -570,7 +588,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       order.receiverLng === undefined ||
       order.receiverLng === null
     ) {
-      notification.error('Receiver coordinates are missing for this order.');
+      notification.error('Đơn hàng chưa có tọa độ người nhận.');
       return false;
     }
 
@@ -592,7 +610,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
     }
 
     if (typeof window === 'undefined' || !('geolocation' in navigator)) {
-      notification.error('Geolocation is not supported in your browser.');
+      notification.error('Trình duyệt không hỗ trợ định vị.');
       return;
     }
 
@@ -609,7 +627,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       setDeliveryLatitude(position.coords.latitude.toFixed(6));
       setDeliveryLongitude(position.coords.longitude.toFixed(6));
     } catch (error) {
-      notification.error('Failed to resolve current location.', {
+      notification.error('Không thể lấy vị trí hiện tại.', {
         description: getErrorMessage(error),
       });
     } finally {
@@ -631,7 +649,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
               <Truck className='h-5 w-5 text-primary' />
               <h2 className='text-lg font-semibold'>{current.manifestCode}</h2>
               <Badge className='text-xs'>
-                {current.status.replace(/_/g, ' ')}
+                {MANIFEST_STATUS_LABELS[current.status] ?? current.status}
               </Badge>
             </div>
             <div className='flex gap-4 mt-1 text-sm text-muted-foreground'>
@@ -640,9 +658,9 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                 {current.plannedDate}
               </span>
               {current.courierName && (
-                <span>Courier: {current.courierName}</span>
+                <span>Nhân viên: {current.courierName}</span>
               )}
-              {current.vehicleId && <span>Vehicle: {current.vehicleId}</span>}
+              {current.vehicleId && <span>Xe: {current.vehicleId}</span>}
             </div>
           </div>
           <Button variant='ghost' size='sm' onClick={onClose}>
@@ -653,24 +671,24 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
         {/* Summary KPIs */}
         <div className='grid grid-cols-4 gap-3 mb-4'>
           <KpiCard
-            label='Total Orders'
+            label='Tổng đơn'
             value={current.totalOrders}
             icon={Package}
           />
           <KpiCard
-            label='Delivered'
+            label='Đã giao'
             value={current.deliveredCount}
             icon={CheckCircle2}
             color='text-green-600'
           />
           <KpiCard
-            label='Failed'
+            label='Thất bại'
             value={current.failedCount}
             icon={XCircle}
             color='text-red-600'
           />
           <KpiCard
-            label='COD Collected'
+            label='COD đã thu'
             value={`${current.collectedCodAmount.toLocaleString()} VND`}
             icon={Banknote}
             color='text-amber-600'
@@ -681,9 +699,9 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
         {canOperate && current.status === 'CREATED' && (
           <div className='bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-lg p-3 mb-4 flex items-center justify-between'>
             <div className='text-sm text-amber-700 dark:text-amber-300'>
-              <p className='font-medium'>Ready to Start Delivery</p>
+              <p className='font-medium'>Sẵn sàng bắt đầu giao</p>
               <p className='text-xs mt-0.5'>
-                Click start to mark the courier as departed.
+                Bấm bắt đầu để ghi nhận nhân viên đã xuất phát.
               </p>
             </div>
             <Button
@@ -693,7 +711,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
               className='bg-amber-600 hover:bg-amber-700'
             >
               <Play className='h-4 w-4 mr-1' />
-              Start Delivery
+              Bắt đầu giao
             </Button>
           </div>
         )}
@@ -701,7 +719,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
         {/* Orders List */}
         <div className='space-y-2'>
           <h3 className='font-medium text-sm text-muted-foreground'>
-            Delivery Route ({sortedOrders.length} stops)
+            Tuyến giao hàng ({sortedOrders.length} điểm dừng)
           </h3>
           {sortedOrders.map((order) => (
             <DeliveryOrderCard
@@ -759,9 +777,9 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
           <div className='mt-4 border rounded-lg p-4 bg-muted/30'>
             <div className='flex items-center justify-between mb-3'>
               <h4 className='font-medium text-sm'>
-                {actionMode === 'deliver' && 'Confirm Delivery'}
-                {actionMode === 'fail' && 'Report Delivery Failure'}
-                {actionMode === 'return' && 'Return to Sender'}
+                {actionMode === 'deliver' && 'Xác nhận giao hàng'}
+                {actionMode === 'fail' && 'Báo giao thất bại'}
+                {actionMode === 'return' && 'Hoàn về người gửi'}
                 <span className='text-muted-foreground ml-2'>
                   - {activeOrder.orderCode}
                 </span>
@@ -775,18 +793,18 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
               <div className='space-y-4'>
                 {getRequiredCustomerPayment(activeOrder) > 0 ? (
                   <div className='rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200'>
-                    Customer payment must be completed through payment service
-                    before delivery check-in.
+                    Khách cần hoàn tất thanh toán qua dịch vụ thanh toán trước
+                    khi check-in giao hàng.
                   </div>
                 ) : null}
 
                 <div className='rounded-md border p-3 text-sm'>
                   <div className='flex flex-wrap items-center justify-between gap-2'>
                     <div>
-                      <p className='font-semibold'>Customer payment</p>
+                      <p className='font-semibold'>Thanh toán của khách</p>
                       <p className='text-xs text-muted-foreground'>
-                        COD and receiver-paid shipping fee are verified by
-                        payment service.
+                        COD và phí vận chuyển do người nhận trả được xác minh
+                        qua dịch vụ thanh toán.
                       </p>
                     </div>
                     <Badge
@@ -797,8 +815,8 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                       }
                     >
                       {isCustomerPaymentConfirmed(activeOrder)
-                        ? 'Payment confirmed'
-                        : 'Payment required'}
+                        ? 'Đã xác nhận thanh toán'
+                        : 'Cần thanh toán'}
                     </Badge>
                   </div>
 
@@ -811,7 +829,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                     </div>
                     <div>
                       <p className='text-xs text-muted-foreground'>
-                        Receiver shipping fee
+                        Phí vận chuyển người nhận trả
                       </p>
                       <p className='font-medium'>
                         {formatCurrency(
@@ -820,7 +838,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                       </p>
                     </div>
                     <div>
-                      <p className='text-xs text-muted-foreground'>Total</p>
+                      <p className='text-xs text-muted-foreground'>Tổng</p>
                       <p className='font-semibold'>
                         {formatCurrency(
                           getRequiredCustomerPayment(activeOrder)
@@ -833,18 +851,22 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                   activeOrder.deliveryPaymentAppTransId ? (
                     <div className='mt-3 space-y-1 rounded-md bg-muted/50 p-2 text-xs text-muted-foreground'>
                       <p>
-                        Transaction:{' '}
+                        Giao dịch:{' '}
                         {paymentInitResult?.appTransId ||
                           activeOrder.deliveryPaymentAppTransId}
                       </p>
                       <p>
-                        Status:{' '}
-                        {paymentInitResult?.status ||
-                          activeOrder.deliveryPaymentStatus ||
-                          '--'}
+                        Trạng thái:{' '}
+                        {formatPaymentStatus(
+                          paymentInitResult?.status ||
+                            activeOrder.deliveryPaymentStatus
+                        )}
                       </p>
                       {paymentInitResult?.message ? (
-                        <p>Gateway message: {paymentInitResult.message}</p>
+                        <p>
+                          Thông điệp cổng thanh toán:{' '}
+                          {paymentInitResult.message}
+                        </p>
                       ) : null}
                     </div>
                   ) : null}
@@ -853,7 +875,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                   isConfirmingDeliveryPayment ? (
                     <div className='mt-3 flex items-center gap-2 text-xs text-muted-foreground'>
                       <Loader2 className='h-4 w-4 animate-spin' />
-                      Waiting for payment confirmation...
+                      Đang chờ xác nhận thanh toán...
                     </div>
                   ) : null}
 
@@ -876,7 +898,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                         ) : (
                           <CreditCard className='mr-2 h-4 w-4' />
                         )}
-                        Pay customer amount
+                        Thanh toán khoản của khách
                       </Button>
                       <Button
                         type='button'
@@ -895,14 +917,14 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                         {isConfirmingDeliveryPayment ? (
                           <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                         ) : null}
-                        Verify payment
+                        Xác minh thanh toán
                       </Button>
                     </div>
                   ) : null}
                 </div>
 
                 <div className='space-y-2'>
-                  <Label htmlFor='delivery-proof-photo'>Proof Photo</Label>
+                  <Label htmlFor='delivery-proof-photo'>Ảnh bằng chứng</Label>
                   <Input
                     id='delivery-proof-photo'
                     type='file'
@@ -918,11 +940,11 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                   <div className='flex items-center justify-between gap-4 rounded-md border border-dashed border-amber-500/50 bg-amber-500/5 px-3 py-2'>
                     <div className='space-y-0.5'>
                       <Label htmlFor='delivery-dev-checkin-mode'>
-                        Development mode
+                        Chế độ phát triển
                       </Label>
                       <p className='text-xs text-muted-foreground'>
-                        Fill check-in coordinates at receiver location instead
-                        of current GPS.
+                        Điền tọa độ check-in theo vị trí người nhận thay vì GPS
+                        hiện tại.
                       </p>
                     </div>
                     <Switch
@@ -935,39 +957,39 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
 
                 <div className='grid gap-3 sm:grid-cols-2'>
                   <div className='space-y-1'>
-                    <Label htmlFor='delivery-latitude'>Latitude</Label>
+                    <Label htmlFor='delivery-latitude'>Vĩ độ</Label>
                     <Input
                       id='delivery-latitude'
                       value={deliveryLatitude}
                       readOnly
                       placeholder={
                         devCheckinMode
-                          ? 'Auto-filled from receiver location'
-                          : 'Resolve current location'
+                          ? 'Tự điền từ vị trí người nhận'
+                          : 'Lấy vị trí hiện tại'
                       }
                     />
                   </div>
                   <div className='space-y-1'>
-                    <Label htmlFor='delivery-longitude'>Longitude</Label>
+                    <Label htmlFor='delivery-longitude'>Kinh độ</Label>
                     <Input
                       id='delivery-longitude'
                       value={deliveryLongitude}
                       readOnly
                       placeholder={
                         devCheckinMode
-                          ? 'Auto-filled from receiver location'
-                          : 'Resolve current location'
+                          ? 'Tự điền từ vị trí người nhận'
+                          : 'Lấy vị trí hiện tại'
                       }
                     />
                   </div>
                 </div>
 
                 <div className='space-y-1'>
-                  <Label className='text-xs'>Note</Label>
+                  <Label className='text-xs'>Ghi chú</Label>
                   <Input
                     value={deliveryNote}
                     onChange={(e) => setDeliveryNote(e.target.value)}
-                    placeholder='Optional note'
+                    placeholder='Ghi chú không bắt buộc'
                   />
                 </div>
 
@@ -979,10 +1001,10 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                     disabled={isResolvingLocation}
                   >
                     {isResolvingLocation
-                      ? 'Resolving location...'
+                      ? 'Đang lấy vị trí...'
                       : devCheckinMode
-                        ? 'Fill receiver location'
-                        : 'Use current location'}
+                        ? 'Điền vị trí người nhận'
+                        : 'Dùng vị trí hiện tại'}
                   </Button>
                   <Button
                     onClick={handleConfirmDelivered}
@@ -997,8 +1019,8 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                   >
                     <CheckCircle2 className='h-4 w-4 mr-2' />
                     {isConfirmingDelivered
-                      ? 'Confirming...'
-                      : 'Confirm Delivered'}
+                      ? 'Đang xác nhận...'
+                      : 'Xác nhận đã giao'}
                   </Button>
                 </div>
               </div>
@@ -1007,28 +1029,30 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
             {actionMode === 'fail' && (
               <div className='space-y-3'>
                 <div className='space-y-1'>
-                  <label className='text-xs font-medium'>Failure Reason</label>
+                  <label className='text-xs font-medium'>Lý do thất bại</label>
                   <select
                     className='w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm'
                     value={failureReason}
                     onChange={(e) => setFailureReason(e.target.value)}
                   >
-                    <option value=''>Select reason...</option>
+                    <option value=''>Chọn lý do...</option>
                     <option value='RECIPIENT_NOT_HOME'>
-                      Recipient not home
+                      Người nhận không có nhà
                     </option>
-                    <option value='WRONG_ADDRESS'>Wrong address</option>
-                    <option value='RECIPIENT_REFUSED'>Recipient refused</option>
-                    <option value='CANNOT_CONTACT'>Cannot contact</option>
-                    <option value='OTHER'>Other</option>
+                    <option value='WRONG_ADDRESS'>Sai địa chỉ</option>
+                    <option value='RECIPIENT_REFUSED'>
+                      Người nhận từ chối
+                    </option>
+                    <option value='CANNOT_CONTACT'>Không liên hệ được</option>
+                    <option value='OTHER'>Khác</option>
                   </select>
                 </div>
                 <div className='space-y-1'>
-                  <label className='text-xs font-medium'>Note</label>
+                  <label className='text-xs font-medium'>Ghi chú</label>
                   <Textarea
                     value={deliveryNote}
                     onChange={(e) => setDeliveryNote(e.target.value)}
-                    placeholder='Additional details...'
+                    placeholder='Thông tin bổ sung...'
                     rows={2}
                   />
                 </div>
@@ -1039,7 +1063,9 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                     disabled={isConfirmingFailed}
                   >
                     <XCircle className='h-4 w-4 mr-2' />
-                    {isConfirmingFailed ? 'Confirming...' : 'Confirm Failed'}
+                    {isConfirmingFailed
+                      ? 'Đang xác nhận...'
+                      : 'Xác nhận thất bại'}
                   </Button>
                 </div>
               </div>
@@ -1048,11 +1074,11 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
             {actionMode === 'return' && (
               <div className='space-y-3'>
                 <div className='space-y-1'>
-                  <label className='text-xs font-medium'>Note</label>
+                  <label className='text-xs font-medium'>Ghi chú</label>
                   <Textarea
                     value={deliveryNote}
                     onChange={(e) => setDeliveryNote(e.target.value)}
-                    placeholder='Reason for return...'
+                    placeholder='Lý do hoàn đơn...'
                     rows={2}
                   />
                 </div>
@@ -1064,7 +1090,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                     className='border-purple-300 text-purple-700 hover:bg-purple-50'
                   >
                     <RotateCcw className='h-4 w-4 mr-2' />
-                    {isReturning ? 'Returning...' : 'Return to Sender'}
+                    {isReturning ? 'Đang hoàn...' : 'Hoàn về người gửi'}
                   </Button>
                 </div>
               </div>
@@ -1142,14 +1168,14 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
               </Badge>
               {order.deliveryAttemptCount > 1 && (
                 <Badge variant='outline' className='text-xs'>
-                  Attempt #{order.deliveryAttemptCount}
+                  Lần thử #{order.deliveryAttemptCount}
                 </Badge>
               )}
             </div>
             <div className='flex flex-col gap-0.5 mt-1 text-xs text-muted-foreground'>
               <span className='flex items-center gap-1'>
                 <MapPin className='h-3 w-3' />
-                {order.receiverAddressDetail || 'No address'}
+                {order.receiverAddressDetail || 'Chưa có địa chỉ'}
               </span>
               <span className='flex items-center gap-1'>
                 <Phone className='h-3 w-3' />
@@ -1167,7 +1193,7 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
           )}
           {order.shippingFee > 0 && (
             <span className='text-xs text-muted-foreground'>
-              Fee: {order.shippingFee.toLocaleString()} VND
+              Phí: {order.shippingFee.toLocaleString()} VND
             </span>
           )}
         </div>
@@ -1185,7 +1211,7 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
                 onClick={onDeliver}
               >
                 <CheckCircle2 className='h-3.5 w-3.5 mr-1' />
-                Delivered
+                Đã giao
               </Button>
               <Button
                 size='sm'
@@ -1194,7 +1220,7 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
                 onClick={onFail}
               >
                 <XCircle className='h-3.5 w-3.5 mr-1' />
-                Failed
+                Thất bại
               </Button>
             </>
           )}
@@ -1206,7 +1232,7 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
               onClick={onReturn}
             >
               <RotateCcw className='h-3.5 w-3.5 mr-1' />
-              Return
+              Hoàn
             </Button>
           )}
         </div>
@@ -1217,7 +1243,7 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
         <div className='mt-2 pt-2 border-t text-xs text-green-600 flex flex-wrap items-center gap-2'>
           <span className='flex items-center gap-1'>
             <Clock className='h-3 w-3' />
-            Delivered at {new Date(order.deliveredAt).toLocaleString()}
+            Đã giao lúc {new Date(order.deliveredAt).toLocaleString('vi-VN')}
           </span>
           {order.deliveryCheckinLat !== undefined &&
           order.deliveryCheckinLng !== undefined ? (
@@ -1235,14 +1261,14 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
               className='flex items-center gap-1 text-blue-600 hover:underline'
             >
               <Camera className='h-3 w-3' />
-              Proof
+              Bằng chứng
             </a>
           )}
         </div>
       )}
       {order.status === 'FAILED' && order.failureReason && (
         <div className='mt-2 pt-2 border-t text-xs text-red-600'>
-          Reason: {order.failureReason}
+          Lý do: {order.failureReason}
           {order.note && ` - ${order.note}`}
         </div>
       )}

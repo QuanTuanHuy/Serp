@@ -123,7 +123,7 @@ public class OrderServiceImpl implements OrderService {
         OrderFilterRequest normalizedFilter = orderFilterNormalizer.normalize(filterRequest);
         orderFilterNormalizer.validateRanges(normalizedFilter);
         String customerCreatedBy = orderAccessPolicy.resolveCustomerCreatedByScope();
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
+        Pageable pageable = PageRequest.of(page, size, resolveOrderSort(normalizedFilter));
 
         Page<Order> orderPage = orderRepository.findAll(
                 OrderSpecification.byFilter(tenantId, normalizedFilter, customerCreatedBy),
@@ -139,6 +139,18 @@ public class OrderServiceImpl implements OrderService {
                 .hasNext(orderPage.hasNext())
                 .hasPrevious(orderPage.hasPrevious())
                 .build();
+    }
+
+    private Sort resolveOrderSort(OrderFilterRequest filterRequest) {
+        String sortBy = filterRequest.getSortBy();
+        if (!"updated_at".equals(sortBy)) {
+            return Sort.by(Sort.Direction.DESC, "id");
+        }
+
+        Sort.Direction direction = "asc".equalsIgnoreCase(filterRequest.getSortDirection())
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        return Sort.by(direction, "updatedAt").and(Sort.by(Sort.Direction.DESC, "id"));
     }
 
     @Override

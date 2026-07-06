@@ -9,7 +9,5 @@ export * from './bags';
 export * from './orders';
 export * from './dispatchers';
 export * from './handover-manifests';
-export * from './pickup';
 export * from './pickup-and-delivery';
-export * from './last-mile';
 export * from './settings';

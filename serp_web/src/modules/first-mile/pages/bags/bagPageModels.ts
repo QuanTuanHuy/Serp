@@ -34,22 +34,22 @@ export interface AutoBaggingFormValues {
 }
 
 export const BAG_STATUS_LABELS = {
-  CREATED: 'Open',
-  SEALED: 'Sealed',
-  IN_TRANSIT: 'In transit',
-  ARRIVED: 'Arrived',
-  CANCELLED: 'Cancelled',
+  CREATED: 'Đang mở',
+  SEALED: 'Đã niêm phong',
+  IN_TRANSIT: 'Đang vận chuyển',
+  ARRIVED: 'Đã đến',
+  CANCELLED: 'Đã hủy',
 } satisfies Record<SecondMileBagStatus, string>;
 
 export const BAG_STATUS_OPTIONS: Array<{
   value: SecondMileBagStatus;
   label: string;
 }> = [
-  { value: 'CREATED', label: 'Open' },
-  { value: 'SEALED', label: 'Sealed' },
-  { value: 'IN_TRANSIT', label: 'In transit' },
-  { value: 'ARRIVED', label: 'Arrived' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'CREATED', label: 'Đang mở' },
+  { value: 'SEALED', label: 'Đã niêm phong' },
+  { value: 'IN_TRANSIT', label: 'Đang vận chuyển' },
+  { value: 'ARRIVED', label: 'Đã đến' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
 ];
 
 export const BAG_DESTINATION_TYPE_OPTIONS: Array<{
@@ -57,7 +57,7 @@ export const BAG_DESTINATION_TYPE_OPTIONS: Array<{
   label: string;
 }> = [
   { value: 'HUB', label: 'Hub' },
-  { value: 'POST_OFFICE', label: 'Post office' },
+  { value: 'POST_OFFICE', label: 'Bưu cục' },
 ];
 
 export const emptyBagFormValues: BagFormValues = {
@@ -136,34 +136,34 @@ export const toDefaultedBagFormValues = (
 
 export const validateBagForm = (values: BagFormValues): string | null => {
   if (!values.bagCode.trim()) {
-    return 'Bag code is required.';
+    return 'Vui lòng nhập mã túi.';
   }
   if (!values.originHubId) {
-    return 'Origin hub is required.';
+    return 'Vui lòng chọn hub gốc.';
   }
   if (values.destinationType === 'HUB') {
     if (!values.destinationHubId) {
-      return 'Destination hub is required.';
+      return 'Vui lòng chọn hub đích.';
     }
     if (values.originHubId === values.destinationHubId) {
-      return 'Use a post office destination for same-hub bags.';
+      return 'Hãy chọn bưu cục đích nếu túi đi trong cùng một hub.';
     }
   }
   if (
     values.destinationType === 'POST_OFFICE' &&
     !values.destinationPostOfficeCode.trim()
   ) {
-    return 'Destination post office is required.';
+    return 'Vui lòng chọn bưu cục đích.';
   }
 
   if (!isPositiveOptionalNumber(values.maxWeight)) {
-    return 'Max weight must be greater than zero.';
+    return 'Khối lượng tối đa phải lớn hơn 0.';
   }
   if (!isPositiveOptionalNumber(values.maxVolume)) {
-    return 'Max volume must be greater than zero.';
+    return 'Thể tích tối đa phải lớn hơn 0.';
   }
   if (!isPositiveOptionalInteger(values.maxOrders)) {
-    return 'Max orders must be a positive integer.';
+    return 'Số đơn tối đa phải là số nguyên dương.';
   }
 
   return null;
@@ -173,24 +173,24 @@ export const validateAutoBaggingForm = (
   values: AutoBaggingFormValues
 ): string | null => {
   if (!values.originHubId) {
-    return 'Origin hub is required.';
+    return 'Vui lòng chọn hub gốc.';
   }
   if (values.destinationType === 'HUB') {
     if (!values.destinationHubId) {
-      return 'Destination hub is required.';
+      return 'Vui lòng chọn hub đích.';
     }
     if (values.originHubId === values.destinationHubId) {
-      return 'Use a post office destination for same-hub bags.';
+      return 'Hãy chọn bưu cục đích nếu túi đi trong cùng một hub.';
     }
   }
   if (
     values.destinationType === 'POST_OFFICE' &&
     !values.destinationPostOfficeCode.trim()
   ) {
-    return 'Destination post office is required.';
+    return 'Vui lòng chọn bưu cục đích.';
   }
   if (values.orderCodes.filter((code) => code.trim()).length === 0) {
-    return 'Select at least one order.';
+    return 'Vui lòng chọn ít nhất một đơn hàng.';
   }
   return null;
 };
@@ -230,7 +230,7 @@ export const buildBagRequest = (
 };
 
 export const getBagStatusLabel = (status?: SecondMileBagStatus) =>
-  status ? BAG_STATUS_LABELS[status] : 'Unknown';
+  status ? BAG_STATUS_LABELS[status] : 'Không xác định';
 
 export const getBagStatusVariant = (
   status?: SecondMileBagStatus
@@ -255,11 +255,11 @@ export const formatDateTime = (value?: string) => {
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleString('en-US');
+  return date.toLocaleString('vi-VN');
 };
 
 export const formatNumber = (value?: number, fractionDigits = 2) =>
-  (value ?? 0).toLocaleString('en-US', {
+  (value ?? 0).toLocaleString('vi-VN', {
     maximumFractionDigits: fractionDigits,
   });
 
@@ -286,7 +286,7 @@ export const getVehicleLabel = (
   }
   const vehicle = vehicles.find((item) => item.id === vehicleId);
   if (!vehicle) {
-    return `Vehicle #${vehicleId}`;
+    return `Xe #${vehicleId}`;
   }
   return vehicle.licensePlate;
 };
@@ -296,7 +296,7 @@ export const getDestinationLabel = (bag: SecondMileBag, hubs: Hub[]) => {
     return getHubLabel(hubs, bag.destinationHubId);
   }
   if (bag.destinationPostOfficeCode) {
-    return `Post office ${bag.destinationPostOfficeCode}`;
+    return `Bưu cục ${bag.destinationPostOfficeCode}`;
   }
   return '-';
 };

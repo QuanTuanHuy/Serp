@@ -16,12 +16,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  Input,
   Label,
 } from '@/shared/components/ui';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
@@ -32,22 +32,29 @@ import {
   Eye,
   Loader2,
   MapPin,
-  Pencil,
   Plus,
   RefreshCw,
   ShieldAlert,
   Trash2,
-  Unlink,
 } from 'lucide-react';
 import { TmsCombobox } from '../../../components';
 import {
   useAssignPostOfficeToHubMutation,
+  useGetAllHubPostOfficesQuery,
   useGetHubPostOfficesQuery,
   useGetHubsQuery,
   useGetPostOfficesQuery,
+  useGetProvincesQuery,
+  useGetWardsByProvinceCodeQuery,
   useRemovePostOfficeFromHubMutation,
 } from '../../../api';
-import type { Hub, HubPostOfficeMapping, PostOffice } from '../../../types';
+import type {
+  Hub,
+  HubPostOfficeMapping,
+  PostOffice,
+  Province,
+  Ward,
+} from '../../../types';
 import {
   HubPostOfficeLinkMap,
   type HubPostOfficeMapHub,
@@ -57,7 +64,9 @@ import {
 const HUB_PAGE_SIZE = 300;
 const POST_OFFICE_LOOKUP_SIZE = 500;
 const LINK_PAGE_SIZE = 500;
-const ASSIGN_SEARCH_SIZE = 50;
+const ALL_LINK_PAGE_SIZE = 2000;
+const ASSIGN_LOCATION_SIZE = 200;
+const ASSIGN_POST_OFFICE_SIZE = 200;
 
 interface HubPostOfficeLinkRow {
   mapping: HubPostOfficeMapping;
@@ -140,9 +149,11 @@ export function HubPostOfficeLinkPage() {
   const [selectedPostOfficeCode, setSelectedPostOfficeCode] =
     React.useState('');
   const [assignDialogOpen, setAssignDialogOpen] = React.useState(false);
-  const [assignSearchKeyword, setAssignSearchKeyword] = React.useState('');
-  const [postOfficeCodeToAssign, setPostOfficeCodeToAssign] =
-    React.useState('');
+  const [assignProvinceCode, setAssignProvinceCode] = React.useState('');
+  const [assignWardCode, setAssignWardCode] = React.useState('');
+  const [postOfficeCodesToAssign, setPostOfficeCodesToAssign] = React.useState<
+    string[]
+  >([]);
   const [editTarget, setEditTarget] =
     React.useState<HubPostOfficeLinkRow | null>(null);
   const [editTargetHubId, setEditTargetHubId] = React.useState('');
@@ -203,14 +214,46 @@ export function HubPostOfficeLinkPage() {
     { skip: !selectedHub }
   );
 
+  const {
+    data: allLinkData,
+    isFetching: isFetchingAllLinks,
+    refetch: refetchAllLinks,
+  } = useGetAllHubPostOfficesQuery(
+    {
+      page: 0,
+      size: ALL_LINK_PAGE_SIZE,
+    },
+    { skip: !assignDialogOpen }
+  );
+
   const { data: assignPostOfficesData, isFetching: isFetchingAssignOptions } =
     useGetPostOfficesQuery(
       {
         page: 0,
-        size: ASSIGN_SEARCH_SIZE,
-        keyword: assignSearchKeyword.trim() || undefined,
+        size: ASSIGN_POST_OFFICE_SIZE,
+        provinceCode: assignProvinceCode || undefined,
+        wardCode: assignWardCode || undefined,
+      },
+      { skip: !assignDialogOpen || !assignProvinceCode }
+    );
+
+  const { data: assignProvincesData, isFetching: isFetchingAssignProvinces } =
+    useGetProvincesQuery(
+      {
+        page: 0,
+        size: ASSIGN_LOCATION_SIZE,
       },
       { skip: !assignDialogOpen }
+    );
+
+  const { data: assignWardsData, isFetching: isFetchingAssignWards } =
+    useGetWardsByProvinceCodeQuery(
+      {
+        provinceCode: assignProvinceCode,
+        page: 0,
+        size: ASSIGN_LOCATION_SIZE,
+      },
+      { skip: !assignDialogOpen || !assignProvinceCode }
     );
 
   const postOfficeByCode = React.useMemo(() => {
@@ -231,6 +274,20 @@ export function HubPostOfficeLinkPage() {
     () => new Set(linkedRows.map((row) => row.mapping.postOfficeCode)),
     [linkedRows]
   );
+
+  const assignedCodes = React.useMemo(
+    () =>
+      new Set(
+        (allLinkData?.items ?? []).map((mapping) => mapping.postOfficeCode)
+      ),
+    [allLinkData?.items]
+  );
+
+  React.useEffect(() => {
+    setPostOfficeCodesToAssign((currentCodes) =>
+      currentCodes.filter((code) => !assignedCodes.has(code))
+    );
+  }, [assignedCodes]);
 
   const selectedRow = React.useMemo(
     () =>
@@ -260,14 +317,40 @@ export function HubPostOfficeLinkPage() {
     [hubs, selectedHub?.id]
   );
 
-  const assignPostOfficeOptions = React.useMemo(() => {
-    return (assignPostOfficesData?.items ?? [])
-      .filter((postOffice) => !linkedCodes.has(postOffice.code))
-      .map((postOffice) => ({
-        value: postOffice.code,
-        label: buildPostOfficeLabel(postOffice),
-      }));
-  }, [assignPostOfficesData?.items, linkedCodes]);
+  const assignPostOffices = React.useMemo(
+    () => assignPostOfficesData?.items ?? [],
+    [assignPostOfficesData?.items]
+  );
+
+  const assignProvinceOptions = React.useMemo(
+    () =>
+      (assignProvincesData?.items ?? []).flatMap((province: Province) =>
+        province.provinceCode
+          ? [
+              {
+                value: province.provinceCode,
+                label: `${province.name} (${province.provinceCode})`,
+              },
+            ]
+          : []
+      ),
+    [assignProvincesData?.items]
+  );
+
+  const assignWardOptions = React.useMemo(
+    () =>
+      (assignWardsData?.items ?? []).flatMap((ward: Ward) =>
+        ward.wardCode
+          ? [
+              {
+                value: ward.wardCode,
+                label: `${ward.name} (${ward.wardCode})`,
+              },
+            ]
+          : []
+      ),
+    [assignWardsData?.items]
+  );
 
   const mapPostOffices = React.useMemo(
     () => linkedRows.map(toMapPostOffice),
@@ -280,11 +363,28 @@ export function HubPostOfficeLinkPage() {
     [linkedRows]
   );
 
+  const togglePostOfficeToAssign = React.useCallback(
+    (postOfficeCode: string) => {
+      if (assignedCodes.has(postOfficeCode)) {
+        return;
+      }
+      setPostOfficeCodesToAssign((currentCodes) =>
+        currentCodes.includes(postOfficeCode)
+          ? currentCodes.filter((code) => code !== postOfficeCode)
+          : [...currentCodes, postOfficeCode]
+      );
+    },
+    [assignedCodes]
+  );
+
   const handleRefresh = () => {
     void refetchHubs();
     void refetchPostOffices();
     if (selectedHub) {
       void refetchLinks();
+    }
+    if (assignDialogOpen) {
+      void refetchAllLinks();
     }
   };
 
@@ -304,8 +404,9 @@ export function HubPostOfficeLinkPage() {
       return;
     }
 
-    setAssignSearchKeyword('');
-    setPostOfficeCodeToAssign('');
+    setAssignProvinceCode('');
+    setAssignWardCode('');
+    setPostOfficeCodesToAssign([]);
     setAssignDialogOpen(true);
   };
 
@@ -314,28 +415,31 @@ export function HubPostOfficeLinkPage() {
       return;
     }
 
-    if (!postOfficeCodeToAssign) {
-      notification.error('Vui lòng chọn bưu cục để liên kết.');
-      return;
-    }
+    const codesToAssign = postOfficeCodesToAssign.filter(
+      (code) => !assignedCodes.has(code)
+    );
 
-    if (linkedCodes.has(postOfficeCodeToAssign)) {
-      notification.error('Bưu cục này đã được liên kết với hub.');
+    if (codesToAssign.length === 0) {
+      notification.error('Vui lòng chọn ít nhất một bưu cục để liên kết.');
       return;
     }
 
     try {
       await assignPostOfficeToHub({
         hubId: selectedHub.id,
-        request: { post_office_code: postOfficeCodeToAssign },
+        request: { post_office_codes: codesToAssign },
       }).unwrap();
 
-      notification.success('Đã tạo liên kết hub-bưu cục.');
+      notification.success(
+        `Đã tạo ${codesToAssign.length} liên kết hub-bưu cục.`
+      );
       setAssignDialogOpen(false);
-      setAssignSearchKeyword('');
-      setPostOfficeCodeToAssign('');
-      setSelectedPostOfficeCode(postOfficeCodeToAssign);
+      setAssignProvinceCode('');
+      setAssignWardCode('');
+      setPostOfficeCodesToAssign([]);
+      setSelectedPostOfficeCode(codesToAssign[0] ?? '');
       void refetchLinks();
+      void refetchAllLinks();
     } catch (error) {
       notification.error('Tạo liên kết hub-bưu cục thất bại.', {
         description: getErrorMessage(error),
@@ -375,7 +479,7 @@ export function HubPostOfficeLinkPage() {
 
       await assignPostOfficeToHub({
         hubId: nextHubId,
-        request: { post_office_code: editTarget.mapping.postOfficeCode },
+        request: { post_office_codes: [editTarget.mapping.postOfficeCode] },
       }).unwrap();
 
       notification.success('Đã chuyển liên kết hub-bưu cục.');
@@ -388,7 +492,9 @@ export function HubPostOfficeLinkPage() {
         try {
           await assignPostOfficeToHub({
             hubId: selectedHub.id,
-            request: { post_office_code: editTarget.mapping.postOfficeCode },
+            request: {
+              post_office_codes: [editTarget.mapping.postOfficeCode],
+            },
           }).unwrap();
         } catch {
           notification.error('Khôi phục liên kết ban đầu thất bại.', {
@@ -441,8 +547,8 @@ export function HubPostOfficeLinkPage() {
               Liên kết hub-bưu cục
             </h1>
             <p className='text-muted-foreground'>
-              Quản lý bưu cục được gán cho hub chặng giữa trên cùng một màn
-              hình mạng lưới.
+              Quản lý bưu cục được gán cho hub chặng giữa trên cùng một màn hình
+              mạng lưới.
             </p>
           </div>
 
@@ -480,9 +586,7 @@ export function HubPostOfficeLinkPage() {
                   value={selectedHubId}
                   onValueChange={setSelectedHubId}
                   options={hubOptions}
-                  placeholder={
-                    isFetchingHubs ? 'Đang tải hub...' : 'Chọn hub'
-                  }
+                  placeholder={isFetchingHubs ? 'Đang tải hub...' : 'Chọn hub'}
                   emptyText='Không tìm thấy hub'
                   loading={isFetchingHubs}
                 />
@@ -536,240 +640,166 @@ export function HubPostOfficeLinkPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Liên kết đã chọn</CardTitle>
+              <CardTitle>Danh sách bưu cục liên kết</CardTitle>
               <CardDescription>
-                Chọn điểm đánh dấu trên bản đồ hoặc một dòng để xem chi tiết
-                liên kết.
+                Xem, chuyển hoặc xóa các bưu cục đang kết nối với hub đã chọn.
               </CardDescription>
             </CardHeader>
             <CardContent className='space-y-4'>
-              {selectedRow ? (
-                <>
-                  <div className='space-y-3 text-sm'>
-                    <div>
-                      <p className='text-muted-foreground'>Hub</p>
-                      <p className='font-medium'>
-                        {selectedHub ? buildHubLabel(selectedHub) : '--'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>Bưu cục</p>
-                      <p className='font-medium'>
-                        {selectedRow.postOffice
-                          ? buildPostOfficeLabel(selectedRow.postOffice)
-                          : selectedRow.mapping.postOfficeCode}
-                      </p>
-                    </div>
-                    <div>
-                      <p className='text-muted-foreground'>Ngày tạo</p>
-                      <p className='font-medium'>
-                        {formatDateTime(selectedRow.mapping.createdAt)}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        hasPostOfficeLocation(selectedRow.postOffice)
-                          ? 'default'
-                          : 'outline'
-                      }
-                    >
-                      {hasPostOfficeLocation(selectedRow.postOffice)
-                        ? 'Đủ tọa độ'
-                        : 'Thiếu tọa độ'}
-                    </Badge>
-                  </div>
-
-                  <div className='flex flex-wrap gap-2 border-t pt-4'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => setDetailDialogOpen(true)}
-                    >
-                      <Eye className='h-4 w-4' />
-                      Xem
-                    </Button>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => openEditDialog(selectedRow)}
-                      disabled={!isTmsAdmin}
-                    >
-                      <Pencil className='h-4 w-4' />
-                      Chuyển
-                    </Button>
-                    <Button
-                      variant='destructive'
-                      size='sm'
-                      onClick={() => setDeleteTarget(selectedRow)}
-                      disabled={!isTmsAdmin}
-                    >
-                      <Trash2 className='h-4 w-4' />
-                      Xóa
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className='flex min-h-64 flex-col items-center justify-center gap-3 rounded-md border border-dashed p-6 text-center text-muted-foreground'>
-                  <Unlink className='h-9 w-9' />
-                  <div>
-                    <p className='font-medium text-foreground'>
-                      Chưa chọn liên kết
-                    </p>
-                    <p className='mt-1 text-sm'>
-                      Chọn bưu cục liên kết từ bản đồ hoặc danh sách.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
               <div>
-                <CardTitle>Bưu cục đã liên kết</CardTitle>
-                <CardDescription>
-                  Xem, chuyển hoặc xóa các bưu cục đang kết nối với hub đã
-                  chọn.
-                </CardDescription>
-              </div>
-              {isFetchingLinks ? (
-                <Badge variant='outline' className='gap-1'>
-                  <Loader2 className='h-3.5 w-3.5 animate-spin' />
-                  Đang tải
-                </Badge>
-              ) : null}
-            </div>
-          </CardHeader>
-          <CardContent className='space-y-4'>
-            {!selectedHub ? (
-              <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
-                Chọn hub để tải danh sách bưu cục liên kết.
-              </div>
-            ) : linkedRows.length === 0 && !isFetchingLinks ? (
-              <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
-                Hub này chưa có bưu cục liên kết.
-              </div>
-            ) : (
-              <div className='space-y-2'>
-                {linkedRows.map((row) => {
-                  const isSelected =
-                    row.mapping.postOfficeCode === selectedPostOfficeCode;
+                <div className='mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+                  <div>
+                    <p className='font-medium'>Bưu cục của hub</p>
+                    <p className='text-sm text-muted-foreground'>
+                      Chọn một dòng để đánh dấu trên bản đồ, hoặc dùng nút thao
+                      tác.
+                    </p>
+                  </div>
+                  {isFetchingLinks ? (
+                    <Badge variant='outline' className='w-fit gap-1'>
+                      <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                      Đang tải
+                    </Badge>
+                  ) : null}
+                </div>
 
-                  return (
-                    <div
-                      key={`${row.mapping.id}-${row.mapping.postOfficeCode}`}
-                      role='button'
-                      tabIndex={0}
-                      className={`w-full rounded-md border p-3 text-left transition-colors hover:bg-accent ${
-                        isSelected ? 'border-primary bg-accent' : ''
-                      }`}
-                      onClick={() =>
-                        setSelectedPostOfficeCode(row.mapping.postOfficeCode)
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          setSelectedPostOfficeCode(row.mapping.postOfficeCode);
-                        }
-                      }}
-                    >
-                      <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
-                        <div className='min-w-0 space-y-1'>
-                          <div className='flex flex-wrap items-center gap-2'>
-                            <p className='truncate font-medium'>
-                              {row.postOffice?.name ||
-                                row.mapping.postOfficeCode}
-                            </p>
-                            <Badge variant='outline' className='font-mono'>
-                              {row.mapping.postOfficeCode}
-                            </Badge>
-                          </div>
-                          <p className='line-clamp-2 text-sm text-muted-foreground'>
-                            {row.postOffice?.addressDetail ||
-                              'Chi tiết bưu cục chưa được tải trong vùng tra cứu hiện tại.'}
-                          </p>
-                        </div>
+                {!selectedHub ? (
+                  <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
+                    Chọn hub để tải danh sách bưu cục liên kết.
+                  </div>
+                ) : linkedRows.length === 0 && !isFetchingLinks ? (
+                  <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
+                    Hub này chưa có bưu cục liên kết.
+                  </div>
+                ) : (
+                  <div className='max-h-[32rem] space-y-2 overflow-y-auto pr-1'>
+                    {linkedRows.map((row) => {
+                      const isSelected =
+                        row.mapping.postOfficeCode === selectedPostOfficeCode;
 
-                        <div className='flex flex-wrap gap-2 lg:justify-end'>
-                          <Button
-                            type='button'
-                            variant='outline'
-                            size='sm'
-                            onClick={(event) => {
-                              event.stopPropagation();
+                      return (
+                        <div
+                          key={`${row.mapping.id}-${row.mapping.postOfficeCode}`}
+                          role='button'
+                          tabIndex={0}
+                          className={`w-full rounded-md border p-3 text-left transition-colors hover:bg-accent ${
+                            isSelected ? 'border-primary bg-accent' : ''
+                          }`}
+                          onClick={() =>
+                            setSelectedPostOfficeCode(
+                              row.mapping.postOfficeCode
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
                               setSelectedPostOfficeCode(
                                 row.mapping.postOfficeCode
                               );
-                              setDetailDialogOpen(true);
-                            }}
-                          >
-                            <Eye className='h-4 w-4' />
-                            Xem
-                          </Button>
-                          <Button
-                            type='button'
-                            variant='outline'
-                            size='sm'
-                            disabled={!isTmsAdmin}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openEditDialog(row);
-                            }}
-                          >
-                            <ArrowRightLeft className='h-4 w-4' />
-                            Chuyển
-                          </Button>
-                          <Button
-                            type='button'
-                            variant='destructive'
-                            size='sm'
-                            disabled={!isTmsAdmin}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setDeleteTarget(row);
-                            }}
-                          >
-                            <Trash2 className='h-4 w-4' />
-                            Xóa
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                            }
+                          }}
+                        >
+                          <div className='flex flex-col gap-3'>
+                            <div className='min-w-0 space-y-1'>
+                              <div className='flex flex-wrap items-center gap-2'>
+                                <p className='truncate font-medium'>
+                                  {row.postOffice?.name ||
+                                    row.mapping.postOfficeCode}
+                                </p>
+                                <Badge variant='outline' className='font-mono'>
+                                  {row.mapping.postOfficeCode}
+                                </Badge>
+                              </div>
+                              <p className='line-clamp-2 text-sm text-muted-foreground'>
+                                {row.postOffice?.addressDetail ||
+                                  'Chi tiết bưu cục chưa được tải trong vùng tra cứu hiện tại.'}
+                              </p>
+                            </div>
 
-            {(linkData?.hasNext || linkData?.hasPrevious) && (
-              <div className='flex items-center justify-between border-t pt-4'>
-                <div className='text-sm text-muted-foreground'>
-                  Trang {linkPage + 1}
-                </div>
-                <div className='flex gap-2'>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    disabled={!linkData?.hasPrevious || isFetchingLinks}
-                    onClick={() => setLinkPage((prev) => Math.max(0, prev - 1))}
-                  >
-                    Trước
-                  </Button>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    disabled={!linkData?.hasNext || isFetchingLinks}
-                    onClick={() => setLinkPage((prev) => prev + 1)}
-                  >
-                    Sau
-                  </Button>
-                </div>
+                            <div className='flex flex-wrap gap-2'>
+                              <Button
+                                type='button'
+                                variant='outline'
+                                size='icon'
+                                aria-label='Xem chi tiết liên kết'
+                                title='Xem chi tiết'
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setSelectedPostOfficeCode(
+                                    row.mapping.postOfficeCode
+                                  );
+                                  setDetailDialogOpen(true);
+                                }}
+                              >
+                                <Eye className='h-4 w-4' />
+                              </Button>
+                              <Button
+                                type='button'
+                                variant='outline'
+                                size='icon'
+                                aria-label='Chuyển liên kết'
+                                title='Chuyển liên kết'
+                                disabled={!isTmsAdmin}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openEditDialog(row);
+                                }}
+                              >
+                                <ArrowRightLeft className='h-4 w-4' />
+                              </Button>
+                              <Button
+                                type='button'
+                                variant='destructive'
+                                size='icon'
+                                aria-label='Xóa liên kết'
+                                title='Xóa liên kết'
+                                disabled={!isTmsAdmin}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setDeleteTarget(row);
+                                }}
+                              >
+                                <Trash2 className='h-4 w-4' />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {(linkData?.hasNext || linkData?.hasPrevious) && (
+                  <div className='mt-4 flex items-center justify-between border-t pt-4'>
+                    <div className='text-sm text-muted-foreground'>
+                      Trang {linkPage + 1}
+                    </div>
+                    <div className='flex gap-2'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        disabled={!linkData?.hasPrevious || isFetchingLinks}
+                        onClick={() =>
+                          setLinkPage((prev) => Math.max(0, prev - 1))
+                        }
+                      >
+                        Trước
+                      </Button>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        disabled={!linkData?.hasNext || isFetchingLinks}
+                        onClick={() => setLinkPage((prev) => prev + 1)}
+                      >
+                        Sau
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Dialog
@@ -777,8 +807,9 @@ export function HubPostOfficeLinkPage() {
         onOpenChange={(open) => {
           setAssignDialogOpen(open);
           if (!open) {
-            setAssignSearchKeyword('');
-            setPostOfficeCodeToAssign('');
+            setAssignProvinceCode('');
+            setAssignWardCode('');
+            setPostOfficeCodesToAssign([]);
           }
         }}
       >
@@ -790,34 +821,137 @@ export function HubPostOfficeLinkPage() {
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='hub-po-assign-search'>Tìm bưu cục</Label>
-              <Input
-                id='hub-po-assign-search'
-                placeholder='Mã, tên hoặc địa chỉ'
-                value={assignSearchKeyword}
-                onChange={(event) => {
-                  setAssignSearchKeyword(event.target.value);
-                  setPostOfficeCodeToAssign('');
-                }}
-              />
+            <div className='grid gap-4 sm:grid-cols-2'>
+              <div className='space-y-2'>
+                <Label htmlFor='hub-po-assign-province'>Tỉnh/Thành phố</Label>
+                <TmsCombobox
+                  id='hub-po-assign-province'
+                  value={assignProvinceCode}
+                  onValueChange={(value) => {
+                    setAssignProvinceCode(value);
+                    setAssignWardCode('');
+                    setPostOfficeCodesToAssign([]);
+                  }}
+                  options={assignProvinceOptions}
+                  placeholder={
+                    isFetchingAssignProvinces
+                      ? 'Đang tải tỉnh/thành...'
+                      : 'Chọn tỉnh/thành phố'
+                  }
+                  emptyText='Không tìm thấy tỉnh/thành phố'
+                  loading={isFetchingAssignProvinces}
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='hub-po-assign-ward'>Phường/Xã</Label>
+                <TmsCombobox
+                  id='hub-po-assign-ward'
+                  value={assignWardCode}
+                  onValueChange={(value) => {
+                    setAssignWardCode(value);
+                    setPostOfficeCodesToAssign([]);
+                  }}
+                  options={assignWardOptions}
+                  placeholder={
+                    !assignProvinceCode
+                      ? 'Chọn tỉnh/thành trước'
+                      : isFetchingAssignWards
+                        ? 'Đang tải phường/xã...'
+                        : 'Tất cả phường/xã'
+                  }
+                  emptyText='Không tìm thấy phường/xã'
+                  loading={isFetchingAssignWards}
+                  disabled={!assignProvinceCode}
+                  clearable
+                  clearText='Tất cả phường/xã'
+                />
+              </div>
             </div>
 
             <div className='space-y-2'>
               <Label htmlFor='hub-po-assign-post-office'>Bưu cục</Label>
-              <TmsCombobox
+              <div
                 id='hub-po-assign-post-office'
-                value={postOfficeCodeToAssign}
-                onValueChange={setPostOfficeCodeToAssign}
-                options={assignPostOfficeOptions}
-                placeholder={
-                  isFetchingAssignOptions
-                    ? 'Đang tải bưu cục...'
-                    : 'Chọn bưu cục'
-                }
-                emptyText='Không tìm thấy bưu cục chưa liên kết'
-                loading={isFetchingAssignOptions}
-              />
+                className='max-h-72 space-y-2 overflow-y-auto rounded-md border p-2'
+              >
+                {!assignProvinceCode ? (
+                  <div className='p-4 text-center text-sm text-muted-foreground'>
+                    Chọn tỉnh/thành để tải bưu cục.
+                  </div>
+                ) : isFetchingAssignOptions || isFetchingAllLinks ? (
+                  <div className='flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                    Đang tải bưu cục...
+                  </div>
+                ) : assignPostOffices.length === 0 ? (
+                  <div className='p-4 text-center text-sm text-muted-foreground'>
+                    Không tìm thấy bưu cục trong khu vực đã chọn.
+                  </div>
+                ) : (
+                  assignPostOffices.map((postOffice) => {
+                    const isLinked = assignedCodes.has(postOffice.code);
+                    const isChecked = postOfficeCodesToAssign.includes(
+                      postOffice.code
+                    );
+
+                    return (
+                      <div
+                        key={postOffice.code}
+                        role='button'
+                        tabIndex={isLinked ? -1 : 0}
+                        aria-disabled={isLinked}
+                        className={`flex w-full items-start gap-3 rounded-md border p-3 text-left transition-colors ${
+                          isLinked
+                            ? 'cursor-not-allowed bg-muted/60 opacity-55'
+                            : 'hover:bg-accent'
+                        }`}
+                        onClick={() => {
+                          if (!isLinked) {
+                            togglePostOfficeToAssign(postOffice.code);
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (
+                            !isLinked &&
+                            (event.key === 'Enter' || event.key === ' ')
+                          ) {
+                            event.preventDefault();
+                            togglePostOfficeToAssign(postOffice.code);
+                          }
+                        }}
+                      >
+                        <Checkbox
+                          checked={isLinked || isChecked}
+                          disabled={isLinked}
+                          onCheckedChange={() =>
+                            togglePostOfficeToAssign(postOffice.code)
+                          }
+                          onClick={(event) => event.stopPropagation()}
+                          className='mt-0.5'
+                        />
+                        <div className='min-w-0 flex-1 space-y-1'>
+                          <div className='flex flex-wrap items-center gap-2'>
+                            <span className='font-medium'>
+                              {buildPostOfficeLabel(postOffice)}
+                            </span>
+                            {isLinked ? (
+                              <Badge variant='outline'>Đã liên kết</Badge>
+                            ) : null}
+                          </div>
+                          <p className='line-clamp-2 text-sm text-muted-foreground'>
+                            {postOffice.addressDetail ||
+                              'Chưa có địa chỉ chi tiết'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <p className='text-xs text-muted-foreground'>
+                Đã chọn {postOfficeCodesToAssign.length} bưu cục để liên kết.
+              </p>
             </div>
 
             <div className='flex justify-end gap-2 border-t pt-4'>
@@ -829,9 +963,11 @@ export function HubPostOfficeLinkPage() {
               </Button>
               <Button
                 onClick={() => void handleAssignPostOffice()}
-                disabled={!postOfficeCodeToAssign || isAssigning}
+                disabled={postOfficeCodesToAssign.length === 0 || isAssigning}
               >
-                {isAssigning ? 'Đang tạo...' : 'Tạo liên kết'}
+                {isAssigning
+                  ? 'Đang tạo...'
+                  : `Tạo ${postOfficeCodesToAssign.length || ''} liên kết`}
               </Button>
             </div>
           </div>

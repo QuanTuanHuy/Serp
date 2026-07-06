@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { cn } from '@/shared/utils';
-import type { PickupTrackingOrder } from '../../../types';
+import type { PickupTrackingOrder } from '../../../../types';
 
 type LeafletModule = typeof import('leaflet');
 type LeafletMap = import('leaflet').Map;
@@ -27,17 +27,27 @@ const DEFAULT_CENTER = {
 
 const DEFAULT_ZOOM = 6;
 
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  ASSIGNED_TO_PICKUP: 'Đã phân công lấy',
+  PICKING_UP: 'Đang lấy hàng',
+  PICKED_UP: 'Đã lấy hàng',
+  PENDING_ORIGIN_POST_OFFICE_INBOUND: 'Chờ nhập bưu cục gốc',
+};
+
+const formatOrderStatus = (status?: string): string =>
+  status ? (ORDER_STATUS_LABELS[status] ?? status) : '--';
+
 const buildPopupHtml = (order: PickupTrackingOrder): string => {
   const orderCode = order.orderCode || `#${order.orderId}`;
   const courierText = order.courierName || order.courierCode || '--';
-  const statusText = order.orderStatus || '--';
-  const checkinText = order.checkedIn ? 'Checked in' : 'Not checked in';
+  const statusText = formatOrderStatus(order.orderStatus);
+  const checkinText = order.checkedIn ? 'Đã check-in' : 'Chưa check-in';
 
   return [
     `<div style="min-width: 180px;">`,
     `<div style="font-weight: 600; margin-bottom: 4px;">${orderCode}</div>`,
-    `<div style="font-size: 12px;">Courier: ${courierText}</div>`,
-    `<div style="font-size: 12px;">Status: ${statusText}</div>`,
+    `<div style="font-size: 12px;">Nhân viên: ${courierText}</div>`,
+    `<div style="font-size: 12px;">Trạng thái: ${statusText}</div>`,
     `<div style="font-size: 12px;">${checkinText}</div>`,
     `</div>`,
   ].join('');

@@ -144,7 +144,7 @@ export interface SecondMileHubStaff {
 }
 
 export interface AssignHubPostOfficeRequest {
-  post_office_code: string;
+  post_office_codes: string[];
 }
 
 export interface CreateHubRequest {
@@ -439,6 +439,16 @@ export interface SecondMileBagListFilters {
   destinationPostOfficeCode?: string;
   vehicleId?: number;
   status?: SecondMileBagStatus;
+  minOrders?: number;
+  maxOrders?: number;
+  minWeight?: number;
+  maxWeight?: number;
+  minVolume?: number;
+  maxVolume?: number;
+  sealedFrom?: string;
+  sealedTo?: string;
+  sortBy?: 'sealed_at';
+  sortDirection?: 'asc' | 'desc';
 }
 
 export interface CreateSecondMileBagRequest {
@@ -974,18 +984,25 @@ export interface FirstMileOrderListFilters {
   keyword?: string;
   orderCode?: string;
   customerOrderCode?: string;
+  senderKeyword?: string;
   senderPhone?: string;
+  receiverKeyword?: string;
   receiverPhone?: string;
   originPostOfficeCode?: string;
   originPostOfficeCodes?: string[];
   destinationPostOfficeCode?: string;
   status?: FirstMileOrderStatus;
   statuses?: FirstMileOrderStatus[];
+  pickupMethod?: FirstMileOrderPickupMethod;
   isConfirm?: boolean;
   createdFrom?: string;
   createdTo?: string;
   pickupFrom?: string;
   pickupTo?: string;
+  updatedFrom?: string;
+  updatedTo?: string;
+  sortBy?: 'updated_at';
+  sortDirection?: 'asc' | 'desc';
 }
 
 export interface CreateOrderProductItemRequest {
