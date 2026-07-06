@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 public class SchoolPickupPointUpsertRequest {
 
-    @NotNull
+    @NotNull(message = "Vui lòng chọn điểm đón/trả.")
     private Long pickupPointId;
 
     private Boolean isDefault;

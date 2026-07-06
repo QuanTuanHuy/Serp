@@ -57,14 +57,14 @@ import { LocationPickerMap } from './map/LocationPickerMap';
 import { useGetSchoolPickupPointDropdownOptionsQuery } from '../api/schoolBusApi';
 
 const schoolSchema = z.object({
-  name: z.string().min(1, 'School name is required'),
+  name: z.string().min(1, 'Vui lòng nhập tên trường.'),
   address: z.string().optional(),
   contactPhone: z.string().optional(),
   contactEmail: z
     .string()
     .optional()
     .refine((v) => !v || /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(v), {
-      message: 'Invalid email format',
+      message: 'Email không đúng định dạng.',
     }),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
@@ -72,11 +72,11 @@ const schoolSchema = z.object({
 });
 
 const pickupPointSchema = z.object({
-  name: z.string().min(1, 'Pickup point name is required'),
-  address: z.string().min(1, 'Address is required'),
+  name: z.string().min(1, 'Vui lòng nhập tên điểm đón/trả.'),
+  address: z.string().min(1, 'Vui lòng nhập địa chỉ điểm đón/trả.'),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
-  usageType: z.string().min(1, 'Usage type is required'),
+  usageType: z.string().min(1, 'Vui lòng chọn loại sử dụng.'),
   pickupInstruction: z.string().optional(),
   isActive: z.boolean().default(true),
 });
@@ -202,7 +202,7 @@ export function SchoolFormDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={initialData ? 'Chỉnh sửa trường' : 'Tạo trường'}
-      description='Manage school identity and contact details for the tenant.'
+      description='Quản lý thông tin định danh và liên hệ của trường.'
       stickyFooter
     >
       <SimpleForm
@@ -222,41 +222,41 @@ export function SchoolFormDialog({
         onCancel={() => onOpenChange(false)}
         stickyFooter
       >
-        <FormSectionHeader title='1. School information' />
+        <FormSectionHeader title='1. Thông tin trường học' />
         <TextField
           form={form}
           name='name'
-          label='School name *'
+          label='Tên trường *'
           className='md:col-span-2'
         />
         {initialData?.code ? (
           <ReadOnlyField
-            label='School code'
+            label='Mã trường'
             value={initialData.code}
             className='md:col-span-1'
           />
         ) : null}
 
-        <FormSectionHeader title='2. Contact details' />
+        <FormSectionHeader title='2. Thông tin liên hệ' />
         <TextField
           form={form}
           name='contactPhone'
-          label='Contact phone'
+          label='Số điện thoại liên hệ'
           className='md:col-span-1'
         />
         <TextField
           form={form}
           name='contactEmail'
-          label='Contact email'
+          label='Email liên hệ'
           className='md:col-span-1'
         />
-        <TextareaField form={form} name='address' label='Address' />
+        <TextareaField form={form} name='address' label='Địa chỉ' />
 
-        <FormSectionHeader title='3. Coordinates' />
-        <TextField form={form} name='latitude' label='Latitude' />
-        <TextField form={form} name='longitude' label='Longitude' />
+        <FormSectionHeader title='3. Tọa độ' />
+        <TextField form={form} name='latitude' label='Vĩ độ' />
+        <TextField form={form} name='longitude' label='Kinh độ' />
 
-        <FormSectionHeader title='4. School location map' />
+        <FormSectionHeader title='4. Bản đồ vị trí trường' />
         <div className='col-span-full'>
           <LocationPickerMap
             kind='school'
@@ -285,7 +285,7 @@ export function SchoolFormDialog({
             onAddressResolved={(address: string) =>
               form.setValue('address', address, { shouldDirty: true })
             }
-            title='School location'
+            title='Vị trí trường học'
           />
         </div>
       </SimpleForm>
@@ -349,7 +349,7 @@ export function PickupPointFormDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={initialData ? 'Chỉnh sửa điểm đón/trả' : 'Tạo điểm đón/trả'}
-      description='Register boarding locations for request intake and route planning.'
+      description='Quản lý các điểm đón/trả phục vụ đăng ký và lập tuyến.'
       stickyFooter
     >
       <SimpleForm
@@ -369,10 +369,10 @@ export function PickupPointFormDialog({
         }
         stickyFooter
       >
-        <FormSectionHeader title='1. Pickup point information' />
+        <FormSectionHeader title='1. Thông tin điểm đón/trả' />
         {initialData?.code && (
           <ReadOnlyField
-            label='Pickup point code'
+            label='Mã điểm đón/trả'
             value={initialData.code}
             className='md:col-span-1'
           />
@@ -380,36 +380,36 @@ export function PickupPointFormDialog({
         <TextField
           form={form}
           name='name'
-          label='Pickup point name *'
+          label='Tên điểm đón/trả *'
           className={initialData?.code ? 'md:col-span-1' : 'md:col-span-2'}
         />
 
-        <FormSectionHeader title='2. Usage details' />
+        <FormSectionHeader title='2. Thông tin sử dụng' />
         <SelectField
           form={form}
           name='usageType'
-          label='Usage type *'
+          label='Loại sử dụng *'
           allowEmpty
-          emptyLabel='Not specified'
+          emptyLabel='Chưa chọn'
           options={[
-            { value: 'PICKUP_ONLY', label: 'Pickup only' },
-            { value: 'DROPOFF_ONLY', label: 'Drop-off only' },
-            { value: 'PICKUP_DROPOFF', label: 'Pickup & drop-off' },
+            { value: 'PICKUP_ONLY', label: 'Chỉ đón' },
+            { value: 'DROPOFF_ONLY', label: 'Chỉ trả' },
+            { value: 'PICKUP_DROPOFF', label: 'Đón và trả' },
           ]}
           className='md:col-span-1'
         />
         <TextareaField
           form={form}
           name='pickupInstruction'
-          label='Pickup instruction'
+          label='Hướng dẫn đón/trả'
         />
-        <TextareaField form={form} name='address' label='Address *' />
+        <TextareaField form={form} name='address' label='Địa chỉ *' />
 
-        <FormSectionHeader title='3. Coordinates' />
-        <TextField form={form} name='latitude' label='Latitude' />
-        <TextField form={form} name='longitude' label='Longitude' />
+        <FormSectionHeader title='3. Tọa độ' />
+        <TextField form={form} name='latitude' label='Vĩ độ' />
+        <TextField form={form} name='longitude' label='Kinh độ' />
 
-        <FormSectionHeader title='4. Pickup point location map' />
+        <FormSectionHeader title='4. Bản đồ vị trí điểm đón/trả' />
         <div className='col-span-full'>
           <LocationPickerMap
             kind='pickup'
@@ -452,7 +452,7 @@ export function PickupPointFormDialog({
             onAddressResolved={(address: string) =>
               form.setValue('address', address, { shouldDirty: true })
             }
-            title='Pickup point location'
+            title='Vị trí điểm đón/trả'
           />
         </div>
       </SimpleForm>

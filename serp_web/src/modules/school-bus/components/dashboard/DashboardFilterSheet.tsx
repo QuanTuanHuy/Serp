@@ -66,27 +66,27 @@ export function DashboardFilterSheet({
         <SheetHeader className='border-b border-border px-6 py-5 text-left'>
           <div className='flex items-center gap-2'>
             <Filter className='h-4 w-4 text-primary' />
-            <SheetTitle>Dashboard filters</SheetTitle>
+            <SheetTitle>Bộ lọc Dashboard</SheetTitle>
           </div>
           <SheetDescription>
-            Apply one filter set to every summary and chart block.
+            Áp dụng bộ lọc cho toàn bộ chỉ số tổng quan và biểu đồ.
           </SheetDescription>
         </SheetHeader>
 
         <div className='flex-1 space-y-5 overflow-y-auto px-6 py-6'>
           <SchoolBusDatePicker
-            label='Service date'
+            label='Ngày phục vụ'
             value={draft.serviceDate}
             onChange={(serviceDate) =>
               setDraft((current) => ({ ...current, serviceDate }))
             }
-            placeholder='Latest available date'
+            placeholder='Ngày gần nhất có dữ liệu'
             fullWidth
           />
 
           <div className='space-y-1.5'>
             <label className='text-xs font-semibold text-foreground'>
-              School
+              Trường học
             </label>
             <SchoolBusSelect
               value={draft.schoolId}
@@ -98,7 +98,7 @@ export function DashboardFilterSheet({
                 }))
               }
               options={schoolOptions}
-              placeholder='All accessible schools'
+              placeholder='Tất cả trường có quyền truy cập'
               searchable
               clearable
               fullWidth
@@ -108,7 +108,7 @@ export function DashboardFilterSheet({
 
           <div className='space-y-1.5'>
             <label className='text-xs font-semibold text-foreground'>
-              Direction
+              Chiều tuyến
             </label>
             <SchoolBusSelect
               value={draft.direction}
@@ -120,10 +120,10 @@ export function DashboardFilterSheet({
                 }))
               }
               options={[
-                { label: 'Outbound', value: 'OUTBOUND' },
-                { label: 'Return', value: 'RETURN' },
+                { label: 'Chiều đi học', value: 'OUTBOUND' },
+                { label: 'Chiều về nhà', value: 'RETURN' },
               ]}
-              placeholder='All directions'
+              placeholder='Tất cả chiều tuyến'
               clearable
               fullWidth
               size='md'
@@ -142,7 +142,7 @@ export function DashboardFilterSheet({
               onOpenChange(false);
             }}
           >
-            Reset
+            Đặt lại
           </Button>
           <Button
             type='button'
@@ -152,7 +152,7 @@ export function DashboardFilterSheet({
               onOpenChange(false);
             }}
           >
-            Apply filters
+            Áp dụng bộ lọc
           </Button>
         </div>
       </SheetContent>

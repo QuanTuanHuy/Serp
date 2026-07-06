@@ -44,6 +44,12 @@ import { SchoolBusDatePicker } from '../components/ui/SchoolBusDatePicker';
 import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
+import {
+  attendanceStatusLabel,
+  attendanceTypeLabel,
+  operationEventLabel,
+  tripStatusLabel,
+} from '../schoolBusLabels';
 
 export function SchoolBusReportsPage() {
   // --- Filter States ---------------------------------------------------------
@@ -346,7 +352,7 @@ export function SchoolBusReportsPage() {
       },
       {
         key: 'assignment',
-        header: 'Assignment',
+        header: 'Phân công',
         render: (row: any) => (
           <div className='flex flex-col gap-0.5'>
             <span className='font-semibold text-slate-700 text-xs'>
@@ -361,7 +367,9 @@ export function SchoolBusReportsPage() {
       {
         key: 'status',
         header: 'Trạng thái',
-        render: (row: any) => <SchoolBusStatusBadge status={row.status} />,
+        render: (row: any) => (
+          <SchoolBusStatusBadge status={row.status} labelMap={tripStatusLabel} />
+        ),
       },
     ],
     []
@@ -404,7 +412,7 @@ export function SchoolBusReportsPage() {
       },
       {
         key: 'event',
-        header: 'Event',
+        header: 'Sự kiện',
         render: (row: any) => {
           const evType = (
             row.eventType ||
@@ -429,7 +437,9 @@ export function SchoolBusReportsPage() {
                 colorClass
               )}
             >
-              {evType.toLowerCase().replace('_', ' ')}
+              {operationEventLabel[evType] ||
+                attendanceTypeLabel[evType] ||
+                evType.toLowerCase().replace('_', ' ')}
             </span>
           );
         },
@@ -437,11 +447,16 @@ export function SchoolBusReportsPage() {
       {
         key: 'status',
         header: 'Trạng thái',
-        render: (row: any) => <SchoolBusStatusBadge status={row.status} />,
+        render: (row: any) => (
+          <SchoolBusStatusBadge
+            status={row.status}
+            labelMap={attendanceStatusLabel}
+          />
+        ),
       },
       {
         key: 'recorded',
-        header: 'Recorded',
+        header: 'Ghi nhận lúc',
         render: (row: any) => (
           <span className='text-slate-500 font-medium text-xs'>
             {formatDateTime(row.recordedAt)}
@@ -478,21 +493,21 @@ export function SchoolBusReportsPage() {
       },
       {
         key: 'plannedStudents',
-        header: 'Planned students',
+        header: 'Học sinh dự kiến',
         render: (row: any) => (
           <div className='flex items-center gap-1.5 font-medium text-slate-700'>
             <Users className='h-3.5 w-3.5 text-slate-400 shrink-0' />
-            <span>{row.plannedStudents} students</span>
+            <span>{row.plannedStudents} học sinh</span>
           </div>
         ),
       },
       {
         key: 'busCapacity',
-        header: 'Bus capacity',
+        header: 'Sức chứa xe',
         render: (row: any) => (
           <div className='flex items-center gap-1.5 font-medium text-slate-700'>
             <Bus className='h-3.5 w-3.5 text-slate-400 shrink-0' />
-            <span>{row.busCapacity} seats</span>
+            <span>{row.busCapacity} chỗ</span>
           </div>
         ),
       },
@@ -596,7 +611,7 @@ export function SchoolBusReportsPage() {
           </Button>
         </div>
         <div className='text-xs text-slate-400 font-semibold uppercase tracking-wider'>
-          Page-level records
+          Bản ghi trên trang
         </div>
       </div>
 
@@ -604,7 +619,7 @@ export function SchoolBusReportsPage() {
         <div className='grid grid-cols-2 sm:grid-cols-5 gap-3 border-t border-slate-100 pt-3.5'>
           <div className='bg-blue-50/50 border border-blue-100/50 rounded-xl p-2.5 text-center'>
             <p className='text-[10px] font-bold text-blue-500 uppercase tracking-wider'>
-              Boarded
+              Đã lên xe
             </p>
             <p className='text-lg font-bold text-blue-700 mt-1'>
               {boardedCount}
@@ -612,7 +627,7 @@ export function SchoolBusReportsPage() {
           </div>
           <div className='bg-emerald-50/50 border border-emerald-100/50 rounded-xl p-2.5 text-center'>
             <p className='text-[10px] font-bold text-emerald-500 uppercase tracking-wider'>
-              Dropped off
+              Đã xuống xe
             </p>
             <p className='text-lg font-bold text-emerald-700 mt-1'>
               {droppedOffCount}
@@ -620,7 +635,7 @@ export function SchoolBusReportsPage() {
           </div>
           <div className='bg-amber-50/50 border border-amber-100/50 rounded-xl p-2.5 text-center'>
             <p className='text-[10px] font-bold text-amber-500 uppercase tracking-wider'>
-              Absent
+              Vắng mặt
             </p>
             <p className='text-lg font-bold text-amber-700 mt-1'>
               {absentCount}
@@ -628,7 +643,7 @@ export function SchoolBusReportsPage() {
           </div>
           <div className='bg-rose-50/50 border border-rose-100/50 rounded-xl p-2.5 text-center'>
             <p className='text-[10px] font-bold text-rose-500 uppercase tracking-wider'>
-              No-show
+              Không có mặt
             </p>
             <p className='text-lg font-bold text-rose-700 mt-1'>
               {noShowCount}
@@ -636,7 +651,7 @@ export function SchoolBusReportsPage() {
           </div>
           <div className='bg-slate-50 border border-slate-200/50 rounded-xl p-2.5 text-center col-span-2 sm:col-span-1'>
             <p className='text-[10px] font-bold text-slate-500 uppercase tracking-wider'>
-              Not served
+              Chưa phục vụ
             </p>
             <p className='text-lg font-bold text-slate-700 mt-1'>
               {notServedCount}
@@ -675,30 +690,30 @@ export function SchoolBusReportsPage() {
           ) : (
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               <SchoolBusMetricCard
-                label='Transport requests'
+                label='Yêu cầu đưa đón'
                 value={report.totalRequests}
-                hint='Transport demand records in scope'
+                hint='Yêu cầu trong phạm vi dữ liệu'
                 icon={FileText}
                 tone='info'
               />
               <SchoolBusMetricCard
-                label='Approved requests'
+                label='Yêu cầu đã duyệt'
                 value={report.approvedRequests}
-                hint='Released into subscriptions'
+                hint='Đã chuyển thành đăng ký'
                 icon={CheckCircle2}
                 tone='success'
               />
               <SchoolBusMetricCard
-                label='Completed trips'
+                label='Chuyến đã hoàn thành'
                 value={report.completedRoutes}
-                hint='Route plans closed'
+                hint='Tuyến đã hoàn tất vận hành'
                 icon={Milestone}
                 tone='success'
               />
               <SchoolBusMetricCard
-                label='Attendance events'
+                label='Sự kiện điểm danh'
                 value={report.attendanceEvents}
-                hint='Boarding/dropoff/absence events'
+                hint='Lên xe, xuống xe và vắng mặt'
                 icon={Fingerprint}
                 tone='info'
               />

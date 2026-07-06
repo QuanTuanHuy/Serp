@@ -39,36 +39,36 @@ import {
   formatDateTime,
   getPageItems,
 } from '../utils';
+import { routeStatusLabel } from '../schoolBusLabels';
 
 const routeStatusMap: Record<string, { label: string; className: string }> = {
-  PUBLISHED: {
-    label: 'Đã phát hành',
-    className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50',
-  },
-  TRIP_CREATED: {
-    label: 'Trip created',
-    className:
-      'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
-  },
-  PLANNED: {
-    label: 'Planned',
+  DRAFT: {
+    label: routeStatusLabel.DRAFT,
     className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
   },
-  ASSIGNED: {
-    label: 'Assigned',
-    className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50',
+  GENERATED: {
+    label: routeStatusLabel.GENERATED,
+    className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
   },
-  IN_PROGRESS: {
-    label: 'In progress',
+  REVIEWING: {
+    label: routeStatusLabel.REVIEWING,
+    className: 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-50',
+  },
+  PUBLISHED: {
+    label: routeStatusLabel.PUBLISHED,
     className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50',
   },
-  COMPLETED: {
-    label: 'Hoàn thành',
+  ASSIGNED: {
+    label: routeStatusLabel.ASSIGNED,
+    className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50',
+  },
+  TRIP_CREATED: {
+    label: routeStatusLabel.TRIP_CREATED,
     className:
       'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
   },
   CANCELLED: {
-    label: 'Đã hủy',
+    label: routeStatusLabel.CANCELLED,
     className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50',
   },
 };
@@ -108,7 +108,9 @@ export function SchoolBusDispatchPage() {
 
   // Route-level status - reflects planning/dispatch state, NOT execution state
   const plannedRoutes = routes.filter((route) =>
-    ['PLANNED', 'ASSIGNED'].includes(route.status)
+    ['DRAFT', 'GENERATED', 'REVIEWING', 'PUBLISHED', 'ASSIGNED'].includes(
+      route.status
+    )
   ).length;
   const dispatchedRoutes = routes.filter(
     (route) => route.status === 'TRIP_CREATED'

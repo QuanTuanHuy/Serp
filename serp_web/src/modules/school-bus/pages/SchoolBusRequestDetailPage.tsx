@@ -36,6 +36,7 @@ import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime } from '../utils';
 import type { SchoolBusRequestStudent } from '../types';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
+import { requestStatusLabel } from '../schoolBusLabels';
 
 // --- helpers ----------------------------------------------------------------
 
@@ -496,7 +497,10 @@ export function SchoolBusRequestDetailPage({
         <div className='space-y-6'>
           {/* -- Status subtitle row */}
           <div className='flex flex-wrap items-center gap-2.5 bg-slate-50 border border-slate-200/60 rounded-xl p-3.5'>
-            <SchoolBusStatusBadge status={request.status} />
+            <SchoolBusStatusBadge
+              status={request.status}
+              labelMap={requestStatusLabel}
+            />
             <span className='text-slate-300'>-</span>
             <span className='text-sm font-semibold text-slate-700'>
               {REQUEST_TYPE_LABELS[request.requestType] || request.requestType}
@@ -586,13 +590,12 @@ export function SchoolBusRequestDetailPage({
                       )}
                     >
                       {allReady
-                        ? 'Eligible for approval'
-                        : `Cannot approve yet - ${blockingIssues.length} approval blocker${blockingIssues.length > 1 ? 's' : ''} must be fixed`}
+                        ? 'Đủ điều kiện phê duyệt'
+                        : `Chưa thể phê duyệt - cần xử lý ${blockingIssues.length} vấn đề`}
                     </p>
                     {allReady ? (
                       <p className='text-xs text-emerald-700 mt-1 font-medium'>
-                        All required student, pickup/drop-off, and coordinate
-                        checks passed.
+                        Các kiểm tra về học sinh, điểm đón/trả và tọa độ đều đạt.
                       </p>
                     ) : (
                       <ul className='mt-2.5 space-y-1 bg-white/50 rounded-xl p-3 border border-amber-200/50'>
@@ -936,7 +939,12 @@ export function SchoolBusRequestDetailPage({
                   />
                   <InfoRow
                     label='Trạng thái'
-                    value={<SchoolBusStatusBadge status={request.status} />}
+                    value={
+                      <SchoolBusStatusBadge
+                        status={request.status}
+                        labelMap={requestStatusLabel}
+                      />
+                    }
                   />
                   <InfoRow
                     label='Effective from'
@@ -951,11 +959,11 @@ export function SchoolBusRequestDetailPage({
                     }
                   />
                   <InfoRow
-                    label='Submitted at'
+                    label='Thời gian gửi'
                     value={formatDateTime(request.requestedAt)}
                   />
                   <InfoRow
-                    label='Approved at'
+                    label='Thời gian duyệt'
                     value={
                       request.approvedAt
                         ? formatDateTime(request.approvedAt)

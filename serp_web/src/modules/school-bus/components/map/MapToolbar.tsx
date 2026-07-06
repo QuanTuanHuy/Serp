@@ -26,7 +26,7 @@ interface MapToolbarProps {
   isExpanded: boolean;
   onToggleExpand: () => void;
   className?: string;
-  /** Custom label for the second fit button (default: 'Fit Route'). */
+  /** Custom label for the second fit button. */
   fitRouteLabel?: string;
   /** Set to false to hide the separator and expand/collapse button. */
   showExpand?: boolean;
@@ -42,7 +42,7 @@ export function MapToolbar({
   isExpanded,
   onToggleExpand,
   className,
-  fitRouteLabel = 'Fit Route',
+  fitRouteLabel = 'Thu phóng tới tuyến đang chọn',
   showExpand = true,
   compact = false,
 }: MapToolbarProps) {
@@ -61,7 +61,7 @@ export function MapToolbar({
           className='flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground hover:bg-muted focus:bg-muted focus:text-foreground disabled:pointer-events-none disabled:opacity-40'
         >
           <Navigation className='h-3.5 w-3.5 text-slate-500' />
-          <span>Fit All Markers</span>
+          <span>Hiển thị tất cả điểm</span>
         </DropdownMenuItem>
       )}
       {onFitRoute && (
@@ -82,12 +82,12 @@ export function MapToolbar({
           {isExpanded ? (
             <>
               <Minimize2 className='h-3.5 w-3.5 text-slate-500' />
-              <span>Collapse Map</span>
+              <span>Thu gọn bản đồ</span>
             </>
           ) : (
             <>
               <Expand className='h-3.5 w-3.5 text-slate-500' />
-              <span>Expand Map</span>
+              <span>Mở rộng bản đồ</span>
             </>
           )}
         </DropdownMenuItem>
@@ -108,7 +108,7 @@ export function MapToolbar({
               className='h-8 gap-1.5 rounded-xl border border-border bg-popover/95 px-2.5 text-xs font-semibold text-popover-foreground shadow-md hover:bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-hidden'
             >
               <Compass className='h-4 w-4 text-slate-600 animate-pulse' />
-              <span>Map Actions</span>
+              <span>Thao tác bản đồ</span>
             </Button>
           </DropdownMenuTrigger>
           {dropdownContent}
@@ -127,8 +127,8 @@ export function MapToolbar({
             <ToolBtn
               onClick={onFitAll}
               icon={<Navigation className='h-3.5 w-3.5' />}
-              label='Hiển thị tất cả'
-              title='Zoom to fit all markers'
+              label='Hiển thị tất cả điểm'
+              title='Hiển thị tất cả điểm trên bản đồ'
               disabled={!canFitAll}
             />
           )}
@@ -139,7 +139,7 @@ export function MapToolbar({
               label={fitRouteLabel}
               title={
                 canFitRoute
-                  ? `Zoom to fit ${fitRouteLabel.toLowerCase()}`
+                  ? fitRouteLabel
                   : `Chọn một mục trước để dùng ${fitRouteLabel}`
               }
               disabled={!canFitRoute}
@@ -157,8 +157,8 @@ export function MapToolbar({
                     <Expand className='h-3.5 w-3.5' />
                   )
                 }
-                label={isExpanded ? 'Collapse' : 'Expand'}
-                title={isExpanded ? 'Collapse map' : 'Expand map'}
+                label={isExpanded ? 'Thu gọn' : 'Mở rộng'}
+                title={isExpanded ? 'Thu gọn bản đồ' : 'Mở rộng bản đồ'}
                 active={isExpanded}
               />
             </>

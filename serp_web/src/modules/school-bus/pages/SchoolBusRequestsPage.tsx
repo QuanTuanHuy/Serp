@@ -38,6 +38,7 @@ import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { schoolBusUi } from '../theme';
 import type { SchoolBusTransportRequest } from '../types';
 import { REQUEST_TYPE_OPTIONS } from '../constants';
+import { requestStatusLabel } from '../schoolBusLabels';
 import {
   formatDate,
   formatDateTime,
@@ -282,7 +283,10 @@ export function SchoolBusRequestsPage() {
           header: 'Trạng thái',
           render: (request) => (
             <div className='space-y-1'>
-              <SchoolBusStatusBadge status={request.status} />
+              <SchoolBusStatusBadge
+                status={request.status}
+                labelMap={requestStatusLabel}
+              />
               {request.approvedAt ? (
                 <p className='text-[10px] text-slate-400'>
                   Approved: {formatDateTime(request.approvedAt)}
@@ -457,9 +461,9 @@ export function SchoolBusRequestsPage() {
       <SchoolBusSelect
         value={filterStatus}
         onChange={setFilterStatus}
-        placeholder='All states'
+        placeholder='Tất cả trạng thái'
         options={[
-          { label: 'Submitted (Pending)', value: 'SUBMITTED' },
+          { label: 'Chờ duyệt', value: 'SUBMITTED' },
           { label: 'Đã duyệt', value: 'APPROVED' },
           { label: 'Từ chối', value: 'REJECTED' },
         ]}

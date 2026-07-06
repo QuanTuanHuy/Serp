@@ -35,6 +35,10 @@ import {
   SCHOOL_BUS_PAGE_QUERY_OPTIONS,
 } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
+import {
+  subscriptionStatusLabel,
+  tripOptionLabel,
+} from '../schoolBusLabels';
 
 export function SchoolBusSubscriptionsPage() {
   const access = useSchoolBusAccess();
@@ -94,18 +98,19 @@ export function SchoolBusSubscriptionsPage() {
   }, [schools]);
 
   const statusOptions = [
-    { label: 'All statuses', value: '' },
-    { label: 'Đang hoạt động', value: 'ACTIVE', color: 'green' as const },
-    { label: 'Paused', value: 'PAUSED', color: 'orange' as const },
-    { label: 'Stopped', value: 'STOPPED', color: 'red' as const },
-    { label: 'Expired', value: 'EXPIRED', color: 'slate' as const },
+    { label: 'Tất cả trạng thái', value: '' },
+    { label: subscriptionStatusLabel.PENDING, value: 'PENDING', color: 'slate' as const },
+    { label: subscriptionStatusLabel.ACTIVE, value: 'ACTIVE', color: 'green' as const },
+    { label: subscriptionStatusLabel.PAUSED, value: 'PAUSED', color: 'orange' as const },
+    { label: subscriptionStatusLabel.STOPPED, value: 'STOPPED', color: 'red' as const },
+    { label: subscriptionStatusLabel.EXPIRED, value: 'EXPIRED', color: 'slate' as const },
   ];
 
   const tripOptionOptions = [
-    { label: 'All trip options', value: '' },
-    { label: 'Round trip', value: 'ROUND_TRIP' },
-    { label: 'To school only', value: 'MORNING' },
-    { label: 'From school only', value: 'AFTERNOON' },
+    { label: 'Tất cả loại chuyến', value: '' },
+    { label: tripOptionLabel.ROUND_TRIP, value: 'ROUND_TRIP' },
+    { label: tripOptionLabel.MORNING, value: 'MORNING' },
+    { label: tripOptionLabel.AFTERNOON, value: 'AFTERNOON' },
   ];
 
   const subscriptionColumns: SchoolBusTableColumn<any>[] = [
@@ -165,18 +170,13 @@ export function SchoolBusSubscriptionsPage() {
       key: 'tripOption',
       header: 'Trip option',
       render: (subscription) => {
-        const labels: Record<string, string> = {
-          ROUND_TRIP: 'Round trip',
-          MORNING: 'To school only',
-          AFTERNOON: 'From school only',
-        };
         const colors: Record<string, string> = {
           ROUND_TRIP: 'bg-blue-50/50 text-blue-700 border-blue-100/50',
           MORNING: 'bg-sky-50/50 text-sky-700 border-sky-100/50',
           AFTERNOON: 'bg-indigo-50/50 text-indigo-700 border-indigo-100/50',
         };
         const label =
-          labels[subscription.tripOption] || subscription.tripOption;
+          tripOptionLabel[subscription.tripOption] || subscription.tripOption;
         const colorClass =
           colors[subscription.tripOption] ||
           'bg-slate-50 text-slate-600 border-slate-100';
@@ -255,7 +255,10 @@ export function SchoolBusSubscriptionsPage() {
       key: 'status',
       header: 'Trạng thái',
       render: (subscription) => (
-        <SchoolBusStatusBadge status={subscription.status} />
+        <SchoolBusStatusBadge
+          status={subscription.status}
+          labelMap={subscriptionStatusLabel}
+        />
       ),
     },
     {
@@ -359,14 +362,14 @@ export function SchoolBusSubscriptionsPage() {
             tone='success'
           />
           <SchoolBusMetricCard
-            label='Paused or stopped'
+            label='Tạm dừng hoặc đã dừng'
             value={
               subscriptions.filter((item) => item.status !== 'ACTIVE').length
             }
             hint={
               access.isParentOnly
-                ? 'Paused or stopped services'
-                : 'Excluded from route generation'
+                ? 'Dịch vụ đang tạm dừng hoặc đã dừng'
+                : 'Không tham gia lập tuyến'
             }
             icon={PauseCircle}
             tone='warning'

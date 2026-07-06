@@ -14,6 +14,7 @@ import { useGetSchoolBusSubscriptionByIdQuery } from '../api/schoolBusApi';
 import { SchoolBusStatusBadge } from './SchoolBusStatusBadge';
 import { formatDate } from '../utils';
 import { cn } from '@/shared/utils';
+import { subscriptionStatusLabel } from '../schoolBusLabels';
 
 /* -- Day chip helpers ------------------------------------------------------- */
 const DAYS: { key: keyof DayFields; label: string }[] = [
@@ -121,7 +122,12 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
             </div>
           </div>
           <div className='flex items-center gap-2'>
-            {sub && <SchoolBusStatusBadge status={sub.status} />}
+            {sub && (
+              <SchoolBusStatusBadge
+                status={sub.status}
+                labelMap={subscriptionStatusLabel}
+              />
+            )}
             <button
               onClick={onClose}
               className='flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground'
@@ -157,7 +163,12 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
                 />
                 <Field
                   label='Trạng thái'
-                  value={<SchoolBusStatusBadge status={sub.status} />}
+                  value={
+                    <SchoolBusStatusBadge
+                      status={sub.status}
+                      labelMap={subscriptionStatusLabel}
+                    />
+                  }
                 />
                 <Field
                   label='Source Request ID'

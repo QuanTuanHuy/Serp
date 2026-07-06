@@ -212,7 +212,7 @@ export function ManualDemandAssignPanel({
       <div className='grid grid-cols-3 gap-2 mb-3 bg-slate-50/60 p-2 rounded-xl border border-slate-100 text-center'>
         <div className='flex flex-col items-center'>
           <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
-            Eligible
+            Đủ điều kiện
           </span>
           <span className='text-sm font-extrabold text-slate-750 mt-0.5'>
             {eligibleCount}
@@ -220,7 +220,7 @@ export function ManualDemandAssignPanel({
         </div>
         <div className='flex flex-col items-center border-x border-slate-200/50'>
           <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
-            Unassigned
+            Chưa gán
           </span>
           <span className='text-sm font-extrabold text-slate-750 mt-0.5'>
             {unassignedCount}
@@ -228,7 +228,7 @@ export function ManualDemandAssignPanel({
         </div>
         <div className='flex flex-col items-center'>
           <span className='text-[10px] font-bold text-[#C81E3A] uppercase tracking-wider'>
-            Assignable
+            Có thể gán
           </span>
           <span className='text-sm font-extrabold text-[#C81E3A] mt-0.5'>
             {assignableCount}
@@ -237,8 +237,8 @@ export function ManualDemandAssignPanel({
       </div>
 
       <p className='mb-3 text-[11px] text-slate-455 leading-relaxed'>
-        Add eligible students to the selected route. Stops will be created
-        automatically from pickup/drop-off points.
+        Thêm học sinh đủ điều kiện vào tuyến đang chọn. Điểm dừng sẽ được tạo
+        tự động từ điểm đón/trả.
       </p>
 
       <div className='max-h-80 space-y-1.5 overflow-y-auto pr-1'>
@@ -271,7 +271,7 @@ export function ManualDemandAssignPanel({
                   </p>
                   <span className='px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-600 text-[8px] font-semibold scale-95 shrink-0'>
                     {student.tripOption === 'ROUND_TRIP'
-                      ? 'Round-trip'
+                      ? 'Hai chiều'
                       : student.tripOption}
                   </span>
                 </div>
@@ -280,8 +280,7 @@ export function ManualDemandAssignPanel({
                     <span> {point || '-'}</span>
                   ) : (
                     <span className='text-amber-600'>
-                      Warning: No {direction === 'OUTBOUND' ? 'pickup' : 'dropoff'}{' '}
-                      point
+                      Cảnh báo: chưa có điểm {direction === 'OUTBOUND' ? 'đón' : 'trả'}
                     </span>
                   )}
                 </p>

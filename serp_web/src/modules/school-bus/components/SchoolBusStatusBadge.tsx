@@ -5,11 +5,15 @@ import { getLabel, statusLabel } from '../schoolBusLabels';
 
 interface SchoolBusStatusBadgeProps {
   status?: string | null;
+  labelMap?: Record<string, string>;
 }
 
-export function SchoolBusStatusBadge({ status }: SchoolBusStatusBadgeProps) {
+export function SchoolBusStatusBadge({
+  status,
+  labelMap = statusLabel,
+}: SchoolBusStatusBadgeProps) {
   const normalizedStatus = status?.toUpperCase() || 'UNKNOWN';
-  const displayLabel = getLabel(statusLabel, normalizedStatus);
+  const displayLabel = getLabel(labelMap, normalizedStatus);
 
   if (
     [
@@ -32,7 +36,7 @@ export function SchoolBusStatusBadge({ status }: SchoolBusStatusBadgeProps) {
   }
 
   if (
-    ['PENDING', 'SUBMITTED', 'PAUSED', 'WAITING', 'WARNING'].includes(
+    ['PENDING', 'SUBMITTED', 'PAUSED', 'WARNING'].includes(
       normalizedStatus
     )
   ) {
@@ -52,7 +56,6 @@ export function SchoolBusStatusBadge({ status }: SchoolBusStatusBadgeProps) {
       'BOARDING',
       'DEPARTED',
       'ARRIVED',
-      'SCHEDULED',
       'PLANNED',
     ].includes(normalizedStatus)
   ) {

@@ -23,11 +23,11 @@ export function SchoolBusPaginationBar({
   return (
     <div className='flex flex-col gap-3 border-t border-border px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between'>
       <div>
-        Page{' '}
-        <span className='font-semibold text-foreground'>{currentPage}</span> of{' '}
+        Trang{' '}
+        <span className='font-semibold text-foreground'>{currentPage}</span>/
         <span className='font-semibold text-foreground'>{totalPages}</span>
         {' · '}
-        <span>{page.totalElements} records</span>
+        <span>{page.totalElements} bản ghi</span>
       </div>
       <div className='flex gap-2'>
         <Button
@@ -38,7 +38,7 @@ export function SchoolBusPaginationBar({
           disabled={page.first}
           onClick={() => onPageChange(Math.max(page.page - 1, 0))}
         >
-          Previous
+          Trước
         </Button>
         <Button
           type='button'
@@ -48,7 +48,7 @@ export function SchoolBusPaginationBar({
           disabled={page.last}
           onClick={() => onPageChange(page.page + 1)}
         >
-          Next
+          Sau
         </Button>
       </div>
     </div>

@@ -157,7 +157,8 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
         }
 
         if (parentProfileId == null) {
-            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "Parent profile ID is required");
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    messageCommon.getMessage("student.parentProfile.required"));
         }
         student.setParentProfile(parentService.getParent(parentProfileId, tenantId));
 

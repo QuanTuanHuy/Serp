@@ -190,7 +190,7 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
     }
 
     private void applySchool(SchoolEntity school, SchoolUpsertRequest request) {
-        validateCoordinatePair(request.getLatitude(), request.getLongitude(), "school");
+        validateCoordinatePair(request.getLatitude(), request.getLongitude(), "trường học");
         if (request.getContactEmail() != null && !request.getContactEmail().isBlank()
                 && !request.getContactEmail().matches("^[\\w.+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$")) {
             throw new AppException(AppErrorCode.School.EMAIL_INVALID, messageCommon.getMessage(AppErrorCode.School.EMAIL_INVALID));

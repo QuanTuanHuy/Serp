@@ -63,6 +63,11 @@ import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { SCHOOL_BUS_ACCOUNT_MODULE_ID } from '../constants';
+import {
+  busStatusLabel,
+  profileStatusLabel,
+  staffStatusLabel,
+} from '../schoolBusLabels';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import {
   DropdownMenu,
@@ -89,7 +94,7 @@ import {
 
 // -- Helpers -------------------------------------------------------------------
 
-function UnassignedBadge({ label = 'Unassigned' }: { label?: string }) {
+function UnassignedBadge({ label = 'Chưa gán' }: { label?: string }) {
   return (
     <span className='inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-slate-200'>
       {label}
@@ -592,7 +597,9 @@ export function SchoolBusFleetPage() {
     {
       key: 'status',
       header: 'Trạng thái',
-      render: (bus) => <SchoolBusStatusBadge status={bus.status} />,
+      render: (bus) => (
+        <SchoolBusStatusBadge status={bus.status} labelMap={busStatusLabel} />
+      ),
     },
     {
       key: 'actions',
@@ -713,6 +720,7 @@ export function SchoolBusFleetPage() {
       render: (driver) => (
         <SchoolBusStatusBadge
           status={driver.isActive === false ? 'INACTIVE' : driver.status}
+          labelMap={staffStatusLabel}
         />
       ),
     },
@@ -820,6 +828,7 @@ export function SchoolBusFleetPage() {
       render: (attendant) => (
         <SchoolBusStatusBadge
           status={attendant.isActive === false ? 'INACTIVE' : attendant.status}
+          labelMap={staffStatusLabel}
         />
       ),
     },
@@ -953,7 +962,10 @@ export function SchoolBusFleetPage() {
       key: 'status',
       header: 'Trạng thái',
       render: (depot) => (
-        <SchoolBusStatusBadge status={depot.isActive ? 'ACTIVE' : 'INACTIVE'} />
+        <SchoolBusStatusBadge
+          status={depot.isActive ? 'ACTIVE' : 'INACTIVE'}
+          labelMap={profileStatusLabel}
+        />
       ),
     },
     {

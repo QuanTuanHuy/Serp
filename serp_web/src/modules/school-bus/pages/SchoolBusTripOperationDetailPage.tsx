@@ -69,6 +69,13 @@ import { TripMap } from '../components/map/TripMap';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import { schoolBusUi } from '../theme';
+import {
+  directionLabel,
+  operationEventLabel,
+  tripStatusLabel,
+  tripStopStatusLabel,
+  tripStudentStatusLabel,
+} from '../schoolBusLabels';
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -76,116 +83,132 @@ function stopTypeLabel(stop: TripAttendanceStopItem): string {
   const { stopPurpose, locationType } = stop;
   if (stopPurpose === 'START_TERMINAL') {
     return locationType === 'SCHOOL'
-      ? 'School - Start terminal'
-      : 'Depot - Start terminal';
+      ? 'Trường học - Điểm đầu tuyến'
+      : 'Bãi xe - Điểm đầu tuyến';
   }
   if (stopPurpose === 'END_TERMINAL') {
     return locationType === 'SCHOOL'
-      ? 'School - End terminal'
-      : 'Depot - End terminal';
+      ? 'Trường học - Điểm cuối tuyến'
+      : 'Bãi xe - Điểm cuối tuyến';
   }
   if (stopPurpose === 'PICKUP') return 'Điểm đón';
   if (stopPurpose === 'DROPOFF') return 'Điểm trả';
-  return locationType || 'Stop';
+  return locationType || 'Điểm dừng';
 }
 
 const statusMap: Record<string, { label: string; className: string }> = {
-  CREATED: {
-    label: 'Đã tạo',
+  PLANNED: {
+    label: tripStatusLabel.PLANNED,
     className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
   },
-  PLANNED: {
-    label: 'Planned',
-    className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
+  ASSIGNED: {
+    label: tripStatusLabel.ASSIGNED,
+    className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50',
   },
   IN_PROGRESS: {
-    label: 'In progress',
+    label: tripStatusLabel.IN_PROGRESS,
     className: 'border-blue-200 bg-blue-55 text-blue-700 hover:bg-blue-55',
   },
   COMPLETED: {
-    label: 'Hoàn thành',
+    label: tripStatusLabel.COMPLETED,
     className:
       'border-emerald-250 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
   },
   CANCELLED: {
-    label: 'Đã hủy',
+    label: tripStatusLabel.CANCELLED,
     className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50',
-  },
-  PAUSED: {
-    label: 'Paused',
-    className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50',
   },
   // Stop statuses:
   PENDING: {
-    label: 'Đang chờ',
+    label: tripStopStatusLabel.PENDING,
     className: 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-50',
   },
   ARRIVED: {
-    label: 'Arrived',
+    label: tripStopStatusLabel.ARRIVED,
     className: 'border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-50',
   },
   BOARDING: {
-    label: 'Boarding',
+    label: tripStopStatusLabel.BOARDING,
     className:
       'border-indigo-250 bg-indigo-50 text-indigo-700 hover:bg-indigo-50',
   },
   DEPARTED: {
-    label: 'Departed',
+    label: tripStopStatusLabel.DEPARTED,
     className:
       'border-emerald-250 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
   },
   SKIPPED: {
-    label: 'Skipped',
+    label: tripStopStatusLabel.SKIPPED,
     className:
       'border-slate-200 bg-slate-100 text-slate-400 hover:bg-slate-100',
   },
+  BOARDED: {
+    label: tripStudentStatusLabel.BOARDED,
+    className: 'border-blue-150 bg-blue-50 text-blue-650',
+  },
+  ABSENT: {
+    label: tripStudentStatusLabel.ABSENT,
+    className: 'border-red-200 bg-red-50 text-red-700',
+  },
+  DROPPED_OFF: {
+    label: tripStudentStatusLabel.DROPPED_OFF,
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-650',
+  },
+  NO_SHOW: {
+    label: tripStudentStatusLabel.NO_SHOW,
+    className: 'border-red-250 bg-red-50 text-red-650',
+  },
+  NOT_SERVED: {
+    label: tripStudentStatusLabel.NOT_SERVED,
+    className: 'border-slate-200 bg-slate-50 text-slate-400',
+  },
   // Event types
   TRIP_STARTED: {
-    label: 'Trip Started',
+    label: operationEventLabel.TRIP_STARTED,
     className: 'border-blue-250 bg-blue-50 text-blue-700',
   },
   TRIP_COMPLETED: {
-    label: 'Trip Completed',
+    label: operationEventLabel.TRIP_COMPLETED,
     className: 'border-emerald-250 bg-emerald-50 text-emerald-700',
   },
   TRIP_CANCELLED: {
-    label: 'Trip Cancelled',
+    label: operationEventLabel.TRIP_CANCELLED,
     className: 'border-red-250 bg-red-50 text-red-700',
   },
   STOP_ARRIVED: {
-    label: 'Stop Arrived',
+    label: operationEventLabel.STOP_ARRIVED,
     className: 'border-blue-200 bg-blue-50 text-blue-600',
   },
   STOP_BOARDING_STARTED: {
-    label: 'Boarding Started',
+    label: operationEventLabel.STOP_BOARDING_STARTED,
     className: 'border-indigo-200 bg-indigo-50 text-indigo-700',
   },
   STOP_DEPARTED: {
-    label: 'Stop Departed',
+    label: operationEventLabel.STOP_DEPARTED,
     className: 'border-emerald-200 bg-emerald-55 text-emerald-700',
   },
   STOP_SKIPPED: {
-    label: 'Stop Skipped',
+    label: operationEventLabel.STOP_SKIPPED,
     className: 'border-slate-200 bg-slate-100 text-slate-450',
   },
   STUDENT_BOARDED: {
-    label: 'Student Boarded',
+    label: operationEventLabel.STUDENT_BOARDED,
     className: 'border-blue-150 bg-blue-50 text-blue-650',
   },
   STUDENT_ABSENT: {
-    label: 'Student Absent',
+    label: operationEventLabel.STUDENT_ABSENT,
     className: 'border-red-200 bg-red-50 text-red-700',
   },
   STUDENT_NO_SHOW: {
-    label: 'Student No-show',
+    label: operationEventLabel.STUDENT_NO_SHOW,
     className: 'border-red-250 bg-red-50 text-red-650',
   },
   STUDENT_DROPPED_OFF: {
-    label: 'Student Dropped Off',
+    label: operationEventLabel.STUDENT_DROPPED_OFF,
     className: 'border-emerald-200 bg-emerald-50 text-emerald-650',
   },
   STUDENT_NOT_SERVED: {
-    label: 'Student Not Served',
+    label: operationEventLabel.STUDENT_NOT_SERVED,
     className: 'border-slate-200 bg-slate-50 text-slate-400',
   },
 };
@@ -209,9 +232,7 @@ const renderFriendlyBadge = (status: string) => {
 };
 
 const getFriendlyDirection = (dir?: string | null) => {
-  if (dir === 'RETURN') return 'Return';
-  if (dir === 'OUTBOUND') return 'Outbound';
-  if (dir === 'ROUND_TRIP') return 'Round trip';
+  if (dir) return directionLabel[dir] || dir;
   return dir || '';
 };
 
@@ -459,7 +480,7 @@ export function SchoolBusTripOperationDetailPage({
 
     if (tripStatus === 'COMPLETED') {
       current = stops[stops.length - 1];
-    } else if (tripStatus === 'CREATED' || tripStatus === 'PLANNED') {
+    } else if (tripStatus === 'PLANNED' || tripStatus === 'ASSIGNED') {
       current = stops[0];
       if (stops.length > 1) next = stops[1];
     } else if (tripStatus === 'IN_PROGRESS') {
@@ -657,9 +678,9 @@ export function SchoolBusTripOperationDetailPage({
     });
   };
   const handleComplete = () =>
-    act('Complete trip', () => completeTrip({ id: tripId }).unwrap());
+    act('Hoàn thành chuyến', () => completeTrip({ id: tripId }).unwrap());
   const handleStartBoarding = (stopId: number) => {
-    void act('Start boarding', async () => {
+    void act('Bắt đầu đón/trả', async () => {
       const response = await startBoardingStop({ tripId, routeStopId: stopId }).unwrap();
       setSelectedStopId(stopId);
       setIsAttendanceDrawerOpen(true);
@@ -670,7 +691,7 @@ export function SchoolBusTripOperationDetailPage({
   };
   const handleCancel = () => {
     if (!cancelReason.trim()) return;
-    act('Cancel trip', () =>
+    act('Hủy chuyến', () =>
       cancelTrip({ id: tripId, body: { reason: cancelReason } }).unwrap()
     );
     setShowCancelForm(false);
@@ -678,14 +699,14 @@ export function SchoolBusTripOperationDetailPage({
   };
 
   const handleArrive = (stopId: number) => {
-    void act('Arrive stop', () =>
+    void act('Đến điểm dừng', () =>
       arriveStop({ tripId, routeStopId: stopId }).unwrap()
     ).then((response) => {
       patchTripOperationOverview(extractAction(response));
     });
   };
   const handleDepart = (stopId: number) => {
-    void act('Depart stop', () =>
+    void act('Rời điểm dừng', () =>
       departStop({ tripId, routeStopId: stopId }).unwrap()
     ).then((response) => {
       patchTripOperationOverview(extractAction(response));
@@ -693,7 +714,7 @@ export function SchoolBusTripOperationDetailPage({
   };
   const handleSkip = (stopId: number) => {
     if (!skipReason.trim()) return;
-    act('Skip stop', () =>
+    act('Bỏ qua điểm dừng', () =>
       skipStop({ tripId, routeStopId: stopId, reason: skipReason }).unwrap()
     );
     setShowSkipForm(false);
@@ -1002,10 +1023,7 @@ export function SchoolBusTripOperationDetailPage({
                     !tripIsCompleted &&
                     !tripIsCancelled && (
                       <>
-                        {tripStatus === 'CREATED' ||
-                        tripStatus === 'PLANNED' ||
-                        tripStatus === 'ASSIGNED' ||
-                        tripStatus === 'READY' ? (
+                        {tripStatus === 'PLANNED' || tripStatus === 'ASSIGNED' ? (
                           <Button
                             size='sm'
                             className='bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-full font-bold shadow-none h-8 px-4 border-0 text-xs shrink-0 w-full'
@@ -1013,7 +1031,7 @@ export function SchoolBusTripOperationDetailPage({
                             disabled={isActing}
                           >
                             <PlayCircle className='mr-1.5 h-4 w-4' />
-                            Start Trip
+                            Bắt đầu chuyến
                           </Button>
                         ) : null}
 
@@ -1022,7 +1040,7 @@ export function SchoolBusTripOperationDetailPage({
                             className='w-full'
                             title={
                               !canCompleteTrip
-                                ? 'Complete all stops and resolve all student statuses before completing this trip.'
+                                ? 'Cần hoàn tất các điểm dừng và xử lý trạng thái học sinh trước khi hoàn thành chuyến.'
                                 : undefined
                             }
                           >
@@ -1033,12 +1051,11 @@ export function SchoolBusTripOperationDetailPage({
                               disabled={isActing || !canCompleteTrip}
                             >
                               <CheckCircle2 className='mr-1.5 h-4 w-4' />
-                              Complete Trip
+                              Hoàn thành chuyến
                             </Button>
                             {!canCompleteTrip && (
                               <p className='text-[9px] text-red-500 mt-1 font-semibold text-center leading-tight'>
-                                Complete all stops and resolve all student
-                                statuses before completing this trip.
+                                Cần hoàn tất các điểm dừng và xử lý trạng thái học sinh trước khi hoàn thành chuyến.
                               </p>
                             )}
                           </div>
@@ -1049,7 +1066,7 @@ export function SchoolBusTripOperationDetailPage({
                             <Input
                               value={cancelReason}
                               onChange={(e) => setCancelReason(e.target.value)}
-                              placeholder='Cancellation reason...'
+                              placeholder='Lý do hủy chuyến...'
                               className='h-7 text-xs rounded-lg px-2 bg-slate-50'
                             />
                             <div className='flex gap-1 justify-end'>
@@ -1059,7 +1076,7 @@ export function SchoolBusTripOperationDetailPage({
                                 className='h-6 text-[10px] px-2 rounded-lg'
                                 onClick={() => setShowCancelForm(false)}
                               >
-                                Cancel
+                                Quay lại
                               </Button>
                               <Button
                                 size='sm'
@@ -1067,7 +1084,7 @@ export function SchoolBusTripOperationDetailPage({
                                 onClick={handleCancel}
                                 disabled={!cancelReason.trim() || isActing}
                               >
-                                Confirm
+                                Xác nhận
                               </Button>
                             </div>
                           </div>
@@ -1170,7 +1187,7 @@ export function SchoolBusTripOperationDetailPage({
                           {summary.totalStudents}
                         </span>
                         <span className='text-[9px] text-slate-400 font-semibold truncate'>
-                          Total
+                          Tổng
                         </span>
                       </div>
                       <div className='flex flex-col gap-1 min-w-0'>
@@ -1178,7 +1195,7 @@ export function SchoolBusTripOperationDetailPage({
                           {summary.planned}
                         </span>
                         <span className='text-[9px] text-slate-400 font-semibold truncate'>
-                          Planned
+                          Chưa điểm danh
                         </span>
                       </div>
                       <div className='flex flex-col gap-1 min-w-0'>
@@ -1186,7 +1203,7 @@ export function SchoolBusTripOperationDetailPage({
                           {summary.boarded}
                         </span>
                         <span className='text-[9px] text-slate-400 font-semibold truncate'>
-                          Boarded
+                          Đã lên xe
                         </span>
                       </div>
                       <div className='flex flex-col gap-1 min-w-0'>
@@ -1194,7 +1211,7 @@ export function SchoolBusTripOperationDetailPage({
                           {summary.droppedOff}
                         </span>
                         <span className='text-[9px] text-slate-400 font-semibold truncate'>
-                          Drop
+                          Đã xuống
                         </span>
                       </div>
                       <div className='flex flex-col gap-1 min-w-0'>
@@ -1429,7 +1446,7 @@ export function SchoolBusTripOperationDetailPage({
                           {/* Detailed timing info */}
                           <div className='text-[10px] text-slate-500 pl-6 space-y-0.5 font-medium'>
                             <div className='flex items-center gap-1.5'>
-                              <span className='text-slate-400'>Planned:</span>
+                              <span className='text-slate-400'>Dự kiến:</span>
                               <span className='text-slate-700 font-semibold'>
                                 {stop.plannedArrivalTime || '-'}
                                 {stop.plannedDepartureTime
@@ -1440,7 +1457,7 @@ export function SchoolBusTripOperationDetailPage({
                             {(stop.actualArrivalTime ||
                               stop.actualDepartureTime) && (
                               <div className='flex items-center gap-1.5 text-blue-600'>
-                                <span>Actual:</span>
+                                <span>Thực tế:</span>
                                 <span className='font-semibold'>
                                   {stop.actualArrivalTime
                                     ? stop.actualArrivalTime
@@ -1471,11 +1488,11 @@ export function SchoolBusTripOperationDetailPage({
                                 tripIsActive &&
                                 access.canOperateTrip
                                   ? !isOutbound && isServiceStop
-                                    ? 'Mark Dropoff'
-                                    : 'Mark Attendance'
+                                    ? 'Ghi nhận xuống xe'
+                                    : 'Điểm danh'
                                   : access.isParentOnly
-                                    ? 'View Student Status'
-                                    : 'View Attendance'}
+                                    ? 'Xem trạng thái học sinh'
+                                    : 'Xem điểm danh'}
                               </Button>
                             </div>
                           )}
@@ -1484,11 +1501,11 @@ export function SchoolBusTripOperationDetailPage({
                           {(stop.actualBoardedCount > 0 ||
                             stop.actualDroppedCount > 0) && (
                             <p className='text-[10px] text-slate-500 pl-6 font-medium'>
-                              Actual boarded:{' '}
+                              Đã lên xe:{' '}
                               <span className='font-bold text-slate-700'>
                                 {stop.actualBoardedCount}
                               </span>{' '}
-                              - Actual dropped:{' '}
+                              - Đã xuống xe:{' '}
                               <span className='font-bold text-slate-700'>
                                 {stop.actualDroppedCount}
                               </span>
@@ -1503,7 +1520,7 @@ export function SchoolBusTripOperationDetailPage({
                                 className='flex flex-wrap items-center gap-1.5 pl-6 pt-1'
                                 title={
                                   !isNextActionableStop
-                                    ? 'Process previous stops first.'
+                                    ? 'Cần xử lý các điểm trước trước.'
                                     : undefined
                                 }
                               >
@@ -1518,11 +1535,11 @@ export function SchoolBusTripOperationDetailPage({
                                   >
                                     {stop.stopPurpose === 'END_TERMINAL'
                                       ? stop.locationType === 'SCHOOL'
-                                        ? 'Arrive School'
+                                        ? 'Đến trường'
                                         : stop.locationType === 'DEPOT'
-                                          ? 'Arrive Depot'
-                                          : 'Arrive Stop'
-                                      : 'Arrive Stop'}
+                                          ? 'Đến bãi xe'
+                                          : 'Đến điểm dừng'
+                                      : 'Đến điểm dừng'}
                                   </Button>
                                 )}
                                 {showStartBoarding && (
@@ -1535,8 +1552,8 @@ export function SchoolBusTripOperationDetailPage({
                                     disabled={isActing || !isNextActionableStop}
                                   >
                                     {stop.stopPurpose === 'DROPOFF'
-                                      ? 'Start Dropoff'
-                                      : 'Start Boarding'}
+                                      ? 'Bắt đầu trả học sinh'
+                                      : 'Bắt đầu đón học sinh'}
                                   </Button>
                                 )}
                                 {showDepart && (
@@ -1558,18 +1575,18 @@ export function SchoolBusTripOperationDetailPage({
                                   >
                                     {isStartTerminal
                                       ? stop.locationType === 'SCHOOL'
-                                        ? 'Depart School'
+                                        ? 'Rời trường'
                                         : stop.locationType === 'DEPOT'
-                                          ? 'Depart Depot'
-                                          : 'Depart Stop'
-                                      : 'Depart Stop'}
+                                          ? 'Rời bãi xe'
+                                          : 'Rời điểm dừng'
+                                      : 'Rời điểm dừng'}
                                   </Button>
                                 )}
                                 {showCompleteTrip && (
                                   <div
                                     title={
                                       !canCompleteTrip
-                                        ? 'Complete all stops and resolve all student statuses before completing this trip.'
+                                        ? 'Cần hoàn tất các điểm dừng và xử lý trạng thái học sinh trước khi hoàn thành chuyến.'
                                         : undefined
                                     }
                                   >
@@ -1579,7 +1596,7 @@ export function SchoolBusTripOperationDetailPage({
                                       onClick={handleComplete}
                                       disabled={isActing || !canCompleteTrip}
                                     >
-                                      Complete Trip
+                                      Hoàn thành chuyến
                                     </Button>
                                   </div>
                                 )}
@@ -1593,7 +1610,7 @@ export function SchoolBusTripOperationDetailPage({
                                           onChange={(e) =>
                                             setSkipReason(e.target.value)
                                           }
-                                          placeholder='Skip reason...'
+                                          placeholder='Lý do bỏ qua...'
                                           className='h-7 w-32 rounded-lg border-slate-200 bg-white px-2 text-[10px] font-normal text-slate-650 placeholder:text-slate-400 shadow-none focus-visible:ring-1 focus-visible:ring-[#C81E3A]/20'
                                         />
                                         <Button
@@ -1606,7 +1623,7 @@ export function SchoolBusTripOperationDetailPage({
                                             !skipReason.trim() || isActing
                                           }
                                         >
-                                          OK
+                                          Xác nhận
                                         </Button>
                                         <Button
                                           size='sm'
@@ -1614,7 +1631,7 @@ export function SchoolBusTripOperationDetailPage({
                                           className='h-7 rounded-lg px-2 text-[10px] font-semibold text-slate-600 shadow-none hover:bg-slate-50 hover:text-slate-700'
                                           onClick={() => setShowSkipForm(false)}
                                         >
-                                          Back
+                                          Quay lại
                                         </Button>
                                       </div>
                                     ) : (
@@ -1634,7 +1651,7 @@ export function SchoolBusTripOperationDetailPage({
                                           size={11}
                                           className='mr-1 shrink-0'
                                         />
-                                        Skip Stop
+                                        Bỏ qua điểm
                                       </Button>
                                     )}
                                   </>
@@ -1739,19 +1756,19 @@ export function SchoolBusTripOperationDetailPage({
                 <SheetTitle className='text-base font-extrabold text-slate-800'>
                   {access.isParentOnly
                     ? selectedStop
-                      ? `Stop Transit Status: ${selectedStop.displayName}`
-                      : 'Student Transit Status Directory'
+                      ? `Trạng thái qua điểm: ${selectedStop.displayName}`
+                      : 'Danh sách trạng thái học sinh'
                     : selectedStop
-                      ? `Attendance at Stop: ${selectedStop.displayName}`
-                      : 'Trip Attendance Directory'}
+                      ? `Điểm danh tại điểm: ${selectedStop.displayName}`
+                      : 'Danh sách điểm danh chuyến'}
                 </SheetTitle>
               </div>
               <SheetDescription className='text-xs text-slate-400 mt-1 font-semibold'>
                 {selectedStop
-                  ? `${stopTypeLabel(selectedStop)} - Status: ${selectedStop.stopStatus}`
+                  ? `${stopTypeLabel(selectedStop)} - Trạng thái: ${tripStopStatusLabel[selectedStop.stopStatus] || selectedStop.stopStatus}`
                   : access.isParentOnly
-                    ? `Route: ${routeCode} - Student Details`
-                    : `Route: ${routeCode} - Direction: ${getFriendlyDirection(manifest?.routeDirection)}`}
+                    ? `Tuyến: ${routeCode} - Chi tiết học sinh`
+                    : `Tuyến: ${routeCode} - Chiều: ${getFriendlyDirection(manifest?.routeDirection)}`}
               </SheetDescription>
             </SheetHeader>
 

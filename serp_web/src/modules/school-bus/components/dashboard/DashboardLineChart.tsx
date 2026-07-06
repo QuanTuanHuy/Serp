@@ -29,7 +29,7 @@ export function DashboardLineChart({
       return (
         <div className='rounded-lg border border-border bg-popover p-2.5 text-popover-foreground shadow-lg'>
           <p className='mb-1 text-xs font-semibold text-muted-foreground'>
-            Date: {dataPoint.label || dataPoint.name}
+            Ngày: {dataPoint.label || dataPoint.name}
           </p>
           <div className='flex items-center gap-2'>
             <span
@@ -37,7 +37,7 @@ export function DashboardLineChart({
               style={{ backgroundColor: color }}
             />
             <span className='text-sm font-semibold text-foreground'>
-              Trips:{' '}
+              Số chuyến:{' '}
               <span className='text-red-700 dark:text-red-400'>
                 {dataPoint.count}
               </span>

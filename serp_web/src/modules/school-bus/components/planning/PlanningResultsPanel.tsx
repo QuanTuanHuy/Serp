@@ -42,6 +42,10 @@ import {
   useDeleteRouteInSessionMutation,
   useGreedyFillRouteMutation,
 } from '../../api/schoolBusApi';
+import {
+  busStatusLabel,
+  directionLabel,
+} from '../../schoolBusLabels';
 import type {
   SchoolBusPlanningPreview,
   SchoolBusPlanningSession,
@@ -275,7 +279,7 @@ function CreateRoutePanel({
                   </div>
                 ) : (
                   <p className='text-[11px] text-amber-600 font-medium'>
-                    Warning: Chưa có bãi xes available. Please create a depot first.
+                    Cảnh báo: chưa có bãi xe khả dụng. Vui lòng tạo bãi xe trước.
                   </p>
                 )
               ) : (
@@ -321,7 +325,7 @@ function CreateRoutePanel({
                 )
               ) : (
                 <p className='text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 font-medium'>
-                  Ends at school:{' '}
+                  Kết thúc tại trường:{' '}
                   <span className='font-semibold text-slate-700'>
                     {session.schoolName}
                   </span>{' '}
@@ -334,10 +338,10 @@ function CreateRoutePanel({
           {/* Group 3: Bus */}
           <div className='space-y-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm'>
             <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>
-              3. Bus
+              3. Xe
             </p>
             <div>
-              <label className={labelCls}>Bus *</label>
+              <label className={labelCls}>Xe *</label>
               <SchoolBusSelect
                 fullWidth
                 value={form.busId}
@@ -356,11 +360,11 @@ function CreateRoutePanel({
                     : loadingBuses
                       ? 'Đang tải xe...'
                       : buses.length === 0
-                        ? 'Chưa có xees in this depot'
+                        ? 'Chưa có xe trong bãi này'
                         : 'Chọn xe'
                 }
                 options={buses.map((bus) => ({
-                  label: `${bus.plateNumber} - ${bus.capacity} seats - ${bus.busType || 'Vehicle'} - ${bus.status || 'UNKNOWN'}`,
+                  label: `${bus.plateNumber} - ${bus.capacity} chỗ - ${bus.busType || 'Xe'} - ${busStatusLabel[bus.status || ''] || bus.status || 'Không rõ'}`,
                   value: bus.id,
                 }))}
               />
@@ -369,7 +373,7 @@ function CreateRoutePanel({
               <div className='grid grid-cols-2 gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2 text-[10px]'>
                 <div className='col-span-2'>
                   <span className='block text-slate-400 font-bold uppercase'>
-                    Bus
+                    Xe
                   </span>
                   <span className='font-bold text-slate-800'>
                     {selectedBus.plateNumber}
@@ -377,15 +381,15 @@ function CreateRoutePanel({
                 </div>
                 <div>
                   <span className='block text-slate-400 font-bold uppercase'>
-                    Capacity
+                    Sức chứa
                   </span>
                   <span className='font-bold text-slate-800'>
-                    {selectedBus.capacity} students
+                    {selectedBus.capacity} học sinh
                   </span>
                 </div>
                 <div>
                   <span className='block text-slate-400 font-bold uppercase'>
-                    Assigned
+                    Đã phân công
                   </span>
                   <span className='font-bold text-slate-800'>
                     0/{selectedBus.capacity}
@@ -393,7 +397,7 @@ function CreateRoutePanel({
                 </div>
                 <div>
                   <span className='block text-slate-400 font-bold uppercase'>
-                    Available
+                    Còn trống
                   </span>
                   <span className='font-bold text-slate-800'>
                     {selectedBus.capacity}
@@ -401,41 +405,41 @@ function CreateRoutePanel({
                 </div>
                 <div>
                   <span className='block text-slate-400 font-bold uppercase'>
-                    Status
+                    Trạng thái
                   </span>
                   <span className='font-bold text-slate-800'>
-                    {selectedBus.status || '-'}
+                    {busStatusLabel[selectedBus.status || ''] || selectedBus.status || '-'}
                   </span>
                 </div>
               </div>
             ) : (
               <p className='text-[11px] text-slate-450 font-medium'>
                 {!selectedDepotId
-                  ? 'Choose a depot before selecting a bus.'
-                  : 'Choose a bus to determine route capacity.'}
+                  ? 'Chọn bãi xe trước khi chọn xe.'
+                  : 'Chọn xe để xác định sức chứa tuyến.'}
               </p>
             )}
           </div>
           {/* Group 4: Notes & validation warnings */}
           <div className='space-y-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm'>
             <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>
-              4. Additional Information
+              4. Thông tin bổ sung
             </p>
             <div>
-              <label className={labelCls}>Notes</label>
+              <label className={labelCls}>Ghi chú</label>
               <input
                 className={inputCls}
                 value={form.planningNotes}
                 onChange={(e) =>
                   setForm((p) => ({ ...p, planningNotes: e.target.value }))
                 }
-                placeholder='Optional notes'
+                placeholder='Ghi chú không bắt buộc'
               />
             </div>
             {((needsStartDepot && form.startDepotId === '') ||
               (needsEndDepot && form.endDepotId === '')) && (
               <p className='text-[11px] text-amber-600 font-semibold'>
-                Warning: Depot is required to create this route.
+                Cảnh báo: cần chọn bãi xe để tạo tuyến.
               </p>
             )}
           </div>
@@ -448,7 +452,7 @@ function CreateRoutePanel({
               onClick={() => onOpenChange(false)}
               className='text-slate-500 hover:text-slate-900'
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               type='submit'
@@ -456,7 +460,7 @@ function CreateRoutePanel({
               disabled={submitting || !canSubmit}
               className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white'
             >
-              {submitting ? 'Đang tạo...' : 'Create Route'}
+              {submitting ? 'Đang tạo...' : 'Tạo tuyến'}
             </Button>
           </div>
         </form>
@@ -533,7 +537,7 @@ function SessionRouteCard({
               {route.routeCode}
             </span>
             <span>
-              {route.routeDirection === 'RETURN' ? 'Return' : 'Outbound'}
+              {directionLabel[route.routeDirection] || route.routeDirection}
             </span>
           </p>
         </div>
@@ -562,32 +566,32 @@ function SessionRouteCard({
                 : 'bg-amber-50 text-amber-700 border-amber-200'
             )}
           >
-            {isAssigned ? 'Ready for trip' : 'Needs assignment'}
+            {isAssigned ? 'Sẵn sàng tạo chuyến' : 'Cần phân công'}
           </span>
         </div>
       </div>
 
       <div className='grid grid-cols-2 gap-2 text-[11px] text-slate-650 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100/60'>
         <div className='flex items-center gap-1.5 min-w-0'>
-          <span className='text-slate-400 font-medium'>Bus:</span>
+          <span className='text-slate-400 font-medium'>Xe:</span>
           <span className='font-bold text-slate-700 truncate'>
-            {route.busPlateNumber || 'Not selected'}
+            {route.busPlateNumber || 'Chưa chọn'}
           </span>
         </div>
         <div className='flex items-center gap-1.5 justify-end'>
-          <span className='text-slate-400 font-medium'>Students:</span>
+          <span className='text-slate-400 font-medium'>Học sinh:</span>
           <span className='font-bold text-slate-700'>
             {capacity != null ? `${studentCount}/${capacity}` : studentCount}
           </span>
         </div>
         <div className='flex items-center gap-1.5 min-w-0'>
-          <span className='text-slate-400 font-medium'>Depot:</span>
+          <span className='text-slate-400 font-medium'>Bãi xe:</span>
           <span className='font-bold text-slate-700 truncate'>
             {depotName || 'N/A'}
           </span>
         </div>
         <div className='flex items-center gap-1.5 justify-end'>
-          <span className='text-slate-400 font-medium'>Stops:</span>
+          <span className='text-slate-400 font-medium'>Điểm dừng:</span>
           <span className='font-bold text-slate-700'>
             {route.stopsCount || 0}
           </span>
@@ -811,7 +815,7 @@ function RouteCard({
                   : 'bg-amber-50 text-amber-700 border-amber-200'
               )}
             >
-              {isAssigned ? 'Ready for trip' : 'Needs assignment'}
+              {isAssigned ? 'Sẵn sàng tạo chuyến' : 'Cần phân công'}
             </span>
           </div>
         </div>
@@ -819,13 +823,13 @@ function RouteCard({
 
       <div className='grid grid-cols-2 gap-2 text-[11px] text-slate-650 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100/60'>
         <div className='flex items-center gap-1.5 min-w-0'>
-          <span className='text-slate-400 font-medium'>Capacity:</span>
+          <span className='text-slate-400 font-medium'>Sức chứa:</span>
           <span className='font-bold text-slate-700'>
             {route.requiredCapacity || '-'}
           </span>
         </div>
         <div className='flex items-center gap-1.5 justify-end'>
-          <span className='text-slate-400 font-medium'>Students:</span>
+          <span className='text-slate-400 font-medium'>Học sinh:</span>
           <span className='font-bold text-slate-700'>{route.studentCount}</span>
         </div>
         <div className='flex items-center gap-1.5 min-w-0'>
@@ -845,7 +849,7 @@ function RouteCard({
           </span>
         </div>
         <div className='flex items-center gap-1.5 min-w-0'>
-          <span className='text-slate-400 font-medium'>Stops:</span>
+          <span className='text-slate-400 font-medium'>Điểm dừng:</span>
           <span className='font-bold text-slate-700'>
             {route.stopCount || 0}
           </span>
@@ -853,10 +857,10 @@ function RouteCard({
       </div>
 
       <div className='flex items-center justify-between border-t border-slate-100/50 pt-2 text-[10px] text-slate-450'>
-        <span>Draft Preview</span>
+        <span>Bản nháp xem trước</span>
         {isSelected && (
           <span className='px-2 py-0.5 bg-red-50 text-[#C81E3A] border border-red-100 text-[9px] font-extrabold rounded-full flex items-center gap-1 shadow-sm'>
-            Currently Selected
+            Đang chọn
           </span>
         )}
       </div>
@@ -1407,12 +1411,12 @@ export function PlanningResultsPanel({
               : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-100/50 hover:text-slate-700'
           )}
         >
-          <span className='text-xs font-bold'>Student Demand</span>
+          <span className='text-xs font-bold'>Nhu cầu học sinh</span>
           <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
             {preview && !isPreviewStale
-              ? `Total ${preview.summary?.totalSubscriptions || preview.totalEligibleStudents} || Eligible ${preview.summary?.eligibleStudents || preview.totalEligibleStudents} || Points ${preview.summary?.pointCount || preview.totalEligiblePickupPoints}`
+              ? `Tổng ${preview.summary?.totalSubscriptions || preview.totalEligibleStudents} || Đủ điều kiện ${preview.summary?.eligibleStudents || preview.totalEligibleStudents} || Điểm ${preview.summary?.pointCount || preview.totalEligiblePickupPoints}`
               : isPreviewStale
-                ? 'Out of date'
+                ? 'Đã cũ'
                 : 'Chưa có xem trước'}
           </span>
         </button>
@@ -1576,7 +1580,7 @@ export function PlanningResultsPanel({
                       </div>
                       <div className='p-2.5 rounded-2xl bg-emerald-50/50 border border-emerald-100 shadow-sm flex flex-col justify-between'>
                         <span className='text-[9px] font-extrabold text-emerald-650 uppercase tracking-wider leading-none'>
-                          Eligible
+                          Đủ điều kiện
                         </span>
                         <span className='text-sm font-black text-emerald-700 mt-1.5'>
                           {eligibleCount}
@@ -1584,7 +1588,7 @@ export function PlanningResultsPanel({
                       </div>
                       <div className='p-2.5 rounded-2xl bg-blue-50/50 border border-blue-100 shadow-sm flex flex-col justify-between'>
                         <span className='text-[9px] font-extrabold text-blue-650 uppercase tracking-wider leading-none'>
-                          Points
+                          Điểm
                         </span>
                         <span className='text-sm font-black text-blue-700 mt-1.5'>
                           {pointsCount}

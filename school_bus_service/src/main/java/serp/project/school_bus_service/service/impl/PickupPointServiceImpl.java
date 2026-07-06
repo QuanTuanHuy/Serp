@@ -140,7 +140,7 @@ public class PickupPointServiceImpl extends AbstractBaseService<PickupPointEntit
             "PICKUP_ONLY", "DROPOFF_ONLY", "PICKUP_DROPOFF");
 
     private void applyPickupPoint(PickupPointEntity pickupPoint, PickupPointUpsertRequest request) {
-        validateCoordinatePair(request.getLatitude(), request.getLongitude(), "pickup point");
+        validateCoordinatePair(request.getLatitude(), request.getLongitude(), "điểm đón/trả");
         if (request.getUsageType() == null || request.getUsageType().isBlank()) {
             throw new AppException(AppErrorCode.PickupPoint.USAGE_TYPE_REQUIRED, messageCommon.getMessage(AppErrorCode.PickupPoint.USAGE_TYPE_REQUIRED));
         }

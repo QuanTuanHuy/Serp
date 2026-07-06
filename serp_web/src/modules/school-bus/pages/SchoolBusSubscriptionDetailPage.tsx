@@ -30,11 +30,12 @@ import { SchoolBusSection } from '../components/SchoolBusSection';
 import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { formatDate } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
+import { subscriptionStatusLabel, tripOptionLabel } from '../schoolBusLabels';
 
 const TRIP_OPTION_LABELS: Record<string, string> = {
-  MORNING: 'To school only (Morning)',
-  AFTERNOON: 'From school only (Afternoon)',
-  ROUND_TRIP: 'Round trip',
+  MORNING: tripOptionLabel.MORNING,
+  AFTERNOON: tripOptionLabel.AFTERNOON,
+  ROUND_TRIP: tripOptionLabel.ROUND_TRIP,
 };
 
 const DAY_KEYS = [
@@ -174,7 +175,10 @@ export function SchoolBusSubscriptionDetailPage({
       </p>
       {/* Metadata row */}
       <div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400 font-semibold'>
-        <SchoolBusStatusBadge status={sub.status} />
+        <SchoolBusStatusBadge
+          status={sub.status}
+          labelMap={subscriptionStatusLabel}
+        />
         <span>-</span>
         <span>{TRIP_OPTION_LABELS[sub.tripOption] || sub.tripOption}</span>
         <span>-</span>
@@ -274,11 +278,11 @@ export function SchoolBusSubscriptionDetailPage({
               <CheckCircle2 className='mt-0.5 h-5 w-5 text-emerald-600 shrink-0' />
               <div>
                 <h4 className='font-bold text-sm text-emerald-950'>
-                  Active subscription
+                  {subscriptionStatusLabel.ACTIVE}
                 </h4>
                 <p className='text-xs text-emerald-850 mt-0.5 leading-relaxed font-medium'>
-                  This student is eligible for route planning when service date,
-                  active days, and pickup/drop-off conditions match.
+                  Học sinh đủ điều kiện tham gia lập tuyến khi ngày phục vụ,
+                  ngày hoạt động và điểm đón/trả phù hợp.
                 </p>
               </div>
             </div>
@@ -289,11 +293,10 @@ export function SchoolBusSubscriptionDetailPage({
               <PauseCircle className='mt-0.5 h-5 w-5 text-amber-600 shrink-0' />
               <div>
                 <h4 className='font-bold text-sm text-amber-950'>
-                  Paused subscription
+                  {subscriptionStatusLabel.PAUSED}
                 </h4>
                 <p className='text-xs text-amber-850 mt-0.5 leading-relaxed font-medium'>
-                  This subscription is excluded from route planning during the
-                  pause period.
+                  Đăng ký này không tham gia lập tuyến trong thời gian tạm dừng.
                 </p>
               </div>
             </div>
@@ -304,11 +307,10 @@ export function SchoolBusSubscriptionDetailPage({
               <StopCircle className='mt-0.5 h-5 w-5 text-red-600 shrink-0' />
               <div>
                 <h4 className='font-bold text-sm text-red-950'>
-                  Stopped subscription
+                  {subscriptionStatusLabel.STOPPED}
                 </h4>
                 <p className='text-xs text-red-850 mt-0.5 leading-relaxed font-medium'>
-                  This subscription is no longer used for new route planning
-                  sessions.
+                  Đăng ký này không còn được sử dụng cho các phiên lập tuyến mới.
                 </p>
               </div>
             </div>
@@ -319,11 +321,10 @@ export function SchoolBusSubscriptionDetailPage({
               <AlertCircle className='mt-0.5 h-5 w-5 text-slate-500 shrink-0' />
               <div>
                 <h4 className='font-bold text-sm text-slate-950'>
-                  Expired subscription
+                  {subscriptionStatusLabel.EXPIRED}
                 </h4>
                 <p className='text-xs text-slate-700 mt-0.5 leading-relaxed font-medium'>
-                  This subscription contract has reached its effective to-date
-                  and is expired.
+                  Đăng ký đã đến ngày kết thúc hiệu lực.
                 </p>
               </div>
             </div>
@@ -508,7 +509,7 @@ export function SchoolBusSubscriptionDetailPage({
 
             {/* Planning Eligibility Checklist - Admin/Dispatcher only */}
             {!access.isParentOnly && (
-              <SchoolBusSection title='Route Planning Eligibility'>
+              <SchoolBusSection title='Điều kiện tham gia lập tuyến'>
                 <div
                   className={cn(
                     'p-5 rounded-2xl border shadow-sm space-y-4 transition-all',
@@ -519,7 +520,7 @@ export function SchoolBusSubscriptionDetailPage({
                 >
                   <div className='flex items-center justify-between pb-3 border-b border-slate-200/60'>
                     <span className='text-sm text-slate-500 font-semibold'>
-                      Visible in route planning:
+                      Hiển thị trong lập tuyến:
                     </span>
                     <span
                       className={cn(
@@ -529,7 +530,7 @@ export function SchoolBusSubscriptionDetailPage({
                           : 'bg-amber-50 text-amber-700 border-amber-200'
                       )}
                     >
-                      {isEligible ? 'Yes (Eligible)' : 'No (Ineligible)'}
+                      {isEligible ? 'Có (đủ điều kiện)' : 'Không (chưa đủ điều kiện)'}
                     </span>
                   </div>
 
@@ -537,9 +538,9 @@ export function SchoolBusSubscriptionDetailPage({
                     {/* 1. Status Check */}
                     <div className='flex items-center gap-2'>
                       {isStatusActive ? (
-                        <span className='text-emerald-600 font-bold'>OK</span>
+                        <span className='text-emerald-600 font-bold'>Đạt</span>
                       ) : (
-                        <span className='text-amber-500 font-bold'>Warning:</span>
+                        <span className='text-amber-500 font-bold'>Cảnh báo:</span>
                       )}
                       <span className='text-slate-500 font-medium'>
                         Subscription status is Active
@@ -629,7 +630,10 @@ export function SchoolBusSubscriptionDetailPage({
                   <span className='text-[10px] text-slate-400 font-bold block mb-0.5 uppercase tracking-wide'>
                     Status
                   </span>
-                  <SchoolBusStatusBadge status={sub.status} />
+                  <SchoolBusStatusBadge
+                    status={sub.status}
+                    labelMap={subscriptionStatusLabel}
+                  />
                 </div>
                 <div>
                   <span className='text-[10px] text-slate-400 font-bold block mb-0.5 uppercase tracking-wide'>

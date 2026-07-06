@@ -8,12 +8,9 @@ export const routeStatusLabel: Record<string, string> = {
   DRAFT: 'Nháp',
   GENERATED: 'Đã tạo',
   REVIEWING: 'Đang rà soát',
-  PLANNED: 'Đã lập kế hoạch',
-  ASSIGNED: 'Đã phân công',
   PUBLISHED: 'Đã phát hành',
+  ASSIGNED: 'Đã phân công',
   TRIP_CREATED: 'Đã tạo chuyến',
-  IN_PROGRESS: 'Đang thực hiện',
-  COMPLETED: 'Hoàn thành',
   CANCELLED: 'Đã hủy',
 };
 
@@ -28,23 +25,23 @@ export const requestStatusLabel: Record<string, string> = {
 
 /* -- Subscription status ----------------------------------------- */
 export const subscriptionStatusLabel: Record<string, string> = {
+  PENDING: 'Chờ kích hoạt',
   ACTIVE: 'Đang hoạt động',
-  INACTIVE: 'Ngừng hoạt động',
-  EXPIRED: 'Hết hạn',
-  CANCELLED: 'Đã hủy',
   PAUSED: 'Tạm dừng',
   STOPPED: 'Đã dừng',
-  SCHEDULED: 'Đã lên lịch',
+  EXPIRED: 'Hết hạn',
 };
 
 /* -- Planning session status ------------------------------------- */
-export const sessionStatusLabel: Record<string, string> = {
+export const planningSessionStatusLabel: Record<string, string> = {
   DRAFT: 'Nháp',
-  IN_PROGRESS: 'Đang thực hiện',
+  GENERATED: 'Đã tạo phương án',
+  REVIEWING: 'Đang rà soát',
   PUBLISHED: 'Đã phát hành',
-  COMPLETED: 'Hoàn thành',
   CANCELLED: 'Đã hủy',
 };
+
+export const sessionStatusLabel = planningSessionStatusLabel;
 
 /* -- Route direction --------------------------------------------- */
 export const directionLabel: Record<string, string> = {
@@ -108,33 +105,39 @@ export const pickupUsageTypeLabel: Record<string, string> = {
   PICKUP_DROPOFF: 'Đón và trả',
   PICKUP_ONLY: 'Chỉ đón',
   DROPOFF_ONLY: 'Chỉ trả',
+  PICKUP: 'Chỉ đón',
+  DROPOFF: 'Chỉ trả',
+};
+
+export const routeAssignmentStatusLabel: Record<string, string> = {
+  ASSIGNED: 'Đã phân công',
+  CONFIRMED: 'Đã xác nhận',
+  CANCELLED: 'Đã hủy',
+  REPLACED: 'Đã thay thế',
 };
 
 export const tripStatusLabel: Record<string, string> = {
-  CREATED: 'Đã tạo',
-  SCHEDULED: 'Đã lên lịch',
+  PLANNED: 'Đã lên kế hoạch',
+  ASSIGNED: 'Đã phân công',
   IN_PROGRESS: 'Đang thực hiện',
   COMPLETED: 'Hoàn thành',
   CANCELLED: 'Đã hủy',
 };
 
 export const tripStopStatusLabel: Record<string, string> = {
-  CREATED: 'Đã tạo',
   PENDING: 'Đang chờ',
   ARRIVED: 'Đã đến điểm',
   BOARDING: 'Đang đón/trả',
   DEPARTED: 'Đã rời điểm',
   SKIPPED: 'Đã bỏ qua',
-  COMPLETED: 'Hoàn thành',
 };
 
 export const tripStudentStatusLabel: Record<string, string> = {
-  CREATED: 'Đã tạo',
-  WAITING: 'Đang chờ',
+  PLANNED: 'Chưa điểm danh',
   BOARDED: 'Đã lên xe',
-  DROPPED_OFF: 'Đã xuống xe',
   ABSENT: 'Vắng mặt',
-  NO_SHOW: 'Không có mặt',
+  DROPPED_OFF: 'Đã xuống xe',
+  NO_SHOW: 'Không có mặt tại điểm đón',
   NOT_SERVED: 'Chưa phục vụ',
 };
 
@@ -145,25 +148,65 @@ export const attendanceTypeLabel: Record<string, string> = {
 };
 
 export const attendanceStatusLabel: Record<string, string> = {
-  BOARDED: 'Đã lên xe',
-  DROPPED_OFF: 'Đã xuống xe',
+  PRESENT: 'Có mặt',
   ABSENT: 'Vắng mặt',
-  NO_SHOW: 'Không có mặt',
-  NOT_SERVED: 'Chưa phục vụ',
+};
+
+export const attendanceRecordStatusLabel = attendanceStatusLabel;
+
+export const routeCalculationStatusLabel: Record<string, string> = {
+  SUCCESS: 'Thành công',
+  FAILED: 'Thất bại',
+  PARTIAL: 'Một phần',
+};
+
+export const routeReadinessStatusLabel: Record<string, string> = {
+  READY: 'Sẵn sàng',
+  MISSING_BUS: 'Thiếu xe',
+  MISSING_DRIVER: 'Thiếu tài xế',
+  MISSING_ATTENDANT: 'Thiếu phụ xe',
+};
+
+export const pickupDropoffReadinessStatusLabel: Record<string, string> = {
+  READY: 'Sẵn sàng',
+  MISSING_PICKUP_WINDOW: 'Thiếu khung giờ đón',
+  MISSING_COORDINATES: 'Thiếu tọa độ',
+  UNSUPPORTED_USAGE_TYPE: 'Loại điểm chưa hỗ trợ',
+  NOT_CHECKED: 'Chưa kiểm tra',
+};
+
+export const operationEventLabel: Record<string, string> = {
+  TRIP_STARTED: 'Đã bắt đầu chuyến',
+  TRIP_COMPLETED: 'Đã hoàn thành chuyến',
+  TRIP_CANCELLED: 'Đã hủy chuyến',
+  STOP_ARRIVED: 'Đã đến điểm dừng',
+  STOP_BOARDING_STARTED: 'Đã bắt đầu đón/trả',
+  STOP_DEPARTED: 'Đã rời điểm dừng',
+  STOP_SKIPPED: 'Đã bỏ qua điểm dừng',
+  STUDENT_BOARDED: 'Học sinh đã lên xe',
+  STUDENT_ABSENT: 'Học sinh vắng mặt',
+  STUDENT_NO_SHOW: 'Học sinh không có mặt',
+  STUDENT_DROPPED_OFF: 'Học sinh đã xuống xe',
+  STUDENT_NOT_SERVED: 'Học sinh chưa được phục vụ',
 };
 
 export const statusLabel: Record<string, string> = {
   ...routeStatusLabel,
   ...requestStatusLabel,
   ...subscriptionStatusLabel,
-  ...sessionStatusLabel,
+  ...planningSessionStatusLabel,
   ...profileStatusLabel,
   ...staffStatusLabel,
   ...busStatusLabel,
+  ...routeAssignmentStatusLabel,
   ...tripStatusLabel,
   ...tripStopStatusLabel,
   ...tripStudentStatusLabel,
   ...attendanceStatusLabel,
+  ...routeCalculationStatusLabel,
+  ...routeReadinessStatusLabel,
+  ...pickupDropoffReadinessStatusLabel,
+  ...operationEventLabel,
 };
 
 /* -- Generic helper ---------------------------------------------- */

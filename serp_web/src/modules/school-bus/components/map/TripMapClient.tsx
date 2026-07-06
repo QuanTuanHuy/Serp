@@ -9,6 +9,7 @@ import {
   SCHOOL_BUS_MAP_DEFAULT_ZOOM,
   SCHOOL_BUS_MAP_DETAIL_ZOOM,
 } from '../../constants';
+import { tripStopStatusLabel } from '../../schoolBusLabels';
 import type { TripAttendanceStopItem } from '../../types';
 import { createSchoolBusMarkerIcon, createStopNumberIcon } from './mapIcons';
 
@@ -135,7 +136,7 @@ export default function TripMapClient({
   const tripIsCompleted = normalizedStatus === 'COMPLETED';
   const tripIsActive = normalizedStatus === 'IN_PROGRESS';
   const tripNotStarted =
-    normalizedStatus === 'CREATED' || normalizedStatus === 'PLANNED';
+    normalizedStatus === 'PLANNED' || normalizedStatus === 'ASSIGNED';
 
   let currentStopIndex = -1;
   let nextStopIndex = -1;
@@ -232,9 +233,9 @@ export default function TripMapClient({
                 ? 'Điểm cuối tuyến'
                 : stop.stopPurpose === 'PICKUP'
                   ? 'Điểm đón'
-                  : stop.stopPurpose === 'DROPOFF'
-                    ? 'Điểm trả'
-                    : 'Stop';
+                    : stop.stopPurpose === 'DROPOFF'
+                      ? 'Điểm trả'
+                    : 'Điểm dừng';
 
           return (
             <Marker
@@ -246,25 +247,27 @@ export default function TripMapClient({
               <Popup>
                 <div className='space-y-1 text-xs'>
                   <p className='font-semibold text-slate-800'>
-                    {isCurrent && tripIsActive && ' Current stop: '}
-                    {isNext && ' Next stop: '}
-                    {stop.displayName || `Stop #${stop.routeStopId}`}
+                    {isCurrent && tripIsActive && 'Điểm hiện tại: '}
+                    {isNext && 'Điểm tiếp theo: '}
+                    {stop.displayName || `Điểm #${stop.routeStopId}`}
                   </p>
                   <p className='text-[10px] text-slate-400 font-medium'>
-                    Order: #{stop.stopOrder} - {purposeLabel}
+                    Thứ tự: #{stop.stopOrder} - {purposeLabel}
                   </p>
                   <p className='text-slate-500'>
-                    Status:{' '}
-                    <span className='font-semibold'>{stop.stopStatus}</span>
+                    Trạng thái:{' '}
+                    <span className='font-semibold'>
+                      {tripStopStatusLabel[stop.stopStatus] || stop.stopStatus}
+                    </span>
                   </p>
                   {stop.plannedBoardingCount > 0 && (
                     <p className='text-blue-600'>
-                      Planned board: {stop.plannedBoardingCount} students
+                      Dự kiến lên xe: {stop.plannedBoardingCount} học sinh
                     </p>
                   )}
                   {stop.plannedDropoffCount > 0 && (
                     <p className='text-emerald-600'>
-                      Planned drop-off: {stop.plannedDropoffCount} students
+                      Dự kiến xuống xe: {stop.plannedDropoffCount} học sinh
                     </p>
                   )}
                 </div>
@@ -276,7 +279,7 @@ export default function TripMapClient({
       {isFallback && (
         <div className='pointer-events-none absolute bottom-3 left-1/2 z-[1000] -translate-x-1/2'>
           <span className='inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500 shadow-sm'>
-            Actual road geometry not yet computed.
+            Chưa có hình học tuyến theo đường thực tế.
           </span>
         </div>
       )}

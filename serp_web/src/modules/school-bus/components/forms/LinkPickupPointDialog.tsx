@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui';
 import { schoolBusUi } from '../../theme';
+import { getLabel, pickupUsageTypeLabel } from '../../schoolBusLabels';
 import { SchoolBusSelect } from '../ui/SchoolBusSelect';
 import type {
   SchoolBusPickupPoint,
@@ -27,7 +28,7 @@ import type {
 import { SchoolBusFormDialog } from '../SchoolBusFormDialog';
 
 const linkSchema = z.object({
-  pickupPointId: z.coerce.number().min(1, 'Pickup point is required'),
+  pickupPointId: z.coerce.number().min(1, 'Vui lòng chọn điểm đón/trả.'),
   isDefault: z.boolean().default(false),
   isActive: z.boolean().default(true),
 });
@@ -72,8 +73,8 @@ export function LinkPickupPointDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title='Link pickup point to school'
-      description='Associate an existing pickup point with this school.'
+      title='Liên kết điểm đón/trả với trường'
+      description='Chọn một điểm đón/trả hiện có để liên kết với trường này.'
     >
       <Form {...form}>
         <form
@@ -92,7 +93,7 @@ export function LinkPickupPointDialog({
               name='pickupPointId'
               render={({ field }) => (
                 <FormItem className='md:col-span-2'>
-                  <FormLabel>Pickup point *</FormLabel>
+                  <FormLabel>Điểm đón/trả *</FormLabel>
                   <SchoolBusSelect
                     fullWidth
                     size='md'
@@ -101,7 +102,7 @@ export function LinkPickupPointDialog({
                     onChange={(v) => field.onChange(v ? Number(v) : null)}
                     placeholder='Chọn điểm đón/trả'
                     options={pickupPoints.map((pp) => ({
-                      label: `${pp.name} - ${pp.address} (${pp.usageType || 'N/A'})`,
+                      label: `${pp.name} - ${pp.address} (${pp.usageType ? getLabel(pickupUsageTypeLabel, pp.usageType) : 'Chưa xác định'})`,
                       value: String(pp.id),
                     }))}
                     searchable
@@ -119,14 +120,14 @@ export function LinkPickupPointDialog({
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               type='submit'
               className={schoolBusUi.primaryButton}
               disabled={isLoading}
             >
-              {isLoading ? 'Linking...' : 'Link pickup point'}
+              {isLoading ? 'Đang liên kết...' : 'Liên kết điểm đón/trả'}
             </Button>
           </div>
         </form>

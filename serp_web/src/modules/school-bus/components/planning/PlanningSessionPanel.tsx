@@ -5,6 +5,7 @@ import { Rocket, X, Loader2, Activity, Clock3 } from 'lucide-react';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import { SchoolBusStatusBadge } from '../SchoolBusStatusBadge';
+import { planningSessionStatusLabel } from '../../schoolBusLabels';
 import type { SchoolBusPlanningSession } from '../../types';
 import { schoolBusUi } from '../../theme';
 
@@ -79,20 +80,23 @@ export function PlanningSessionPanel({
               <Activity className='h-4 w-4 text-emerald-600' />
               Active Session
             </h3>
-            <SchoolBusStatusBadge status={activeSession.status} />
+            <SchoolBusStatusBadge
+              status={activeSession.status}
+              labelMap={planningSessionStatusLabel}
+            />
           </div>
 
           <div className='grid grid-cols-3 gap-2'>
             <StatItem
-              label='Eligible'
+              label='Đủ điều kiện'
               value={activeSession.totalEligibleStudents}
             />
             <StatItem
-              label='Planned'
+              label='Đã lập tuyến'
               value={activeSession.totalPlannedStudents}
             />
             <StatItem
-              label='Unassigned'
+              label='Chưa gán'
               value={activeSession.totalUnassignedStudents}
               warn={activeSession.totalUnassignedStudents > 0}
             />
@@ -173,7 +177,10 @@ export function PlanningSessionPanel({
                     <span className='text-xs font-bold text-slate-800'>
                       #{s.id} · {s.serviceDate}
                     </span>
-                    <SchoolBusStatusBadge status={s.status} />
+                    <SchoolBusStatusBadge
+                      status={s.status}
+                      labelMap={planningSessionStatusLabel}
+                    />
                   </div>
                   <p className='mt-1 text-[10px] font-semibold text-slate-500'>
                     {s.schoolName} · {s.routeDirection}

@@ -35,7 +35,7 @@ const DEFAULT_LEGEND_ITEMS: LegendItem[] = [
   { kind: 'depot', label: 'Bãi xe', icon: Warehouse },
   { kind: 'pickup', label: 'Điểm đón', icon: MapPin },
   { kind: 'dropoff', label: 'Điểm trả', icon: MapPinCheck },
-  { kind: 'bus', label: 'Bus context', icon: Bus },
+  { kind: 'bus', label: 'Xe buýt', icon: Bus },
   { kind: 'student', label: 'Học sinh', icon: User },
 ];
 
@@ -67,17 +67,17 @@ export function SchoolBusMapLegend({
           e.stopPropagation();
           setIsCollapsed(true);
         }}
-        title={isCollapsed ? 'Click to show legend' : 'Click to hide legend'}
+        title={isCollapsed ? 'Hiện chú giải bản đồ' : 'Ẩn chú giải bản đồ'}
       >
         {isCollapsed ? (
           <span className='normal-case tracking-normal text-muted-foreground hover:text-foreground'>
-            Map legend <span className='text-slate-400'>· show</span>
+            Chú giải bản đồ <span className='text-slate-400'>· hiện</span>
           </span>
         ) : (
           <>
-            <span>Map legend</span>
+            <span>Chú giải bản đồ</span>
             <span className='ml-1 text-[9px] font-normal normal-case tracking-normal text-slate-400'>
-              (hide)
+              (ẩn)
             </span>
           </>
         )}
@@ -102,14 +102,14 @@ export function SchoolBusMapLegend({
                   className='block h-[2px] w-8 rounded-full'
                   style={{ backgroundColor: schoolBusBrand.sky }}
                 />
-                Outbound route
+                Tuyến đến trường
               </p>
               <p className='flex items-center gap-2 text-emerald-700'>
                 <span
                   className='block h-[2px] w-8 rounded-full border-t-2 border-dashed'
                   style={{ borderColor: schoolBusBrand.emerald }}
                 />
-                Return route
+                Tuyến về nhà
               </p>
             </div>
           )}
@@ -144,7 +144,7 @@ function LegendRow({
           ? 'text-foreground'
           : 'text-slate-300 line-through decoration-slate-300'
       )}
-      title={active ? `Hide ${label} markers` : `Show ${label} markers`}
+      title={active ? `Ẩn ${label}` : `Hiện ${label}`}
     >
       <span
         className={cn(

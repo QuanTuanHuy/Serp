@@ -37,28 +37,29 @@ import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { formatDate, getPageItems, SCHOOL_BUS_PAGE_QUERY_OPTIONS } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import { schoolBusUi } from '../theme';
+import { directionLabel, tripStatusLabel } from '../schoolBusLabels';
 
 const statusMap: Record<string, { label: string; className: string }> = {
-  CREATED: {
-    label: 'Đã tạo',
+  PLANNED: {
+    label: tripStatusLabel.PLANNED,
     className: 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-50',
   },
+  ASSIGNED: {
+    label: tripStatusLabel.ASSIGNED,
+    className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50',
+  },
   IN_PROGRESS: {
-    label: 'In progress',
+    label: tripStatusLabel.IN_PROGRESS,
     className: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50',
   },
   COMPLETED: {
-    label: 'Hoàn thành',
+    label: tripStatusLabel.COMPLETED,
     className:
       'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50',
   },
   CANCELLED: {
-    label: 'Đã hủy',
+    label: tripStatusLabel.CANCELLED,
     className: 'border-red-200 bg-red-50 text-red-700 hover:bg-red-50',
-  },
-  PAUSED: {
-    label: 'Paused',
-    className: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50',
   },
 };
 
@@ -91,9 +92,7 @@ const formatLocationType = (type?: string | null) => {
 };
 
 const getFriendlyDirection = (dir?: string | null) => {
-  if (dir === 'RETURN') return 'Return';
-  if (dir === 'OUTBOUND') return 'Outbound';
-  if (dir === 'ROUND_TRIP') return 'Round trip';
+  if (dir) return directionLabel[dir] || dir;
   return dir || '';
 };
 
@@ -220,17 +219,18 @@ export function SchoolBusTripsPage() {
   }, [uniqueDates]);
 
   const statusOptions = [
-    { label: 'All statuses', value: '' },
-    { label: 'Đã tạo', value: 'CREATED', color: 'slate' as const },
-    { label: 'In progress', value: 'IN_PROGRESS', color: 'blue' as const },
-    { label: 'Hoàn thành', value: 'COMPLETED', color: 'green' as const },
-    { label: 'Đã hủy', value: 'CANCELLED', color: 'red' as const },
+    { label: 'Tất cả trạng thái', value: '' },
+    { label: tripStatusLabel.PLANNED, value: 'PLANNED', color: 'slate' as const },
+    { label: tripStatusLabel.ASSIGNED, value: 'ASSIGNED', color: 'orange' as const },
+    { label: tripStatusLabel.IN_PROGRESS, value: 'IN_PROGRESS', color: 'blue' as const },
+    { label: tripStatusLabel.COMPLETED, value: 'COMPLETED', color: 'green' as const },
+    { label: tripStatusLabel.CANCELLED, value: 'CANCELLED', color: 'red' as const },
   ];
 
   const directionOptions = [
-    { label: 'All directions', value: '' },
-    { label: 'Outbound', value: 'OUTBOUND' },
-    { label: 'Return', value: 'RETURN' },
+    { label: 'Tất cả chiều tuyến', value: '' },
+    { label: directionLabel.OUTBOUND, value: 'OUTBOUND' },
+    { label: directionLabel.RETURN, value: 'RETURN' },
   ];
 
   const call = async (label: string, action: () => Promise<any>) => {
@@ -412,7 +412,7 @@ export function SchoolBusTripsPage() {
 
             {hasBus && hasDriver && (
               <span className='inline-flex items-center gap-1 text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-100 rounded px-1.5 py-0.5 w-fit mt-0.5'>
-                Assigned
+                Đã phân công
               </span>
             )}
           </div>
@@ -463,7 +463,7 @@ export function SchoolBusTripsPage() {
                 className='text-[10px] text-slate-500 truncate mt-0.5'
                 title={trip.nextStopName}
               >
-                Next: {trip.nextStopName}
+                Tiếp theo: {trip.nextStopName}
               </span>
             )}
           </div>
@@ -513,18 +513,18 @@ export function SchoolBusTripsPage() {
           );
         }
 
-        if (normalized === 'CREATED') {
+        if (normalized === 'PLANNED' || normalized === 'ASSIGNED') {
           return (
             <div className='flex items-center justify-end gap-1.5'>
               <Button
                 size='sm'
                 className='bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-full px-4.5 font-bold shadow-none h-8 border-0 text-xs shrink-0'
                 onClick={() =>
-                  call('Start trip', () => startTrip(trip.id).unwrap())
+                  call('Bắt đầu chuyến', () => startTrip(trip.id).unwrap())
                 }
               >
                 <PlayCircle className='mr-1.5 h-3.5 w-3.5' />
-                Start trip
+                Bắt đầu chuyến
               </Button>
               <Button
                 size='sm'
@@ -533,7 +533,7 @@ export function SchoolBusTripsPage() {
                 asChild
               >
                 <Link href={`/school-bus/trips/${trip.id}`}>
-                  Open operations
+                  Mở vận hành
                 </Link>
               </Button>
             </div>
