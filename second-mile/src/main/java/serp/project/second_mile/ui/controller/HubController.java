@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package serp.project.second_mile.ui.controller;
 
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -99,6 +100,17 @@ public class HubController {
                 .build();
     }
 
+    @GetMapping("/post-offices")
+    public ApiResponse<PageResponse<HubPostOfficeMappingResponse>> listHubPostOfficeMappings(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.<PageResponse<HubPostOfficeMappingResponse>>builder()
+                .message(messageService.getMessage("success.hubs.post_offices.list"))
+                .result(hubPostOfficeService.listPostOfficeMappings(page, size))
+                .build();
+    }
+
     @GetMapping("/{id}/post-offices")
     public ApiResponse<PageResponse<HubPostOfficeMappingResponse>> listHubPostOffices(
             @PathVariable Long id,
@@ -113,11 +125,11 @@ public class HubController {
 
     @PostMapping("/{id}/post-offices")
     @PreAuthorize("hasRole('TMS_ADMIN')")
-    public ApiResponse<HubPostOfficeMappingResponse> assignPostOfficeToHub(
+    public ApiResponse<List<HubPostOfficeMappingResponse>> assignPostOfficeToHub(
             @PathVariable Long id,
             @Valid @RequestBody AssignHubPostOfficeRequest request
     ) {
-        return ApiResponse.<HubPostOfficeMappingResponse>builder()
+        return ApiResponse.<List<HubPostOfficeMappingResponse>>builder()
                 .message(messageService.getMessage("success.hubs.post_offices.assign"))
                 .result(hubPostOfficeService.assignPostOfficeToHub(id, request))
                 .build();

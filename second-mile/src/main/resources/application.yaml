@@ -76,6 +76,10 @@ tms-order:
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}
   api-key: ${GOONG_API_KEY:${GEOCODE_API_KEY:${GEOCODE-API-KEY:}}}
+  fallback:
+    base-url: ${GEOCODE_FALLBACK_BASE_URL:https://geocode.maps.co/search}
+    api-key: ${GEOCODE_FALLBACK_API_KEY:${MAPS_CO_API_KEY:}}
+    min-interval-ms: ${GEOCODE_FALLBACK_MIN_INTERVAL_MS:1000}
   rate-limit:
     tps: ${GEOCODE_RATE_LIMIT_TPS:1}
 

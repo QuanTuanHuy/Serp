@@ -18,6 +18,8 @@ public interface HubPostOfficeMappingRepository extends JpaRepository<HubPostOff
 
     Page<HubPostOfficeMapping> findByHub_IdAndTenantId(Long hubId, Long tenantId, Pageable pageable);
 
+    Page<HubPostOfficeMapping> findByTenantId(Long tenantId, Pageable pageable);
+
     Optional<HubPostOfficeMapping> findByTenantIdAndPostOfficeCode(Long tenantId, String postOfficeCode);
 
     void deleteByTenantIdAndPostOfficeCode(Long tenantId, String postOfficeCode);

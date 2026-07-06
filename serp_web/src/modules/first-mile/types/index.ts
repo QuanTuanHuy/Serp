@@ -144,7 +144,7 @@ export interface SecondMileHubStaff {
 }
 
 export interface AssignHubPostOfficeRequest {
-  post_office_code: string;
+  post_office_codes: string[];
 }
 
 export interface CreateHubRequest {

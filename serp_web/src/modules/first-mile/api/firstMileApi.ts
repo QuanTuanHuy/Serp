@@ -223,8 +223,21 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: normalizeHubPostOfficeMappingPage,
     }),
 
+    getAllHubPostOffices: builder.query<
+      FirstMilePaginatedData<HubPostOfficeMapping>,
+      { page?: number; size?: number }
+    >({
+      query: ({ page = 0, size = 20 }) => ({
+        url: '/hubs/post-offices',
+        method: 'GET',
+        params: { page, size },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: normalizeHubPostOfficeMappingPage,
+    }),
+
     assignPostOfficeToHub: builder.mutation<
-      HubPostOfficeMapping,
+      HubPostOfficeMapping[],
       { hubId: number; request: AssignHubPostOfficeRequest }
     >({
       query: ({ hubId, request }) => ({
@@ -234,8 +247,11 @@ export const firstMileApi = api.injectEndpoints({
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (
-        response: FirstMileApiResponse<HubPostOfficeMapping>
-      ) => normalizeHubPostOfficeMapping(unwrapFirstMileResult(response)),
+        response: FirstMileApiResponse<HubPostOfficeMapping[]>
+      ) =>
+        unwrapFirstMileResult(response).map((mapping) =>
+          normalizeHubPostOfficeMapping(mapping)
+        ),
     }),
 
     removePostOfficeFromHub: builder.mutation<
@@ -2352,6 +2368,7 @@ export const {
   useAssignSecondMileStaffToHubMutation,
   useUnassignSecondMileHubStaffAssignmentMutation,
   useGetHubPostOfficesQuery,
+  useGetAllHubPostOfficesQuery,
   useAssignPostOfficeToHubMutation,
   useRemovePostOfficeFromHubMutation,
   useLazyExportHubTemplateQuery,
