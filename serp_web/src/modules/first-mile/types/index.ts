@@ -76,7 +76,7 @@ export interface PostOffice {
   hubId?: number;
 }
 
-export type HubStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+export type HubStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface Hub {
   id: number;
@@ -575,7 +575,7 @@ export interface SecondMileRouteListFilters {
 }
 
 export interface SecondMileCreateRouteRequest {
-  route_code: string;
+  route_code?: string;
   route_name: string;
   origin_type?: SecondMileRouteEndpointType;
   origin_hub_id?: number;

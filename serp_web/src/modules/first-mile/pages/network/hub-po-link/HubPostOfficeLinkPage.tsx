@@ -230,7 +230,7 @@ export function HubPostOfficeLinkPage() {
       page: 0,
       size: ALL_LINK_PAGE_SIZE,
     },
-    { skip: !assignDialogOpen }
+    { skip: !assignDialogOpen, refetchOnMountOrArgChange: true }
   );
 
   const { data: assignPostOfficesData, isFetching: isFetchingAssignOptions } =

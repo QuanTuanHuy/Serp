@@ -221,6 +221,10 @@ export const firstMileApi = api.injectEndpoints({
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: normalizeHubPostOfficeMappingPage,
+      providesTags: (_result, _error, { hubId }) => [
+        { type: 'HubPostOfficeMapping', id: 'ALL' },
+        { type: 'HubPostOfficeMapping', id: `HUB-${hubId}` },
+      ],
     }),
 
     getAllHubPostOffices: builder.query<
@@ -234,6 +238,7 @@ export const firstMileApi = api.injectEndpoints({
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: normalizeHubPostOfficeMappingPage,
+      providesTags: [{ type: 'HubPostOfficeMapping', id: 'ALL' }],
     }),
 
     assignPostOfficeToHub: builder.mutation<
@@ -252,6 +257,10 @@ export const firstMileApi = api.injectEndpoints({
         unwrapFirstMileResult(response).map((mapping) =>
           normalizeHubPostOfficeMapping(mapping)
         ),
+      invalidatesTags: (_result, _error, { hubId }) => [
+        { type: 'HubPostOfficeMapping', id: 'ALL' },
+        { type: 'HubPostOfficeMapping', id: `HUB-${hubId}` },
+      ],
     }),
 
     removePostOfficeFromHub: builder.mutation<
@@ -264,6 +273,10 @@ export const firstMileApi = api.injectEndpoints({
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: unwrapFirstMileResultOrRaw,
+      invalidatesTags: (_result, _error, { hubId }) => [
+        { type: 'HubPostOfficeMapping', id: 'ALL' },
+        { type: 'HubPostOfficeMapping', id: `HUB-${hubId}` },
+      ],
     }),
 
     getSecondMileHubStaffAssignments: builder.query<
