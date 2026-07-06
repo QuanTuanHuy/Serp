@@ -712,7 +712,7 @@ function SchoolBusSchoolsPageContent() {
       const response = editingSchool
         ? await updateSchool({ id: editingSchool.id, body: values }).unwrap()
         : await createSchool(values).unwrap();
-      toast.success(response.message || 'School saved');
+      toast.success(response.message || 'Đã lưu trường học');
       setSchoolDialogOpen(false);
       setEditingSchool(null);
     } catch (error: any) {
@@ -728,7 +728,7 @@ function SchoolBusSchoolsPageContent() {
             body: values,
           }).unwrap()
         : await createPickupPoint(values).unwrap();
-      toast.success(response.message || 'Pickup point saved');
+      toast.success(response.message || 'Đã lưu điểm đón/trả');
       setPickupDialogOpen(false);
       setEditingPickup(null);
     } catch (error: any) {
@@ -741,12 +741,12 @@ function SchoolBusSchoolsPageContent() {
     try {
       if (deleteTarget.type === 'school') {
         const response = await deleteSchool(deleteTarget.entity.id).unwrap();
-        toast.success(response.message || 'School deleted');
+        toast.success(response.message || 'Đã xóa trường học');
       } else {
         const response = await deletePickupPoint(
           deleteTarget.entity.id
         ).unwrap();
-        toast.success(response.message || 'Pickup point deleted');
+        toast.success(response.message || 'Đã xóa điểm đón/trả');
       }
       setDeleteTarget(null);
     } catch (error: any) {

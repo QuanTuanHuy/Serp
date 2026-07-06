@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { Eye, Plus, Loader2, Settings } from 'lucide-react';
@@ -53,7 +53,7 @@ export function PlanningContextPanel({
         <div>
           <h3 className='text-sm font-bold text-slate-900 flex items-center gap-2'>
             <Settings className='h-4 w-4 text-[#C81E3A]' />
-            Planning Context
+            Ngữ cảnh lập tuyến
           </h3>
           <p className='text-[11px] text-slate-400 mt-0.5'>
             Chọn tham số để xác định phạm vi phiên lập kế hoạch.
@@ -67,13 +67,13 @@ export function PlanningContextPanel({
             className='h-7 px-2 text-[10px] font-bold text-[#C81E3A] hover:bg-red-50 hover:text-[#C81E3A] gap-1'
           >
             <Plus className='h-3 w-3' />
-            New Session
+            Phiên mới
           </Button>
         )}
       </div>
 
       <div className='space-y-0.5'>
-        <label className={fieldLabel}>School *</label>
+        <label className={fieldLabel}>Trường học *</label>
         <SchoolBusSelect
           fullWidth
           value={form.schoolId}
@@ -88,14 +88,14 @@ export function PlanningContextPanel({
           searchable
         />
 
-        <label className={fieldLabel}>Service Date *</label>
+        <label className={fieldLabel}>Ngày phục vụ *</label>
         <SchoolBusDatePicker
           fullWidth
           value={form.serviceDate}
           onChange={(val) => onFormChange((f) => ({ ...f, serviceDate: val }))}
         />
 
-        <label className={fieldLabel}>Route Direction</label>
+        <label className={fieldLabel}>Chiều tuyến</label>
         <SchoolBusSelect
           fullWidth
           value={form.routeDirection}
@@ -106,8 +106,8 @@ export function PlanningContextPanel({
             }))
           }
           options={[
-            { label: 'Outbound (To school)', value: 'OUTBOUND' },
-            { label: 'Return (From school)', value: 'RETURN' },
+            { label: 'Đến trường', value: 'OUTBOUND' },
+            { label: 'Về nhà', value: 'RETURN' },
           ]}
         />
       </div>
@@ -124,7 +124,7 @@ export function PlanningContextPanel({
           ) : (
             <Eye className='mr-1.5 h-3.5 w-3.5' />
           )}
-          Preview
+          Xem trước
         </Button>
         <Button
           onClick={onCreateSession}
@@ -136,20 +136,20 @@ export function PlanningContextPanel({
           ) : (
             <Plus className='mr-1.5 h-3.5 w-3.5' />
           )}
-          Create
+          Tạo phiên
         </Button>
       </div>
 
       {isPreviewContextMatch && !canCreate && createDisabledReason && (
         <div className='text-[10px] font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-xl p-2 flex items-start gap-1.5'>
-          <span className='mt-0.5'>Warning:</span>
+          <span className='mt-0.5'>Cảnh báo:</span>
           <span>{createDisabledReason}</span>
         </div>
       )}
 
       {!isPreviewContextMatch && (
         <div className='text-[10px] text-slate-400 text-center italic'>
-          Please click Preview to check demand before creating a session.
+          Vui lòng bấm Xem trước để kiểm tra nhu cầu trước khi tạo phiên mới.
         </div>
       )}
     </div>

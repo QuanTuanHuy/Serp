@@ -148,16 +148,16 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
 
           {!isLoading && !sub && (
             <p className='py-8 text-center text-sm text-slate-400'>
-              Could not load subscription detail.
+              Không tải được chi tiết đăng ký.
             </p>
           )}
 
           {!isLoading && sub && (
             <>
               {/* Identity */}
-              <Section title='Identity' icon={Hash}>
+              <Section title='Thông tin định danh' icon={Hash}>
                 <Field
-                  label='Subscription Code'
+                  label='Mã đăng ký'
                   value={sub.subscriptionCode}
                   mono
                 />
@@ -171,38 +171,38 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
                   }
                 />
                 <Field
-                  label='Source Request ID'
+                  label='ID yêu cầu nguồn'
                   value={sub.sourceRequestId || '-'}
                 />
                 <div /> {/* spacer */}
               </Section>
 
               {/* Student & School */}
-              <Section title='Student & School' icon={User}>
+              <Section title='Học sinh và trường học' icon={User}>
                 <Field label='Học sinh' value={sub.studentName} />
                 <Field label='Trường học' value={sub.schoolName} />
-                <Field label='Trip Option' value={sub.tripOption} />
+                <Field label='Phương án đi xe' value={sub.tripOption} />
                 <div />
               </Section>
 
               {/* Pickup & Dropoff */}
-              <Section title='Pickup & Dropoff' icon={MapPin}>
+              <Section title='Điểm đón và điểm trả' icon={MapPin}>
                 <Field
-                  label='Pickup Point'
+                  label='Điểm đón'
                   value={sub.pickupPointName || '-'}
                 />
                 <Field
-                  label='Dropoff Point'
+                  label='Điểm trả'
                   value={sub.dropoffPointName || '-'}
                 />
               </Section>
 
               {/* Active days */}
-              <Section title='Active Days' icon={CalendarDays}>
+              <Section title='Ngày hoạt động' icon={CalendarDays}>
                 {/* Active days */}
                 <div className='col-span-2'>
                   <span className='text-[11px] font-medium uppercase tracking-wide text-slate-400'>
-                    Active Days
+                    Ngày hoạt động
                   </span>
                   <div className='mt-1.5 flex flex-wrap gap-1.5'>
                     {DAYS.map(({ key, label }) => (
@@ -223,12 +223,12 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
               </Section>
 
               {/* Effective Period */}
-              <Section title='Effective Period' icon={Clock}>
-                <Field label='From' value={formatDate(sub.effectiveFrom)} />
+              <Section title='Thời gian hiệu lực' icon={Clock}>
+                <Field label='Từ ngày' value={formatDate(sub.effectiveFrom)} />
                 <Field
-                  label='To'
+                  label='Đến ngày'
                   value={
-                    sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Indefinite'
+                    sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Không xác định'
                   }
                 />
               </Section>
@@ -242,7 +242,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
             onClick={onClose}
             className='rounded-xl bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground'
           >
-            Close
+            Đóng
           </button>
         </div>
       </div>

@@ -48,7 +48,7 @@ export function SchoolBusDeleteDialog({
             className={schoolBusUi.outlineButton}
             disabled={isLoading}
           >
-            Cancel
+            Hủy
           </AlertDialogCancel>
           <AlertDialogAction
             className={schoolBusUi.dangerButton}

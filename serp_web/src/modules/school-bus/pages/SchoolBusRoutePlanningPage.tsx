@@ -61,7 +61,7 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
       done: step !== 'pick-school',
     },
     {
-      label: 'Click Preview Demand to load pickup points',
+      label: 'Bấm Xem trước nhu cầu để tải điểm đón/trả',
       done: step === null,
     },
   ];
@@ -84,11 +84,11 @@ function MapEmptyState({ step }: { step: MapEmptyStep }) {
       </div>
 
       <div className='text-center'>
-        <p className='text-sm font-semibold text-slate-600'>Map is ready</p>
+        <p className='text-sm font-semibold text-slate-600'>Bản đồ đã sẵn sàng</p>
         <p className='mt-1 text-xs text-slate-400 max-w-[220px]'>
           {step === 'no-coords'
-            ? 'School has no coordinates - add lat/lng to the school record to see it on the map.'
-            : 'Complete the steps below to load markers.'}
+            ? 'Trường học chưa có tọa độ. Hãy bổ sung vĩ độ/kinh độ để hiển thị trên bản đồ.'
+            : 'Hoàn tất các bước dưới đây để tải marker.'}
         </p>
       </div>
 
@@ -320,7 +320,7 @@ export default function SchoolBusRoutePlanningPage() {
           });
           setSessionError(null);
         } else {
-          setSessionError('Planning session not found or no longer available.');
+          setSessionError('Không tìm thấy phiên lập kế hoạch hoặc phiên không còn khả dụng.');
         }
       }
       setIsHydrated(true);
@@ -358,7 +358,7 @@ export default function SchoolBusRoutePlanningPage() {
           setRouteError(null);
         } else {
           setRouteError(
-            'Route does not belong to the selected planning session.'
+            'Tuyến xe không thuộc về phiên lập kế hoạch đã chọn.'
           );
         }
       }
@@ -370,7 +370,7 @@ export default function SchoolBusRoutePlanningPage() {
   // -- Handlers ---------------------------------------------------------------
   const handlePreview = useCallback(async () => {
     if (!form.schoolId || !form.serviceDate) {
-      toast.error('Please fill School and Service Date');
+      toast.error('Vui lòng chọn trường học và ngày phục vụ');
       return;
     }
     try {
@@ -385,7 +385,7 @@ export default function SchoolBusRoutePlanningPage() {
       // Auto-fit to show all pickup points
       setFitTarget('all');
       setFitKey((k) => k + 1);
-      toast.success('Demand preview loaded');
+      toast.success('Đã tải bản xem trước nhu cầu');
     } catch {
       toast.error('Không thể tải bản xem trước');
     }
@@ -402,7 +402,7 @@ export default function SchoolBusRoutePlanningPage() {
       }).unwrap();
       setActiveSessionId(res.data.id);
       setRightPanelTab('route-builder');
-      toast.success(`Session #${res.data.id} created`);
+      toast.success(`Đã tạo phiên #${res.data.id}`);
     } catch (e: unknown) {
       const err = e as { data?: { message?: string } };
       toast.error(err?.data?.message || 'Không thể tạo phiên');
@@ -417,7 +417,7 @@ export default function SchoolBusRoutePlanningPage() {
           sessionId: activeSession.id,
           body: req,
         }).unwrap();
-        toast.success('Route created');
+        toast.success('Đã tạo tuyến xe');
 
         // Invalidate/refetch session summary and routes list to reflect changes immediately
         refetchSession();
@@ -458,7 +458,7 @@ export default function SchoolBusRoutePlanningPage() {
       preserveSessionQueryParams(sessionId, routeId);
       void refetchSession();
       void refetchRoutes();
-      toast.success('Session published!');
+      toast.success('Đã phát hành phiên lập kế hoạch!');
     } catch (e: unknown) {
       const err = e as {
         data?: {
@@ -489,11 +489,11 @@ export default function SchoolBusRoutePlanningPage() {
           <div className='flex flex-col gap-2 max-w-[380px] text-xs leading-normal'>
             <div className='font-bold text-slate-900 flex items-center gap-1.5'>
               <span className='h-2 w-2 rounded-full bg-rose-600' />
-              Publish Blocked: {publishVal.blockingRouteCount} route(s) failed
-              validation
+              Không thể phát hành: {publishVal.blockingRouteCount} tuyến không đạt
+              yêu cầu xác thực
             </div>
             <p className='text-[11px] text-slate-500 font-semibold'>
-              Total {publishVal.totalBlockingIssues} blocking issue(s) detected:
+              Phát hiện tổng cộng {publishVal.totalBlockingIssues} lỗi nghiêm trọng:
             </p>
             <div className='max-h-[220px] overflow-y-auto space-y-2.5 pr-1 border-t border-slate-100 pt-2'>
               {publishVal.blockingRoutes.map((route) => (
@@ -512,7 +512,7 @@ export default function SchoolBusRoutePlanningPage() {
                         {issue.message}
                         {issue.suggestedFix && (
                           <div className='text-rose-900 font-bold mt-0.5 bg-rose-50/50 px-1.5 py-0.5 rounded border border-rose-100/45'>
-                             Fix: {issue.suggestedFix}
+                             Sửa: {issue.suggestedFix}
                           </div>
                         )}
                       </li>
@@ -525,7 +525,7 @@ export default function SchoolBusRoutePlanningPage() {
           { duration: 10000 }
         );
       } else {
-        toast.error(err?.data?.message || 'Publish failed');
+        toast.error(err?.data?.message || 'Phát hành thất bại');
       }
     }
   }, [
@@ -548,7 +548,7 @@ export default function SchoolBusRoutePlanningPage() {
       await cancelSession(activeSession.id).unwrap();
       setActiveSessionId(null);
       setPreview(null);
-      toast.success('Session cancelled');
+      toast.success('Đã hủy phiên lập kế hoạch');
     } catch {
       toast.error('Không thể hủy session');
     } finally {
@@ -618,7 +618,7 @@ export default function SchoolBusRoutePlanningPage() {
     setFitTarget('all');
     setFitKey((k) => k + 1);
     clearSessionQueryParams();
-    toast.success('Workspace reset to new session planning context');
+    toast.success('Đã đặt lại không gian làm việc về ngữ cảnh lập kế hoạch phiên mới');
   }, [clearSessionQueryParams]);
 
   // -- Derived values ---------------------------------------------------------
@@ -682,20 +682,20 @@ export default function SchoolBusRoutePlanningPage() {
     <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
       <AlertDialogContent className='school-bus-shell'>
         <AlertDialogHeader>
-          <AlertDialogTitle>Cancel Session?</AlertDialogTitle>
+          <AlertDialogTitle>Hủy phiên lập tuyến?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to cancel this session? Draft routes will be
-            soft-deleted. This action cannot be undone.
+            Bạn có chắc chắn muốn hủy phiên này không? Các tuyến nháp sẽ bị xóa
+            mềm và thao tác này không thể hoàn tác.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={cancelling}>Close</AlertDialogCancel>
+          <AlertDialogCancel disabled={cancelling}>Đóng</AlertDialogCancel>
           <AlertDialogAction
             onClick={confirmCancel}
             disabled={cancelling}
             className='bg-destructive text-white hover:bg-destructive/90'
           >
-            Confirm Cancel
+            Xác nhận hủy
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -712,10 +712,10 @@ export default function SchoolBusRoutePlanningPage() {
           <div className='flex h-full w-[320px] shrink-0 flex-col overflow-hidden border-r border-border bg-card text-card-foreground shadow-xl'>
             <div className='shrink-0 border-b border-border bg-muted/40 px-4 py-3'>
               <p className='text-[10px] font-bold uppercase tracking-widest text-muted-foreground'>
-                School Bus Platform
+                Nền tảng xe bus trường học
               </p>
               <h2 className='mt-0.5 text-base font-bold text-foreground'>
-                Route Planning
+                Lập tuyến xe
               </h2>
             </div>
             {/* Scrollable inner area */}
@@ -790,7 +790,7 @@ export default function SchoolBusRoutePlanningPage() {
               onFitRoute={handleFitRoute}
               canFitAll={canFitAll}
               canFitRoute={canFitSelectedRoute}
-              fitRouteLabel='Fit Route'
+              fitRouteLabel='Thu phóng tuyến'
             />
           </div>
         </div>
@@ -804,14 +804,14 @@ export default function SchoolBusRoutePlanningPage() {
     <MapMarkerVisibilityProvider>
       <SchoolBusPageShell
         compact
-        title='Route Planning Workspace'
-        description='Build student routes by pickup points, vehicle capacity, and service date.'
+        title='Không gian lập tuyến'
+        description='Xây dựng tuyến học sinh theo điểm đón/trả, sức chứa xe và ngày phục vụ.'
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
               { label: 'Điều phối', href: '/school-bus/dispatch' },
-              { label: 'Route Planning', current: true },
+              { label: 'Lập tuyến', current: true },
             ]}
           />
         }
@@ -821,7 +821,7 @@ export default function SchoolBusRoutePlanningPage() {
             {sessionError && (
               <div className='flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-800 shadow-sm'>
                 <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700 text-[10px] font-extrabold border border-red-200'>
-                  Warning:
+                  Cảnh báo:
                 </span>
                 <span>{sessionError}</span>
               </div>
@@ -829,7 +829,7 @@ export default function SchoolBusRoutePlanningPage() {
             {routeError && (
               <div className='flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-850 shadow-sm'>
                 <span className='flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-[10px] font-extrabold border border-amber-200'>
-                  Warning:
+                  Cảnh báo:
                 </span>
                 <span>{routeError}</span>
               </div>
@@ -846,7 +846,7 @@ export default function SchoolBusRoutePlanningPage() {
           <div className='flex w-[340px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
             <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5'>
               <p className='text-[10px] font-extrabold uppercase tracking-widest text-slate-400'>
-                Workspace Controls
+                Bảng điều khiển
               </p>
             </div>
             {/* Scrollable inner area - left panel scrolls independently */}
@@ -924,7 +924,7 @@ export default function SchoolBusRoutePlanningPage() {
                 onFitRoute={handleFitRoute}
                 canFitAll={canFitAll}
                 canFitRoute={canFitSelectedRoute}
-                fitRouteLabel='Fit Route'
+                fitRouteLabel='Thu phóng tuyến'
               />
               {!hasMapData && (
                 <div className='absolute inset-0 z-[500]'>
@@ -938,7 +938,7 @@ export default function SchoolBusRoutePlanningPage() {
           <div className='flex w-[400px] shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-white'>
             <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-2.5'>
               <p className='text-[10px] font-extrabold uppercase tracking-widest text-slate-400'>
-                Routes &amp; Detail
+                Tuyến &amp; Chi tiết
               </p>
             </div>
             {/* Scrollable right panel */}

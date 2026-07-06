@@ -498,9 +498,9 @@ BEGIN
             '0901' || lpad(i::text, 6, '0'),
             'parent' || lpad(i::text, 3, '0') || '@serp-school.edu.vn',
             CASE
-                WHEN i <= 20 THEN 'Hai Ba Trung District, Hanoi'
-                WHEN i <= 50 THEN 'Cau Giay District, Hanoi'
-                ELSE 'Long Bien District, Hanoi'
+                WHEN i <= 20 THEN 'Quận Hai Bà Trưng, Hà Nội'
+                WHEN i <= 50 THEN 'Quận Cầu Giấy, Hà Nội'
+                ELSE 'Quận Long Biên, Hà Nội'
             END,
             true,
             false,
@@ -801,8 +801,8 @@ BEGIN
             v_birth_date,
             CASE WHEN i % 2 = 0 THEN 'FEMALE' ELSE 'MALE' END,
             CASE
-                WHEN i % 17 = 0 THEN 'Family requests a front-row seat when available.'
-                WHEN i % 23 = 0 THEN 'Please remind the student before the scheduled stop.'
+                WHEN i % 17 = 0 THEN 'Gia đình mong muốn học sinh ngồi hàng ghế đầu khi còn chỗ.'
+                WHEN i % 23 = 0 THEN 'Vui lòng nhắc học sinh chuẩn bị trước khi đến điểm dừng.'
                 ELSE NULL
             END,
             true,

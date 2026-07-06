@@ -243,7 +243,7 @@ export default function PlanningMapClient({
             <Popup>
               <div>
                 <p className='text-xs font-semibold text-slate-700'>
-                   School
+                   Trường học
                 </p>
                 <p className='font-medium'>{school.name || 'Trường học'}</p>
               </div>
@@ -265,7 +265,7 @@ export default function PlanningMapClient({
               <Popup>
                 <div>
                   <p className='text-xs font-semibold text-amber-700'>
-                     Depot
+                     Bãi xe
                   </p>
                   <p className='font-medium'>{d.name}</p>
                   {d.address && (
@@ -294,11 +294,11 @@ export default function PlanningMapClient({
               <Popup>
                 <div>
                   <p className='text-xs font-semibold text-sky-700'>
-                     Pickup point
+                     Điểm đón/trả
                   </p>
                   <p className='font-medium'>{pp.pickupPointName}</p>
                   <p className='text-xs text-slate-500'>
-                    {pp.studentCount} student(s)
+                    {pp.studentCount} học sinh
                   </p>
                 </div>
               </Popup>
@@ -333,15 +333,15 @@ export default function PlanningMapClient({
                 <Popup>
                   <div>
                     <p className='text-xs font-semibold text-indigo-700'>
-                      Stop {idx + 1}
+                      Điểm dừng {idx + 1}
                     </p>
                     <p className='font-medium'>
                       {stop.pickupPointName ||
                         stop.displayName ||
-                        `Stop #${stop.id}`}
+                        `Điểm dừng #${stop.id}`}
                     </p>
                     <p className='text-xs text-slate-500'>
-                      {stop.estimatedStudentCount || 0} student(s)
+                      {stop.estimatedStudentCount || 0} học sinh
                     </p>
                   </div>
                 </Popup>

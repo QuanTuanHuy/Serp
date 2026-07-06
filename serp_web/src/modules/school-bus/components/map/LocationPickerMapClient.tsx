@@ -47,7 +47,7 @@ export default function LocationPickerMapClient({
   onChange,
   onAddressResolved,
   referenceMarkers = [],
-  title = 'Pin location',
+  title = 'Ghim vị trí',
   kind = 'pickup',
 }: LocationPickerMapClientProps) {
   const [reverseLocation] = useLazyReverseMapLocationQuery();
@@ -69,7 +69,7 @@ export default function LocationPickerMapClient({
         onAddressResolved(response.data.displayName);
       }
     } catch {
-      toast.error('Reverse geocoding is unavailable for this location');
+      toast.error('Không thể lấy địa chỉ cho vị trí này');
     }
   };
 
@@ -96,7 +96,7 @@ export default function LocationPickerMapClient({
       <div>
         <p className='text-sm font-semibold text-slate-950'>{title}</p>
         <p className='mt-1 text-xs text-slate-500'>
-          Search, click, or drag the marker to update coordinates.
+          Tìm kiếm, bấm trên bản đồ hoặc kéo marker để cập nhật tọa độ.
         </p>
       </div>
 
@@ -175,7 +175,7 @@ export default function LocationPickerMapClient({
                   },
                 }}
               >
-                <Popup>Selected location</Popup>
+                <Popup>Vị trí đã chọn</Popup>
               </Marker>
             ) : null}
           </LeafletMapShell>
@@ -184,16 +184,16 @@ export default function LocationPickerMapClient({
         panel={
           <div className='space-y-3'>
             <p className='text-sm font-semibold text-slate-950'>
-              OpenStreetMap search
+              Tìm kiếm trên OpenStreetMap
             </p>
             <NominatimSearchBox onSelect={handleSearchSelect} />
             <div className='rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600'>
               <p>
-                Latitude:{' '}
+                Vĩ độ:{' '}
                 {selectedLocation ? selectedLocation[0].toFixed(6) : 'Chưa thiết lập'}
               </p>
               <p>
-                Longitude:{' '}
+                Kinh độ:{' '}
                 {selectedLocation ? selectedLocation[1].toFixed(6) : 'Chưa thiết lập'}
               </p>
             </div>

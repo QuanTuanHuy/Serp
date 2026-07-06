@@ -39,13 +39,13 @@ const TRIP_OPTION_LABELS: Record<string, string> = {
 };
 
 const DAY_KEYS = [
-  { key: 'monday', label: 'Mon' },
-  { key: 'tuesday', label: 'Tue' },
-  { key: 'wednesday', label: 'Wed' },
-  { key: 'thursday', label: 'Thu' },
-  { key: 'friday', label: 'Fri' },
-  { key: 'saturday', label: 'Sat' },
-  { key: 'sunday', label: 'Sun' },
+  { key: 'monday', label: 'T2' },
+  { key: 'tuesday', label: 'T3' },
+  { key: 'wednesday', label: 'T4' },
+  { key: 'thursday', label: 'T5' },
+  { key: 'friday', label: 'T6' },
+  { key: 'saturday', label: 'T7' },
+  { key: 'sunday', label: 'CN' },
 ] as const;
 
 interface SchoolBusSubscriptionDetailPageProps {
@@ -75,7 +75,7 @@ export function SchoolBusSubscriptionDetailPage({
           : action === 'pause'
             ? await pauseSubscription(subscriptionId).unwrap()
             : await stopSubscription(subscriptionId).unwrap();
-      toast.success(response.message || `Subscription ${action}d successfully`);
+      toast.success(response.message || 'Đã cập nhật đăng ký dịch vụ');
     } catch (error: any) {
       toast.error(error?.data?.message || 'Không thể cập nhật đăng ký');
     }
@@ -84,14 +84,14 @@ export function SchoolBusSubscriptionDetailPage({
   if (isLoading) {
     return (
       <SchoolBusPageShell
-        title='Subscription Detail'
+        title='Chi tiết đăng ký dịch vụ'
         description='Đang tải chi tiết đăng ký xe bus...'
       >
         <div className='flex h-[400px] items-center justify-center'>
           <div className='flex flex-col items-center gap-3'>
             <div className='h-8 w-8 animate-spin rounded-full border-2 border-[#C81E3A] border-t-transparent' />
             <p className='text-xs text-slate-500 font-medium'>
-              Fetching subscription contract data...
+              Đang tải dữ liệu đăng ký dịch vụ...
             </p>
           </div>
         </div>
@@ -102,19 +102,19 @@ export function SchoolBusSubscriptionDetailPage({
   if (!sub) {
     return (
       <SchoolBusPageShell
-        title='Subscription Detail'
-        description='Could not view transport subscription'
+        title='Chi tiết đăng ký dịch vụ'
+        description='Không thể xem đăng ký dịch vụ xe bus'
       >
         <div className='py-12 flex flex-col items-center gap-4'>
           <SchoolBusEmptyState
-            title='Subscription Not Found'
-            description='This subscription contract may have been deleted, or you might not have access to it.'
+            title='Không tìm thấy đăng ký dịch vụ'
+            description='Đăng ký này có thể đã bị xóa hoặc bạn không có quyền truy cập.'
             icon={AlertCircle}
           />
           <Link href='/school-bus/subscriptions'>
             <Button variant='outline' className='gap-2 rounded-xl'>
               <ArrowLeft className='h-4 w-4' />
-              Back to Subscriptions
+              Quay lại danh sách đăng ký
             </Button>
           </Link>
         </div>
@@ -170,7 +170,7 @@ export function SchoolBusSubscriptionDetailPage({
   const descriptionNode = (
     <div className='space-y-1.5 mt-1'>
       <p className='text-sm text-slate-500 font-medium'>
-        Long-term transport service for student{' '}
+        Dịch vụ xe bus dài hạn của học sinh{' '}
         <span className='font-bold text-slate-800'>{sub.studentName}</span>
       </p>
       {/* Metadata row */}
@@ -183,8 +183,8 @@ export function SchoolBusSubscriptionDetailPage({
         <span>{TRIP_OPTION_LABELS[sub.tripOption] || sub.tripOption}</span>
         <span>-</span>
         <span>
-          Effective: {formatDate(sub.effectiveFrom)} -{' '}
-          {sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Ongoing'}
+          Hiệu lực: {formatDate(sub.effectiveFrom)} -{' '}
+          {sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Đang áp dụng'}
         </span>
       </div>
     </div>
@@ -198,7 +198,7 @@ export function SchoolBusSubscriptionDetailPage({
           className='h-9 rounded-xl gap-2 font-bold text-slate-600 border-slate-200 hover:bg-slate-50'
         >
           <ArrowLeft className='h-4 w-4' />
-          Back
+          Quay lại
         </Button>
       </Link>
 
@@ -214,7 +214,7 @@ export function SchoolBusSubscriptionDetailPage({
                 className='h-9 rounded-xl border-amber-200 hover:bg-amber-50 text-amber-700 font-bold gap-1.5'
               >
                 <PauseCircle className='h-4 w-4' />
-                Pause
+                Tạm dừng
               </Button>
               <Button
                 variant='outline'
@@ -223,7 +223,7 @@ export function SchoolBusSubscriptionDetailPage({
                 className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
               >
                 <StopCircle className='h-4 w-4' />
-                Stop
+                Dừng
               </Button>
             </>
           )}
@@ -237,7 +237,7 @@ export function SchoolBusSubscriptionDetailPage({
                 className='h-9 rounded-xl border-emerald-200 hover:bg-emerald-50 text-emerald-700 font-bold gap-1.5'
               >
                 <PlayCircle className='h-4 w-4' />
-                Resume
+                Kích hoạt lại
               </Button>
               <Button
                 variant='outline'
@@ -246,7 +246,7 @@ export function SchoolBusSubscriptionDetailPage({
                 className='h-9 rounded-xl border-red-200 hover:bg-red-50 text-red-600 font-bold gap-1.5'
               >
                 <StopCircle className='h-4 w-4' />
-                Stop
+                Dừng
               </Button>
             </>
           )}
@@ -257,14 +257,14 @@ export function SchoolBusSubscriptionDetailPage({
 
   return (
     <SchoolBusPageShell
-      title={`Subscription ${sub.subscriptionCode}`}
+      title={`Đăng ký ${sub.subscriptionCode}`}
       description={descriptionNode}
       breadcrumb={
         <SchoolBusBreadcrumb
           items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
             { label: 'Đăng ký', href: '/school-bus/subscriptions' },
-            { label: sub.subscriptionCode || 'Detail', current: true },
+            { label: sub.subscriptionCode || 'Chi tiết', current: true },
           ]}
         />
       }
@@ -335,11 +335,10 @@ export function SchoolBusSubscriptionDetailPage({
               <Info className='mt-0.5 h-5 w-5 text-amber-600 shrink-0' />
               <div>
                 <h4 className='font-bold text-sm text-amber-950'>
-                  Needs configuration
+                  Cần bổ sung cấu hình
                 </h4>
                 <p className='text-xs text-amber-850 mt-0.5 leading-relaxed font-medium'>
-                  Some pickup/drop-off, window or coordinate settings must be
-                  configured before planning.
+                  Cần cấu hình đầy đủ điểm đón/trả hoặc tọa độ trước khi lập tuyến.
                 </p>
               </div>
             </div>
@@ -351,12 +350,12 @@ export function SchoolBusSubscriptionDetailPage({
           {/* Main Column */}
           <div className='lg:col-span-8 space-y-6'>
             {/* Service Overview */}
-            <SchoolBusSection title='Service overview'>
+            <SchoolBusSection title='Tổng quan dịch vụ'>
               <div className='p-5 bg-white rounded-2xl border border-slate-200 shadow-sm'>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4'>
                   <div className='space-y-1'>
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>
-                      Student
+                      Học sinh
                     </span>
                     <div className='flex items-center gap-2'>
                       <div className='flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-50 text-violet-600 border border-violet-100'>
@@ -369,25 +368,25 @@ export function SchoolBusSubscriptionDetailPage({
                   </div>
                   <div className='space-y-1'>
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>
-                      Student Code
+                      Mã học sinh
                     </span>
                     <span className='text-sm font-semibold text-slate-700 font-mono'>
-                      {sub.studentCode || 'N/A'}
+                      {sub.studentCode || 'Chưa có'}
                     </span>
                   </div>
                   {!access.isParentOnly && (
                     <div className='space-y-1'>
                       <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>
-                        Parent
+                        Phụ huynh
                       </span>
                       <span className='text-sm font-semibold text-slate-700'>
-                        {sub.parentName || 'N/A'}
+                        {sub.parentName || 'Chưa có'}
                       </span>
                     </div>
                   )}
                   <div className='space-y-1'>
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>
-                      School
+                      Trường học
                     </span>
                     <div className='flex items-center gap-2'>
                       <div className='flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 border border-blue-100'>
@@ -400,10 +399,10 @@ export function SchoolBusSubscriptionDetailPage({
                   </div>
                   <div className='space-y-1 md:col-span-2'>
                     <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block'>
-                      School Code
+                      Mã trường
                     </span>
                     <span className='text-sm font-semibold text-slate-700 font-mono'>
-                      {sub.schoolCode || 'N/A'}
+                      {sub.schoolCode || 'Chưa có'}
                     </span>
                   </div>
                 </div>
@@ -411,11 +410,11 @@ export function SchoolBusSubscriptionDetailPage({
             </SchoolBusSection>
 
             {/* Transport Configuration */}
-            <SchoolBusSection title='Transport configuration'>
+            <SchoolBusSection title='Cấu hình đưa đón'>
               <div className='p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4'>
                 <div>
                   <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1'>
-                    Trip Option
+                    Phương án đi xe
                   </span>
                   <span className='inline-flex items-center rounded-lg border border-blue-100 bg-blue-50/50 px-2.5 py-1 text-xs font-bold text-blue-700'>
                     {TRIP_OPTION_LABELS[sub.tripOption] || sub.tripOption}
@@ -430,7 +429,7 @@ export function SchoolBusSubscriptionDetailPage({
                         P
                       </span>
                       <h4 className='text-xs font-bold text-slate-500 uppercase tracking-wider'>
-                        Pickup Point
+                        Điểm đón
                       </h4>
                     </div>
                     {sub.pickupPointName ? (
@@ -439,12 +438,12 @@ export function SchoolBusSubscriptionDetailPage({
                           {sub.pickupPointName}
                         </p>
                         <p className='text-[10px] text-slate-400 font-mono mt-1'>
-                          Code: {sub.pickupPointCode || 'N/A'}
+                          Mã: {sub.pickupPointCode || 'Chưa có'}
                         </p>
                       </div>
                     ) : (
                       <p className='text-sm font-semibold text-amber-600 italic bg-amber-50/60 px-2.5 py-1.5 rounded-lg border border-amber-100/30 inline-block'>
-                        Missing configuration
+                        Thiếu cấu hình
                       </p>
                     )}
                   </div>
@@ -456,7 +455,7 @@ export function SchoolBusSubscriptionDetailPage({
                         D
                       </span>
                       <h4 className='text-xs font-bold text-slate-500 uppercase tracking-wider'>
-                        Drop-off Point
+                        Điểm trả
                       </h4>
                     </div>
                     {sub.dropoffPointName ? (
@@ -465,12 +464,12 @@ export function SchoolBusSubscriptionDetailPage({
                           {sub.dropoffPointName}
                         </p>
                         <p className='text-[10px] text-slate-400 font-mono mt-1'>
-                          Code: {sub.dropoffPointCode || 'N/A'}
+                          Mã: {sub.dropoffPointCode || 'Chưa có'}
                         </p>
                       </div>
                     ) : (
                       <p className='text-sm font-semibold text-amber-600 italic bg-amber-50/60 px-2.5 py-1.5 rounded-lg border border-amber-100/30 inline-block'>
-                        Missing configuration
+                        Thiếu cấu hình
                       </p>
                     )}
                   </div>
@@ -479,11 +478,11 @@ export function SchoolBusSubscriptionDetailPage({
             </SchoolBusSection>
 
             {/* Active days */}
-            <SchoolBusSection title='Active days'>
+            <SchoolBusSection title='Ngày hoạt động'>
               <div className='p-5 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4'>
                 <div>
                   <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2'>
-                    Active Days
+                    Ngày hoạt động
                   </span>
                   <div className='flex flex-wrap gap-1.5'>
                     {DAY_KEYS.map(({ key, label }) => {
@@ -543,7 +542,7 @@ export function SchoolBusSubscriptionDetailPage({
                         <span className='text-amber-500 font-bold'>Cảnh báo:</span>
                       )}
                       <span className='text-slate-500 font-medium'>
-                        Subscription status is Active
+                        Trạng thái đăng ký đang hoạt động
                       </span>
                       <span className='ml-auto text-slate-700'>
                         {isStatusActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
@@ -553,57 +552,56 @@ export function SchoolBusSubscriptionDetailPage({
                     {/* 2. Effective date check */}
                     <div className='flex items-center gap-2'>
                       {isDateValid ? (
-                        <span className='text-emerald-600 font-bold'>OK</span>
+                        <span className='text-emerald-600 font-bold'>Đạt</span>
                       ) : (
-                        <span className='text-amber-500 font-bold'>Warning:</span>
+                        <span className='text-amber-500 font-bold'>Cảnh báo:</span>
                       )}
                       <span className='text-slate-500 font-medium'>
-                        Effective date validity
+                        Thời hạn hiệu lực hợp lệ
                       </span>
                       <span className='ml-auto text-slate-700'>
                         {isDateValid
-                          ? 'Within service period'
-                          : 'Outside period'}
+                          ? 'Trong thời gian phục vụ'
+                          : 'Ngoài thời gian phục vụ'}
                       </span>
                     </div>
 
                     {/* 3. Days selected check */}
                     <div className='flex items-center gap-2'>
                       {hasDays ? (
-                        <span className='text-emerald-600 font-bold'>OK</span>
+                        <span className='text-emerald-600 font-bold'>Đạt</span>
                       ) : (
-                        <span className='text-amber-500 font-bold'>Warning:</span>
+                        <span className='text-amber-500 font-bold'>Cảnh báo:</span>
                       )}
                       <span className='text-slate-500 font-medium'>
-                        Active routing days defined
+                        Đã khai báo ngày chạy tuyến
                       </span>
                       <span className='ml-auto text-slate-700'>
-                        {hasDays ? 'Yes' : 'Chưa chọn ngày'}
+                        {hasDays ? 'Có' : 'Chưa chọn ngày'}
                       </span>
                     </div>
 
                     {/* 4. Points configured check */}
                     <div className='flex items-center gap-2'>
                       {pickupPointConfigured && dropoffPointConfigured ? (
-                        <span className='text-emerald-600 font-bold'>OK</span>
+                        <span className='text-emerald-600 font-bold'>Đạt</span>
                       ) : (
-                        <span className='text-amber-500 font-bold'>Warning:</span>
+                        <span className='text-amber-500 font-bold'>Cảnh báo:</span>
                       )}
                       <span className='text-slate-500 font-medium'>
-                        Pickup/drop-off points configured
+                        Đã cấu hình điểm đón/trả
                       </span>
                       <span className='ml-auto text-slate-700'>
                         {pickupPointConfigured && dropoffPointConfigured
-                          ? 'Configured'
-                          : 'Missing points'}
+                          ? 'Đã cấu hình'
+                          : 'Thiếu điểm đón/trả'}
                       </span>
                     </div>
                   </div>
 
                   <div className='rounded-xl bg-slate-50 p-3 text-slate-500 text-[11px] font-semibold leading-relaxed border border-slate-200/60'>
-                    Warning: Detailed route planning compatibility (such as
-                    coordinates and school link compatibility) will be evaluated
-                    during the route planning phase.
+                    Lưu ý: khả năng tham gia lập tuyến chi tiết, như tọa độ và liên kết
+                    với trường học, sẽ được kiểm tra trong giai đoạn lập tuyến.
                   </div>
                 </div>
               </SchoolBusSection>
@@ -615,12 +613,12 @@ export function SchoolBusSubscriptionDetailPage({
             {/* Quick Summary Card */}
             <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
               <h3 className='text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100'>
-                Quick Summary
+                Tóm tắt nhanh
               </h3>
               <div className='space-y-3.5 text-sm'>
                 <div>
                   <span className='text-[10px] text-slate-400 font-bold block mb-0.5 uppercase tracking-wide'>
-                    Subscription Code
+                    Mã đăng ký
                   </span>
                   <span className='font-mono font-bold text-slate-900'>
                     {sub.subscriptionCode}
@@ -628,7 +626,7 @@ export function SchoolBusSubscriptionDetailPage({
                 </div>
                 <div>
                   <span className='text-[10px] text-slate-400 font-bold block mb-0.5 uppercase tracking-wide'>
-                    Status
+                    Trạng thái
                   </span>
                   <SchoolBusStatusBadge
                     status={sub.status}
@@ -637,7 +635,7 @@ export function SchoolBusSubscriptionDetailPage({
                 </div>
                 <div>
                   <span className='text-[10px] text-slate-400 font-bold block mb-0.5 uppercase tracking-wide'>
-                    Effective From
+                    Hiệu lực từ
                   </span>
                   <span className='font-semibold text-slate-700'>
                     {formatDate(sub.effectiveFrom)}
@@ -645,10 +643,10 @@ export function SchoolBusSubscriptionDetailPage({
                 </div>
                 <div>
                   <span className='text-[10px] text-slate-400 font-bold block mb-0.5 uppercase tracking-wide'>
-                    Effective To
+                    Hiệu lực đến
                   </span>
                   <span className='font-semibold text-slate-700'>
-                    {sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Ongoing'}
+                    {sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Đang áp dụng'}
                   </span>
                 </div>
               </div>
@@ -658,12 +656,12 @@ export function SchoolBusSubscriptionDetailPage({
             {sub.sourceRequestId && (
               <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3'>
                 <h3 className='text-xs font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-slate-100'>
-                  Source Request
+                  Yêu cầu nguồn
                 </h3>
                 <div className='space-y-3'>
                   <div>
                     <span className='text-[10px] text-slate-400 font-bold block mb-0.5 uppercase tracking-wide'>
-                      Request Code
+                      Mã yêu cầu
                     </span>
                     <span className='font-semibold text-slate-900'>
                       {sub.sourceRequestCode || `REQ-${sub.sourceRequestId}`}
@@ -671,7 +669,7 @@ export function SchoolBusSubscriptionDetailPage({
                   </div>
                   <div>
                     <span className='text-[10px] text-slate-400 font-bold block mb-0.5 uppercase tracking-wide'>
-                      Request ID
+                      ID yêu cầu
                     </span>
                     <span className='font-semibold text-slate-700 font-mono text-xs'>
                       #{sub.sourceRequestId}
@@ -683,7 +681,7 @@ export function SchoolBusSubscriptionDetailPage({
                         variant='outline'
                         className='h-8 text-xs rounded-xl font-bold border-slate-200 text-slate-700 hover:bg-slate-50 w-full'
                       >
-                        View source request
+                        Xem yêu cầu nguồn
                       </Button>
                     </Link>
                   </div>

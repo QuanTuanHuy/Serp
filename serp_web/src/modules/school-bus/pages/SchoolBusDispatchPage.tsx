@@ -157,12 +157,12 @@ export function SchoolBusDispatchPage() {
 
   return (
     <SchoolBusPageShell
-      title='Dispatch board'
-      description='Plan, inspect, and move routes through the core execution lifecycle.'
+      title='Bảng điều phối'
+      description='Lập kế hoạch, kiểm tra và chuyển tuyến qua các bước vận hành chính.'
       breadcrumb={
         <SchoolBusBreadcrumb
           items={[
-            { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+            { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
             { label: 'Điều phối', current: true },
           ]}
         />
@@ -174,7 +174,7 @@ export function SchoolBusDispatchPage() {
         >
           <Link href='/school-bus/dispatch/planning'>
             <Plus className='h-4 w-4' />
-            Plan routes
+            Lập tuyến
           </Link>
         </Button>
       }
@@ -183,23 +183,23 @@ export function SchoolBusDispatchPage() {
         {/* Metrics Row */}
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
-            label='Routes available'
+            label='Tuyến khả dụng'
             value={routes.length}
-            hint='Current route plans in the tenant'
+            hint='Các tuyến hiện có trong đơn vị'
             icon={Route}
             tone='info'
           />
           <SchoolBusMetricCard
-            label='Ready / assigned'
+            label='Sẵn sàng / đã phân công'
             value={plannedRoutes}
-            hint='Routes not yet started but close to execution'
+            hint='Tuyến chưa chạy nhưng đã gần đủ điều kiện vận hành'
             icon={Map}
             tone='warning'
           />
           <SchoolBusMetricCard
-            label='Trip created'
+            label='Đã tạo chuyến'
             value={dispatchedRoutes}
-            hint='Routes with a trip snapshot locked for execution'
+            hint='Tuyến đã có chuyến vận hành được tạo'
             icon={PlayCircle}
             tone='success'
           />
@@ -217,11 +217,11 @@ export function SchoolBusDispatchPage() {
             <div className='flex flex-col gap-1 pb-2 border-b border-slate-100'>
               <h2 className='text-lg font-bold text-slate-950 flex items-center gap-2'>
                 <Route className='h-5 w-5 text-indigo-600' />
-                Execution board
+                Bảng vận hành
               </h2>
               <p className='text-xs text-slate-500'>
-                Quick actions remain on the list page, while detail pages cover
-                assignment and deeper route inspection.
+                Thao tác nhanh nằm ở danh sách, trang chi tiết dùng để phân
+                công và kiểm tra tuyến sâu hơn.
               </p>
             </div>
 
@@ -297,8 +297,8 @@ export function SchoolBusDispatchPage() {
                           )}
                         >
                           {route.routeDirection === 'RETURN'
-                            ? 'Return'
-                            : 'Outbound'}
+                            ? 'Về nhà'
+                            : 'Đến trường'}
                         </span>
                       </div>
                     </div>
@@ -311,7 +311,7 @@ export function SchoolBusDispatchPage() {
                         </div>
                         <div className='min-w-0'>
                           <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>
-                            Start Point
+                            Điểm xuất phát
                           </p>
                           <p className='font-semibold text-slate-800 truncate mt-0.5'>
                             {route.startLocationName || 'Chưa thiết lập'}
@@ -324,7 +324,7 @@ export function SchoolBusDispatchPage() {
                         </div>
                         <div className='min-w-0'>
                           <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>
-                            End Point
+                            Điểm kết thúc
                           </p>
                           <p className='font-semibold text-slate-800 truncate mt-0.5'>
                             {route.endLocationName || 'Chưa thiết lập'}
@@ -383,7 +383,7 @@ export function SchoolBusDispatchPage() {
                         <span>
                           Thời lượng:{' '}
                           <strong className='text-slate-700'>
-                            {route.plannedDurationMin || 0} mins
+                            {route.plannedDurationMin || 0} phút
                           </strong>
                         </span>
                         {route.startedAt && (
@@ -414,7 +414,7 @@ export function SchoolBusDispatchPage() {
                               href={`/school-bus/dispatch/${route.id}?assign=true`}
                             >
                               <UserCog className='h-3.5 w-3.5' />
-                              Assign
+                              Phân công
                             </Link>
                           </Button>
                         ) : (
@@ -482,8 +482,7 @@ export function SchoolBusDispatchPage() {
                 Bản đồ xem trước tuyến
               </h2>
               <p className='text-xs text-slate-500'>
-                Selected route rendered with fixed start, stops, fixed end, and
-                stop-order polyline.
+                Tuyến xe đã chọn hiển thị với điểm đầu, điểm cuối, các điểm đón trả và đường đi theo thứ tự.
               </p>
             </div>
 
@@ -581,10 +580,10 @@ export function SchoolBusDispatchPage() {
                             </div>
                             <div>
                               <p className='text-[10px] font-semibold text-slate-400 leading-none'>
-                                Stops Count
+                                Số điểm dừng
                               </p>
                               <p className='font-medium text-slate-700 mt-0.5'>
-                                {routePreviewData.stops.length} stop(s)
+                                {routePreviewData.stops.length} điểm
                               </p>
                             </div>
                           </div>
@@ -595,7 +594,7 @@ export function SchoolBusDispatchPage() {
                             </div>
                             <div>
                               <p className='text-[10px] font-semibold text-slate-400 leading-none'>
-                                Status
+                                Trạng thái
                               </p>
                               <div className='mt-0.5'>
                                 <RouteStatusBadge
@@ -612,12 +611,12 @@ export function SchoolBusDispatchPage() {
                       {/* Route Metrics */}
                       <div>
                         <h3 className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5'>
-                          Route Metrics
+                          Thông số tuyến
                         </h3>
                         <div className='grid grid-cols-2 gap-2 text-xs'>
                           <div className='p-2 rounded-lg bg-slate-50 border border-slate-100'>
                             <p className='text-[9px] font-semibold text-slate-400 uppercase tracking-wide'>
-                              Distance
+                              Khoảng cách
                             </p>
                             <p className='font-bold text-slate-800 mt-0.5'>
                               {routePreviewData.route.plannedDistanceKm || 0}{' '}
@@ -626,11 +625,11 @@ export function SchoolBusDispatchPage() {
                           </div>
                           <div className='p-2 rounded-lg bg-slate-50 border border-slate-100'>
                             <p className='text-[9px] font-semibold text-slate-400 uppercase tracking-wide'>
-                              Duration
+                              Thời lượng
                             </p>
                             <p className='font-bold text-slate-800 mt-0.5'>
                               {routePreviewData.route.plannedDurationMin || 0}{' '}
-                              mins
+                              phút
                             </p>
                           </div>
                         </div>
@@ -642,11 +641,10 @@ export function SchoolBusDispatchPage() {
                       {selectedRouteMissingCoordinates > 0 && (
                         <div className='rounded-lg border border-amber-200 bg-amber-50/50 p-2.5 text-xs text-amber-700 leading-normal'>
                           <p className='font-semibold'>
-                            Warning: {selectedRouteMissingCoordinates} stop(s) missing
-                            coordinates.
+                            Cảnh báo: {selectedRouteMissingCoordinates} điểm dừng thiếu tọa độ.
                           </p>
                           <p className='text-[10px] text-amber-600 mt-0.5'>
-                            Route path renders only plotted segments.
+                            Đường đi của tuyến chỉ vẽ qua các đoạn có tọa độ.
                           </p>
                         </div>
                       )}
@@ -661,7 +659,7 @@ export function SchoolBusDispatchPage() {
                   Chọn tuyến
                 </h3>
                 <p className='text-xs text-slate-500 max-w-[240px] mt-1'>
-                  Choose a route from the execution board to preview its path.
+                  Chọn một tuyến từ bảng vận hành để xem trước đường đi.
                 </p>
               </div>
             )}

@@ -454,7 +454,7 @@ export function SchoolBusFleetPage() {
       const response = editingBusId
         ? await updateBus({ id: editingBusId, body: values }).unwrap()
         : await createBus(values).unwrap();
-      toast.success(response.message || 'Bus saved');
+      toast.success(response.message || 'Đã lưu thông tin xe buýt');
       setBusDialogOpen(false);
       setEditingBusId(null);
     } catch {
@@ -467,7 +467,7 @@ export function SchoolBusFleetPage() {
       const response = editingDriverId
         ? await updateDriver({ id: editingDriverId, body: values }).unwrap()
         : await createDriver(values).unwrap();
-      toast.success(response.message || 'Driver saved');
+      toast.success(response.message || 'Đã lưu thông tin tài xế');
       setDriverDialogOpen(false);
       setEditingDriverId(null);
     } catch {
@@ -485,7 +485,7 @@ export function SchoolBusFleetPage() {
             body: values,
           }).unwrap()
         : await createAttendant(values).unwrap();
-      toast.success(response.message || 'Attendant saved');
+      toast.success(response.message || 'Đã lưu thông tin phụ xe');
       setAttendantDialogOpen(false);
       setEditingAttendantId(null);
     } catch {
@@ -498,7 +498,7 @@ export function SchoolBusFleetPage() {
       const response = editingDepotId
         ? await updateDepot({ id: editingDepotId, body: values }).unwrap()
         : await createDepot(values).unwrap();
-      toast.success(response.message || 'Depot saved');
+      toast.success(response.message || 'Đã lưu bãi xe');
       setDepotDialogOpen(false);
       setEditingDepotId(null);
     } catch {
@@ -511,16 +511,16 @@ export function SchoolBusFleetPage() {
     try {
       if (deleteTarget.type === 'bus') {
         const response = await deleteBus(deleteTarget.entity.id).unwrap();
-        toast.success(response.message || 'Bus deleted');
+        toast.success(response.message || 'Đã xóa thông tin xe buýt');
       } else if (deleteTarget.type === 'driver') {
         const response = await deleteDriver(deleteTarget.entity.id).unwrap();
-        toast.success(response.message || 'Driver deleted');
+        toast.success(response.message || 'Đã xóa thông tin tài xế');
       } else if (deleteTarget.type === 'attendant') {
         const response = await deleteAttendant(deleteTarget.entity.id).unwrap();
-        toast.success(response.message || 'Attendant deleted');
+        toast.success(response.message || 'Đã xóa thông tin phụ xe');
       } else {
         const response = await deleteDepot(deleteTarget.entity.id).unwrap();
-        toast.success(response.message || 'Depot deleted');
+        toast.success(response.message || 'Đã xóa bãi xe');
       }
       setDeleteTarget(null);
     } catch {
@@ -561,7 +561,7 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'type',
-      header: 'Type',
+      header: 'Loại xe',
       render: (bus) => (
         <span className='text-xs font-semibold text-slate-600 bg-slate-50 px-2 py-1 rounded-md border border-slate-100'>
           {formatBusType(bus.busType)}
@@ -570,16 +570,16 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'capacity',
-      header: 'Capacity',
+      header: 'Sức chứa',
       render: (bus) => (
         <span className='text-xs text-slate-700 font-medium'>
-          {bus.capacity} seats
+          {bus.capacity} chỗ
         </span>
       ),
     },
     {
       key: 'depot',
-      header: 'Home depot',
+      header: 'Bãi xe mặc định',
       render: (bus) =>
         bus.homeDepotName ? (
           <span className='text-sm text-slate-700 font-semibold'>
@@ -591,7 +591,7 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'assignment',
-      header: 'Assignment',
+      header: 'Phân công',
       render: () => <UnassignedBadge />,
     },
     {
@@ -648,7 +648,7 @@ export function SchoolBusFleetPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search plate or depot...'
+          placeholder='Tìm biển số hoặc bãi xe...'
           value={busSearch}
           onChange={(e) => setBusSearch(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
@@ -657,19 +657,19 @@ export function SchoolBusFleetPage() {
       <SchoolBusSelect
         value={busStatusFilter}
         onChange={setBusStatusFilter}
-        placeholder='All statuses'
+        placeholder='Tất cả trạng thái'
         options={[
-          { label: 'Available', value: 'AVAILABLE' },
-          { label: 'In use', value: 'IN_USE' },
-          { label: 'Maintenance', value: 'MAINTENANCE' },
-          { label: 'Retired', value: 'RETIRED' },
+          { label: 'Sẵn sàng', value: 'AVAILABLE' },
+          { label: 'Đang sử dụng', value: 'IN_USE' },
+          { label: 'Bảo trì', value: 'MAINTENANCE' },
+          { label: 'Ngừng sử dụng', value: 'RETIRED' },
         ]}
         clearable
       />
       <SchoolBusSelect
         value={busDepotFilter}
         onChange={setBusDepotFilter}
-        placeholder='All depots'
+        placeholder='Tất cả bãi xe'
         icon={Warehouse}
         options={depots.map((d) => ({ label: d.name, value: String(d.id) }))}
         clearable
@@ -695,7 +695,7 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'phone',
-      header: 'Phone',
+      header: 'Số điện thoại',
       render: (driver) =>
         driver.phone ? (
           <span className='text-sm text-slate-700 font-medium'>
@@ -707,10 +707,10 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'linkedUser',
-      header: 'Linked account',
+      header: 'Tài khoản liên kết',
       render: (driver) => (
         <span className='text-xs font-semibold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100'>
-          {driver.user?.email || 'Local profile'}
+          {driver.user?.email || 'Hồ sơ nội bộ'}
         </span>
       ),
     },
@@ -771,7 +771,7 @@ export function SchoolBusFleetPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search driver...'
+          placeholder='Tìm tài xế...'
           value={driverSearch}
           onChange={(e) => setDriverSearch(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
@@ -780,7 +780,7 @@ export function SchoolBusFleetPage() {
       <SchoolBusSelect
         value={driverStatusFilter}
         onChange={setDriverStatusFilter}
-        placeholder='All statuses'
+        placeholder='Tất cả trạng thái'
         options={[
           { label: 'Đang hoạt động', value: 'active' },
           { label: 'Ngừng hoạt động', value: 'inactive' },
@@ -807,7 +807,7 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'phone',
-      header: 'Phone',
+      header: 'Số điện thoại',
       render: (attendant) =>
         attendant.phone ? (
           <span className='text-sm text-slate-700 font-medium'>
@@ -819,7 +819,7 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'assignment',
-      header: 'Assignment',
+      header: 'Phân công',
       render: () => <UnassignedBadge />,
     },
     {
@@ -881,7 +881,7 @@ export function SchoolBusFleetPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search attendant...'
+          placeholder='Tìm phụ xe...'
           value={attendantSearch}
           onChange={(e) => setAttendantSearch(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
@@ -890,7 +890,7 @@ export function SchoolBusFleetPage() {
       <SchoolBusSelect
         value={attendantStatusFilter}
         onChange={setAttendantStatusFilter}
-        placeholder='All statuses'
+        placeholder='Tất cả trạng thái'
         options={[
           { label: 'Đang hoạt động', value: 'active' },
           { label: 'Ngừng hoạt động', value: 'inactive' },
@@ -924,7 +924,7 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'address',
-      header: 'Address',
+      header: 'Địa chỉ',
       render: (depot) =>
         depot.address ? (
           <span className='text-sm text-slate-600 font-semibold'>
@@ -936,7 +936,7 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'phone',
-      header: 'Contact phone',
+      header: 'Số điện thoại liên hệ',
       render: (depot) =>
         depot.contactPhone ? (
           <span className='text-sm text-slate-700 font-medium'>
@@ -948,14 +948,14 @@ export function SchoolBusFleetPage() {
     },
     {
       key: 'coordinates',
-      header: 'Coordinates',
+      header: 'Tọa độ',
       render: (depot) =>
         depot.latitude && depot.longitude ? (
           <span className='inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-600/15'>
             <MapPin className='h-3.5 w-3.5' /> Set
           </span>
         ) : (
-          <WarningBadge label='Missing coordinates' />
+          <WarningBadge label='Thiếu tọa độ' />
         ),
     },
     {
@@ -1015,7 +1015,7 @@ export function SchoolBusFleetPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search depot...'
+          placeholder='Tìm bãi xe...'
           value={depotSearch}
           onChange={(e) => setDepotSearch(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
@@ -1024,10 +1024,10 @@ export function SchoolBusFleetPage() {
       <SchoolBusSelect
         value={depotCoordsFilter}
         onChange={setDepotCoordsFilter}
-        placeholder='All coordinates'
+        placeholder='Tất cả tọa độ'
         options={[
-          { label: 'Has coordinates', value: 'set' },
-          { label: 'Missing coordinates', value: 'missing' },
+          { label: 'Đã có tọa độ', value: 'set' },
+          { label: 'Thiếu tọa độ', value: 'missing' },
         ]}
         clearable
       />
@@ -1039,13 +1039,13 @@ export function SchoolBusFleetPage() {
   return (
     <>
       <SchoolBusPageShell
-        title='Fleet & crew status'
-        description='Operational fleet overview - vehicle availability, crew licensing, and depot configuration.'
+        title='Trạng thái phương tiện và nhân sự'
+        description='Tổng quan vận hành phương tiện, nhân sự và cấu hình bãi xe.'
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Fleet & Crew', current: true },
+              { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
+              { label: 'Phương tiện và nhân sự', current: true },
             ]}
           />
         }
@@ -1055,7 +1055,7 @@ export function SchoolBusFleetPage() {
               <DropdownMenuTrigger asChild>
                 <Button variant='outline' className='rounded-full'>
                   <Plus className='h-4 w-4' />
-                  Add resource
+                  Thêm dữ liệu
                   <ChevronDown className='ml-1 h-3 w-3' />
                 </Button>
               </DropdownMenuTrigger>
@@ -1066,7 +1066,7 @@ export function SchoolBusFleetPage() {
                     setDriverDialogOpen(true);
                   }}
                 >
-                  <UserCog className='h-4 w-4' /> Add driver
+                  <UserCog className='h-4 w-4' /> Thêm tài xế
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
@@ -1074,7 +1074,7 @@ export function SchoolBusFleetPage() {
                     setAttendantDialogOpen(true);
                   }}
                 >
-                  <ShieldCheck className='h-4 w-4' /> Add attendant
+                  <ShieldCheck className='h-4 w-4' /> Thêm phụ xe
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
@@ -1082,7 +1082,7 @@ export function SchoolBusFleetPage() {
                     setDepotDialogOpen(true);
                   }}
                 >
-                  <Warehouse className='h-4 w-4' /> Add depot
+                  <Warehouse className='h-4 w-4' /> Thêm bãi xe
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1093,7 +1093,7 @@ export function SchoolBusFleetPage() {
                 setBusDialogOpen(true);
               }}
             >
-              <Plus className='h-4 w-4' /> Add bus
+              <Plus className='h-4 w-4' /> Thêm xe
             </Button>
           </div>
         }
@@ -1102,30 +1102,30 @@ export function SchoolBusFleetPage() {
           {/* Fleet status stats */}
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
             <SchoolBusMetricCard
-              label='Available buses'
+              label='Xe sẵn sàng'
               value={availableBuses}
-              hint={`${buses.length} total registered`}
+              hint={`${buses.length} xe đã đăng ký`}
               icon={Bus}
               tone='info'
             />
             <SchoolBusMetricCard
-              label='Available drivers'
+              label='Tài xế sẵn sàng'
               value={availableDrivers}
-              hint={`${drivers.length} total - ${drivers.length - availableDrivers} unavailable`}
+              hint={`${drivers.length} tổng - ${drivers.length - availableDrivers} không sẵn sàng`}
               icon={UserCog}
               tone='linked'
             />
             <SchoolBusMetricCard
-              label='Available attendants'
+              label='Phụ xe sẵn sàng'
               value={availableAttendants}
-              hint={`${attendants.length} total - ${attendants.length - availableAttendants} unavailable`}
+              hint={`${attendants.length} tổng - ${attendants.length - availableAttendants} không sẵn sàng`}
               icon={ShieldCheck}
               tone='success'
             />
             <SchoolBusMetricCard
-              label='Depots'
+              label='Bãi xe'
               value={depotsPage.length}
-              hint={`${depotsPage.filter((d) => d.latitude && d.longitude).length} with coordinates`}
+              hint={`${depotsPage.filter((d) => d.latitude && d.longitude).length} đã có tọa độ`}
               icon={Warehouse}
               tone='warning'
             />
@@ -1226,13 +1226,13 @@ export function SchoolBusFleetPage() {
                       ? 'Không tìm thấy phụ xe'
                       : 'Không có phụ xe phù hợp với bộ lọc'
                     : depotsPage.length === 0
-                      ? 'Chưa có bãi xes found'
-                      : 'Chưa có bãi xes match current search'
+                      ? 'Không tìm thấy bãi xe'
+                      : 'Không có bãi xe phù hợp với bộ lọc'
             }
             emptyDescription={
               activeTab === 'buses'
                 ? buses.length === 0
-                  ? 'Add the first bus to make assignment possible.'
+                  ? 'Hãy thêm xe bus đầu tiên để hỗ trợ phân công tuyến.'
                   : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
                 : activeTab === 'drivers'
                   ? drivers.length === 0
@@ -1312,7 +1312,7 @@ export function SchoolBusFleetPage() {
           if (!open) setViewTarget(null);
         }}
         title={fleetViewTitle}
-        description='Read-only fleet and crew information loaded from the detail API.'
+        description='Thông tin phương tiện và nhân sự chỉ đọc được tải từ API chi tiết.'
         isLoading={fleetViewLoading}
         isError={fleetViewError}
         sections={fleetViewSections}
@@ -1332,7 +1332,7 @@ export function SchoolBusFleetPage() {
                 ? 'Xóa bãi xe'
                 : 'Xóa phụ xe'
         }
-        description='This will soft-delete the selected record from active fleet operations.'
+        description='Bản ghi được chọn sẽ được xóa mềm khỏi dữ liệu vận hành phương tiện.'
         isLoading={
           deletingBus || deletingDriver || deletingAttendant || deletingDepot
         }
@@ -1346,7 +1346,7 @@ function getFleetViewTitle(viewTarget: FleetViewTarget) {
   if (viewTarget?.type === 'bus') return 'Bus detail';
   if (viewTarget?.type === 'driver') return 'Driver detail';
   if (viewTarget?.type === 'attendant') return 'Attendant detail';
-  if (viewTarget?.type === 'depot') return 'Depot detail';
+  if (viewTarget?.type === 'depot') return 'Chi tiết bãi xe';
   return 'Fleet detail';
 }
 
@@ -1366,20 +1366,20 @@ function getFleetViewSections({
   if (type === 'bus') {
     return [
       {
-        title: 'Bus information',
+        title: 'Thông tin xe',
         fields: [
-          { label: 'Plate number', value: bus?.plateNumber },
-          { label: 'Bus type', value: bus?.busType },
-          { label: 'Capacity', value: bus?.capacity },
+          { label: 'Biển số xe', value: bus?.plateNumber },
+          { label: 'Loại xe', value: bus?.busType },
+          { label: 'Sức chứa', value: bus?.capacity },
           { label: 'Trạng thái', value: bus?.status },
-          { label: 'Đang hoạt động', value: bus?.isActive === false ? 'No' : 'Yes' },
+          { label: 'Đang hoạt động', value: bus?.isActive === false ? 'Không' : 'Có' },
         ],
       },
       {
-        title: 'Assignment defaults',
+        title: 'Cấu hình phân công mặc định',
         fields: [
-          { label: 'Home depot', value: bus?.homeDepotName },
-          { label: 'Home depot ID', value: bus?.homeDepotId },
+          { label: 'Bãi xe mặc định', value: bus?.homeDepotName },
+          { label: 'ID bãi xe mặc định', value: bus?.homeDepotId },
         ],
       },
     ];
@@ -1388,19 +1388,19 @@ function getFleetViewSections({
   if (type === 'driver') {
     return [
       {
-        title: 'Account link',
+        title: 'Liên kết tài khoản',
         fields: [
-          { label: 'Account user ID', value: driver?.accountUserId || driver?.userId },
-          { label: 'Account email', value: driver?.user?.email },
+          { label: 'ID tài khoản', value: driver?.accountUserId || driver?.userId },
+          { label: 'Email tài khoản', value: driver?.user?.email },
         ],
       },
       {
-        title: 'Driver information',
+        title: 'Thông tin tài xế',
         fields: [
-          { label: 'Full name', value: driver?.fullName },
-          { label: 'Phone', value: driver?.phone },
+          { label: 'Họ tên', value: driver?.fullName },
+          { label: 'Số điện thoại', value: driver?.phone },
           { label: 'Trạng thái', value: driver?.status },
-          { label: 'Đang hoạt động', value: driver?.isActive === false ? 'No' : 'Yes' },
+          { label: 'Đang hoạt động', value: driver?.isActive === false ? 'Không' : 'Có' },
         ],
       },
     ];
@@ -1409,24 +1409,24 @@ function getFleetViewSections({
   if (type === 'attendant') {
     return [
       {
-        title: 'Account link',
+        title: 'Liên kết tài khoản',
         fields: [
           {
-            label: 'Account user ID',
+            label: 'ID tài khoản',
             value: attendant?.accountUserId || attendant?.userId,
           },
-          { label: 'Account email', value: attendant?.user?.email },
+          { label: 'Email tài khoản', value: attendant?.user?.email },
         ],
       },
       {
-        title: 'Attendant information',
+        title: 'Thông tin phụ xe',
         fields: [
-          { label: 'Full name', value: attendant?.fullName },
-          { label: 'Phone', value: attendant?.phone },
+          { label: 'Họ tên', value: attendant?.fullName },
+          { label: 'Số điện thoại', value: attendant?.phone },
           { label: 'Trạng thái', value: attendant?.status },
           {
             label: 'Đang hoạt động',
-            value: attendant?.isActive === false ? 'No' : 'Yes',
+            value: attendant?.isActive === false ? 'Không' : 'Có',
           },
         ],
       },
@@ -1436,21 +1436,21 @@ function getFleetViewSections({
   if (type === 'depot') {
     return [
       {
-        title: 'Depot information',
+        title: 'Thông tin bãi xe',
         fields: [
-          { label: 'Depot code', value: depot?.code },
-          { label: 'Depot name', value: depot?.name },
-          { label: 'Contact phone', value: depot?.contactPhone },
-          { label: 'Đang hoạt động', value: depot?.isActive === false ? 'No' : 'Yes' },
-          { label: 'Address', value: depot?.address, fullWidth: true },
-          { label: 'Description', value: depot?.description, fullWidth: true },
+          { label: 'Mã bãi xe', value: depot?.code },
+          { label: 'Tên bãi xe', value: depot?.name },
+          { label: 'Số điện thoại liên hệ', value: depot?.contactPhone },
+          { label: 'Đang hoạt động', value: depot?.isActive === false ? 'Không' : 'Có' },
+          { label: 'Địa chỉ', value: depot?.address, fullWidth: true },
+          { label: 'Mô tả', value: depot?.description, fullWidth: true },
         ],
       },
       {
-        title: 'Coordinates',
+        title: 'Tọa độ',
         fields: [
-          { label: 'Latitude', value: depot?.latitude },
-          { label: 'Longitude', value: depot?.longitude },
+          { label: 'Vĩ độ', value: depot?.latitude },
+          { label: 'Kinh độ', value: depot?.longitude },
         ],
       },
     ];

@@ -91,7 +91,7 @@ export function SchoolBusRouteDetailPage({
         id: routeId,
         body: values,
       }).unwrap();
-      toast.success(response.message || 'Route assigned');
+      toast.success(response.message || 'Đã phân công nguồn lực');
       setAssignmentOpen(false);
     } catch (error: any) {
       toast.error(error?.data?.message || 'Không thể phân công tuyến');
@@ -101,7 +101,7 @@ export function SchoolBusRouteDetailPage({
   const handleCreateTrip = async () => {
     try {
       const response = await createTripFromRoute(routeId).unwrap();
-      toast.success(response.message || 'Trip created from route');
+      toast.success(response.message || 'Đã tạo chuyến từ tuyến');
     } catch (error: any) {
       toast.error(error?.data?.message || 'Không thể tạo chuyến');
     }
@@ -110,12 +110,12 @@ export function SchoolBusRouteDetailPage({
   if (isLoading || !detail) {
     return (
       <SchoolBusPageShell
-        title='Route detail'
+        title='Chi tiết tuyến'
         description='Đang tải chi tiết tuyến...'
       >
         <SchoolBusEmptyState
           title='Đang tải chi tiết tuyến'
-          description='Fetching route, stop, and assignment data.'
+          description='Đang tải dữ liệu tuyến, điểm dừng và phân công.'
         />
       </SchoolBusPageShell>
     );
@@ -156,7 +156,7 @@ export function SchoolBusRouteDetailPage({
     <>
       <SchoolBusPageShell
         title={`${route.routeCode} - ${route.routeName}`}
-        description='Inspect route state, stop plan, and assignment details before and during execution.'
+        description='Kiểm tra trạng thái tuyến, lộ trình điểm dừng và chi tiết phân công trước và trong khi vận hành.'
         actions={
           <>
             {['DRAFT', 'GENERATED', 'REVIEWING', 'PUBLISHED', 'ASSIGNED'].includes(route.status) ? (
@@ -273,7 +273,7 @@ export function SchoolBusRouteDetailPage({
                   icon={GraduationCap}
                 />
                 <SummaryItem
-                  label='Direction'
+                  label='Chiều tuyến'
                   value={
                     directionLabel[route.routeDirection] || route.routeDirection
                   }
@@ -324,7 +324,7 @@ export function SchoolBusRouteDetailPage({
                   label='Thời gian dự kiến'
                   value={
                     route.plannedDurationMin != null
-                      ? `${route.plannedDurationMin} mins`
+                      ? `${route.plannedDurationMin} phút`
                       : 'N/A'
                   }
                   icon={Clock3}
@@ -544,7 +544,7 @@ export function SchoolBusRouteDetailPage({
 
           {/* Right Column */}
           <div className='flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start'>
-            {/* Route Map Card with Workspace Wrapper */}
+            {/* Bản đồ tuyến đường Card with Workspace Wrapper */}
             <div className='bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col'>
               <div className='p-4 border-b border-slate-100 flex items-center justify-between'>
                 <h3 className='font-bold text-slate-900 text-sm flex items-center gap-2'>
@@ -553,7 +553,7 @@ export function SchoolBusRouteDetailPage({
                 </h3>
                 {missingStopCoordinates > 0 && (
                   <span className='rounded bg-amber-50 border border-amber-100 text-amber-700 font-bold text-[9px] px-1.5 py-0.5 animate-pulse'>
-                    Warning: {missingStopCoordinates} stop(s) missing coords
+                    Cảnh báo: {missingStopCoordinates} điểm dừng thiếu tọa độ
                   </span>
                 )}
               </div>
@@ -563,7 +563,7 @@ export function SchoolBusRouteDetailPage({
                     <div className='absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]'>
                       <div className='flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm'>
                         <Loader2 className='h-4 w-4 animate-spin text-[#C81E3A]' />
-                        Updating route map...
+                        Đang cập nhật bản đồ...
                       </div>
                     </div>
                   )}
@@ -594,18 +594,18 @@ export function SchoolBusRouteDetailPage({
                 <div className='flex items-center gap-2'>
                   <Route className='h-4.5 w-4.5 text-indigo-600 shrink-0' />
                   <h3 className='font-bold text-slate-900 text-sm'>
-                    Stop Sequence Plan
+                    Kế hoạch lộ trình điểm dừng
                   </h3>
                 </div>
                 <span className='text-[10px] text-slate-500 font-bold bg-slate-50 border border-slate-150 px-2 py-0.5 rounded-full'>
-                  {detail.stops.length} location(s)
+                  {detail.stops.length} điểm dừng
                 </span>
               </div>
 
               {detail.stops.length === 0 ? (
                 <SchoolBusEmptyState
                   title='Chưa tạo điểm dừng'
-                  description='Generate a route plan to materialize the stop sequence.'
+                  description='Tạo kế hoạch tuyến để xác lập lộ trình điểm dừng.'
                   icon={Route}
                 />
               ) : (
@@ -661,12 +661,12 @@ export function SchoolBusRouteDetailPage({
                                   : isEnd
                                     ? 'Trường học'
                                     : isDropoff
-                                      ? 'Drop-off'
+                                      ? 'Điểm trả'
                                       : 'Điểm đón'}
                               </span>
                               <span>-</span>
                               <span>
-                                {stop.estimatedStudentCount || 0} student(s)
+                                {stop.estimatedStudentCount || 0} học sinh
                               </span>
                             </p>
                           </div>
@@ -687,7 +687,7 @@ export function SchoolBusRouteDetailPage({
         initialData={detail.assignment}
         buses={getPageItems(busesData?.data).map((bus) => ({
           id: bus.id,
-          label: `${bus.plateNumber} - ${bus.capacity} seats`,
+          label: `${bus.plateNumber} - ${bus.capacity} chỗ`,
           value: String(bus.id),
         }))}
         drivers={driversData?.data || []}

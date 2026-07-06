@@ -45,6 +45,7 @@ import {
 import {
   busStatusLabel,
   directionLabel,
+  usageTypeLabel,
 } from '../../schoolBusLabels';
 import type {
   SchoolBusPlanningPreview,
@@ -190,7 +191,7 @@ function CreateRoutePanel({
         className='w-full rounded-full border-red-250 text-[#C81E3A] hover:bg-[#FDECEF]/50 gap-1.5 text-xs font-semibold'
       >
         <Plus className='h-3.5 w-3.5' />
-        {open ? 'Cancel Route Builder' : 'Open Route Builder'}
+        {open ? 'Đóng bộ tạo tuyến' : 'Mở bộ tạo tuyến'}
       </Button>
       {open && (
         <form
@@ -199,17 +200,17 @@ function CreateRoutePanel({
         >
           <div className='border-b border-slate-100 pb-1.5'>
             <h4 className='text-xs font-bold text-slate-700 uppercase tracking-wide'>
-              Route Builder
+              Bộ tạo tuyến
             </h4>
           </div>
 
           {/* Group 1: Route identity */}
           <div className='space-y-3 p-3 bg-white rounded-xl border border-slate-100 shadow-sm'>
             <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none'>
-              1. Route Identity
+              1. Thông tin tuyến
             </p>
             <div>
-              <label className={labelCls}>Route Name *</label>
+              <label className={labelCls}>Tên tuyến *</label>
               <input
                 className={inputCls}
                 value={form.routeName}
@@ -218,27 +219,27 @@ function CreateRoutePanel({
                 }
                 placeholder={
                   initDir === 'OUTBOUND'
-                    ? 'e.g. Morning Outbound Route A'
-                    : 'e.g. Afternoon Return Route A'
+                    ? 'VD: Tuyến sáng đến trường A'
+                    : 'VD: Tuyến chiều về nhà A'
                 }
                 required
               />
             </div>
             <div>
-              <label className={labelCls}>Direction</label>
+              <label className={labelCls}>Chiều tuyến</label>
               <div className='w-full rounded-xl border border-slate-150 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-700 shadow-none'>
                 {initDir === 'OUTBOUND' ? (
                   <span>
-                    OUTBOUND - Depot {'->'} School{' '}
+                    Đến trường - Bãi xe {'->'} Trường{' '}
                     <span className='text-[10px] font-medium text-slate-400 ml-1'>
-                      (Inherited from session context)
+                      (Lấy từ ngữ cảnh phiên)
                     </span>
                   </span>
                 ) : (
                   <span>
-                    RETURN - School {'->'} Depot{' '}
+                    Về nhà - Trường {'->'} Bãi xe{' '}
                     <span className='text-[10px] font-medium text-slate-400 ml-1'>
-                      (Inherited from session context)
+                      (Lấy từ ngữ cảnh phiên)
                     </span>
                   </span>
                 )}
@@ -320,7 +321,7 @@ function CreateRoutePanel({
                   </div>
                 ) : (
                   <p className='text-[11px] text-amber-600 font-medium'>
-                    Warning: Chưa có bãi xes available. Please create a depot first.
+                    Cảnh báo: chưa có bãi xe khả dụng. Vui lòng tạo bãi xe trước.
                   </p>
                 )
               ) : (
@@ -641,7 +642,7 @@ function SessionRouteCard({
               ) : (
                 <Sparkles className='h-3.5 w-3.5' />
               )}
-              {greedyFilling ? 'Running...' : 'Greedy Fill'}
+              {greedyFilling ? 'Đang chạy...' : 'Gán tự động'}
             </Button>
           )}
           {(() => {
@@ -660,7 +661,7 @@ function SessionRouteCard({
                     asChild
                   >
                     <Link href={`/school-bus/dispatch/${route.id}`}>
-                      View Details
+                      Xem chi tiết
                     </Link>
                   </Button>
                   <Button
@@ -669,7 +670,7 @@ function SessionRouteCard({
                     className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
                     onClick={handleAddStudents}
                   >
-                    Add Students
+                    Thêm học sinh
                   </Button>
                   <Button
                     size='sm'
@@ -678,7 +679,7 @@ function SessionRouteCard({
                     asChild
                   >
                     <Link href={`/school-bus/dispatch/${route.id}?assign=true`}>
-                      Edit Staff
+                      Sửa nhân sự
                     </Link>
                   </Button>
                 </>
@@ -694,7 +695,7 @@ function SessionRouteCard({
                     asChild
                   >
                     <Link href={`/school-bus/dispatch/${route.id}?assign=true`}>
-                      Assign Staff
+                      Phân công nhân sự
                     </Link>
                   </Button>
                   <Button
@@ -703,7 +704,7 @@ function SessionRouteCard({
                     className='rounded-full h-8 text-xs font-semibold border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
                     onClick={handleAddStudents}
                   >
-                    Add Students
+                    Thêm học sinh
                   </Button>
                   <Button
                     size='sm'
@@ -712,7 +713,7 @@ function SessionRouteCard({
                     asChild
                   >
                     <Link href={`/school-bus/dispatch/${route.id}`}>
-                      View Details
+                      Xem chi tiết
                     </Link>
                   </Button>
                 </>
@@ -727,7 +728,7 @@ function SessionRouteCard({
                   className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white shadow-sm h-8 text-xs font-semibold px-4'
                   onClick={handleAddStudents}
                 >
-                  Add Students
+                  Thêm học sinh
                 </Button>
                 <Button
                   size='sm'
@@ -736,7 +737,7 @@ function SessionRouteCard({
                   asChild
                 >
                   <Link href={`/school-bus/dispatch/${route.id}`}>
-                    View Details
+                    Xem chi tiết
                   </Link>
                 </Button>
               </>
@@ -756,7 +757,7 @@ function SessionRouteCard({
               ) : (
                 <Trash2 className='h-3.5 w-3.5' />
               )}
-              Delete
+              Xóa
             </Button>
           )}
         </div>
@@ -875,7 +876,7 @@ function RouteCard({
             className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white shadow-sm h-8 text-xs font-semibold px-4'
             onClick={() => onSelect(route.routeId)}
           >
-            Add Students
+            Thêm học sinh
           </Button>
           <Button
             size='sm'
@@ -884,7 +885,7 @@ function RouteCard({
             asChild
           >
             <Link href={`/school-bus/dispatch/${route.routeId}`}>
-              View Details
+              Xem chi tiết
             </Link>
           </Button>
           <Button
@@ -894,7 +895,7 @@ function RouteCard({
             asChild
           >
             <Link href={`/school-bus/dispatch/${route.routeId}?assign=true`}>
-              Assign Staff
+              Phân công nhân sự
             </Link>
           </Button>
         </div>
@@ -997,10 +998,10 @@ function RouteDetailPanel({
 
   const delStop = (stopId: number) => {
     stopConfirm.requestConfirm({
-      title: 'Remove stop?',
+      title: 'Xóa điểm dừng?',
       description:
-        'This stop and all students assigned to it will be removed from the route.',
-      confirmLabel: 'Remove stop',
+        'Điểm dừng này và tất cả học sinh được gán vào đó sẽ bị xóa khỏi tuyến.',
+      confirmLabel: 'Xóa điểm dừng',
       variant: 'danger',
       payload: stopId,
     });
@@ -1008,10 +1009,10 @@ function RouteDetailPanel({
 
   const delStudent = (studentId: number, subscriptionId: number) => {
     studentConfirm.requestConfirm({
-      title: 'Remove student?',
+      title: 'Xóa học sinh?',
       description:
-        'The student will be unassigned from this route and returned to the unassigned pool.',
-      confirmLabel: 'Remove',
+        'Học sinh này sẽ được gỡ khỏi tuyến và quay lại danh sách chưa gán.',
+      confirmLabel: 'Xóa',
       variant: 'danger',
       payload: { studentId, subscriptionId },
     });
@@ -1071,8 +1072,8 @@ function RouteDetailPanel({
 
           <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2'>
             {detail.route.routeDirection === 'OUTBOUND'
-              ? 'Pickup Stops'
-              : 'Drop-off Stops'}{' '}
+              ? 'Điểm đón'
+              : 'Điểm trả'}{' '}
             ({middleStops.length})
           </p>
           {middleStops.length === 0 ? (
@@ -1146,7 +1147,7 @@ function RouteDetailPanel({
             return (
               <>
                 <p className='text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4'>
-                  Students ({students.length})
+                  Học sinh ({students.length})
                 </p>
                 {students.length === 0 ? (
                   <p className='text-xs text-slate-300'>
@@ -1349,7 +1350,7 @@ export function PlanningResultsPanel({
       if (!activeSession) return;
       try {
         await deleteRoute({ sessionId: activeSession.id, routeId }).unwrap();
-        toast.success('Route deleted successfully');
+        toast.success('Đã xóa tuyến thành công');
         if (selectedRouteId === routeId) {
           onSelectRoute(null);
         }
@@ -1372,11 +1373,11 @@ export function PlanningResultsPanel({
           body: { preserveExistingAssignments: true },
         }).unwrap();
         toast.success(
-          `Added ${response.data.addedStudents} students across ${response.data.addedStops} stops. Remaining capacity: ${response.data.remainingCapacity}.`
+          `Đã thêm ${response.data.addedStudents} học sinh qua ${response.data.addedStops} điểm dừng. Sức chứa còn lại: ${response.data.remainingCapacity}.`
         );
       } catch (e: unknown) {
         const err = e as { data?: { message?: string } };
-        toast.error(err?.data?.message || 'Greedy Fill failed');
+        toast.error(err?.data?.message || 'Gán tự động thất bại');
         throw e;
       }
     },
@@ -1429,7 +1430,7 @@ export function PlanningResultsPanel({
               : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-100/50 hover:text-slate-700'
           )}
         >
-          <span className='text-xs font-bold'>Route Builder</span>
+          <span className='text-xs font-bold'>Bộ tạo tuyến</span>
           <span className='text-[10px] text-slate-400 mt-0.5 font-medium'>
             {activeSession ? `Routes (${sessionRoutes.length})` : 'Chưa có phiên'}
           </span>
@@ -1447,10 +1448,10 @@ export function PlanningResultsPanel({
                   <AlertTriangle className='h-6 w-6' />
                 </div>
                 <p className='text-sm font-bold text-slate-700'>
-                  Preview is out of date
+                  Bản xem trước đã cũ
                 </p>
                 <p className='mt-1 text-xs text-slate-455 max-w-[240px] leading-relaxed'>
-                  Planning context has changed. Click Preview to refresh.
+                  Ngữ cảnh lập tuyến đã thay đổi. Bấm Xem trước để tải lại.
                 </p>
                 {onPreviewDemandClick && (
                   <Button
@@ -1459,7 +1460,7 @@ export function PlanningResultsPanel({
                     disabled={previewing}
                     className='mt-4 rounded-full bg-[#C81E3A] text-white hover:bg-[#A91931] px-5 text-xs font-semibold shadow-sm'
                   >
-                    {previewing ? 'Previewing...' : 'Preview Demand'}
+                    {previewing ? 'Đang xem trước...' : 'Xem trước nhu cầu'}
                   </Button>
                 )}
               </div>
@@ -1473,13 +1474,13 @@ export function PlanningResultsPanel({
                 </div>
                 <p className='text-sm font-bold text-slate-700'>
                   {activeSession
-                    ? 'Preview demand for this session'
+                    ? 'Xem trước nhu cầu của phiên này'
                     : 'Chưa có xem trước nhu cầu'}
                 </p>
                 <p className='mt-1 text-xs text-slate-455 max-w-[240px] leading-relaxed'>
                   {activeSession
-                    ? 'Preview demand for this session to inspect eligible and blocked students.'
-                    : 'Complete planning context and click Preview to inspect eligible students.'}
+                    ? 'Xem trước nhu cầu của phiên này để kiểm tra học sinh đủ điều kiện và bị chặn.'
+                    : 'Hoàn tất ngữ cảnh lập tuyến rồi bấm Xem trước để kiểm tra học sinh đủ điều kiện.'}
                 </p>
                 {onPreviewDemandClick && (
                   <Button
@@ -1488,7 +1489,7 @@ export function PlanningResultsPanel({
                     disabled={previewing}
                     className='mt-4 rounded-full bg-[#C81E3A] text-white hover:bg-[#A91931] px-5 text-xs font-semibold shadow-sm'
                   >
-                    {previewing ? 'Previewing...' : 'Preview Demand'}
+                    {previewing ? 'Đang xem trước...' : 'Xem trước nhu cầu'}
                   </Button>
                 )}
               </div>
@@ -1509,9 +1510,9 @@ export function PlanningResultsPanel({
                         <AlertTriangle className='h-6 w-6' />
                       </div>
                       <p className='text-sm font-bold text-slate-800 leading-snug'>
-                        Planning session already exists for this school, date
-                        and direction. Please open the existing session to
-                        continue.
+                        Phiên lập kế hoạch cho trường học, ngày và chiều này đã tồn tại.
+                        Vui lòng mở phiên đã có để tiếp tục.
+
                       </p>
                       {onOpenSession && (
                         <Button
@@ -1521,7 +1522,7 @@ export function PlanningResultsPanel({
                           }
                           className='rounded-full bg-[#C81E3A] text-white hover:bg-[#A91931] px-5 text-xs font-semibold shadow-sm gap-1.5'
                         >
-                          Open Existing Session
+                          Mở phiên lập kế hoạch hiện tại
                         </Button>
                       )}
                     </div>
@@ -1561,10 +1562,10 @@ export function PlanningResultsPanel({
                     <div className='border-b border-slate-100 pb-2.5 flex items-center justify-between'>
                       <h3 className='text-sm font-bold text-slate-950 flex items-center gap-2'>
                         <Users className='h-4 w-4 text-[#C81E3A] shrink-0' />
-                        Planning Demand Preview
+                        Xem trước nhu cầu lập tuyến
                       </h3>
                       <span className='px-2 py-0.5 bg-red-50 border border-red-100 text-[#C81E3A] text-[10px] font-bold rounded-full'>
-                        {currentDirection === 'RETURN' ? 'Return' : 'Outbound'}
+                        {currentDirection === 'RETURN' ? 'Về nhà' : 'Đến trường'}
                       </span>
                     </div>
 
@@ -1572,7 +1573,7 @@ export function PlanningResultsPanel({
                     <div className='grid grid-cols-3 gap-2 text-xs'>
                       <div className='p-2.5 rounded-2xl bg-slate-50 border border-slate-150 shadow-sm flex flex-col justify-between'>
                         <span className='text-[9px] font-extrabold text-slate-450 uppercase tracking-wider leading-none'>
-                          Total
+                          Tổng
                         </span>
                         <span className='text-sm font-black text-slate-850 mt-1.5'>
                           {totalSubs}
@@ -1607,7 +1608,7 @@ export function PlanningResultsPanel({
                             : 'border-transparent text-slate-400 hover:text-slate-600'
                         )}
                       >
-                        Students ({preview ? eligibleDemands.length : 0})
+                        Học sinh ({preview ? eligibleDemands.length : 0})
                       </button>
                       <button
                         onClick={() => setPreviewTab('points')}
@@ -1618,7 +1619,7 @@ export function PlanningResultsPanel({
                             : 'border-transparent text-slate-400 hover:text-slate-600'
                         )}
                       >
-                        Points ({preview ? points.length : 0})
+                        Điểm ({preview ? points.length : 0})
                       </button>
                       <button
                         onClick={() => setPreviewTab('context')}
@@ -1629,7 +1630,7 @@ export function PlanningResultsPanel({
                             : 'border-transparent text-slate-400 hover:text-slate-600'
                         )}
                       >
-                        Context
+                        Ngữ cảnh
                       </button>
                     </div>
 
@@ -1641,11 +1642,11 @@ export function PlanningResultsPanel({
                             <div className='flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 shadow-sm w-full'>
                               <Users className='h-8 w-8 text-slate-350 mb-2' />
                               <p className='text-xs font-bold text-slate-600'>
-                                No Preview Data
+                                Chưa có dữ liệu xem trước
                               </p>
                               <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
-                                Fill context on the left and click "Preview
-                                Demand" to load students.
+                                Điền ngữ cảnh bên trái và bấm "Xem trước" để
+                                tải danh sách học sinh.
                               </p>
                             </div>
                           );
@@ -1673,11 +1674,7 @@ export function PlanningResultsPanel({
                                         </span>
                                         <span>-</span>
                                         <span>
-                                          {d.tripOption === 'ONE_WAY'
-                                            ? 'One Way'
-                                            : d.tripOption === 'ROUND_TRIP'
-                                              ? 'Round Trip'
-                                              : d.tripOption}
+                                          {usageTypeLabel[d.tripOption] || d.tripOption}
                                         </span>
                                       </p>
                                     </div>
@@ -1706,11 +1703,11 @@ export function PlanningResultsPanel({
                             <div className='flex flex-col items-center justify-center py-12 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 shadow-sm w-full'>
                               <MapPin className='h-8 w-8 text-slate-350 mb-2' />
                               <p className='text-xs font-bold text-slate-600'>
-                                No Preview Data
+                                Chưa có dữ liệu xem trước
                               </p>
                               <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
-                                Fill context on the left and click "Preview
-                                Demand" to load points.
+                                Điền ngữ cảnh bên trái và bấm "Xem trước" để
+                                tải danh sách điểm.
                               </p>
                             </div>
                           );
@@ -1815,12 +1812,12 @@ export function PlanningResultsPanel({
                             dayNames[new Date(sDate).getDay()];
                           const isMatch = activeDaysSet.has(dateDayName);
                           if (isMatch) {
-                            dateMatchText = 'Service date matches schedule day';
+                            dateMatchText = 'Ngày phục vụ khớp với lịch hoạt động';
                             dateMatchColor =
                               'text-emerald-700 bg-emerald-55/10 border-emerald-100';
                           } else {
                             dateMatchText =
-                              'Service date is not included in schedule days';
+                              'Ngày phục vụ không nằm trong lịch hoạt động';
                             dateMatchColor =
                               'text-red-700 bg-red-55/10 border-red-100';
                           }
@@ -1834,9 +1831,9 @@ export function PlanningResultsPanel({
                           preview?.direction || form?.routeDirection;
                         const dirLabel =
                           dirVal === 'OUTBOUND'
-                            ? 'Home -> School'
+                            ? 'Nhà -> Trường'
                             : dirVal === 'RETURN'
-                              ? 'School -> Home'
+                              ? 'Trường -> Nhà'
                               : (dirVal || '-');
                         const hasContext = !!(
                           form?.schoolId || preview?.schoolId
@@ -1846,7 +1843,7 @@ export function PlanningResultsPanel({
                             <div className='flex flex-col items-center justify-center py-10 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 w-full'>
                               <Calendar className='h-8 w-8 text-slate-355 mb-2' />
                               <p className='text-xs font-bold text-slate-650'>
-                                Select Context
+                                Chọn ngữ cảnh
                               </p>
                               <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
                                 Chọn ngữ cảnh lập kế hoạch và xem trước nhu cầu.
@@ -1860,7 +1857,7 @@ export function PlanningResultsPanel({
                             {/* School Section */}
                             <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-1.5 shadow-sm'>
                               <p className='text-[9px] font-extrabold text-slate-455 uppercase tracking-wider'>
-                                School
+                                Trường học
                               </p>
                               <div>
                                 <p className='font-bold text-slate-800 text-sm leading-snug'>
@@ -1880,7 +1877,7 @@ export function PlanningResultsPanel({
                             {/* Active Days Section */}
                             <div className='rounded-2xl border border-slate-150 bg-white p-3 space-y-2.5 shadow-sm'>
                               <p className='text-[9px] font-extrabold text-slate-455 uppercase tracking-wider'>
-                                Active Days
+                                Ngày hoạt động
                               </p>
                               <div className='flex flex-wrap gap-1.5'>
                                 {daysOfWeek.map((day) => {
@@ -1909,9 +1906,9 @@ export function PlanningResultsPanel({
                                 >
                                   <span>
                                     {dateMatchText ===
-                                    'Service date matches schedule day'
-                                      ? 'OK'
-                                      : 'Warning:'}
+                                    'Ngày phục vụ khớp với lịch hoạt động'
+                                      ? 'Đạt'
+                                      : 'Cảnh báo:'}
                                   </span>
                                   <span>{dateMatchText}</span>
                                 </div>
@@ -1926,7 +1923,7 @@ export function PlanningResultsPanel({
                               <div className='grid grid-cols-2 gap-x-3 gap-y-2 pt-1 text-[11px]'>
                                 <div className='flex flex-col'>
                                   <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>
-                                    Service Date
+                                    Ngày phục vụ
                                   </span>
                                   <span className='font-bold text-slate-800 mt-0.5'>
                                     {serviceDateFormatted}
@@ -1934,7 +1931,7 @@ export function PlanningResultsPanel({
                                 </div>
                                 <div className='flex flex-col'>
                                   <span className='text-[9px] font-bold text-slate-400 uppercase tracking-wider'>
-                                    Direction
+                                    Chiều tuyến
                                   </span>
                                   <span className='font-bold text-slate-800 mt-0.5'>
                                     {dirLabel}
@@ -1976,12 +1973,12 @@ export function PlanningResultsPanel({
                   <div className='border-b border-slate-100 pb-2.5 flex items-center justify-between'>
                     <h3 className='text-sm font-bold text-slate-955 flex items-center gap-2'>
                       <Route className='h-4 w-4 text-blue-600 shrink-0' />
-                      Routes ({sessionRoutes.length})
+                      Tuyến ({sessionRoutes.length})
                     </h3>
                     {refreshingRoutes && !creatingRoute && (
                       <span className='inline-flex items-center gap-1 text-[10px] font-semibold text-slate-400'>
                         <Loader2 className='h-3 w-3 animate-spin' />
-                        Refreshing
+                        Đang làm mới
                       </span>
                     )}
                   </div>
@@ -1997,10 +1994,10 @@ export function PlanningResultsPanel({
                       <Loader2 className='h-7 w-7 text-blue-600 animate-spin' />
                       <div className='space-y-1'>
                         <p className='text-xs font-bold text-slate-700'>
-                          Creating route...
+                          Đang tạo tuyến...
                         </p>
                         <p className='text-[10px] text-slate-455 font-semibold'>
-                          Computing initial path and timeline...
+                          Đang tính lộ trình và thời gian dự kiến...
                         </p>
                       </div>
                     </div>
@@ -2029,7 +2026,7 @@ export function PlanningResultsPanel({
                             deleteConfirm.requestConfirm({
                               title: 'Xóa tuyến trống?',
                               description:
-                                'Are you sure you want to delete this route? This action cannot be undone.',
+                                'Bạn có chắc chắn muốn xóa tuyến này không? Thao tác này không thể hoàn tác.',
                               confirmLabel: 'Xóa',
                               variant: 'danger',
                               payload: r.id,
@@ -2041,10 +2038,10 @@ export function PlanningResultsPanel({
                           }
                           onGreedyFill={() => {
                             greedyConfirm.requestConfirm({
-                              title: 'Greedy Fill this route?',
+                              title: 'Gán tự động cho tuyến này?',
                               description:
-                                'Automatically assign eligible students to this route based on distance and remaining bus capacity?',
-                              confirmLabel: 'Greedy Fill',
+                                'Tự động gán học sinh đủ điều kiện vào tuyến dựa trên khoảng cách và sức chứa còn lại của xe?',
+                              confirmLabel: 'Gán tự động',
                               variant: 'primary',
                               payload: r.id,
                             });

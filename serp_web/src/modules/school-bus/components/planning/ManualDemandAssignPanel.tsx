@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { UserPlus, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
@@ -7,6 +7,7 @@ import { cn } from '@/shared/utils';
 import { SchoolBusSection } from '../SchoolBusSection';
 import { useAssignStudentToRouteMutation } from '../../api/schoolBusApi';
 import type { SchoolBusEligibleStudent, SchoolBusRoute } from '../../types';
+import { directionLabel, tripOptionLabel } from '../../schoolBusLabels';
 
 interface ManualDemandAssignPanelProps {
   /** The route to assign students to */
@@ -61,10 +62,10 @@ export function ManualDemandAssignPanel({
       <div className='rounded-2xl border border-slate-100 bg-slate-50/40 px-4 py-6 text-center'>
         <UserPlus className='mx-auto mb-2 h-8 w-8 text-slate-300' />
         <p className='text-sm font-medium text-slate-500'>
-          Chọn tuyến to assign students
+          Chọn tuyến để gán học sinh
         </p>
         <p className='mt-1 text-xs text-slate-400'>
-          Click a route card above to select it
+          Bấm vào thẻ tuyến xe ở trên để chọn
         </p>
       </div>
     );
@@ -75,7 +76,7 @@ export function ManualDemandAssignPanel({
     return (
       <div className='rounded-2xl border border-amber-100 bg-amber-50/40 px-4 py-4 text-center'>
         <p className='text-sm font-medium text-amber-700'>
-          Route is {selectedRoute.status} - no further edits allowed
+          Tuyến xe ở trạng thái {selectedRoute.status === 'PUBLISHED' ? 'Đã phát hành' : selectedRoute.status === 'CANCELLED' ? 'Đã hủy' : selectedRoute.status} - không thể sửa đổi
         </p>
       </div>
     );
@@ -86,15 +87,14 @@ export function ManualDemandAssignPanel({
 
   if (!selectedRoute.busId || routeCapacity == null) {
     return (
-      <SchoolBusSection title='Add Students'>
+      <SchoolBusSection title='Thêm học sinh'>
         <div className='rounded-2xl border border-amber-100 bg-amber-50/10 px-4 py-6 text-center'>
           <AlertCircle className='mx-auto mb-2 h-8 w-8 text-amber-500' />
           <p className='text-sm font-bold text-amber-800'>
-            Choose a bus before adding students.
+            Vui lòng chọn xe trước khi thêm học sinh.
           </p>
           <p className='mt-1.5 text-xs text-slate-500 leading-normal px-2'>
-            Bus capacity is required before students can be assigned to this
-            route.
+            Cần có sức chứa xe trước khi gán học sinh vào tuyến này.
           </p>
         </div>
       </SchoolBusSection>
@@ -103,15 +103,15 @@ export function ManualDemandAssignPanel({
 
   if (routeStudentCount >= routeCapacity) {
     return (
-      <SchoolBusSection title='Add Students'>
+      <SchoolBusSection title='Thêm học sinh'>
         <div className='rounded-2xl border border-red-100 bg-red-50/10 px-4 py-6 text-center'>
           <AlertCircle className='mx-auto mb-2 h-8 w-8 text-red-500' />
           <p className='text-sm font-bold text-red-800'>
-            Route has reached bus capacity.
+            Tuyến đã đạt sức chứa của xe.
           </p>
           <p className='mt-1.5 text-xs text-slate-500 leading-normal px-2'>
-            Students: {routeStudentCount}/{routeCapacity}. Choose a larger bus
-            or create another route.
+            Học sinh: {routeStudentCount}/{routeCapacity}. Vui lòng chọn xe lớn
+            hơn hoặc tạo tuyến khác.
           </p>
         </div>
       </SchoolBusSection>
@@ -121,7 +121,7 @@ export function ManualDemandAssignPanel({
   // Case C: Loading state
   if (loadingEligible) {
     return (
-      <SchoolBusSection title='Add Students'>
+      <SchoolBusSection title='Thêm học sinh'>
         <div className='flex items-center gap-2 py-8 justify-center text-slate-500'>
           <Loader2 className='h-4 w-4 animate-spin text-blue-600' />
           <p className='text-xs font-semibold'>Đang tải nhu cầu có thể gán...</p>
@@ -147,7 +147,7 @@ export function ManualDemandAssignPanel({
 
   if (eligibleCount === 0) {
     return (
-      <SchoolBusSection title='Add Students'>
+      <SchoolBusSection title='Thêm học sinh'>
         <div className='rounded-2xl border border-slate-100 bg-slate-50/40 px-4 py-6 text-center'>
           <p className='text-xs text-slate-400'>
             Không có học sinh đủ điều kiện cho phiên này.
@@ -160,14 +160,14 @@ export function ManualDemandAssignPanel({
   // Case A: No unassigned students left
   if (unassignedCount === 0) {
     return (
-      <SchoolBusSection title='Add Students'>
+      <SchoolBusSection title='Thêm học sinh'>
         <div className='rounded-2xl border border-emerald-100 bg-emerald-50/10 px-4 py-6 text-center'>
           <CheckCircle2 className='mx-auto mb-2 h-8 w-8 text-emerald-500' />
           <p className='text-sm font-semibold text-emerald-800'>
-            All eligible students have been assigned.
+            Tất cả học sinh đủ điều kiện đã được gán.
           </p>
           <p className='mt-1 text-xs text-slate-400'>
-            Every student is assigned to a route in this session.
+            Mỗi học sinh đã được gán vào một tuyến trong phiên này.
           </p>
         </div>
       </SchoolBusSection>
@@ -177,15 +177,15 @@ export function ManualDemandAssignPanel({
   // Case B: Unassigned exist but none can be assigned to this route
   if (assignableCount === 0) {
     return (
-      <SchoolBusSection title='Add Students'>
+      <SchoolBusSection title='Thêm học sinh'>
         <div className='rounded-2xl border border-amber-100 bg-amber-50/10 px-4 py-6 text-center'>
           <AlertCircle className='mx-auto mb-2 h-8 w-8 text-amber-500' />
           <p className='text-sm font-bold text-amber-800'>
             Không có học sinh có thể gán cho tuyến này.
           </p>
           <p className='mt-1.5 text-xs text-slate-500 leading-normal px-2'>
-            There are unassigned students, but none can be added to this route
-            because of direction, capacity, or pickup/drop-off constraints.
+            Vẫn còn học sinh chưa gán, nhưng không có học sinh nào phù hợp với
+            tuyến này do chiều tuyến, sức chứa hoặc cấu hình điểm đón/trả.
           </p>
         </div>
       </SchoolBusSection>
@@ -194,10 +194,10 @@ export function ManualDemandAssignPanel({
 
   return (
     <SchoolBusSection
-      title={`Add Students to "${selectedRoute.routeName}"`}
+      title={`Thêm học sinh vào "${selectedRoute.routeName}"`}
       action={
         <span className='rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700'>
-          {direction}
+          {directionLabel[direction || ''] || direction}
         </span>
       }
     >
@@ -270,9 +270,7 @@ export function ManualDemandAssignPanel({
                     {student.studentName}
                   </p>
                   <span className='px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-600 text-[8px] font-semibold scale-95 shrink-0'>
-                    {student.tripOption === 'ROUND_TRIP'
-                      ? 'Hai chiều'
-                      : student.tripOption}
+                    {tripOptionLabel[student.tripOption || ''] || student.tripOption}
                   </span>
                 </div>
                 <p className='mt-0.5 text-[10px] truncate text-slate-450 flex items-center gap-1'>
@@ -302,7 +300,7 @@ export function ManualDemandAssignPanel({
                   {isThisLoading ? (
                     <Loader2 className='h-3 w-3 animate-spin text-slate-500' />
                   ) : (
-                    'Add'
+                    'Thêm'
                   )}
                 </Button>
               )}

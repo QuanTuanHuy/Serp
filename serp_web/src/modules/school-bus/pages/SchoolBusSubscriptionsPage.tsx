@@ -89,7 +89,7 @@ export function SchoolBusSubscriptionsPage() {
 
   const schoolOptions = React.useMemo(() => {
     return [
-      { label: 'All schools', value: '' },
+      { label: 'Tất cả trường học', value: '' },
       ...schools.map((s: any) => ({
         label: s.label,
         value: s.label,
@@ -116,7 +116,7 @@ export function SchoolBusSubscriptionsPage() {
   const subscriptionColumns: SchoolBusTableColumn<any>[] = [
     {
       key: 'code',
-      header: 'Subscription',
+      header: 'Đăng ký dịch vụ',
       className: 'pl-6',
       headerClassName: 'pl-6',
       render: (subscription) => (
@@ -133,7 +133,7 @@ export function SchoolBusSubscriptionsPage() {
             </Link>
             {subscription.sourceRequestId && (
               <span className='text-[10px] text-slate-400 font-normal mt-0.5'>
-                From req #{subscription.sourceRequestId}
+                Từ yêu cầu #{subscription.sourceRequestId}
               </span>
             )}
           </div>
@@ -168,7 +168,7 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'tripOption',
-      header: 'Trip option',
+      header: 'Phương án đi xe',
       render: (subscription) => {
         const colors: Record<string, string> = {
           ROUND_TRIP: 'bg-blue-50/50 text-blue-700 border-blue-100/50',
@@ -194,7 +194,7 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'pickupDropoff',
-      header: 'Pickup / Drop-off',
+      header: 'Điểm đón / trả',
       render: (subscription) => (
         <div className='flex flex-col gap-1.5 text-xs'>
           <div className='flex items-center gap-1.5'>
@@ -210,7 +210,7 @@ export function SchoolBusSubscriptionsPage() {
               </span>
             ) : (
               <span className='font-medium text-amber-600 italic bg-amber-50 px-1 py-0.5 rounded shrink-0'>
-                Missing
+                Thiếu cấu hình
               </span>
             )}
           </div>
@@ -227,7 +227,7 @@ export function SchoolBusSubscriptionsPage() {
               </span>
             ) : (
               <span className='font-medium text-amber-600 italic bg-amber-50 px-1 py-0.5 rounded shrink-0'>
-                Missing
+                Thiếu cấu hình
               </span>
             )}
           </div>
@@ -236,17 +236,17 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'effective',
-      header: 'Effective',
+      header: 'Hiệu lực',
       render: (subscription) => (
         <div className='flex flex-col text-xs text-slate-600 gap-0.5'>
           <span className='font-medium text-slate-700'>
             {formatDate(subscription.effectiveFrom)}
           </span>
           <span className='text-[10px] text-slate-400'>
-            to{' '}
+            đến{' '}
             {subscription.effectiveTo
               ? formatDate(subscription.effectiveTo)
-              : 'Ongoing'}
+              : 'Đang áp dụng'}
           </span>
         </div>
       ),
@@ -291,7 +291,7 @@ export function SchoolBusSubscriptionsPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search code or student name...'
+          placeholder='Tìm theo mã đăng ký hoặc tên học sinh...'
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
@@ -303,7 +303,7 @@ export function SchoolBusSubscriptionsPage() {
           value={filterSchool}
           onChange={setFilterSchool}
           options={schoolOptions}
-          placeholder='All schools'
+          placeholder='Tất cả trường học'
           searchable
           className='w-48'
         />
@@ -311,14 +311,14 @@ export function SchoolBusSubscriptionsPage() {
           value={filterStatus}
           onChange={setFilterStatus}
           options={statusOptions}
-          placeholder='All statuses'
+          placeholder='Tất cả trạng thái'
           className='w-40'
         />
         <SchoolBusSelect
           value={filterTripOption}
           onChange={setFilterTripOption}
           options={tripOptionOptions}
-          placeholder='All trip options'
+          placeholder='Tất cả phương án'
           className='w-44'
         />
       </div>
@@ -330,8 +330,8 @@ export function SchoolBusSubscriptionsPage() {
       title='Đăng ký'
       description={
         access.isParentOnly
-          ? 'Track active transport services for your children.'
-          : 'Long-term student transport demand. Approved requests are converted into active subscriptions and route planning reads from this source.'
+          ? 'Theo dõi các dịch vụ xe bus đang áp dụng cho học sinh.'
+          : 'Quản lý nhu cầu sử dụng xe bus dài hạn. Yêu cầu đã duyệt được chuyển thành đăng ký để phục vụ lập tuyến.'
       }
     >
       <div className='flex flex-col gap-6'>
@@ -342,8 +342,8 @@ export function SchoolBusSubscriptionsPage() {
             value={data?.data?.totalElements || 0}
             hint={
               access.isParentOnly
-                ? 'Transport services for your children'
-                : 'Active and historical service contracts'
+                ? 'Dịch vụ xe bus của học sinh'
+                : 'Đăng ký đang hoạt động và lịch sử'
             }
             icon={Repeat}
             tone='info'
@@ -355,8 +355,8 @@ export function SchoolBusSubscriptionsPage() {
             }
             hint={
               access.isParentOnly
-                ? 'Currently active services'
-                : 'Visible in route planning'
+                ? 'Dịch vụ đang hoạt động'
+                : 'Được dùng trong lập tuyến'
             }
             icon={PlayCircle}
             tone='success'
@@ -378,11 +378,11 @@ export function SchoolBusSubscriptionsPage() {
 
         {/* Data Table */}
         <SchoolBusDataTable
-          title='Subscription directory'
+          title='Danh sách đăng ký dịch vụ'
           description={
             access.isParentOnly
-              ? 'View subscription details for your children.'
-              : 'Use status actions to control whether a student is eligible for daily routing.'
+              ? 'Xem chi tiết đăng ký dịch vụ của học sinh.'
+              : 'Theo dõi trạng thái đăng ký để xác định học sinh đủ điều kiện tham gia lập tuyến hằng ngày.'
           }
           toolbar={subscriptionToolbar}
           data={filteredSubscriptions}
@@ -402,7 +402,7 @@ export function SchoolBusSubscriptionsPage() {
           }
           emptyDescription={
             subscriptions.length === 0
-              ? 'Approve a transport request to create subscriptions automatically, or create subscriptions through the API.'
+              ? 'Duyệt yêu cầu xe bus để hệ thống tự tạo đăng ký dịch vụ.'
               : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
           }
         />

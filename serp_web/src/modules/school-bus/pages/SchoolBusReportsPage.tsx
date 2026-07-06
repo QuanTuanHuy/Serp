@@ -198,7 +198,7 @@ export function SchoolBusReportsPage() {
   // --- Dropdown Options ------------------------------------------------------
   const schoolOptions = useMemo(() => {
     return [
-      { label: 'All Schools', value: '' },
+      { label: 'Tất cả trường học', value: '' },
       ...schoolsList.map((school) => ({
         label: school.label,
         value: school.id,
@@ -207,18 +207,18 @@ export function SchoolBusReportsPage() {
   }, [schoolsList]);
 
   const statusOptions = [
-    { label: 'All Statuses', value: '' },
+    { label: 'Tất cả trạng thái', value: '' },
     { label: 'Đang hoạt động', value: 'ACTIVE' },
     { label: 'Đang chờ', value: 'PENDING' },
-    { label: 'In Progress', value: 'IN_PROGRESS' },
+    { label: 'Đang thực hiện', value: 'IN_PROGRESS' },
     { label: 'Hoàn thành', value: 'COMPLETED' },
     { label: 'Đã hủy', value: 'CANCELLED' },
   ];
 
   const directionOptions = [
-    { label: 'All Directions', value: '' },
-    { label: 'Outbound', value: 'OUTBOUND' },
-    { label: 'Return', value: 'RETURN' },
+    { label: 'Tất cả chiều tuyến', value: '' },
+    { label: 'Đến trường', value: 'OUTBOUND' },
+    { label: 'Về nhà', value: 'RETURN' },
   ];
 
   // --- Filter Actions --------------------------------------------------------
@@ -324,7 +324,7 @@ export function SchoolBusReportsPage() {
       },
       {
         key: 'serviceDate',
-        header: 'Service date',
+        header: 'Ngày phục vụ',
         render: (row: any) => (
           <span className='text-slate-600 font-medium'>
             {formatDate(row.serviceDate)}
@@ -333,7 +333,7 @@ export function SchoolBusReportsPage() {
       },
       {
         key: 'direction',
-        header: 'Direction',
+        header: 'Chiều tuyến',
         render: (row: any) => {
           const isReturn = row.routeDirection === 'RETURN';
           return (
@@ -345,7 +345,7 @@ export function SchoolBusReportsPage() {
                   : 'bg-orange-50/50 text-orange-700 border-orange-200/50'
               )}
             >
-              {isReturn ? 'Return' : 'Outbound'}
+              {isReturn ? 'Về nhà' : 'Đến trường'}
             </span>
           );
         },
@@ -513,7 +513,7 @@ export function SchoolBusReportsPage() {
       },
       {
         key: 'utilization',
-        header: 'Utilization',
+        header: 'Mức sử dụng',
         render: (row: any) => {
           const pct = row.utilizationPercent || 0;
           const displayPct = Math.min(pct, 100);
@@ -549,20 +549,20 @@ export function SchoolBusReportsPage() {
           if (pct > 100) {
             return (
               <span className='inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 border border-rose-200/50'>
-                Over Capacity
+                Vượt sức chứa
               </span>
             );
           }
           if (pct === 100) {
             return (
               <span className='inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200/50'>
-                Optimal (Full)
+                Tối ưu (đầy xe)
               </span>
             );
           }
           return (
             <span className='inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 border border-blue-200/50'>
-              Under Capacity
+              Dưới sức chứa
             </span>
           );
         },
@@ -584,10 +584,10 @@ export function SchoolBusReportsPage() {
               onChange={(e) => setKeyword(e.target.value)}
               placeholder={
                 activeTab === 'trips'
-                  ? 'Search trips, students, routes...'
+                  ? 'Tìm chuyến, học sinh, tuyến...'
                   : activeTab === 'attendance'
-                    ? 'Search students, routes...'
-                    : 'Search trips, students, routes...'
+                    ? 'Tìm học sinh, tuyến...'
+                    : 'Tìm chuyến, học sinh, tuyến...'
               }
               className='w-full h-9 pl-9 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-300 transition-all font-medium text-slate-700'
             />
@@ -602,7 +602,7 @@ export function SchoolBusReportsPage() {
             className='h-9 rounded-lg px-3 flex items-center gap-2 border-slate-200 font-semibold text-xs text-slate-700 bg-white hover:bg-slate-50 shadow-sm'
           >
             <Filter className='h-3.5 w-3.5 text-slate-500' />
-            <span>Filter</span>
+            <span>Bộ lọc</span>
             {activeFiltersCount > 0 && (
               <span className='flex h-5 min-w-5 items-center justify-center rounded-full bg-[#C81E3A] px-1 text-[10px] font-bold text-white leading-none'>
                 {activeFiltersCount}
@@ -666,11 +666,11 @@ export function SchoolBusReportsPage() {
     <>
       <SchoolBusPageShell
         title='Báo cáo'
-        description='Review trip execution, attendance activity, and capacity utilization.'
+        description='Theo dõi vận hành chuyến, hoạt động điểm danh và mức sử dụng sức chứa.'
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+              { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
               { label: 'Báo cáo', current: true },
             ]}
           />
@@ -730,12 +730,12 @@ export function SchoolBusReportsPage() {
               },
               {
                 key: 'attendance',
-                label: 'Attendance',
+                label: 'Điểm danh',
                 count: attendanceData?.data?.totalElements || 0,
               },
               {
                 key: 'capacity',
-                label: 'Capacity',
+                label: 'Sức chứa',
                 count: capacityData?.data?.totalElements || 0,
               },
             ]}
@@ -804,13 +804,13 @@ export function SchoolBusReportsPage() {
           <div className='flex flex-col gap-6'>
             <SheetHeader className='border-b border-slate-100 pb-4'>
               <SheetTitle className='text-base font-extrabold text-slate-800'>
-                Filters
+                Bộ lọc
               </SheetTitle>
             </SheetHeader>
 
             <div className='space-y-4'>
               <SchoolBusDatePicker
-                label='From date'
+                label='Từ ngày'
                 value={tempFilters.fromDate}
                 onChange={(val) =>
                   setTempFilters({ ...tempFilters, fromDate: val })
@@ -820,7 +820,7 @@ export function SchoolBusReportsPage() {
                 fullWidth
               />
               <SchoolBusDatePicker
-                label='To date'
+                label='Đến ngày'
                 value={tempFilters.toDate}
                 onChange={(val) =>
                   setTempFilters({ ...tempFilters, toDate: val })
@@ -862,7 +862,7 @@ export function SchoolBusReportsPage() {
               </div>
               <div className='flex flex-col gap-1.5 w-full'>
                 <label className='text-xs font-semibold text-slate-700'>
-                  Direction
+                  Chiều tuyến
                 </label>
                 <SchoolBusSelect
                   value={tempFilters.direction}
@@ -885,14 +885,14 @@ export function SchoolBusReportsPage() {
               onClick={handleResetFilters}
               className='text-slate-500 hover:bg-slate-50 rounded-lg text-xs font-semibold px-4 py-2'
             >
-              <RotateCcw className='mr-1.5 h-3.5 w-3.5' /> Clear Filters
+              <RotateCcw className='mr-1.5 h-3.5 w-3.5' /> Xóa bộ lọc
             </Button>
             <Button
               size='sm'
               onClick={handleApplyFilters}
               className='bg-[#C81E3A] text-white hover:bg-[#b01730] active:bg-[#961427] rounded-lg text-xs font-semibold shadow-sm px-4 py-2'
             >
-              Apply Filters
+              Áp dụng
             </Button>
           </div>
         </SheetContent>

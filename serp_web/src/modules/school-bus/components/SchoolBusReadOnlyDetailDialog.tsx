@@ -50,7 +50,7 @@ export function SchoolBusReadOnlyDetailDialog({
         </div>
       ) : isError ? (
         <div className='rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive'>
-          Could not load detail. Please close and try again.
+          Không thể tải thông tin chi tiết. Vui lòng đóng và thử lại.
         </div>
       ) : (
         <div className='space-y-6'>
@@ -73,7 +73,7 @@ export function SchoolBusReadOnlyDetailDialog({
               className={schoolBusUi.outlineButton}
               onClick={() => onOpenChange(false)}
             >
-              Close
+              Đóng
             </Button>
           </div>
         </div>

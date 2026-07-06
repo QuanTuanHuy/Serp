@@ -210,7 +210,7 @@ export function SchoolBusTripsPage() {
 
   const dateOptions = React.useMemo(() => {
     return [
-      { label: 'All service dates', value: '' },
+      { label: 'Tất cả ngày phục vụ', value: '' },
       ...uniqueDates.map((date) => ({
         label: formatDate(date),
         value: date,
@@ -236,12 +236,12 @@ export function SchoolBusTripsPage() {
   const call = async (label: string, action: () => Promise<any>) => {
     try {
       const response = await action();
-      toast.success(response.message || `${label} completed`);
+      toast.success(response.message || `Đã hoàn tất: ${label}`);
     } catch (error: any) {
       toast.error(
         error?.status === 429
-          ? 'System is busy. Please wait a few seconds and try again.'
-          : (error?.data?.message || `${label} failed`)
+          ? 'Hệ thống đang bận. Vui lòng đợi vài giây và thử lại.'
+          : (error?.data?.message || `Thao tác ${label} thất bại`)
       );
     }
   };
@@ -285,7 +285,7 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'service',
-      header: 'Service',
+      header: 'Dịch vụ',
       render: (trip) => (
         <div className='flex flex-col text-slate-700 gap-0.5'>
           <span className='font-semibold text-xs'>
@@ -299,7 +299,7 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'startEnd',
-      header: 'Start -> End',
+      header: 'Điểm đầu -> Điểm cuối',
       render: (trip) => {
         const StartIcon =
           trip.startLocationType === 'SCHOOL'
@@ -334,7 +334,7 @@ export function SchoolBusTripsPage() {
                 <StartIcon className='h-3 w-3' />
               </div>
               <span className='truncate' title={trip.startLocationName}>
-                {trip.startLocationName || 'N/A'}
+                {trip.startLocationName || 'Chưa có'}
               </span>
               <span className='text-slate-400 font-normal shrink-0 mx-0.5'>
                 {'->'}
@@ -348,7 +348,7 @@ export function SchoolBusTripsPage() {
                 <EndIcon className='h-3 w-3' />
               </div>
               <span className='truncate' title={trip.endLocationName}>
-                {trip.endLocationName || 'N/A'}
+                {trip.endLocationName || 'Chưa có'}
               </span>
             </div>
             <span className='text-[10px] text-slate-500 font-medium'>
@@ -361,7 +361,7 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'assignment',
-      header: 'Assignment',
+      header: 'Phân công',
       render: (trip) => {
         const hasBus = !!trip.busPlateNumber;
         const hasDriver = !!trip.driverName;
@@ -378,7 +378,7 @@ export function SchoolBusTripsPage() {
               </div>
             ) : (
               <span className='inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-600 bg-amber-50 border border-amber-100 rounded px-1.5 py-0.5 w-fit'>
-                <AlertTriangle className='h-2.5 w-2.5' /> Missing Bus
+                <AlertTriangle className='h-2.5 w-2.5' /> Thiếu xe
               </span>
             )}
 
@@ -394,7 +394,7 @@ export function SchoolBusTripsPage() {
               </div>
             ) : (
               <span className='inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-600 bg-amber-50 border border-amber-100 rounded px-1.5 py-0.5 w-fit'>
-                <AlertTriangle className='h-2.5 w-2.5' /> Missing Driver
+                <AlertTriangle className='h-2.5 w-2.5' /> Thiếu tài xế
               </span>
             )}
 
@@ -421,7 +421,7 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'stopsCount',
-      header: 'Stop Progress',
+      header: 'Tiến độ điểm dừng',
       render: (trip) => {
         const totalStops = trip.totalStops || 0;
         const completedStops =
@@ -433,11 +433,11 @@ export function SchoolBusTripsPage() {
           <div className='flex flex-col gap-1 min-w-[120px] max-w-[160px] text-xs'>
             <div className='flex items-center justify-between font-semibold text-slate-700'>
               <span>
-                {completedStops} / {totalStops} stops
+                {completedStops} / {totalStops} điểm dừng
               </span>
               {completedStops === totalStops && totalStops > 0 && (
                 <span className='text-[9px] bg-emerald-50 text-emerald-700 px-1 py-0.2 rounded font-bold border border-emerald-100'>
-                  Done
+                  Hoàn thành
                 </span>
               )}
             </div>
@@ -481,7 +481,7 @@ export function SchoolBusTripsPage() {
               className='text-[10px] text-red-600 bg-red-50 border border-red-100 rounded px-1.5 py-0.5 max-w-[140px] truncate'
               title={trip.cancellationReason}
             >
-              Reason: {trip.cancellationReason}
+              Lý do: {trip.cancellationReason}
             </p>
           )}
         </div>
@@ -489,7 +489,7 @@ export function SchoolBusTripsPage() {
     },
     {
       key: 'actions',
-      header: access.isParentOnly ? 'Tracking' : 'Operate',
+      header: access.isParentOnly ? 'Theo dõi' : 'Thao tác',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (trip) => {
@@ -557,7 +557,7 @@ export function SchoolBusTripsPage() {
                       'rounded-full px-4.5 font-bold shadow-none h-8 border-0 text-xs shrink-0'
                     )}
                     onClick={() =>
-                      call('Depart stop', () =>
+                      call('Rời điểm dừng', () =>
                         departTripStop({
                           tripId: trip.id,
                           routeStopId: trip.nextRouteStopId,
@@ -565,14 +565,14 @@ export function SchoolBusTripsPage() {
                       )
                     }
                   >
-                    Depart stop
+                    Rời điểm dừng
                   </Button>
                 ) : (
                   <Button
                     size='sm'
                     className='bg-[#C81E3A] hover:bg-[#B31B34] text-white rounded-full px-4.5 font-bold shadow-none h-8 border-0 text-xs shrink-0'
                     onClick={() =>
-                      call('Arrive stop', () =>
+                      call('Đến điểm dừng', () =>
                         arriveTripStop({
                           tripId: trip.id,
                           routeStopId: trip.nextRouteStopId,
@@ -581,7 +581,7 @@ export function SchoolBusTripsPage() {
                     }
                   >
                     <MapPin className='mr-1.5 h-3.5 w-3.5' />
-                    Arrive next stop
+                    Đến điểm tiếp theo
                   </Button>
                 )}
                 <Button
@@ -591,7 +591,7 @@ export function SchoolBusTripsPage() {
                   asChild
                 >
                   <Link href={`/school-bus/trips/${trip.id}`}>
-                    Open operations
+                    Mở vận hành
                   </Link>
                 </Button>
               </div>
@@ -606,12 +606,12 @@ export function SchoolBusTripsPage() {
                     'rounded-full px-4.5 font-bold shadow-none h-8 border-0 text-xs shrink-0'
                   )}
                   onClick={() =>
-                    call('Complete trip', () =>
+                    call('Hoàn thành chuyến', () =>
                       completeTrip({ id: trip.id }).unwrap()
                     )
                   }
                 >
-                  Complete trip
+                  Hoàn thành chuyến
                 </Button>
                 <Button
                   size='sm'
@@ -620,7 +620,7 @@ export function SchoolBusTripsPage() {
                   asChild
                 >
                   <Link href={`/school-bus/trips/${trip.id}`}>
-                    Open operations
+                    Mở vận hành
                   </Link>
                 </Button>
               </div>
@@ -636,7 +636,7 @@ export function SchoolBusTripsPage() {
               className='rounded-full h-8 text-xs font-semibold px-3'
               asChild
             >
-              <Link href={`/school-bus/trips/${trip.id}`}>Open details</Link>
+              <Link href={`/school-bus/trips/${trip.id}`}>Xem chi tiết</Link>
             </Button>
             <Button
               size='sm'
@@ -658,7 +658,7 @@ export function SchoolBusTripsPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search trip or route code...'
+          placeholder='Tìm theo mã chuyến hoặc mã tuyến...'
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-350 focus:ring-1 focus:ring-slate-200/50'
@@ -670,21 +670,21 @@ export function SchoolBusTripsPage() {
           value={filterStatus}
           onChange={setFilterStatus}
           options={statusOptions}
-          placeholder='All statuses'
+          placeholder='Tất cả trạng thái'
           className='w-36'
         />
         <SchoolBusSelect
           value={filterDirection}
           onChange={setFilterDirection}
           options={directionOptions}
-          placeholder='All directions'
+          placeholder='Tất cả chiều tuyến'
           className='w-36'
         />
         <SchoolBusSelect
           value={filterDate}
           onChange={setFilterDate}
           options={dateOptions}
-          placeholder='All service dates'
+          placeholder='Tất cả ngày phục vụ'
           className='w-40'
           disabled={uniqueDates.length === 0}
         />
@@ -694,11 +694,11 @@ export function SchoolBusTripsPage() {
 
   return (
     <SchoolBusPageShell
-      title={access.isParentOnly ? 'Student Trip Tracking' : 'Trip Operations'}
+      title={access.isParentOnly ? 'Theo dõi chuyến học sinh' : 'Vận hành chuyến'}
       description={
         access.isParentOnly
-          ? "Track your student's trips in real time."
-          : 'Trips are operational snapshots created from planned routes. Use this page to start trips and process stop arrival/departure order.'
+          ? 'Theo dõi các chuyến xe của học sinh theo thời gian gần thực.'
+          : 'Quản lý các chuyến được tạo từ tuyến đã lập kế hoạch, bắt đầu chuyến và xử lý thứ tự đến/rời điểm.'
       }
       breadcrumb={
         <SchoolBusBreadcrumb
@@ -706,11 +706,11 @@ export function SchoolBusTripsPage() {
             access.isParentOnly
               ? [
                   { label: 'Xe bus trường học', href: '/school-bus/dashboard' },
-                  { label: 'Student Trip Tracking', current: true },
+                  { label: 'Theo dõi chuyến học sinh', current: true },
                 ]
               : [
-                  { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-                  { label: 'Trip Operations', current: true },
+                  { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
+                  { label: 'Vận hành chuyến', current: true },
                 ]
           }
         />
@@ -722,7 +722,7 @@ export function SchoolBusTripsPage() {
           <div className='flex items-center justify-end -mb-3'>
             <span className='text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 shrink-0'>
               <span className='inline-flex h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5 animate-pulse' />
-              Auto-refreshes every 20s - Last updated: {lastUpdated}
+              Tự làm mới mỗi 20 giây - cập nhật gần nhất: {lastUpdated}
             </span>
           </div>
         )}
@@ -730,23 +730,23 @@ export function SchoolBusTripsPage() {
         {/* Metrics row */}
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
-            label={access.isParentOnly ? 'Total Tracking Trips' : 'Chuyến xe'}
+            label={access.isParentOnly ? 'Tổng chuyến theo dõi' : 'Chuyến xe'}
             value={data?.data?.totalElements || 0}
             hint={
               access.isParentOnly
-                ? 'All historical & current student trips'
-                : 'Route execution records'
+                ? 'Tất cả chuyến hiện tại và lịch sử của học sinh'
+                : 'Bản ghi vận hành chuyến'
             }
             icon={Route}
             tone='info'
           />
           <SchoolBusMetricCard
-            label='In progress'
+            label='Đang thực hiện'
             value={trips.filter((trip) => trip.status === 'IN_PROGRESS').length}
             hint={
               access.isParentOnly
-                ? 'Trips currently running'
-                : 'Trips currently operating'
+                ? 'Chuyến đang chạy'
+                : 'Chuyến đang vận hành'
             }
             icon={PlayCircle}
             tone='info'
@@ -756,8 +756,8 @@ export function SchoolBusTripsPage() {
             value={trips.filter((trip) => trip.status === 'COMPLETED').length}
             hint={
               access.isParentOnly
-                ? 'Successfully ended trips'
-                : 'Closed trip executions'
+                ? 'Chuyến đã kết thúc'
+                : 'Chuyến đã đóng vận hành'
             }
             icon={CheckCircle2}
             tone='success'
@@ -767,12 +767,12 @@ export function SchoolBusTripsPage() {
         {/* Data Table within Card */}
         <SchoolBusDataTable
           title={
-            access.isParentOnly ? 'Student Trips' : 'Trip Operations Board'
+            access.isParentOnly ? 'Chuyến của học sinh' : 'Bảng vận hành chuyến'
           }
           description={
             access.isParentOnly
-              ? 'View and track current and past trips.'
-              : 'For each trip, only the next pending stop can be processed by the backend.'
+              ? 'Xem và theo dõi các chuyến hiện tại, lịch sử.'
+              : 'Mỗi chuyến chỉ cho phép xử lý điểm dừng kế tiếp theo đúng thứ tự.'
           }
           toolbar={tripToolbar}
           data={filteredTrips}
@@ -792,7 +792,7 @@ export function SchoolBusTripsPage() {
           emptyDescription={
             trips.length === 0
               ? access.isParentOnly
-                ? 'There are no active or scheduled trips for your children.'
+                ? 'Hiện chưa có chuyến đang hoạt động hoặc đã lên lịch cho học sinh.'
                 : 'Hãy tạo chuyến từ tuyến đã điều phối trước khi vận hành.'
               : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
           }

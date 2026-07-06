@@ -91,7 +91,7 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
             size='icon'
             className='w-full mt-4'
             onClick={toggleSidebar}
-            title='Expand sidebar'
+            title='Mở rộng thanh bên'
           >
             <PanelLeftOpen className='h-4 w-4' />
           </Button>
@@ -175,7 +175,7 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
           <div className='rounded-lg bg-muted p-3 text-xs text-muted-foreground'>
             <p className='font-medium'>{currentModule.moduleName}</p>
             <p className='mt-1'>
-              {currentModule.moduleDescription || 'Module Description'}
+              {currentModule.moduleDescription || 'Mô tả module'}
             </p>
           </div>
         </div>

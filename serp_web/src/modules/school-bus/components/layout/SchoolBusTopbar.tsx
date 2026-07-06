@@ -150,7 +150,7 @@ export function SchoolBusTopbar({
           <form onSubmit={handleSearch} className='relative'>
             <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
             <Input
-              placeholder='Search trips, students, routes...'
+              placeholder='Tìm chuyến xe, học sinh, tuyến...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='pl-10 pr-4'
@@ -201,7 +201,7 @@ export function SchoolBusTopbar({
                       onClick={() => router.push('/school-bus/settings')}
                     >
                       <Settings className='mr-2 h-4 w-4' />
-                      Settings
+                      Cài đặt
                     </Button>
                     <Button
                       variant='ghost'
@@ -209,7 +209,7 @@ export function SchoolBusTopbar({
                       onClick={() => router.push('/')}
                     >
                       <Home className='mr-2 h-4 w-4' />
-                      Back to SERP
+                      Quay về SERP
                     </Button>
                   </div>
 
@@ -219,7 +219,7 @@ export function SchoolBusTopbar({
                       className='w-full justify-start text-destructive hover:text-destructive'
                       onClick={handleLogout}
                     >
-                      Logout
+                      Đăng xuất
                     </Button>
                   </div>
                 </div>

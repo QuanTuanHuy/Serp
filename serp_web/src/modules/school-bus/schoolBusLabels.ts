@@ -87,6 +87,21 @@ export const profileStatusLabel: Record<string, string> = {
   INACTIVE: 'Ngừng hoạt động',
 };
 
+export const genderLabel: Record<string, string> = {
+  MALE: 'Nam',
+  FEMALE: 'Nữ',
+  OTHER: 'Khác',
+};
+
+export const contactProfileLabel: Record<string, string> = {
+  REACHABLE: 'Có thể liên hệ',
+  MISSING_PHONE: 'Thiếu số điện thoại',
+  MISSING_EMAIL: 'Thiếu email',
+  NO_LINKED_STUDENT: 'Chưa liên kết học sinh',
+  LOCAL_PROFILE: 'Hồ sơ nội bộ',
+  NOT_AVAILABLE: 'Chưa có',
+};
+
 export const staffStatusLabel: Record<string, string> = {
   AVAILABLE: 'Sẵn sàng',
   ASSIGNED: 'Đã phân công',
