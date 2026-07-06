@@ -15,7 +15,6 @@ import {
   Plus,
   RefreshCcw,
   ShieldAlert,
-  SlidersHorizontal,
   WandSparkles,
 } from 'lucide-react';
 
@@ -60,7 +59,6 @@ import {
   useRemoveSecondMileBagOrderMutation,
   useReopenSecondMileBagMutation,
   useSealSecondMileBagMutation,
-  useUpdateSecondMileBagCapacitySettingsMutation,
   useUpdateSecondMileBagMutation,
   useValidateSecondMileBaggingMutation,
 } from '../../api/firstMileApi';
@@ -109,12 +107,6 @@ import {
 const PAGE_SIZE = 20;
 const ALL_VALUE = '__ALL__';
 
-type BagCapacitySettingsFormValues = {
-  maxWeight: string;
-  maxVolume: string;
-  maxOrders: string;
-};
-
 export function BagListPage() {
   const notification = useNotification();
   const roles = useAppSelector(
@@ -143,13 +135,6 @@ export function BagListPage() {
   const [editingId, setEditingId] = React.useState<number | null>(null);
   const [formValues, setFormValues] =
     React.useState<BagFormValues>(emptyBagFormValues);
-  const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const [settingsValues, setSettingsValues] =
-    React.useState<BagCapacitySettingsFormValues>({
-      maxWeight: '',
-      maxVolume: '',
-      maxOrders: '',
-    });
 
   const [selectedDetailId, setSelectedDetailId] = React.useState<number | null>(
     null
@@ -258,13 +243,10 @@ export function BagListPage() {
     { page: 0, size: 500, status: 'ACTIVE' },
     { skip: !canView }
   );
-  const {
-    data: bagCapacitySettings,
-    isFetching: isFetchingBagCapacitySettings,
-    refetch: refetchBagCapacitySettings,
-  } = useGetSecondMileBagCapacitySettingsQuery(undefined, {
-    skip: !canView,
-  });
+  const { data: bagCapacitySettings } =
+    useGetSecondMileBagCapacitySettingsQuery(undefined, {
+      skip: !canView,
+    });
   const {
     data: bagsData,
     isFetching: isFetchingBags,
@@ -338,10 +320,6 @@ export function BagListPage() {
   const [sealBag, { isLoading: isSealing }] = useSealSecondMileBagMutation();
   const [reopenBag, { isLoading: isReopening }] =
     useReopenSecondMileBagMutation();
-  const [
-    updateBagCapacitySettings,
-    { isLoading: isUpdatingBagCapacitySettings },
-  ] = useUpdateSecondMileBagCapacitySettingsMutation();
   const [validateBagging, { isLoading: isValidating }] =
     useValidateSecondMileBaggingMutation();
   const [autoPlanBags, { isLoading: isAutoPlanning }] =
@@ -525,26 +503,6 @@ export function BagListPage() {
     setFormOpen(true);
   };
 
-  const openSettingsDialog = () => {
-    if (!canManage) {
-      notification.error('Cần quyền quản lý hub để cấu hình túi.');
-      return;
-    }
-
-    setSettingsValues({
-      maxWeight: bagCapacitySettings?.maxWeight
-        ? String(bagCapacitySettings.maxWeight)
-        : '',
-      maxVolume: bagCapacitySettings?.maxVolume
-        ? String(bagCapacitySettings.maxVolume)
-        : '',
-      maxOrders: bagCapacitySettings?.maxOrders
-        ? String(bagCapacitySettings.maxOrders)
-        : '',
-    });
-    setSettingsOpen(true);
-  };
-
   const handleEdit = (bag: SecondMileBag) => {
     if (!canManage || bag.status !== 'CREATED') {
       notification.error('Chỉ có thể sửa túi đang mở.');
@@ -581,42 +539,6 @@ export function BagListPage() {
       void refetch();
     } catch (err) {
       notification.error('Không thể lưu túi.', {
-        description: getErrorMessage(err),
-      });
-    }
-  };
-
-  const handleSubmitSettings = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const maxWeight = Number(settingsValues.maxWeight);
-    const maxVolume = Number(settingsValues.maxVolume);
-    const maxOrders = Number(settingsValues.maxOrders);
-
-    if (!Number.isFinite(maxWeight) || maxWeight <= 0) {
-      notification.error('Khối lượng tối đa phải lớn hơn 0.');
-      return;
-    }
-    if (!Number.isFinite(maxVolume) || maxVolume <= 0) {
-      notification.error('Thể tích tối đa phải lớn hơn 0.');
-      return;
-    }
-    if (!Number.isInteger(maxOrders) || maxOrders <= 0) {
-      notification.error('Số đơn tối đa phải là số nguyên dương.');
-      return;
-    }
-
-    try {
-      await updateBagCapacitySettings({
-        max_weight: maxWeight,
-        max_volume: maxVolume,
-        max_orders: maxOrders,
-      }).unwrap();
-      notification.success('Đã cập nhật mặc định túi.');
-      setSettingsOpen(false);
-      void refetchBagCapacitySettings();
-      void refetch();
-    } catch (err) {
-      notification.error('Không thể cập nhật mặc định túi.', {
         description: getErrorMessage(err),
       });
     }
@@ -828,16 +750,6 @@ export function BagListPage() {
             >
               <WandSparkles className='h-4 w-4' />
               Tự động lập túi
-            </Button>
-          )}
-          {canManage && (
-            <Button
-              variant='outline'
-              disabled={isFetchingBagCapacitySettings}
-              onClick={openSettingsDialog}
-            >
-              <SlidersHorizontal className='h-4 w-4' />
-              Mặc định túi
             </Button>
           )}
           <Button variant='outline' onClick={() => void refetch()}>
@@ -1226,90 +1138,6 @@ export function BagListPage() {
           setAutoPlan(null);
         }}
       />
-
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className='sm:max-w-lg'>
-          <DialogHeader>
-            <DialogTitle>Mặc định túi</DialogTitle>
-            <DialogDescription>
-              Thiết lập sức chứa mặc định dùng khi tạo túi mới và lập túi tự
-              động.
-            </DialogDescription>
-          </DialogHeader>
-          <form className='space-y-4' onSubmit={handleSubmitSettings}>
-            <div className='grid gap-3 sm:grid-cols-3'>
-              <div className='space-y-2'>
-                <Label htmlFor='bag-default-max-weight'>
-                  Khối lượng tối đa (kg)
-                </Label>
-                <Input
-                  id='bag-default-max-weight'
-                  type='number'
-                  min='0'
-                  step='0.01'
-                  value={settingsValues.maxWeight}
-                  onChange={(event) =>
-                    setSettingsValues((current) => ({
-                      ...current,
-                      maxWeight: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='bag-default-max-volume'>
-                  Thể tích tối đa (m3)
-                </Label>
-                <Input
-                  id='bag-default-max-volume'
-                  type='number'
-                  min='0'
-                  step='0.001'
-                  value={settingsValues.maxVolume}
-                  onChange={(event) =>
-                    setSettingsValues((current) => ({
-                      ...current,
-                      maxVolume: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='bag-default-max-orders'>Số đơn tối đa</Label>
-                <Input
-                  id='bag-default-max-orders'
-                  type='number'
-                  min='1'
-                  step='1'
-                  value={settingsValues.maxOrders}
-                  onChange={(event) =>
-                    setSettingsValues((current) => ({
-                      ...current,
-                      maxOrders: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type='button'
-                variant='outline'
-                disabled={isUpdatingBagCapacitySettings}
-                onClick={() => setSettingsOpen(false)}
-              >
-                Hủy
-              </Button>
-              <Button type='submit' disabled={isUpdatingBagCapacitySettings}>
-                {isUpdatingBagCapacitySettings && (
-                  <Loader2 className='h-4 w-4 animate-spin' />
-                )}
-                Lưu mặc định
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

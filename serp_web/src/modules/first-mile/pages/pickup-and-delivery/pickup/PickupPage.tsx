@@ -66,6 +66,20 @@ type PickupPageAccessScope =
 
 const POST_OFFICE_PAGE_SIZE = 200;
 
+const PICKUP_STATUS_LABELS: Record<string, string> = {
+  PLANNED: 'Đã lập kế hoạch',
+  IN_PROGRESS: 'Đang thực hiện',
+  COMPLETED: 'Hoàn tất',
+  CANCELLED: 'Đã hủy',
+  ASSIGNED_TO_PICKUP: 'Đã phân công lấy',
+  PICKING_UP: 'Đang lấy hàng',
+  PICKED_UP: 'Đã lấy hàng',
+  PENDING_ORIGIN_POST_OFFICE_INBOUND: 'Chờ nhập bưu cục gốc',
+};
+
+const formatPickupStatus = (status?: string): string =>
+  status ? (PICKUP_STATUS_LABELS[status] ?? status) : '--';
+
 const resolvePickupPageAccessScope = (
   roles: string[]
 ): PickupPageAccessScope => {
@@ -116,7 +130,7 @@ const formatDateTime = (value?: string): string => {
     return value;
   }
 
-  return parsedDate.toLocaleString('en-US');
+  return parsedDate.toLocaleString('vi-VN');
 };
 
 const formatNumber = (value?: number): string => {
@@ -299,7 +313,7 @@ export const PickupPage: React.FC = () => {
   );
   const wardComboboxOptions = React.useMemo(
     () => [
-      { value: 'ALL', label: 'All wards in province' },
+      { value: 'ALL', label: 'Tất cả phường/xã trong tỉnh' },
       ...wardOptions.flatMap((ward) =>
         ward.wardCode
           ? [
@@ -413,9 +427,12 @@ export const PickupPage: React.FC = () => {
       return;
     }
 
-    notification.error('Failed to load couriers for selected post office.', {
-      description: getErrorMessage(couriersError),
-    });
+    notification.error(
+      'Không thể tải nhân viên giao nhận của bưu cục đã chọn.',
+      {
+        description: getErrorMessage(couriersError),
+      }
+    );
   }, [couriersError, notification]);
 
   const courierOptions = React.useMemo(() => {
@@ -429,12 +446,12 @@ export const PickupPage: React.FC = () => {
       .map((courier) => ({
         id: courier.id,
         code: courier.code?.trim() || `COURIER-${courier.id}`,
-        fullName: courier.fullName?.trim() || 'Unknown courier',
+        fullName: courier.fullName?.trim() || 'Nhân viên giao nhận chưa rõ',
       }));
   }, [couriersData]);
   const courierComboboxOptions = React.useMemo(
     () => [
-      { value: 'all', label: 'All couriers' },
+      { value: 'all', label: 'Tất cả nhân viên giao nhận' },
       ...courierOptions.map((courier) => ({
         value: String(courier.id),
         label: `${courier.code} - ${courier.fullName}`,
@@ -492,7 +509,7 @@ export const PickupPage: React.FC = () => {
       return;
     }
 
-    notification.error('Failed to load pickup tracking data.', {
+    notification.error('Không thể tải dữ liệu theo dõi lấy hàng.', {
       description: getErrorMessage(pickupOverviewError),
     });
   }, [notification, pickupOverviewError]);
@@ -553,9 +570,9 @@ export const PickupPage: React.FC = () => {
     (order: PickupTrackingOrder) => {
       const coordinates = resolveValidCheckinCoordinates(order);
       if (!coordinates) {
-        notification.error('Pickup location is missing for this order.', {
+        notification.error('Đơn hàng chưa có vị trí lấy hàng.', {
           description:
-            'Ensure the order has sender coordinates before check-in.',
+            'Vui lòng đảm bảo đơn có tọa độ người gửi trước khi check-in.',
         });
         return false;
       }
@@ -596,7 +613,7 @@ export const PickupPage: React.FC = () => {
   const handleResolveCheckinLocation = async () => {
     if (devCheckinMode) {
       if (!checkinOrder) {
-        notification.error('Please select an order to check in.');
+        notification.error('Vui lòng chọn đơn để check-in.');
         return;
       }
 
@@ -609,7 +626,7 @@ export const PickupPage: React.FC = () => {
 
   const handleResolveCurrentLocation = async () => {
     if (typeof window === 'undefined' || !('geolocation' in navigator)) {
-      notification.error('Geolocation is not supported in your browser.');
+      notification.error('Trình duyệt không hỗ trợ định vị.');
       return;
     }
 
@@ -628,7 +645,7 @@ export const PickupPage: React.FC = () => {
       setCheckinLatitude(position.coords.latitude.toFixed(6));
       setCheckinLongitude(position.coords.longitude.toFixed(6));
     } catch (error) {
-      notification.error('Failed to resolve current location.', {
+      notification.error('Không thể lấy vị trí hiện tại.', {
         description: getErrorMessage(error),
       });
     } finally {
@@ -638,12 +655,12 @@ export const PickupPage: React.FC = () => {
 
   const handleSubmitCheckin = async () => {
     if (!checkinOrder) {
-      notification.error('Please select an order to check in.');
+      notification.error('Vui lòng chọn đơn để check-in.');
       return;
     }
 
     if (!checkinPhoto) {
-      notification.error('Please select a photo before check in.');
+      notification.error('Vui lòng chọn ảnh trước khi check-in.');
       return;
     }
 
@@ -651,7 +668,7 @@ export const PickupPage: React.FC = () => {
     const longitude = Number(checkinLongitude);
 
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      notification.error('Please provide a valid check-in location.');
+      notification.error('Vui lòng cung cấp vị trí check-in hợp lệ.');
       return;
     }
 
@@ -666,7 +683,7 @@ export const PickupPage: React.FC = () => {
         formData,
       }).unwrap();
 
-      notification.success('Pickup check-in completed successfully.');
+      notification.success('Đã check-in lấy hàng thành công.');
       setIsCheckinDialogOpen(false);
       setCheckinOrder(null);
       setCheckinPhoto(null);
@@ -674,7 +691,7 @@ export const PickupPage: React.FC = () => {
       setCheckinLongitude('');
       void refetchOverview();
     } catch (error) {
-      notification.error('Pickup check-in failed.', {
+      notification.error('Check-in lấy hàng thất bại.', {
         description: getErrorMessage(error),
       });
     }
@@ -682,18 +699,18 @@ export const PickupPage: React.FC = () => {
 
   const handleCompleteTrip = async (trip: PickupTrackingTrip) => {
     if (!trip.tripId) {
-      notification.error('Trip id is missing.');
+      notification.error('Thiếu mã chuyến.');
       return;
     }
 
     try {
       await completePickupTrip(trip.tripId).unwrap();
       notification.success(
-        `Trip ${trip.tripCode || `#${trip.tripId}`} completed successfully.`
+        `Đã hoàn tất chuyến ${trip.tripCode || `#${trip.tripId}`}.`
       );
       void refetchOverview();
     } catch (error) {
-      notification.error('Failed to complete trip.', {
+      notification.error('Không thể hoàn tất chuyến.', {
         description: getErrorMessage(error),
       });
     }
@@ -701,18 +718,18 @@ export const PickupPage: React.FC = () => {
 
   const handleReturnTripToPostOffice = async (trip: PickupTrackingTrip) => {
     if (!trip.tripId) {
-      notification.error('Trip id is missing.');
+      notification.error('Thiếu mã chuyến.');
       return;
     }
 
     try {
       await returnPickupTripToPostOffice(trip.tripId).unwrap();
       notification.success(
-        `Trip ${trip.tripCode || `#${trip.tripId}`} returned to post office. Orders are awaiting post office inbound scan.`
+        `Đã chuyển chuyến ${trip.tripCode || `#${trip.tripId}`} về bưu cục. Đơn đang chờ quét nhập bưu cục.`
       );
       void refetchOverview();
     } catch (error) {
-      notification.error('Failed to return trip to post office.', {
+      notification.error('Không thể chuyển chuyến về bưu cục.', {
         description: getErrorMessage(error),
       });
     }
@@ -728,7 +745,9 @@ export const PickupPage: React.FC = () => {
     }
 
     if (orderCodes.length === 0) {
-      notification.error('Scan at least one order before confirming inbound.');
+      notification.error(
+        'Vui lòng quét ít nhất một đơn trước khi xác nhận nhập bưu cục.'
+      );
       return;
     }
 
@@ -737,11 +756,11 @@ export const PickupPage: React.FC = () => {
         tripId: inboundTrip.tripId,
         body: { orderCodes },
       }).unwrap();
-      notification.success('Post office inbound confirmed successfully.');
+      notification.success('Đã xác nhận nhập bưu cục thành công.');
       setInboundTrip(null);
       void refetchOverview();
     } catch (error) {
-      notification.error('Failed to confirm post office inbound.', {
+      notification.error('Không thể xác nhận nhập bưu cục.', {
         description: getErrorMessage(error),
       });
     }
@@ -750,15 +769,15 @@ export const PickupPage: React.FC = () => {
   return (
     <div className='space-y-4'>
       <div className='flex flex-col gap-1'>
-        <h1 className='text-2xl font-bold tracking-tight'>Pickup Tracking</h1>
+        <h1 className='text-2xl font-bold tracking-tight'>Theo dõi lấy hàng</h1>
       </div>
 
       {!canAccess ? (
         <Card>
           <CardHeader>
-            <CardTitle>Access denied</CardTitle>
+            <CardTitle>Không có quyền truy cập</CardTitle>
             <CardDescription>
-              Your account does not have permission to access pickup tracking.
+              Tài khoản của bạn không có quyền truy cập theo dõi lấy hàng.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -766,11 +785,11 @@ export const PickupPage: React.FC = () => {
         <>
           <Card className='gap-3 py-5'>
             <CardHeader className='px-5 py-0'>
-              <CardTitle className='text-base'>Tracking filters</CardTitle>
+              <CardTitle className='text-base'>Bộ lọc theo dõi</CardTitle>
             </CardHeader>
             <CardContent className='grid gap-3 px-5 py-0 md:grid-cols-2 xl:grid-cols-5'>
               <div className='space-y-2'>
-                <Label htmlFor='trip-date'>Trip date</Label>
+                <Label htmlFor='trip-date'>Ngày chuyến</Label>
                 <Input
                   id='trip-date'
                   type='date'
@@ -782,21 +801,21 @@ export const PickupPage: React.FC = () => {
               {!isCourierScope ? (
                 <>
                   <div className='space-y-2'>
-                    <Label htmlFor='pickup-province'>Province</Label>
+                    <Label htmlFor='pickup-province'>Tỉnh/Thành phố</Label>
                     <TmsCombobox
                       id='pickup-province'
                       value={selectedProvinceCode}
                       onValueChange={handleProvinceChange}
                       options={provinceComboboxOptions}
-                      placeholder='Select province'
-                      emptyText='No provinces found'
+                      placeholder='Chọn tỉnh/thành phố'
+                      emptyText='Không tìm thấy tỉnh/thành phố'
                       disabled={isLoadingProvinces || !provinceOptions.length}
                       loading={isLoadingProvinces}
                     />
                   </div>
 
                   <div className='space-y-2'>
-                    <Label htmlFor='pickup-ward'>Ward</Label>
+                    <Label htmlFor='pickup-ward'>Phường/Xã</Label>
                     <TmsCombobox
                       id='pickup-ward'
                       value={selectedWardCode || 'ALL'}
@@ -804,11 +823,13 @@ export const PickupPage: React.FC = () => {
                       options={wardComboboxOptions}
                       placeholder={
                         selectedProvinceCode
-                          ? 'Select ward (optional)'
-                          : 'Select province first'
+                          ? 'Chọn phường/xã (không bắt buộc)'
+                          : 'Chọn tỉnh/thành phố trước'
                       }
                       emptyText={
-                        isLoadingWards ? 'Loading wards...' : 'No wards found'
+                        isLoadingWards
+                          ? 'Đang tải phường/xã...'
+                          : 'Không tìm thấy phường/xã'
                       }
                       disabled={!selectedProvinceCode || isLoadingWards}
                       loading={isLoadingWards}
@@ -816,7 +837,7 @@ export const PickupPage: React.FC = () => {
                   </div>
 
                   <div className='space-y-2'>
-                    <Label htmlFor='pickup-post-office'>Post office</Label>
+                    <Label htmlFor='pickup-post-office'>Bưu cục</Label>
                     <TmsCombobox
                       id='pickup-post-office'
                       value={selectedPostOfficeId}
@@ -824,10 +845,10 @@ export const PickupPage: React.FC = () => {
                       options={postOfficeComboboxOptions}
                       placeholder={
                         selectedProvinceCode
-                          ? 'Select post office'
-                          : 'Select province first'
+                          ? 'Chọn bưu cục'
+                          : 'Chọn tỉnh/thành phố trước'
                       }
-                      emptyText='No post offices found'
+                      emptyText='Không tìm thấy bưu cục'
                       disabled={
                         !selectedProvinceCode ||
                         isLoadingPostOffices ||
@@ -839,20 +860,20 @@ export const PickupPage: React.FC = () => {
                     !isLoadingPostOffices &&
                     !postOfficeOptions.length ? (
                       <p className='text-xs text-muted-foreground'>
-                        No post offices found for selected location.
+                        Không tìm thấy bưu cục ở khu vực đã chọn.
                       </p>
                     ) : null}
                   </div>
 
                   <div className='space-y-2'>
-                    <Label htmlFor='pickup-courier'>Courier</Label>
+                    <Label htmlFor='pickup-courier'>Nhân viên giao nhận</Label>
                     <TmsCombobox
                       id='pickup-courier'
                       value={selectedCourierStaffId}
                       onValueChange={setSelectedCourierStaffId}
                       options={courierComboboxOptions}
-                      placeholder='All couriers in post office'
-                      emptyText='No couriers found'
+                      placeholder='Tất cả nhân viên giao nhận trong bưu cục'
+                      emptyText='Không tìm thấy nhân viên giao nhận'
                       disabled={!selectedPostOfficeId || isLoadingCouriers}
                       loading={isLoadingCouriers}
                     />
@@ -860,7 +881,7 @@ export const PickupPage: React.FC = () => {
                 </>
               ) : (
                 <div className='rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground md:col-span-2'>
-                  You are viewing your own assigned pickup orders.
+                  Bạn đang xem các đơn lấy hàng được giao cho chính mình.
                 </div>
               )}
             </CardContent>
@@ -869,7 +890,7 @@ export const PickupPage: React.FC = () => {
           <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7'>
             <Card className='gap-2 py-3'>
               <CardHeader className='px-4 py-0'>
-                <CardDescription>Total trips</CardDescription>
+                <CardDescription>Tổng chuyến</CardDescription>
                 <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.totalTrips)}
                 </CardTitle>
@@ -878,7 +899,7 @@ export const PickupPage: React.FC = () => {
 
             <Card className='gap-2 py-3'>
               <CardHeader className='px-4 py-0'>
-                <CardDescription>Total orders</CardDescription>
+                <CardDescription>Tổng đơn</CardDescription>
                 <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.totalOrders)}
                 </CardTitle>
@@ -887,7 +908,7 @@ export const PickupPage: React.FC = () => {
 
             <Card className='gap-2 py-3'>
               <CardHeader className='px-4 py-0'>
-                <CardDescription>Checked-in orders</CardDescription>
+                <CardDescription>Đơn đã check-in</CardDescription>
                 <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.checkedInOrders)}
                 </CardTitle>
@@ -896,7 +917,7 @@ export const PickupPage: React.FC = () => {
 
             <Card className='gap-2 py-3'>
               <CardHeader className='px-4 py-0'>
-                <CardDescription>Pending check-in</CardDescription>
+                <CardDescription>Chờ check-in</CardDescription>
                 <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.pendingCheckinOrders)}
                 </CardTitle>
@@ -905,7 +926,7 @@ export const PickupPage: React.FC = () => {
 
             <Card className='gap-2 py-3'>
               <CardHeader className='px-4 py-0'>
-                <CardDescription>PICKING_UP orders</CardDescription>
+                <CardDescription>Đơn đang lấy</CardDescription>
                 <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.pickingUpOrders)}
                 </CardTitle>
@@ -914,7 +935,7 @@ export const PickupPage: React.FC = () => {
 
             <Card className='gap-2 py-3'>
               <CardHeader className='px-4 py-0'>
-                <CardDescription>PICKED_UP orders</CardDescription>
+                <CardDescription>Đơn đã lấy</CardDescription>
                 <CardTitle className='text-xl'>
                   {formatNumber(pickupOverview?.pickedUpOrders)}
                 </CardTitle>
@@ -924,7 +945,7 @@ export const PickupPage: React.FC = () => {
             {canManagePostOfficeInbound ? (
               <Card className='gap-2 py-3'>
                 <CardHeader className='px-4 py-0'>
-                  <CardDescription>Pending post office inbound</CardDescription>
+                  <CardDescription>Chờ nhập bưu cục</CardDescription>
                   <CardTitle className='text-xl'>
                     {formatNumber(
                       pickupOverview?.pendingPostOfficeInboundOrders
@@ -937,25 +958,27 @@ export const PickupPage: React.FC = () => {
 
           <Card className='gap-3 py-5'>
             <CardHeader className='px-5 py-0'>
-              <CardTitle className='text-base'>Assigned trips</CardTitle>
+              <CardTitle className='text-base'>Chuyến được phân công</CardTitle>
             </CardHeader>
             <CardContent className='px-5 py-0'>
               {trips.length === 0 ? (
                 <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
-                  No trips found for selected filters.
+                  Không tìm thấy chuyến theo bộ lọc đã chọn.
                 </div>
               ) : (
                 <div className='overflow-x-auto rounded-md border'>
                   <table className='w-full min-w-[820px] text-sm'>
                     <thead className='bg-muted/40 text-left'>
                       <tr>
-                        <th className='px-3 py-2 font-medium'>Trip</th>
-                        <th className='px-3 py-2 font-medium'>Courier</th>
-                        <th className='px-3 py-2 font-medium'>Status</th>
+                        <th className='px-3 py-2 font-medium'>Chuyến</th>
                         <th className='px-3 py-2 font-medium'>
-                          Check-in progress
+                          Nhân viên giao nhận
                         </th>
-                        <th className='px-3 py-2 font-medium'>Actions</th>
+                        <th className='px-3 py-2 font-medium'>Trạng thái</th>
+                        <th className='px-3 py-2 font-medium'>
+                          Tiến độ check-in
+                        </th>
+                        <th className='px-3 py-2 font-medium'>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -984,7 +1007,7 @@ export const PickupPage: React.FC = () => {
                                   : 'secondary'
                               }
                             >
-                              {trip.tripStatus || '--'}
+                              {formatPickupStatus(trip.tripStatus)}
                             </Badge>
                           </td>
                           <td className='px-3 py-2'>
@@ -1000,7 +1023,7 @@ export const PickupPage: React.FC = () => {
                                   disabled={isCompletingTrip || isReturningTrip}
                                   onClick={() => void handleCompleteTrip(trip)}
                                 >
-                                  Complete trip
+                                  Hoàn tất chuyến
                                 </Button>
                               ) : null}
                               {canReturnTripToPostOffice(trip, orders) ? (
@@ -1011,7 +1034,7 @@ export const PickupPage: React.FC = () => {
                                     void handleReturnTripToPostOffice(trip)
                                   }
                                 >
-                                  Return to post office
+                                  Chuyển về bưu cục
                                 </Button>
                               ) : null}
                               {canManagePostOfficeInbound &&
@@ -1028,7 +1051,7 @@ export const PickupPage: React.FC = () => {
                                     handleOpenPostOfficeInbound(trip)
                                   }
                                 >
-                                  Receive at post office
+                                  Nhập bưu cục
                                 </Button>
                               ) : null}
                               {!canCompleteTrip(trip) &&
@@ -1038,7 +1061,7 @@ export const PickupPage: React.FC = () => {
                                 canConfirmPostOfficeInbound(trip, orders)
                               ) ? (
                                 <span className='text-xs text-muted-foreground'>
-                                  No actions
+                                  Không có thao tác
                                 </span>
                               ) : null}
                             </div>
@@ -1054,16 +1077,16 @@ export const PickupPage: React.FC = () => {
 
           <Card className='gap-3 py-5'>
             <CardHeader className='px-5 py-0'>
-              <CardTitle className='text-base'>Pickup map</CardTitle>
+              <CardTitle className='text-base'>Bản đồ lấy hàng</CardTitle>
               <CardDescription>
-                {ordersWithCoordinates.length} assigned order(s) with location.
+                {ordersWithCoordinates.length} đơn được phân công có vị trí.
               </CardDescription>
             </CardHeader>
             <CardContent className='px-5 py-0'>
               {ordersWithCoordinates.length === 0 ? (
                 <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
-                  No assigned pickup orders with coordinates for selected
-                  filters.
+                  Không có đơn lấy hàng được phân công có tọa độ theo bộ lọc đã
+                  chọn.
                 </div>
               ) : (
                 <PickupOrdersMap
@@ -1079,11 +1102,11 @@ export const PickupPage: React.FC = () => {
           <Card className='gap-3 py-5'>
             <CardHeader className='flex flex-col gap-2 px-5 py-0 sm:flex-row sm:items-center sm:justify-between'>
               <div>
-                <CardTitle className='text-base'>Assigned orders</CardTitle>
+                <CardTitle className='text-base'>Đơn được phân công</CardTitle>
                 <CardDescription>
                   {isLoadingOverview
-                    ? 'Loading assigned pickup orders...'
-                    : `${orders.length} order(s) in ${trips.length} trip(s).`}
+                    ? 'Đang tải đơn lấy hàng được phân công...'
+                    : `${orders.length} đơn trong ${trips.length} chuyến.`}
                 </CardDescription>
               </div>
               <Button
@@ -1092,25 +1115,29 @@ export const PickupPage: React.FC = () => {
                 onClick={() => void refetchOverview()}
                 disabled={isFetchingOverview}
               >
-                {isFetchingOverview ? 'Refreshing...' : 'Refresh'}
+                {isFetchingOverview ? 'Đang làm mới...' : 'Làm mới'}
               </Button>
             </CardHeader>
             <CardContent className='px-5 py-0'>
               {orders.length === 0 ? (
                 <div className='rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground'>
-                  No assigned pickup orders for selected filters.
+                  Không có đơn lấy hàng được phân công theo bộ lọc đã chọn.
                 </div>
               ) : (
                 <div className='overflow-x-auto rounded-md border'>
                   <table className='w-full min-w-[900px] text-sm'>
                     <thead className='bg-muted/40 text-left'>
                       <tr>
-                        <th className='px-3 py-2 font-medium'>Order</th>
-                        <th className='px-3 py-2 font-medium'>Courier</th>
-                        <th className='px-3 py-2 font-medium'>Trip</th>
-                        <th className='px-3 py-2 font-medium'>Pickup window</th>
+                        <th className='px-3 py-2 font-medium'>Đơn</th>
+                        <th className='px-3 py-2 font-medium'>
+                          Nhân viên giao nhận
+                        </th>
+                        <th className='px-3 py-2 font-medium'>Chuyến</th>
+                        <th className='px-3 py-2 font-medium'>
+                          Khung giờ lấy hàng
+                        </th>
                         <th className='px-3 py-2 font-medium'>Check-in</th>
-                        <th className='px-3 py-2 font-medium'>Actions</th>
+                        <th className='px-3 py-2 font-medium'>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1128,7 +1155,7 @@ export const PickupPage: React.FC = () => {
                                 {order.orderCode || `#${order.orderId}`}
                               </div>
                               <div className='text-xs text-muted-foreground'>
-                                {order.orderStatus || '--'}
+                                {formatPickupStatus(order.orderStatus)}
                               </div>
                             </td>
                             <td className='px-3 py-2'>
@@ -1160,12 +1187,12 @@ export const PickupPage: React.FC = () => {
                                   }}
                                 >
                                   <Badge variant='default'>
-                                    Checked in{' '}
+                                    Đã check-in{' '}
                                     {formatDateTime(order.checkinTime)}
                                   </Badge>
                                 </button>
                               ) : (
-                                <Badge variant='secondary'>Pending</Badge>
+                                <Badge variant='secondary'>Đang chờ</Badge>
                               )}
                             </td>
                             <td className='px-3 py-2'>
@@ -1178,7 +1205,7 @@ export const PickupPage: React.FC = () => {
                                       handleOpenCheckinDialog(order);
                                     }}
                                   >
-                                    Check in
+                                    Check-in
                                   </Button>
                                 ) : null}
                                 {canViewCheckinDetail(order) ? (
@@ -1190,7 +1217,7 @@ export const PickupPage: React.FC = () => {
                                       handleOpenCheckinDetailDialog(order);
                                     }}
                                   >
-                                    View check-in
+                                    Xem check-in
                                   </Button>
                                 ) : (
                                   <Button
@@ -1201,7 +1228,7 @@ export const PickupPage: React.FC = () => {
                                       setSelectedOrderId(order.orderId);
                                     }}
                                   >
-                                    View
+                                    Xem
                                   </Button>
                                 )}
                               </div>
@@ -1220,17 +1247,17 @@ export const PickupPage: React.FC = () => {
             <Card className='gap-3 py-5'>
               <CardHeader className='px-5 py-0'>
                 <CardTitle className='text-base'>
-                  Order detail:{' '}
+                  Chi tiết đơn:{' '}
                   {selectedOrder.orderCode || `#${selectedOrder.orderId}`}
                 </CardTitle>
                 <CardDescription>
-                  Trip {selectedOrder.tripCode || '--'} | Courier{' '}
+                  Chuyến {selectedOrder.tripCode || '--'} | Nhân viên{' '}
                   {selectedOrder.courierName || '--'}
                 </CardDescription>
               </CardHeader>
               <CardContent className='grid gap-3 px-5 py-0 sm:grid-cols-3'>
                 <div>
-                  <div className='text-xs text-muted-foreground'>Sender</div>
+                  <div className='text-xs text-muted-foreground'>Người gửi</div>
                   <div className='font-medium'>
                     {selectedOrder.senderName || '--'}
                   </div>
@@ -1245,7 +1272,7 @@ export const PickupPage: React.FC = () => {
                   {canViewCheckinDetail(selectedOrder) ? (
                     <>
                       <Badge variant='default'>
-                        Checked in {formatDateTime(selectedOrder.checkinTime)}
+                        Đã check-in {formatDateTime(selectedOrder.checkinTime)}
                       </Badge>
                       <div>
                         <Button
@@ -1255,29 +1282,28 @@ export const PickupPage: React.FC = () => {
                             handleOpenCheckinDetailDialog(selectedOrder)
                           }
                         >
-                          View check-in detail
+                          Xem chi tiết check-in
                         </Button>
                       </div>
                     </>
                   ) : (
-                    <Badge variant='secondary'>Pending check-in</Badge>
+                    <Badge variant='secondary'>Chờ check-in</Badge>
                   )}
                 </div>
 
                 <div>
                   <div className='text-xs text-muted-foreground'>
-                    Planned service
+                    Kế hoạch phục vụ
                   </div>
                   <div>
-                    Arrival: {formatDateTime(selectedOrder.plannedArrivalTime)}
+                    Đến nơi: {formatDateTime(selectedOrder.plannedArrivalTime)}
                   </div>
                   <div>
-                    Start:{' '}
+                    Bắt đầu:{' '}
                     {formatDateTime(selectedOrder.plannedStartServiceTime)}
                   </div>
                   <div>
-                    Departure:{' '}
-                    {formatDateTime(selectedOrder.plannedDepartureTime)}
+                    Rời đi: {formatDateTime(selectedOrder.plannedDepartureTime)}
                   </div>
                 </div>
               </CardContent>
@@ -1315,12 +1341,12 @@ export const PickupPage: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Pickup check-in {checkinOrder?.orderCode || ''}
+              Check-in lấy hàng {checkinOrder?.orderCode || ''}
             </DialogTitle>
             <DialogDescription>
               {devCheckinMode
-                ? 'Upload pickup photo. Development mode fills coordinates at the order pickup location.'
-                : 'Upload pickup photo and share your current location.'}
+                ? 'Tải ảnh lấy hàng lên. Chế độ phát triển sẽ điền tọa độ theo vị trí lấy hàng của đơn.'
+                : 'Tải ảnh lấy hàng lên và chia sẻ vị trí hiện tại của bạn.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -1329,11 +1355,11 @@ export const PickupPage: React.FC = () => {
               <div className='flex items-center justify-between gap-4 rounded-md border border-dashed border-amber-500/50 bg-amber-500/5 px-3 py-2'>
                 <div className='space-y-0.5'>
                   <Label htmlFor='dev-checkin-mode' className='text-sm'>
-                    Development mode
+                    Chế độ phát triển
                   </Label>
                   <p className='text-xs text-muted-foreground'>
-                    Fill check-in coordinates at pickup location (within radius)
-                    instead of your current GPS position.
+                    Điền tọa độ check-in theo vị trí lấy hàng hợp lệ thay vì vị
+                    trí GPS hiện tại.
                   </p>
                 </div>
                 <Switch
@@ -1344,7 +1370,7 @@ export const PickupPage: React.FC = () => {
               </div>
             ) : null}
             <div className='space-y-2'>
-              <Label htmlFor='checkin-photo'>Photo</Label>
+              <Label htmlFor='checkin-photo'>Ảnh</Label>
               <Input
                 id='checkin-photo'
                 type='file'
@@ -1358,29 +1384,29 @@ export const PickupPage: React.FC = () => {
 
             <div className='grid gap-3 sm:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='checkin-latitude'>Latitude</Label>
+                <Label htmlFor='checkin-latitude'>Vĩ độ</Label>
                 <Input
                   id='checkin-latitude'
                   value={checkinLatitude}
                   readOnly
                   placeholder={
                     devCheckinMode
-                      ? 'Auto-filled from pickup location'
-                      : 'Resolve current location'
+                      ? 'Tự điền từ vị trí lấy hàng'
+                      : 'Lấy vị trí hiện tại'
                   }
                 />
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='checkin-longitude'>Longitude</Label>
+                <Label htmlFor='checkin-longitude'>Kinh độ</Label>
                 <Input
                   id='checkin-longitude'
                   value={checkinLongitude}
                   readOnly
                   placeholder={
                     devCheckinMode
-                      ? 'Auto-filled from pickup location'
-                      : 'Resolve current location'
+                      ? 'Tự điền từ vị trí lấy hàng'
+                      : 'Lấy vị trí hiện tại'
                   }
                 />
               </div>
@@ -1393,10 +1419,10 @@ export const PickupPage: React.FC = () => {
               disabled={isResolvingLocation}
             >
               {isResolvingLocation
-                ? 'Resolving location...'
+                ? 'Đang lấy vị trí...'
                 : devCheckinMode
-                  ? 'Fill valid pickup location'
-                  : 'Use current location'}
+                  ? 'Điền vị trí lấy hàng hợp lệ'
+                  : 'Dùng vị trí hiện tại'}
             </Button>
           </div>
 
@@ -1406,13 +1432,13 @@ export const PickupPage: React.FC = () => {
               onClick={() => setIsCheckinDialogOpen(false)}
               disabled={isSubmittingCheckin}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               onClick={() => void handleSubmitCheckin()}
               disabled={isSubmittingCheckin}
             >
-              {isSubmittingCheckin ? 'Submitting...' : 'Confirm check-in'}
+              {isSubmittingCheckin ? 'Đang gửi...' : 'Xác nhận check-in'}
             </Button>
           </DialogFooter>
         </DialogContent>

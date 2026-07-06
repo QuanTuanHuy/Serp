@@ -71,7 +71,7 @@ export const PickupCheckinLocationMap: React.FC<
           fillOpacity: 0.9,
           weight: 2,
         })
-        .bindPopup('Pickup location')
+        .bindPopup('Vị trí lấy hàng')
         .addTo(markerLayer);
     }
 
@@ -89,7 +89,7 @@ export const PickupCheckinLocationMap: React.FC<
           fillOpacity: 0.9,
           weight: 2,
         })
-        .bindPopup('Check-in location')
+        .bindPopup('Vị trí check-in')
         .addTo(markerLayer);
     }
 

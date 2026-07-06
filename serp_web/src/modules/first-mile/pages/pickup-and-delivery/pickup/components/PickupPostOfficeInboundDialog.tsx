@@ -19,7 +19,10 @@ import {
   DialogTitle,
   Input,
 } from '@/shared/components';
-import type { PickupTrackingOrder, PickupTrackingTrip } from '../../../../types';
+import type {
+  PickupTrackingOrder,
+  PickupTrackingTrip,
+} from '../../../../types';
 
 const normalizeScanCode = (value: string): string => value.trim().toUpperCase();
 
@@ -66,7 +69,7 @@ export function PickupPostOfficeInboundDialog({
   const handleScanOrder = (orderCodeValue?: string) => {
     const orderCode = normalizeScanCode(orderCodeValue ?? scanOrderCode);
     if (!orderCode) {
-      notification.error('Order code is required.');
+      notification.error('Vui lòng nhập mã đơn.');
       return;
     }
 
@@ -75,12 +78,12 @@ export function PickupPostOfficeInboundDialog({
     );
     if (pendingOrders.length > 0 && !matchedOrder) {
       notification.error(
-        'This order is not pending inbound on the selected trip.'
+        'Đơn này không chờ nhập bưu cục trong chuyến đã chọn.'
       );
       return;
     }
     if (scannedOrderCodes.includes(orderCode)) {
-      notification.error('This order has already been scanned.');
+      notification.error('Đơn này đã được quét.');
       return;
     }
 
@@ -99,11 +102,11 @@ export function PickupPostOfficeInboundDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>Confirm post office inbound</DialogTitle>
+          <DialogTitle>Xác nhận nhập bưu cục</DialogTitle>
           <DialogDescription>
-            Scan orders returned by courier{' '}
-            {trip?.tripCode ? `for trip ${trip.tripCode}` : ''} before they can
-            proceed to handover.
+            Quét các đơn nhân viên giao nhận mang về{' '}
+            {trip?.tripCode ? `trong chuyến ${trip.tripCode}` : ''} trước khi
+            chuyển sang bàn giao.
           </DialogDescription>
         </DialogHeader>
 
@@ -119,7 +122,7 @@ export function PickupPostOfficeInboundDialog({
                   handleScanOrder();
                 }
               }}
-              placeholder='Scan or enter order code'
+              placeholder='Quét hoặc nhập mã đơn'
             />
             <Button
               className='shrink-0 whitespace-nowrap'
@@ -127,7 +130,7 @@ export function PickupPostOfficeInboundDialog({
               onClick={() => handleScanOrder()}
             >
               <ScanLine className='mr-2 h-4 w-4' />
-              Scan order
+              Quét đơn
             </Button>
           </div>
 
@@ -135,17 +138,16 @@ export function PickupPostOfficeInboundDialog({
             <table className='w-full min-w-[480px] text-sm'>
               <thead className='bg-muted/40 text-left'>
                 <tr>
-                  <th className='px-3 py-2 font-medium'>Order</th>
-                  <th className='px-3 py-2 font-medium'>Sender</th>
-                  <th className='px-3 py-2 font-medium'>Scan status</th>
+                  <th className='px-3 py-2 font-medium'>Đơn</th>
+                  <th className='px-3 py-2 font-medium'>Người gửi</th>
+                  <th className='px-3 py-2 font-medium'>Trạng thái quét</th>
                 </tr>
               </thead>
               <tbody>
                 {pendingOrders.length === 0 ? (
                   <tr className='border-t'>
                     <td className='px-3 py-4 text-muted-foreground' colSpan={3}>
-                      No orders are waiting for post office inbound
-                      confirmation.
+                      Không có đơn đang chờ xác nhận nhập bưu cục.
                     </td>
                   </tr>
                 ) : (
@@ -166,7 +168,7 @@ export function PickupPostOfficeInboundDialog({
                         </td>
                         <td className='px-3 py-2'>
                           <Badge variant={isScanned ? 'default' : 'outline'}>
-                            {isScanned ? 'Scanned' : 'Pending scan'}
+                            {isScanned ? 'Đã quét' : 'Chờ quét'}
                           </Badge>
                         </td>
                       </tr>
@@ -184,7 +186,7 @@ export function PickupPostOfficeInboundDialog({
             variant='outline'
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            Hủy
           </Button>
           <Button
             className='w-full sm:w-auto'
@@ -195,7 +197,7 @@ export function PickupPostOfficeInboundDialog({
             }
             onClick={() => void handleConfirm()}
           >
-            {isConfirming ? 'Confirming...' : 'Confirm inbound'}
+            {isConfirming ? 'Đang xác nhận...' : 'Xác nhận nhập'}
           </Button>
         </DialogFooter>
       </DialogContent>

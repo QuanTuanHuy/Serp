@@ -37,22 +37,22 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; icon: React.ElementType }
 > = {
   CREATED: {
-    label: 'Created',
+    label: 'Đã tạo',
     color: 'bg-slate-100 text-slate-700',
     icon: Clock,
   },
   IN_PROGRESS: {
-    label: 'In Progress',
+    label: 'Đang giao',
     color: 'bg-blue-100 text-blue-700',
     icon: Truck,
   },
   COMPLETED: {
-    label: 'Completed',
+    label: 'Hoàn tất',
     color: 'bg-green-100 text-green-700',
     icon: CheckCircle2,
   },
   CANCELLED: {
-    label: 'Cancelled',
+    label: 'Đã hủy',
     color: 'bg-red-100 text-red-700',
     icon: XCircle,
   },
@@ -74,22 +74,22 @@ const resolveDeliveryManifestAccessScope = (
 };
 
 const getScopeLabel = (scope: DeliveryManifestAccessScope): string => {
-  if (scope === 'ADMIN_ALL') return 'TMS admin';
-  if (scope === 'MANAGER_SCOPED') return 'Post office manager';
-  if (scope === 'COURIER_SELF') return 'Courier';
-  return 'No access';
+  if (scope === 'ADMIN_ALL') return 'Quản trị TMS';
+  if (scope === 'MANAGER_SCOPED') return 'Quản lý bưu cục';
+  if (scope === 'COURIER_SELF') return 'Nhân viên giao nhận';
+  return 'Không có quyền';
 };
 
 const getScopeDescription = (scope: DeliveryManifestAccessScope): string => {
   if (scope === 'COURIER_SELF') {
-    return 'View assigned delivery routes and complete customer delivery check-ins.';
+    return 'Xem tuyến giao được phân công và hoàn tất check-in giao cho khách.';
   }
 
   if (scope === 'ADMIN_ALL' || scope === 'MANAGER_SCOPED') {
-    return 'Create and monitor delivery manifests for last-mile courier routes.';
+    return 'Tạo và theo dõi bảng kê giao hàng cho tuyến giao chặng cuối.';
   }
 
-  return 'Your account does not have permission to access delivery manifests.';
+  return 'Tài khoản của bạn không có quyền truy cập bảng kê giao hàng.';
 };
 
 export const LastMileDispatchersPage: React.FC = () => {
@@ -155,7 +155,7 @@ export const LastMileDispatchersPage: React.FC = () => {
   React.useEffect(() => {
     if (!manifestsError) return;
 
-    notification.error('Failed to load delivery manifests.', {
+    notification.error('Không thể tải bảng kê giao hàng.', {
       description: getErrorMessage(manifestsError),
     });
   }, [manifestsError, notification]);
@@ -166,16 +166,16 @@ export const LastMileDispatchersPage: React.FC = () => {
       <div className='flex items-center justify-between'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight'>
-            Last-mile Dispatchers
+            Phân công giao chặng cuối
           </h1>
           <p className='text-muted-foreground mt-1'>
-            Create and monitor delivery manifests for last-mile courier routes.
+            Tạo và theo dõi bảng kê giao hàng cho tuyến giao chặng cuối.
           </p>
         </div>
         {canManageManifests ? (
           <Button onClick={() => setShowForm(true)} disabled={!postOfficeCode}>
             <Plus className='h-4 w-4 mr-2' />
-            New Manifest
+            Tạo bảng kê
           </Button>
         ) : null}
       </div>
@@ -183,7 +183,7 @@ export const LastMileDispatchersPage: React.FC = () => {
       <Card className='p-4'>
         <div className='flex items-center justify-between gap-3'>
           <div>
-            <div className='text-sm font-medium'>Access Scope</div>
+            <div className='text-sm font-medium'>Phạm vi truy cập</div>
             <p className='text-sm text-muted-foreground'>
               {getScopeDescription(accessScope)}
             </p>
@@ -197,9 +197,9 @@ export const LastMileDispatchersPage: React.FC = () => {
       {!canAccess ? (
         <Card className='p-12 text-center text-muted-foreground'>
           <Truck className='h-12 w-12 mx-auto mb-3 opacity-50' />
-          <p className='font-medium'>Access denied</p>
+          <p className='font-medium'>Không có quyền truy cập</p>
           <p className='text-sm mt-1'>
-            Your account does not have permission to access delivery manifests.
+            Tài khoản của bạn không có quyền truy cập bảng kê giao hàng.
           </p>
         </Card>
       ) : (
@@ -209,21 +209,21 @@ export const LastMileDispatchersPage: React.FC = () => {
             <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
               {isCourierScope ? (
                 <div className='rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground md:col-span-2'>
-                  You are viewing delivery routes assigned to your courier
-                  profile.
+                  Bạn đang xem các tuyến giao được phân công cho hồ sơ nhân viên
+                  giao nhận của mình.
                 </div>
               ) : (
                 <div className='space-y-1'>
                   <label className='text-xs font-medium text-muted-foreground'>
-                    Post Office
+                    Bưu cục
                   </label>
                   <TmsCombobox
                     id='delivery-manifest-post-office'
                     value={postOfficeCode}
                     onValueChange={setPostOfficeCode}
                     options={postOfficeOptions}
-                    placeholder='Select post office'
-                    emptyText='No post offices found'
+                    placeholder='Chọn bưu cục'
+                    emptyText='Không tìm thấy bưu cục'
                     disabled={isLoadingPostOffices}
                     loading={isLoadingPostOffices}
                   />
@@ -231,7 +231,7 @@ export const LastMileDispatchersPage: React.FC = () => {
               )}
               <div className='space-y-1'>
                 <label className='text-xs font-medium text-muted-foreground'>
-                  Status
+                  Trạng thái
                 </label>
                 <select
                   className='w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm'
@@ -242,15 +242,15 @@ export const LastMileDispatchersPage: React.FC = () => {
                     )
                   }
                 >
-                  <option value=''>All Statuses</option>
-                  <option value='CREATED'>Created</option>
-                  <option value='IN_PROGRESS'>In Progress</option>
-                  <option value='COMPLETED'>Completed</option>
+                  <option value=''>Tất cả trạng thái</option>
+                  <option value='CREATED'>Đã tạo</option>
+                  <option value='IN_PROGRESS'>Đang giao</option>
+                  <option value='COMPLETED'>Hoàn tất</option>
                 </select>
               </div>
               <div className='space-y-1'>
                 <label className='text-xs font-medium text-muted-foreground'>
-                  Planned Date
+                  Ngày dự kiến
                 </label>
                 <Input
                   type='date'
@@ -265,7 +265,7 @@ export const LastMileDispatchersPage: React.FC = () => {
                   className='w-full'
                   disabled={!isCourierScope && !postOfficeCode}
                 >
-                  Search
+                  Tìm kiếm
                 </Button>
               </div>
             </div>
@@ -274,24 +274,24 @@ export const LastMileDispatchersPage: React.FC = () => {
           {/* Results */}
           {isLoading ? (
             <div className='text-center py-12 text-muted-foreground'>
-              Loading manifests...
+              Đang tải bảng kê...
             </div>
           ) : !isCourierScope && !postOfficeCode ? (
             <Card className='p-12 text-center text-muted-foreground'>
               <Truck className='h-12 w-12 mx-auto mb-3 opacity-50' />
-              <p className='font-medium'>Select a post office to begin</p>
+              <p className='font-medium'>Chọn bưu cục để bắt đầu</p>
               <p className='text-sm mt-1'>
-                You will see all delivery manifests created for that office.
+                Bạn sẽ thấy toàn bộ bảng kê giao hàng đã tạo cho bưu cục đó.
               </p>
             </Card>
           ) : !manifests?.length ? (
             <Card className='p-12 text-center text-muted-foreground'>
               <Package className='h-12 w-12 mx-auto mb-3 opacity-50' />
-              <p className='font-medium'>No manifests found</p>
+              <p className='font-medium'>Không tìm thấy bảng kê</p>
               <p className='text-sm mt-1'>
                 {isCourierScope
-                  ? 'No assigned delivery routes match the current filters.'
-                  : 'Create a new manifest to assign orders to a courier.'}
+                  ? 'Không có tuyến giao được phân công khớp với bộ lọc hiện tại.'
+                  : 'Tạo bảng kê mới để phân công đơn cho nhân viên giao nhận.'}
               </p>
             </Card>
           ) : (
@@ -380,7 +380,7 @@ const ManifestCard: React.FC<ManifestCardProps> = ({ manifest, onClick }) => {
             </span>
             <span className='flex items-center gap-1'>
               <Package className='h-3.5 w-3.5' />
-              {manifest.deliveredCount}/{manifest.totalOrders} delivered
+              Đã giao {manifest.deliveredCount}/{manifest.totalOrders}
             </span>
             {manifest.courierName && (
               <span className='flex items-center gap-1'>
@@ -416,7 +416,7 @@ const ManifestCard: React.FC<ManifestCardProps> = ({ manifest, onClick }) => {
           </div>
           {manifest.failedCount > 0 && (
             <span className='text-xs text-red-500 mt-1 block'>
-              {manifest.failedCount} failed
+              {manifest.failedCount} thất bại
             </span>
           )}
         </div>

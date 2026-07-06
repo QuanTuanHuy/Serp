@@ -37,7 +37,7 @@ const formatDateTime = (value?: string): string => {
     return value;
   }
 
-  return parsedDate.toLocaleString('en-US');
+  return parsedDate.toLocaleString('vi-VN');
 };
 
 const formatCoordinate = (value?: number): string => {
@@ -55,6 +55,16 @@ const formatDistance = (value?: number): string => {
 
   return `${value.toFixed(2)} m`;
 };
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  ASSIGNED_TO_PICKUP: 'Đã phân công lấy',
+  PICKING_UP: 'Đang lấy hàng',
+  PICKED_UP: 'Đã lấy hàng',
+  PENDING_ORIGIN_POST_OFFICE_INBOUND: 'Chờ nhập bưu cục gốc',
+};
+
+const formatOrderStatus = (status?: string): string =>
+  status ? (ORDER_STATUS_LABELS[status] ?? status) : '--';
 
 const DetailField: React.FC<{
   label: string;
@@ -115,16 +125,16 @@ export const PickupCheckinDetailDialog: React.FC<
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>Pickup check-in detail</DialogTitle>
+          <DialogTitle>Chi tiết check-in lấy hàng</DialogTitle>
           <DialogDescription>
-            Review check-in evidence and location for order {titleCode}.
+            Xem bằng chứng check-in và vị trí của đơn {titleCode}.
           </DialogDescription>
         </DialogHeader>
 
         {isFetching ? (
           <div className='flex items-center gap-2 text-sm text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Loading check-in detail...
+            Đang tải chi tiết check-in...
           </div>
         ) : null}
 
@@ -137,15 +147,17 @@ export const PickupCheckinDetailDialog: React.FC<
         {!isFetching && !loadError && detail ? (
           <div className='space-y-4'>
             <div className='flex flex-wrap items-center gap-2'>
-              <Badge variant='default'>Checked in</Badge>
+              <Badge variant='default'>Đã check-in</Badge>
               {detail.orderStatus ? (
-                <Badge variant='outline'>{detail.orderStatus}</Badge>
+                <Badge variant='outline'>
+                  {formatOrderStatus(detail.orderStatus)}
+                </Badge>
               ) : null}
             </div>
 
             {detail.photoUrl ? (
               <div className='space-y-2'>
-                <p className='text-sm font-medium'>Check-in photo</p>
+                <p className='text-sm font-medium'>Ảnh check-in</p>
                 <a
                   href={detail.photoUrl}
                   target='_blank'
@@ -155,33 +167,33 @@ export const PickupCheckinDetailDialog: React.FC<
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={detail.photoUrl}
-                    alt={`Pickup check-in for ${titleCode}`}
+                    alt={`Check-in lấy hàng cho ${titleCode}`}
                     className='max-h-80 w-full object-contain bg-muted/30'
                   />
                 </a>
               </div>
             ) : (
               <p className='text-sm text-muted-foreground'>
-                No check-in photo available.
+                Chưa có ảnh check-in.
               </p>
             )}
 
             <div className='grid gap-3 sm:grid-cols-2'>
               <DetailField
-                label='Check-in time'
+                label='Thời gian check-in'
                 value={formatDateTime(detail.checkinTime)}
               />
               <DetailField
-                label='Distance from pickup'
+                label='Khoảng cách tới điểm lấy'
                 value={formatDistance(detail.distanceMeters)}
               />
               <DetailField
-                label='Allowed radius'
+                label='Bán kính cho phép'
                 value={formatDistance(detail.allowedRadiusMeters)}
               />
-              <DetailField label='Trip' value={detail.tripCode || '--'} />
+              <DetailField label='Chuyến' value={detail.tripCode || '--'} />
               <DetailField
-                label='Courier'
+                label='Nhân viên giao nhận'
                 value={
                   detail.courierName
                     ? `${detail.courierName}${detail.courierCode ? ` (${detail.courierCode})` : ''}`
@@ -189,7 +201,7 @@ export const PickupCheckinDetailDialog: React.FC<
                 }
               />
               <DetailField
-                label='Post office'
+                label='Bưu cục'
                 value={
                   detail.postOfficeName
                     ? `${detail.postOfficeName}${detail.postOfficeCode ? ` (${detail.postOfficeCode})` : ''}`
@@ -199,7 +211,7 @@ export const PickupCheckinDetailDialog: React.FC<
             </div>
 
             <div className='space-y-2 rounded-md border p-3'>
-              <p className='text-sm font-medium'>Sender</p>
+              <p className='text-sm font-medium'>Người gửi</p>
               <p className='text-sm'>{detail.senderName || '--'}</p>
               <p className='text-sm text-muted-foreground'>
                 {detail.senderPhone || '--'}
@@ -211,19 +223,19 @@ export const PickupCheckinDetailDialog: React.FC<
 
             <div className='grid gap-3 sm:grid-cols-2'>
               <DetailField
-                label='Pickup coordinates'
+                label='Tọa độ lấy hàng'
                 value={`${formatCoordinate(detail.pickupLatitude)}, ${formatCoordinate(detail.pickupLongitude)}`}
               />
               <DetailField
-                label='Check-in coordinates'
+                label='Tọa độ check-in'
                 value={`${formatCoordinate(detail.checkinLatitude)}, ${formatCoordinate(detail.checkinLongitude)}`}
               />
             </div>
 
             <div className='space-y-2'>
-              <p className='text-sm font-medium'>Location map</p>
+              <p className='text-sm font-medium'>Bản đồ vị trí</p>
               <p className='text-xs text-muted-foreground'>
-                Blue: pickup location. Green: check-in location.
+                Xanh dương: vị trí lấy hàng. Xanh lá: vị trí check-in.
               </p>
               <PickupCheckinLocationMap
                 pickupLatitude={detail.pickupLatitude}

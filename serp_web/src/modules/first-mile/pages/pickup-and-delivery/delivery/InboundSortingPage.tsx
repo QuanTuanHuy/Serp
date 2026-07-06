@@ -128,10 +128,12 @@ export const InboundSortingPage: React.FC = () => {
       {/* Header */}
       <div className='flex items-center justify-between'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Inbound Sorting</h1>
+          <h1 className='text-2xl font-bold tracking-tight'>
+            Phân loại đơn nhập bưu cục
+          </h1>
           <p className='text-muted-foreground mt-1'>
-            Scan and confirm orders arriving at the destination post office for
-            last-mile delivery.
+            Quét và xác nhận các đơn đã đến bưu cục đích để chuẩn bị giao chặng
+            cuối.
           </p>
         </div>
       </div>
@@ -141,13 +143,13 @@ export const InboundSortingPage: React.FC = () => {
         <div className='flex gap-3'>
           <Info className='h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5' />
           <div className='text-sm text-blue-800 dark:text-blue-200'>
-            <p className='font-medium mb-1'>How to sort inbound orders:</p>
+            <p className='font-medium mb-1'>Cách phân loại đơn nhập:</p>
             <ol className='list-decimal list-inside space-y-1 text-blue-700 dark:text-blue-300'>
-              <li>Select your post office and load pending orders</li>
-              <li>Scan order barcodes or select orders from the list below</li>
+              <li>Chọn bưu cục và tải danh sách đơn đang chờ</li>
+              <li>Quét mã vạch đơn hoặc chọn đơn trong danh sách bên dưới</li>
               <li>
-                Click &quot;Confirm Ready for Delivery&quot; to mark them as
-                sortable
+                Bấm &quot;Xác nhận sẵn sàng giao&quot; để chuyển đơn sang trạng
+                thái có thể phân công giao
               </li>
             </ol>
           </div>
@@ -159,32 +161,32 @@ export const InboundSortingPage: React.FC = () => {
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           {/* Post Office */}
           <div className='space-y-2'>
-            <label className='text-sm font-medium'>Post Office</label>
+            <label className='text-sm font-medium'>Bưu cục</label>
             <div className='flex gap-2'>
               <TmsCombobox
                 id='inbound-post-office'
                 value={postOfficeCode}
                 onValueChange={handlePostOfficeChange}
                 options={postOfficeOptions}
-                placeholder='Select post office'
-                emptyText='No post offices found'
+                placeholder='Chọn bưu cục'
+                emptyText='Không tìm thấy bưu cục'
                 disabled={isLoadingPostOffices}
                 loading={isLoadingPostOffices}
                 className='flex-1'
               />
               <Button onClick={handleSearch} disabled={!postOfficeCode}>
                 <PackageSearch className='h-4 w-4 mr-2' />
-                Load
+                Tải
               </Button>
             </div>
           </div>
 
           {/* Scanner Input */}
           <div className='space-y-2'>
-            <label className='text-sm font-medium'>Scan Order Barcode</label>
+            <label className='text-sm font-medium'>Quét mã vạch đơn</label>
             <div className='flex gap-2'>
               <Input
-                placeholder='Scan or type order code...'
+                placeholder='Quét hoặc nhập mã đơn...'
                 value={scanInput}
                 onChange={(e) => setScanInput(e.target.value)}
                 onKeyDown={handleScanKeyDown}
@@ -203,36 +205,34 @@ export const InboundSortingPage: React.FC = () => {
         <Card className='p-4'>
           <div className='flex items-center justify-between mb-4'>
             <div className='flex items-center gap-2'>
-              <h2 className='text-lg font-semibold'>Pending Orders</h2>
+              <h2 className='text-lg font-semibold'>Đơn đang chờ</h2>
               {filteredOrders && (
-                <Badge variant='secondary'>
-                  {filteredOrders.length} orders
-                </Badge>
+                <Badge variant='secondary'>{filteredOrders.length} đơn</Badge>
               )}
             </div>
             <div className='flex gap-2'>
               <Input
-                placeholder='Filter by code...'
+                placeholder='Lọc theo mã...'
                 className='w-48'
                 value={searchCode}
                 onChange={(e) => setSearchCode(e.target.value)}
               />
               <Button variant='outline' size='sm' onClick={selectAll}>
-                Select All
+                Chọn tất cả
               </Button>
             </div>
           </div>
 
           {isLoading ? (
             <div className='text-center py-8 text-muted-foreground'>
-              Loading orders...
+              Đang tải đơn...
             </div>
           ) : !filteredOrders?.length ? (
             <div className='text-center py-8 text-muted-foreground'>
               <PackageSearch className='h-12 w-12 mx-auto mb-3 opacity-50' />
-              <p>No pending inbound orders found.</p>
+              <p>Không tìm thấy đơn nhập bưu cục đang chờ.</p>
               <p className='text-sm mt-1'>
-                Orders will appear here when bags arrive at this post office.
+                Đơn sẽ hiển thị tại đây khi túi hàng đến bưu cục này.
               </p>
             </div>
           ) : (
@@ -258,7 +258,7 @@ export const InboundSortingPage: React.FC = () => {
               <div className='flex items-center gap-3'>
                 <CheckCircle2 className='h-5 w-5 text-green-600' />
                 <span className='font-medium'>
-                  {selectedOrders.size} order(s) selected
+                  Đã chọn {selectedOrders.size} đơn
                 </span>
               </div>
               <Button
@@ -266,7 +266,7 @@ export const InboundSortingPage: React.FC = () => {
                 disabled={isConfirming}
                 className='bg-green-600 hover:bg-green-700'
               >
-                {isConfirming ? 'Processing...' : 'Confirm Ready for Delivery'}
+                {isConfirming ? 'Đang xử lý...' : 'Xác nhận sẵn sàng giao'}
               </Button>
             </div>
           </Card>
@@ -315,7 +315,7 @@ const InboundOrderCard: React.FC<InboundOrderCardProps> = ({
           <div className='flex items-center gap-4 mt-1 text-xs text-muted-foreground'>
             <span className='flex items-center gap-1'>
               <MapPin className='h-3 w-3' />
-              {order.receiverAddressDetail || 'No address'}
+              {order.receiverAddressDetail || 'Chưa có địa chỉ'}
             </span>
             <span className='flex items-center gap-1'>
               <Phone className='h-3 w-3' />

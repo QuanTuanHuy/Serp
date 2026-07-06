@@ -13,7 +13,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
   Dialog,
@@ -24,6 +23,9 @@ import {
   DialogTitle,
   Input,
   Label,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Switch,
 } from '@/shared/components/ui';
 import {
@@ -43,6 +45,7 @@ import {
   Search,
   ShieldAlert,
   Trash2,
+  X,
 } from 'lucide-react';
 import {
   useCreateProductTypeMutation,
@@ -75,6 +78,9 @@ export const ProductTypeListPage: React.FC = () => {
   const [page, setPage] = React.useState(0);
   const [keywordInput, setKeywordInput] = React.useState('');
   const [keyword, setKeyword] = React.useState<string | undefined>(undefined);
+  const [searchColumn, setSearchColumn] = React.useState<
+    'code' | 'name' | null
+  >(null);
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<ProductType | null>(
     null
@@ -98,16 +104,25 @@ export const ProductTypeListPage: React.FC = () => {
     useDeleteProductTypeMutation();
 
   const isSaving = isCreating || isUpdating;
+  const isKeywordActive = Boolean(keyword);
 
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
     setPage(0);
     setKeyword(keywordInput.trim() || undefined);
+    setSearchColumn(null);
+  };
+
+  const handleClearSearch = () => {
+    setKeywordInput('');
+    setKeyword(undefined);
+    setPage(0);
+    setSearchColumn(null);
   };
 
   const openCreateDialog = () => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can create product types.');
+      notification.error('Chỉ TMS_ADMIN mới có thể tạo loại hàng.');
       return;
     }
 
@@ -118,7 +133,7 @@ export const ProductTypeListPage: React.FC = () => {
 
   const openEditDialog = (item: ProductType) => {
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can update product types.');
+      notification.error('Chỉ TMS_ADMIN mới có thể cập nhật loại hàng.');
       return;
     }
 
@@ -133,11 +148,11 @@ export const ProductTypeListPage: React.FC = () => {
 
   const validateForm = () => {
     if (!formValues.code.trim()) {
-      return 'Product type code is required.';
+      return 'Vui lòng nhập mã loại hàng.';
     }
 
     if (!formValues.name.trim()) {
-      return 'Product type name is required.';
+      return 'Vui lòng nhập tên loại hàng.';
     }
 
     return null;
@@ -147,7 +162,7 @@ export const ProductTypeListPage: React.FC = () => {
     event.preventDefault();
 
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can save product types.');
+      notification.error('Chỉ TMS_ADMIN mới có thể lưu loại hàng.');
       return;
     }
 
@@ -169,10 +184,10 @@ export const ProductTypeListPage: React.FC = () => {
           id: editingItem.id,
           body,
         }).unwrap();
-        notification.success('Product type updated successfully.');
+        notification.success('Đã cập nhật loại hàng.');
       } else {
         await createProductType(body).unwrap();
-        notification.success('Product type created successfully.');
+        notification.success('Đã tạo loại hàng.');
         setPage(0);
       }
 
@@ -180,7 +195,7 @@ export const ProductTypeListPage: React.FC = () => {
       setEditingItem(null);
       void refetch();
     } catch (error) {
-      notification.error('Failed to save product type.', {
+      notification.error('Không thể lưu loại hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -192,13 +207,13 @@ export const ProductTypeListPage: React.FC = () => {
     }
 
     if (!isTmsAdmin) {
-      notification.error('Only TMS_ADMIN can delete product types.');
+      notification.error('Chỉ TMS_ADMIN mới có thể xóa loại hàng.');
       return;
     }
 
     try {
       await deleteProductType(deleteTarget.id).unwrap();
-      notification.success('Product type deleted successfully.');
+      notification.success('Đã xóa loại hàng.');
       setDeleteTarget(null);
 
       if ((data?.items.length ?? 0) === 1 && page > 0) {
@@ -207,7 +222,7 @@ export const ProductTypeListPage: React.FC = () => {
         void refetch();
       }
     } catch (error) {
-      notification.error('Failed to delete product type.', {
+      notification.error('Không thể xóa loại hàng.', {
         description: getErrorMessage(error),
       });
     }
@@ -218,47 +233,29 @@ export const ProductTypeListPage: React.FC = () => {
       <div className='space-y-6'>
         <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
           <div className='flex flex-col gap-2'>
-            <h1 className='text-2xl font-bold tracking-tight'>Product Types</h1>
+            <h1 className='text-2xl font-bold tracking-tight'>Loại hàng</h1>
             <p className='text-muted-foreground'>
-              Configure product classification used in TMS order imports.
+              Cấu hình phân loại hàng hóa dùng cho đơn TMS và dữ liệu nhập.
             </p>
           </div>
 
           {isTmsAdmin ? (
             <Button onClick={openCreateDialog}>
               <Plus className='mr-2 h-4 w-4' />
-              New Product Type
+              Tạo loại hàng
             </Button>
           ) : (
             <Badge variant='outline' className='gap-1'>
               <ShieldAlert className='h-3.5 w-3.5' />
-              View only (write actions require TMS_ADMIN)
+              Chỉ xem, thao tác ghi yêu cầu TMS_ADMIN
             </Badge>
           )}
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Search</CardTitle>
-            <CardDescription>
-              Filter product types by code or name.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={handleSearch}
-              className='flex flex-col gap-2 sm:flex-row'
-            >
-              <div className='relative flex-1'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  className='pl-10'
-                  value={keywordInput}
-                  onChange={(event) => setKeywordInput(event.target.value)}
-                  placeholder='Search product type...'
-                />
-              </div>
-              <Button type='submit'>Apply</Button>
+            <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+              <CardTitle>Kết quả ({data?.totalItems ?? 0})</CardTitle>
               <Button
                 type='button'
                 variant='outline'
@@ -266,21 +263,15 @@ export const ProductTypeListPage: React.FC = () => {
                 disabled={isFetching}
               >
                 <RefreshCw className='mr-2 h-4 w-4' />
-                Refresh
+                Làm mới
               </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Results ({data?.totalItems ?? 0})</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className='flex items-center gap-2 text-muted-foreground'>
                 <Loader2 className='h-4 w-4 animate-spin' />
-                Loading product types...
+                Đang tải loại hàng...
               </div>
             ) : data && data.items.length > 0 ? (
               <div className='space-y-4'>
@@ -289,14 +280,156 @@ export const ProductTypeListPage: React.FC = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className='min-w-[160px]'>Code</TableHead>
-                          <TableHead className='min-w-[240px]'>Name</TableHead>
+                          <TableHead className='min-w-[160px]'>
+                            <Popover
+                              open={searchColumn === 'code'}
+                              onOpenChange={(open) =>
+                                setSearchColumn(open ? 'code' : null)
+                              }
+                            >
+                              <div className='flex items-center gap-1'>
+                                <span>Mã</span>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type='button'
+                                    variant={
+                                      isKeywordActive ? 'outline' : 'ghost'
+                                    }
+                                    size='icon'
+                                    className='size-7'
+                                    disabled={isFetching}
+                                    title='Tìm mã loại hàng'
+                                    aria-label='Tìm mã loại hàng'
+                                  >
+                                    <Search className='h-4 w-4' />
+                                  </Button>
+                                </PopoverTrigger>
+                              </div>
+                              <PopoverContent
+                                align='start'
+                                sideOffset={8}
+                                className='w-72 p-3'
+                              >
+                                <form
+                                  className='flex items-center gap-2'
+                                  onSubmit={handleSearch}
+                                >
+                                  <Input
+                                    className='h-9 bg-background'
+                                    value={keywordInput}
+                                    onChange={(event) =>
+                                      setKeywordInput(event.target.value)
+                                    }
+                                    placeholder='Tìm mã loại hàng...'
+                                    disabled={isFetching}
+                                  />
+                                  <Button
+                                    type='submit'
+                                    variant='outline'
+                                    size='icon'
+                                    className='size-9 shrink-0'
+                                    disabled={isFetching}
+                                    title='Tìm kiếm'
+                                    aria-label='Tìm mã loại hàng'
+                                  >
+                                    <Search className='h-4 w-4' />
+                                  </Button>
+                                  {isKeywordActive ? (
+                                    <Button
+                                      type='button'
+                                      variant='ghost'
+                                      size='icon'
+                                      className='size-9 shrink-0'
+                                      disabled={isFetching}
+                                      onClick={handleClearSearch}
+                                      title='Xóa tìm kiếm'
+                                      aria-label='Xóa tìm kiếm mã loại hàng'
+                                    >
+                                      <X className='h-4 w-4' />
+                                    </Button>
+                                  ) : null}
+                                </form>
+                              </PopoverContent>
+                            </Popover>
+                          </TableHead>
+                          <TableHead className='min-w-[240px]'>
+                            <Popover
+                              open={searchColumn === 'name'}
+                              onOpenChange={(open) =>
+                                setSearchColumn(open ? 'name' : null)
+                              }
+                            >
+                              <div className='flex items-center gap-1'>
+                                <span>Tên</span>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type='button'
+                                    variant={
+                                      isKeywordActive ? 'outline' : 'ghost'
+                                    }
+                                    size='icon'
+                                    className='size-7'
+                                    disabled={isFetching}
+                                    title='Tìm tên loại hàng'
+                                    aria-label='Tìm tên loại hàng'
+                                  >
+                                    <Search className='h-4 w-4' />
+                                  </Button>
+                                </PopoverTrigger>
+                              </div>
+                              <PopoverContent
+                                align='start'
+                                sideOffset={8}
+                                className='w-72 p-3'
+                              >
+                                <form
+                                  className='flex items-center gap-2'
+                                  onSubmit={handleSearch}
+                                >
+                                  <Input
+                                    className='h-9 bg-background'
+                                    value={keywordInput}
+                                    onChange={(event) =>
+                                      setKeywordInput(event.target.value)
+                                    }
+                                    placeholder='Tìm tên loại hàng...'
+                                    disabled={isFetching}
+                                  />
+                                  <Button
+                                    type='submit'
+                                    variant='outline'
+                                    size='icon'
+                                    className='size-9 shrink-0'
+                                    disabled={isFetching}
+                                    title='Tìm kiếm'
+                                    aria-label='Tìm tên loại hàng'
+                                  >
+                                    <Search className='h-4 w-4' />
+                                  </Button>
+                                  {isKeywordActive ? (
+                                    <Button
+                                      type='button'
+                                      variant='ghost'
+                                      size='icon'
+                                      className='size-9 shrink-0'
+                                      disabled={isFetching}
+                                      onClick={handleClearSearch}
+                                      title='Xóa tìm kiếm'
+                                      aria-label='Xóa tìm kiếm tên loại hàng'
+                                    >
+                                      <X className='h-4 w-4' />
+                                    </Button>
+                                  ) : null}
+                                </form>
+                              </PopoverContent>
+                            </Popover>
+                          </TableHead>
                           <TableHead className='min-w-[120px]'>
-                            Status
+                            Trạng thái
                           </TableHead>
                           {isTmsAdmin ? (
                             <TableHead className='sticky right-0 z-20 border-l bg-card text-right'>
-                              Actions
+                              Thao tác
                             </TableHead>
                           ) : null}
                         </TableRow>
@@ -312,7 +445,7 @@ export const ProductTypeListPage: React.FC = () => {
                               <Badge
                                 variant={item.isActive ? 'default' : 'outline'}
                               >
-                                {item.isActive ? 'Active' : 'Inactive'}
+                                {item.isActive ? 'Đang dùng' : 'Ngừng dùng'}
                               </Badge>
                             </TableCell>
                             {isTmsAdmin ? (
@@ -323,8 +456,8 @@ export const ProductTypeListPage: React.FC = () => {
                                     size='icon'
                                     variant='outline'
                                     onClick={() => openEditDialog(item)}
-                                    title='Edit'
-                                    aria-label={`Edit ${item.code}`}
+                                    title='Sửa'
+                                    aria-label={`Sửa ${item.code}`}
                                   >
                                     <Pencil className='h-4 w-4' />
                                   </Button>
@@ -333,8 +466,8 @@ export const ProductTypeListPage: React.FC = () => {
                                     size='icon'
                                     variant='destructive'
                                     onClick={() => setDeleteTarget(item)}
-                                    title='Delete'
-                                    aria-label={`Delete ${item.code}`}
+                                    title='Xóa'
+                                    aria-label={`Xóa ${item.code}`}
                                   >
                                     <Trash2 className='h-4 w-4' />
                                   </Button>
@@ -354,22 +487,23 @@ export const ProductTypeListPage: React.FC = () => {
                     onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
                     disabled={!data.hasPrevious || isFetching}
                   >
-                    Previous
+                    Trước
                   </Button>
                   <span className='text-sm text-muted-foreground'>
-                    Page {data.currentPage + 1} / {Math.max(data.totalPages, 1)}
+                    Trang {data.currentPage + 1} /{' '}
+                    {Math.max(data.totalPages, 1)}
                   </span>
                   <Button
                     variant='outline'
                     onClick={() => setPage((prev) => prev + 1)}
                     disabled={!data.hasNext || isFetching}
                   >
-                    Next
+                    Sau
                   </Button>
                 </div>
               </div>
             ) : (
-              <p className='text-muted-foreground'>No product types found.</p>
+              <p className='text-muted-foreground'>Không tìm thấy loại hàng.</p>
             )}
           </CardContent>
         </Card>
@@ -390,16 +524,16 @@ export const ProductTypeListPage: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingItem ? 'Edit Product Type' : 'New Product Type'}
+              {editingItem ? 'Sửa loại hàng' : 'Tạo loại hàng'}
             </DialogTitle>
             <DialogDescription>
-              Product type codes are used by order forms and Excel import.
+              Mã loại hàng được dùng trong form đơn hàng và file Excel nhập.
             </DialogDescription>
           </DialogHeader>
 
           <form className='space-y-4' onSubmit={handleSubmitForm}>
             <div className='space-y-2'>
-              <Label htmlFor='product-type-code'>Code</Label>
+              <Label htmlFor='product-type-code'>Mã</Label>
               <Input
                 id='product-type-code'
                 value={formValues.code}
@@ -409,13 +543,13 @@ export const ProductTypeListPage: React.FC = () => {
                     code: event.target.value,
                   }))
                 }
-                placeholder='e.g. FRAGILE'
+                placeholder='Ví dụ: FRAGILE'
                 disabled={isSaving}
               />
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='product-type-name'>Name</Label>
+              <Label htmlFor='product-type-name'>Tên</Label>
               <Input
                 id='product-type-name'
                 value={formValues.name}
@@ -425,16 +559,16 @@ export const ProductTypeListPage: React.FC = () => {
                     name: event.target.value,
                   }))
                 }
-                placeholder='e.g. Fragile goods'
+                placeholder='Ví dụ: Hàng dễ vỡ'
                 disabled={isSaving}
               />
             </div>
 
             <div className='flex items-center justify-between rounded-md border p-3'>
               <div className='space-y-0.5'>
-                <Label htmlFor='product-type-active'>Active</Label>
+                <Label htmlFor='product-type-active'>Đang dùng</Label>
                 <p className='text-xs text-muted-foreground'>
-                  Inactive product types are hidden from order creation.
+                  Loại hàng ngừng dùng sẽ bị ẩn khi tạo đơn.
                 </p>
               </div>
               <Switch
@@ -457,13 +591,13 @@ export const ProductTypeListPage: React.FC = () => {
                 onClick={() => setIsFormOpen(false)}
                 disabled={isSaving}
               >
-                Cancel
+                Hủy
               </Button>
               <Button type='submit' disabled={isSaving}>
                 {isSaving ? (
                   <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                 ) : null}
-                {editingItem ? 'Save Changes' : 'Create'}
+                {editingItem ? 'Lưu thay đổi' : 'Tạo'}
               </Button>
             </DialogFooter>
           </form>
@@ -477,14 +611,14 @@ export const ProductTypeListPage: React.FC = () => {
             setDeleteTarget(null);
           }
         }}
-        title='Delete product type'
+        title='Xóa loại hàng'
         description={
           deleteTarget
-            ? `This will permanently delete product type ${deleteTarget.code} - ${deleteTarget.name}.`
-            : 'This action cannot be undone.'
+            ? `Thao tác này sẽ xóa vĩnh viễn loại hàng ${deleteTarget.code} - ${deleteTarget.name}.`
+            : 'Không thể hoàn tác thao tác này.'
         }
-        confirmText='Delete'
-        cancelText='Cancel'
+        confirmText='Xóa'
+        cancelText='Hủy'
         onConfirm={handleDelete}
         isLoading={isDeleting}
         variant='destructive'

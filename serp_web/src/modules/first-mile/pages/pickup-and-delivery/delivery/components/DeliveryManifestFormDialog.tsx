@@ -65,11 +65,11 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
 
   const courierOptions = useMemo(
     () => [
-      { value: NONE_VALUE, label: 'No courier assigned' },
+      { value: NONE_VALUE, label: 'Chưa phân công nhân viên' },
       ...(couriers ?? []).map((courier) => ({
         value: String(courier.id),
-        label: `${courier.code?.trim() || `Courier #${courier.id}`} - ${
-          courier.fullName?.trim() || 'Unnamed courier'
+        label: `${courier.code?.trim() || `NVGN-${courier.id}`} - ${
+          courier.fullName?.trim() || 'Nhân viên chưa có tên'
         }`,
       })),
     ],
@@ -78,7 +78,7 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
 
   const vehicleOptions = useMemo(
     () => [
-      { value: NONE_VALUE, label: 'No vehicle assigned' },
+      { value: NONE_VALUE, label: 'Chưa phân công xe' },
       ...(vehiclesData?.items ?? [])
         .filter(
           (vehicle) =>
@@ -136,7 +136,7 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
         <div className='flex items-center justify-between mb-6'>
           <div className='flex items-center gap-2'>
             <Route className='h-5 w-5 text-primary' />
-            <h2 className='text-lg font-semibold'>Create Delivery Manifest</h2>
+            <h2 className='text-lg font-semibold'>Tạo bảng kê giao hàng</h2>
           </div>
           <Button variant='ghost' size='sm' onClick={onClose}>
             <X className='h-4 w-4' />
@@ -145,16 +145,15 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
 
         {/* Info Banner */}
         <div className='bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-700 dark:text-blue-300'>
-          Select orders that are ready for delivery. The system will
-          automatically optimize the delivery route using Nearest Neighbor +
-          2-opt algorithm.
+          Chọn các đơn đã sẵn sàng giao. Hệ thống sẽ tự động tối ưu tuyến giao
+          bằng thuật toán Nearest Neighbor + 2-opt.
         </div>
 
         {/* Form Fields */}
         <div className='grid grid-cols-2 gap-4 mb-6'>
           <div className='space-y-1'>
             <label className='text-xs font-medium text-muted-foreground'>
-              Courier
+              Nhân viên giao nhận
             </label>
             <TmsCombobox
               id='delivery-manifest-courier'
@@ -163,11 +162,11 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
                 setCourierId(value === NONE_VALUE ? '' : value)
               }
               options={courierOptions}
-              placeholder='Select courier'
+              placeholder='Chọn nhân viên giao nhận'
               emptyText={
                 postOfficeId
-                  ? 'No couriers found'
-                  : 'Select a post office first'
+                  ? 'Không tìm thấy nhân viên giao nhận'
+                  : 'Chọn bưu cục trước'
               }
               disabled={!postOfficeId || isLoadingCouriers}
               loading={isLoadingCouriers}
@@ -175,7 +174,7 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
           </div>
           <div className='space-y-1'>
             <label className='text-xs font-medium text-muted-foreground'>
-              Vehicle
+              Xe
             </label>
             <TmsCombobox
               id='delivery-manifest-vehicle'
@@ -184,15 +183,15 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
                 setVehicleId(value === NONE_VALUE ? '' : value)
               }
               options={vehicleOptions}
-              placeholder='Select vehicle'
-              emptyText='No active vehicles found'
+              placeholder='Chọn xe'
+              emptyText='Không tìm thấy xe đang hoạt động'
               disabled={isLoadingVehicles}
               loading={isLoadingVehicles}
             />
           </div>
           <div className='space-y-1'>
             <label className='text-xs font-medium text-muted-foreground'>
-              Planned Date
+              Ngày dự kiến
             </label>
             <Input
               type='date'
@@ -202,7 +201,7 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
           </div>
           <div className='space-y-1'>
             <label className='text-xs font-medium text-muted-foreground'>
-              Planned Departure
+              Thời gian xuất phát dự kiến
             </label>
             <Input
               type='datetime-local'
@@ -212,10 +211,10 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
           </div>
           <div className='col-span-2 space-y-1'>
             <label className='text-xs font-medium text-muted-foreground'>
-              Note
+              Ghi chú
             </label>
             <Textarea
-              placeholder='e.g. District focus area, special instructions...'
+              placeholder='Ví dụ: khu vực ưu tiên, hướng dẫn đặc biệt...'
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
@@ -228,26 +227,26 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
           <div className='flex items-center justify-between'>
             <h3 className='font-medium flex items-center gap-2'>
               <Package className='h-4 w-4' />
-              Ready Orders ({readyOrders?.length ?? 0})
+              Đơn sẵn sàng giao ({readyOrders?.length ?? 0})
             </h3>
             <div className='flex gap-2'>
-              <Badge variant='outline'>{selectedOrders.size} selected</Badge>
+              <Badge variant='outline'>Đã chọn {selectedOrders.size}</Badge>
               <Button variant='outline' size='sm' onClick={selectAllOrders}>
-                Select All
+                Chọn tất cả
               </Button>
             </div>
           </div>
 
           {loadingOrders ? (
             <p className='text-sm text-muted-foreground py-4 text-center'>
-              Loading available orders...
+              Đang tải đơn khả dụng...
             </p>
           ) : !readyOrders?.length ? (
             <div className='text-center py-6 text-muted-foreground border rounded-lg'>
               <Package className='h-8 w-8 mx-auto mb-2 opacity-50' />
-              <p className='text-sm'>No orders ready for delivery.</p>
+              <p className='text-sm'>Không có đơn sẵn sàng giao.</p>
               <p className='text-xs mt-1'>
-                Confirm inbound orders first on the Inbound Sorting page.
+                Hãy xác nhận đơn nhập bưu cục trước ở trang phân loại đơn nhập.
               </p>
             </div>
           ) : (
@@ -285,7 +284,7 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
         {/* Actions */}
         <div className='flex justify-end gap-3 mt-6 pt-4 border-t'>
           <Button variant='outline' onClick={onClose}>
-            Cancel
+            Hủy
           </Button>
           <Button
             onClick={handleCreate}
@@ -293,8 +292,8 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
           >
             <Truck className='h-4 w-4 mr-2' />
             {isCreating
-              ? 'Creating...'
-              : `Create Manifest (${selectedOrders.size} orders)`}
+              ? 'Đang tạo...'
+              : `Tạo bảng kê (${selectedOrders.size} đơn)`}
           </Button>
         </div>
       </Card>
