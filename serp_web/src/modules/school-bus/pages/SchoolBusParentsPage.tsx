@@ -22,6 +22,7 @@ import {
   useCreateParentMutation,
   useDeleteParentMutation,
   useGetParentByIdQuery,
+  useGetParentSummaryQuery,
   useGetParentsQuery,
   useUpdateParentMutation,
 } from '../api/schoolBusApi';
@@ -139,6 +140,9 @@ export function SchoolBusParentsPage() {
     pagination.params,
     SCHOOL_BUS_PAGE_QUERY_OPTIONS
   );
+  const { data: summaryData } = useGetParentSummaryQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const { data: editingParentData } = useGetParentByIdQuery(
     editingParentId || 0,
     { skip: !dialogOpen || !editingParentId }
@@ -183,9 +187,7 @@ export function SchoolBusParentsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
-  const withEmail = parents.filter((p) => p.email).length;
-  const withPhone = parents.filter((p) => p.phone).length;
-  const activeParents = parents.filter((p) => p.isActive !== false).length;
+  const summary = summaryData?.data;
 
   const filteredParents = React.useMemo(() => {
     let result = parents;
@@ -433,28 +435,28 @@ export function SchoolBusParentsPage() {
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
             <SchoolBusMetricCard
               label='Hồ sơ phụ huynh'
-              value={parents.length}
+              value={summary?.totalParents ?? 0}
               icon={Users}
               tone='info'
               hint='Hồ sơ đã liên kết với vận hành xe bus'
             />
             <SchoolBusMetricCard
               label='Có email'
-              value={withEmail}
+              value={summary?.withEmail ?? 0}
               icon={Mail}
               tone='success'
               hint='Sẵn sàng nhận thông báo'
             />
             <SchoolBusMetricCard
               label='Có số điện thoại'
-              value={withPhone}
+              value={summary?.withPhone ?? 0}
               icon={Phone}
               tone='default'
               hint='Có thể liên hệ khi cần'
             />
             <SchoolBusMetricCard
               label='Phụ huynh đang hoạt động'
-              value={activeParents}
+              value={summary?.activeParents ?? 0}
               icon={CheckCircle2}
               tone='success'
               hint='Phụ huynh đang hoạt động trong vận hành xe bus'

@@ -6,6 +6,7 @@ import serp.project.school_bus_service.dto.params.ParentProfileParamsRequest;
 import serp.project.school_bus_service.dto.request.ParentProfileUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.ParentProfileResponse;
+import serp.project.school_bus_service.dto.response.ParentSummaryResponse;
 import serp.project.school_bus_service.service.IParentService;
 import serp.project.school_bus_service.mapper.SchoolBusMapper;
 import serp.project.school_bus_service.entity.ParentProfileEntity;
@@ -60,6 +61,17 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
                 PageableUtils.from(params,
                         Set.of("id", "fullName", "email", "createdAt", "updatedAt"), "fullName")),
                 response -> response);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ParentSummaryResponse getSummary(Long tenantId) {
+        var summary = parentProfileRepository.getParentSummary(tenantId);
+        return new ParentSummaryResponse(
+                value(summary.getTotalParents()),
+                value(summary.getWithEmail()),
+                value(summary.getWithPhone()),
+                value(summary.getActiveParents()));
     }
 
     private String keywordPattern(String keyword) {
@@ -198,5 +210,9 @@ public class ParentServiceImpl extends AbstractBaseService<ParentProfileEntity, 
                 parentProfileRepository.save(profile);
             }
         }
+    }
+
+    private long value(Long value) {
+        return value == null ? 0L : value;
     }
 }

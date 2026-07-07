@@ -21,6 +21,7 @@ import {
 import { cn } from '@/shared/utils';
 import { Button, Badge } from '@/shared/components/ui';
 import {
+  useGetRouteDispatchSummaryQuery,
   useGetRouteMapQuery,
   useGetRoutesQuery,
 } from '../api/schoolBusApi';
@@ -101,20 +102,18 @@ export function SchoolBusDispatchPage() {
     pagination.params,
     SCHOOL_BUS_PAGE_QUERY_OPTIONS
   );
+  const { data: summaryData } = useGetRouteDispatchSummaryQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const [selectedRouteId, setSelectedRouteId] = React.useState<number | null>(
     null
   );
   const routes = getPageItems(data?.data);
 
   // Route-level status - reflects planning/dispatch state, NOT execution state
-  const plannedRoutes = routes.filter((route) =>
-    ['DRAFT', 'GENERATED', 'REVIEWING', 'PUBLISHED', 'ASSIGNED'].includes(
-      route.status
-    )
-  ).length;
-  const dispatchedRoutes = routes.filter(
-    (route) => route.status === 'TRIP_CREATED'
-  ).length;
+  const summary = summaryData?.data;
+  const plannedRoutes = summary?.plannedRoutes ?? 0;
+  const dispatchedRoutes = summary?.tripCreatedRoutes ?? 0;
 
   const prioritizedRoutes = routes;
   const {
@@ -184,7 +183,7 @@ export function SchoolBusDispatchPage() {
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
             label='Tuyến khả dụng'
-            value={routes.length}
+            value={summary?.totalRoutes ?? 0}
             hint='Các tuyến hiện có trong đơn vị'
             icon={Route}
             tone='info'

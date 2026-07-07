@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.dto.response.StudentResponse;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.entity.StudentEntity;
+import serp.project.school_bus_service.repository.projection.StudentSummaryProjection;
 
 import java.util.List;
 
@@ -16,6 +17,21 @@ public interface StudentRepository extends BaseRepository<StudentEntity, Long> {
     List<StudentEntity> findByTenantIdAndParentProfileIdAndIsDeletedFalse(Long tenantId, Long parentProfileId);
 
     long countByTenantIdAndIsDeletedFalse(Long tenantId);
+
+    @Query(value = """
+            SELECT
+                COUNT(s.id) AS totalStudents,
+                COUNT(DISTINCT s.school_id) AS linkedSchools,
+                COUNT(DISTINCT s.parent_profile_id) AS linkedParents,
+                COALESCE(SUM(CASE WHEN s.is_active = true THEN 1 ELSE 0 END), 0) AS activeStudents
+              FROM public.school_bus_student s
+             WHERE s.tenant_id = :tenantId
+               AND s.is_deleted = false
+               AND (CAST(:parentProfileId AS bigint) IS NULL OR s.parent_profile_id = :parentProfileId)
+            """, nativeQuery = true)
+    StudentSummaryProjection getStudentSummary(
+            @Param("tenantId") Long tenantId,
+            @Param("parentProfileId") Long parentProfileId);
 
     @Query(value = """
             SELECT new serp.project.school_bus_service.dto.response.StudentResponse(

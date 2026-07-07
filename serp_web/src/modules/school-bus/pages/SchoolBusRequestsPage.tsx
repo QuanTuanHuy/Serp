@@ -20,6 +20,7 @@ import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   useApproveTransportRequestMutation,
+  useGetTransportRequestSummaryQuery,
   useGetTransportRequestsQuery,
   useRejectTransportRequestMutation,
   useGetSchoolDropdownOptionsQuery,
@@ -61,6 +62,9 @@ export function SchoolBusRequestsPage() {
     pagination.params,
     SCHOOL_BUS_PAGE_QUERY_OPTIONS
   );
+  const { data: summaryData } = useGetTransportRequestSummaryQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
 
   const [approveTransportRequest, { isLoading: approving }] =
@@ -75,16 +79,11 @@ export function SchoolBusRequestsPage() {
   const schools = schoolsData?.data || [];
 
   // Stats (derived from unfiltered requests in current page for dashboard metrics)
-  const totalRequestsCount = data?.data?.totalElements || requests.length;
-  const pendingRequestsCount = requests.filter(
-    (r) => r.status === 'SUBMITTED'
-  ).length;
-  const approvedRequestsCount = requests.filter(
-    (r) => r.status === 'APPROVED'
-  ).length;
-  const rejectedRequestsCount = requests.filter(
-    (r) => r.status === 'REJECTED'
-  ).length;
+  const summary = summaryData?.data;
+  const totalRequestsCount = summary?.totalRequests ?? 0;
+  const pendingRequestsCount = summary?.submittedRequests ?? 0;
+  const approvedRequestsCount = summary?.approvedRequests ?? 0;
+  const rejectedRequestsCount = summary?.rejectedRequests ?? 0;
 
   // Search and Filter states
   const [searchTerm, setSearchTerm] = React.useState('');

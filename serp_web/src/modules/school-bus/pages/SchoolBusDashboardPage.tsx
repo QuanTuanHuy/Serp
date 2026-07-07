@@ -14,8 +14,13 @@ import {
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
-  useGetDashboardOperationsQuery,
+  useGetDashboardAttendanceStatusQuery,
+  useGetDashboardRequestStatusQuery,
+  useGetDashboardRouteReadinessQuery,
   useGetDashboardSchoolsQuery,
+  useGetDashboardSummaryQuery,
+  useGetDashboardTripsByDateQuery,
+  useGetDashboardTripStatusQuery,
   type SchoolBusDashboardQueryParams,
 } from '../api/schoolBusDashboardApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -123,30 +128,54 @@ export function SchoolBusDashboardPage() {
     userKey: access.userKey,
   };
 
-  const operationsQuery = useGetDashboardOperationsQuery(queryArgs);
-  const schoolsQuery = useGetDashboardSchoolsQuery({
-    userKey: access.userKey,
-  });
+  const queryOptions = { refetchOnMountOrArgChange: true };
+  const summaryQuery = useGetDashboardSummaryQuery(queryArgs, queryOptions);
+  const tripStatusQuery = useGetDashboardTripStatusQuery(
+    queryArgs,
+    queryOptions
+  );
+  const attendanceStatusQuery = useGetDashboardAttendanceStatusQuery(
+    queryArgs,
+    queryOptions
+  );
+  const routeReadinessQuery = useGetDashboardRouteReadinessQuery(
+    queryArgs,
+    queryOptions
+  );
+  const requestStatusQuery = useGetDashboardRequestStatusQuery(
+    queryArgs,
+    queryOptions
+  );
+  const tripsByDateQuery = useGetDashboardTripsByDateQuery(
+    queryArgs,
+    queryOptions
+  );
+  const schoolsQuery = useGetDashboardSchoolsQuery(
+    {
+      userKey: access.userKey,
+    },
+    queryOptions
+  );
 
-  const operations = operationsQuery.data?.data;
-  const summary = operations?.summary;
+  const summary = summaryQuery.data?.data;
   const activeFilterCount = countActiveFilters(filters);
   const tripStatusChart = localizeChartData(
-    operations?.tripStatusChart,
+    tripStatusQuery.data?.data,
     tripStatusLabel
   );
   const attendanceChart = localizeChartData(
-    operations?.attendanceChart,
+    attendanceStatusQuery.data?.data,
     tripStudentStatusLabel
   );
   const routeReadinessChart = localizeChartData(
-    operations?.routeReadinessChart,
+    routeReadinessQuery.data?.data,
     routeReadinessStatusLabel
   );
   const requestStatusChart = localizeChartData(
-    operations?.requestStatusChart,
+    requestStatusQuery.data?.data,
     requestStatusLabel
   );
+  const tripsByDateChart = tripsByDateQuery.data?.data || [];
   const pageTitle = access.isParentOnly
     ? 'Tổng quan đưa đón học sinh'
     : access.isDriver
@@ -209,7 +238,7 @@ export function SchoolBusDashboardPage() {
         }
       >
         <div className='space-y-6'>
-          {operationsQuery.isLoading ? (
+          {summaryQuery.isLoading ? (
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               {[0, 1, 2, 3].map((item) => (
                 <div
@@ -218,7 +247,7 @@ export function SchoolBusDashboardPage() {
                 />
               ))}
             </div>
-          ) : operationsQuery.isError || !summary ? (
+          ) : summaryQuery.isError || !summary ? (
             <SchoolBusEmptyState
               title='Không thể tải chỉ số tổng quan'
               description='Các biểu đồ vẫn hiển thị trong khi hệ thống thử tải lại dữ liệu tổng quan.'
@@ -261,8 +290,8 @@ export function SchoolBusDashboardPage() {
           <div className='grid gap-6 md:grid-cols-3'>
             <DashboardChartCard
               title='Phân bố trạng thái chuyến'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              isLoading={tripStatusQuery.isLoading}
+              isError={tripStatusQuery.isError}
             >
               <DashboardDonutChart
                 title='Phân bố trạng thái chuyến'
@@ -273,8 +302,8 @@ export function SchoolBusDashboardPage() {
 
             <DashboardChartCard
               title='Trạng thái điểm danh học sinh'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              isLoading={attendanceStatusQuery.isLoading}
+              isError={attendanceStatusQuery.isError}
             >
               <DashboardDonutChart
                 title='Trạng thái điểm danh học sinh'
@@ -285,8 +314,8 @@ export function SchoolBusDashboardPage() {
 
             <DashboardChartCard
               title='Trạng thái phân công tuyến'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              isLoading={routeReadinessQuery.isLoading}
+              isError={routeReadinessQuery.isError}
             >
               <DashboardBarChart
                 title='Trạng thái phân công tuyến'
@@ -299,21 +328,21 @@ export function SchoolBusDashboardPage() {
           <div className='grid gap-6 md:grid-cols-3'>
             <DashboardChartCard
               title='Số chuyến theo thời gian'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              isLoading={tripsByDateQuery.isLoading}
+              isError={tripsByDateQuery.isError}
               className='md:col-span-2'
             >
               <DashboardLineChart
                 title='Số chuyến theo thời gian'
-                data={operations?.tripsByDate || []}
+                data={tripsByDateChart}
                 color='#991B1B'
               />
             </DashboardChartCard>
 
             <DashboardChartCard
               title='Khối lượng yêu cầu'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              isLoading={requestStatusQuery.isLoading}
+              isError={requestStatusQuery.isError}
             >
               <DashboardBarChart
                 title='Khối lượng yêu cầu'

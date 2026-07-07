@@ -39,6 +39,7 @@ import {
   useGetDepotsQuery,
   useGetDriverByIdQuery,
   useGetDriversQuery,
+  useGetFleetSummaryQuery,
   useUpdateAttendantMutation,
   useUpdateBusMutation,
   useUpdateDepotMutation,
@@ -178,6 +179,9 @@ export function SchoolBusFleetPage() {
     depotPagination.params,
     { ...SCHOOL_BUS_PAGE_QUERY_OPTIONS, skip: activeTab !== 'depots' }
   );
+  const { data: fleetSummaryData } = useGetFleetSummaryQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
 
   // --- Dialog state -----------------------------------------------
   const [busDialogOpen, setBusDialogOpen] = React.useState(false);
@@ -241,15 +245,17 @@ export function SchoolBusFleetPage() {
   const depots = getPageItems(depotsData?.data);
 
   // --- Stats ------------------------------------------------------
-  const availableBuses = buses.filter(
-    (b) => b.status === 'AVAILABLE' || b.status === 'ACTIVE'
-  ).length;
-  const availableDrivers = drivers.filter(
-    (d) => d.isActive !== false && d.status !== 'ON_LEAVE'
-  ).length;
-  const availableAttendants = attendants.filter(
-    (a) => a.isActive !== false && a.status !== 'ON_LEAVE'
-  ).length;
+  const fleetSummary = fleetSummaryData?.data;
+  const totalBuses = fleetSummary?.totalBuses ?? 0;
+  const availableBuses = fleetSummary?.availableBuses ?? 0;
+  const totalDrivers = fleetSummary?.totalDrivers ?? 0;
+  const availableDrivers = fleetSummary?.availableDrivers ?? 0;
+  const unavailableDrivers = fleetSummary?.unavailableDrivers ?? 0;
+  const totalAttendants = fleetSummary?.totalAttendants ?? 0;
+  const availableAttendants = fleetSummary?.availableAttendants ?? 0;
+  const unavailableAttendants = fleetSummary?.unavailableAttendants ?? 0;
+  const totalDepots = fleetSummary?.totalDepots ?? 0;
+  const depotsWithCoordinates = fleetSummary?.depotsWithCoordinates ?? 0;
 
   // --- Filter state (per tab) -------------------------------------
   const [busSearch, setBusSearch] = React.useState('');
@@ -1104,28 +1110,28 @@ export function SchoolBusFleetPage() {
             <SchoolBusMetricCard
               label='Xe sẵn sàng'
               value={availableBuses}
-              hint={`${buses.length} xe đã đăng ký`}
+              hint={`${totalBuses} xe đã đăng ký`}
               icon={Bus}
               tone='info'
             />
             <SchoolBusMetricCard
               label='Tài xế sẵn sàng'
               value={availableDrivers}
-              hint={`${drivers.length} tổng - ${drivers.length - availableDrivers} không sẵn sàng`}
+              hint={`${totalDrivers} tổng - ${unavailableDrivers} không sẵn sàng`}
               icon={UserCog}
               tone='linked'
             />
             <SchoolBusMetricCard
               label='Phụ xe sẵn sàng'
               value={availableAttendants}
-              hint={`${attendants.length} tổng - ${attendants.length - availableAttendants} không sẵn sàng`}
+              hint={`${totalAttendants} tổng - ${unavailableAttendants} không sẵn sàng`}
               icon={ShieldCheck}
               tone='success'
             />
             <SchoolBusMetricCard
               label='Bãi xe'
-              value={depotsPage.length}
-              hint={`${depotsPage.filter((d) => d.latitude && d.longitude).length} đã có tọa độ`}
+              value={totalDepots}
+              hint={`${depotsWithCoordinates} đã có tọa độ`}
               icon={Warehouse}
               tone='warning'
             />
@@ -1134,14 +1140,14 @@ export function SchoolBusFleetPage() {
           {/* Unified Table view */}
           <SchoolBusDataTable<any>
             tabs={[
-              { key: 'buses', label: 'Buses', count: buses.length },
-              { key: 'drivers', label: 'Drivers', count: drivers.length },
+              { key: 'buses', label: 'Xe', count: totalBuses },
+              { key: 'drivers', label: 'Tài xế', count: totalDrivers },
               {
                 key: 'attendants',
-                label: 'Attendants',
-                count: attendants.length,
+                label: 'Phụ xe',
+                count: totalAttendants,
               },
-              { key: 'depots', label: 'Depots', count: depotsPage.length },
+              { key: 'depots', label: 'Bãi xe', count: totalDepots },
             ]}
             activeTab={activeTab}
             onTabChange={setActiveTab}

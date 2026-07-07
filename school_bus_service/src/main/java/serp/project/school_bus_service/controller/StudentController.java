@@ -9,6 +9,7 @@ import serp.project.school_bus_service.dto.request.StudentUpsertRequest;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.StudentResponse;
+import serp.project.school_bus_service.dto.response.StudentSummaryResponse;
 import serp.project.school_bus_service.service.IStudentService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
@@ -29,6 +30,12 @@ public class StudentController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<PageResponse<StudentResponse>>> getStudents(
             @ModelAttribute StudentParamsRequest params) {
         return ok("Fetched students", studentService.getStudents(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.student.read')")
+    public ResponseEntity<GeneralResponse<StudentSummaryResponse>> getSummary() {
+        return ok("Fetched student summary", studentService.getSummary(getCurrentTenantId()));
     }
 
     @PostMapping

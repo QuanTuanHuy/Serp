@@ -19,6 +19,7 @@ import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   useGetSchoolDropdownOptionsQuery,
+  useGetSchoolBusSubscriptionSummaryQuery,
   useGetSchoolBusSubscriptionsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
@@ -52,6 +53,10 @@ export function SchoolBusSubscriptionsPage() {
   const { data, isLoading } = useGetSchoolBusSubscriptionsQuery(
     pagination.params,
     SCHOOL_BUS_PAGE_QUERY_OPTIONS
+  );
+  const { data: summaryData } = useGetSchoolBusSubscriptionSummaryQuery(
+    undefined,
+    { refetchOnMountOrArgChange: true }
   );
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
   const subscriptions = getPageItems(data?.data);
@@ -339,7 +344,7 @@ export function SchoolBusSubscriptionsPage() {
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
             label='Đăng ký'
-            value={data?.data?.totalElements || 0}
+            value={summaryData?.data?.totalSubscriptions ?? 0}
             hint={
               access.isParentOnly
                 ? 'Dịch vụ xe bus của học sinh'
@@ -350,9 +355,7 @@ export function SchoolBusSubscriptionsPage() {
           />
           <SchoolBusMetricCard
             label='Đang hoạt động'
-            value={
-              subscriptions.filter((item) => item.status === 'ACTIVE').length
-            }
+            value={summaryData?.data?.activeSubscriptions ?? 0}
             hint={
               access.isParentOnly
                 ? 'Dịch vụ đang hoạt động'
@@ -363,9 +366,7 @@ export function SchoolBusSubscriptionsPage() {
           />
           <SchoolBusMetricCard
             label='Tạm dừng hoặc đã dừng'
-            value={
-              subscriptions.filter((item) => item.status !== 'ACTIVE').length
-            }
+            value={summaryData?.data?.inactiveSubscriptions ?? 0}
             hint={
               access.isParentOnly
                 ? 'Dịch vụ đang tạm dừng hoặc đã dừng'

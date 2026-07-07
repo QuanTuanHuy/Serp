@@ -16,6 +16,7 @@ import serp.project.school_bus_service.dto.request.StudentSubscriptionUpsertRequ
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
+import serp.project.school_bus_service.dto.response.SubscriptionSummaryResponse;
 import serp.project.school_bus_service.service.IStudentSubscriptionService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
@@ -36,6 +37,12 @@ public class SubscriptionController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<PageResponse<StudentSubscriptionResponse>>> getSubscriptions(
             @ModelAttribute StudentSubscriptionParamsRequest params) {
         return ok("Fetched subscriptions", subscriptionService.getSubscriptions(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.subscription.read')")
+    public ResponseEntity<GeneralResponse<SubscriptionSummaryResponse>> getSummary() {
+        return ok("Fetched subscription summary", subscriptionService.getSummary(getCurrentTenantId()));
     }
 
     @GetMapping("/{id}")

@@ -21,6 +21,7 @@ import { Search, Settings, ChevronDown, Home } from 'lucide-react';
 import { NotificationButton } from '@/modules/notifications';
 import { cn } from '@/shared/utils';
 import { useUser } from '@/modules/account';
+import { useSchoolBusNavigationLabels } from '../useSchoolBusNavigationLabels';
 
 interface SchoolBusTopbarProps {
   className?: string;
@@ -39,6 +40,7 @@ export function SchoolBusTopbar({
   const pathname = usePathname();
 
   const { getInitials, getDisplayName, user } = useUser();
+  const { moduleLabel, getSegmentLabel } = useSchoolBusNavigationLabels();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,18 +59,19 @@ export function SchoolBusTopbar({
     const decodedPath = decodeURIComponent(pathname);
     const segments = decodedPath.split('/').filter(Boolean);
     return segments.map((segment, index) => {
-      let name = segment.replace(/-/g, ' ');
-      if (name.includes('&')) {
-        name = name.split('&')[0];
-      }
+      const href = '/' + segments.slice(0, index + 1).join('/');
+      let name = getSegmentLabel(segment, href);
       if (segment.toLowerCase() === 'school-bus') {
-        name = 'Xe bus trường học';
-      } else {
-        name = name.charAt(0).toUpperCase() + name.slice(1);
+        return {
+          name: moduleLabel,
+          href,
+          isLast: index === segments.length - 1,
+        };
       }
+      name = name.charAt(0).toUpperCase() + name.slice(1);
       return {
         name,
-        href: '/' + segments.slice(0, index + 1).join('/'),
+        href,
         isLast: index === segments.length - 1,
       };
     });

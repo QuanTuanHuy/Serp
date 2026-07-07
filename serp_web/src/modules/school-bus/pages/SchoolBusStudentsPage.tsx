@@ -21,6 +21,7 @@ import {
   useCreateStudentMutation,
   useDeleteStudentMutation,
   useGetStudentByIdQuery,
+  useGetStudentSummaryQuery,
   useGetStudentsQuery,
   useUpdateStudentMutation,
   useGetSchoolDropdownOptionsQuery,
@@ -77,6 +78,9 @@ export function SchoolBusStudentsPage() {
     pagination.params,
     SCHOOL_BUS_PAGE_QUERY_OPTIONS
   );
+  const { data: summaryData } = useGetStudentSummaryQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery(undefined, {
     skip: !dialogOpen,
   });
@@ -103,13 +107,7 @@ export function SchoolBusStudentsPage() {
   const parents = parentsData?.data || [];
 
   // --- Stats -------------------------------------------------------
-  const uniqueSchools = new Set(
-    students.map((s) => s.schoolName).filter(Boolean)
-  ).size;
-  const linkedParents = new Set(
-    students.map((s) => s.parentProfileId).filter(Boolean)
-  ).size;
-  const activeStudents = students.filter((s) => s.isActive !== false).length;
+  const summary = summaryData?.data;
 
   // --- Filter state ------------------------------------------------
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -405,27 +403,27 @@ export function SchoolBusStudentsPage() {
           >
             <SchoolBusMetricCard
               label='Học sinh'
-              value={students.length}
+              value={summary?.totalStudents ?? 0}
               icon={User}
               tone='student'
             />
             <SchoolBusMetricCard
               label='Trường học'
-              value={uniqueSchools}
+              value={summary?.linkedSchools ?? 0}
               icon={GraduationCap}
               tone='school'
             />
             {!access.isParentOnly && (
               <SchoolBusMetricCard
                 label='Phụ huynh đã liên kết'
-                value={linkedParents}
+                value={summary?.linkedParents ?? 0}
                 icon={Users}
                 tone='default'
               />
             )}
             <SchoolBusMetricCard
               label='Học sinh đang hoạt động'
-              value={activeStudents}
+              value={summary?.activeStudents ?? 0}
               icon={CheckCircle2}
               tone='success'
             />

@@ -9,6 +9,7 @@ import serp.project.school_bus_service.dto.request.ParentProfileUpsertRequest;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.ParentProfileResponse;
+import serp.project.school_bus_service.dto.response.ParentSummaryResponse;
 import serp.project.school_bus_service.service.IParentService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
@@ -29,6 +30,12 @@ public class ParentController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<PageResponse<ParentProfileResponse>>> getParents(
             @ModelAttribute ParentProfileParamsRequest params) {
         return ok("Fetched parents", parentService.getParents(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.fleet.read')")
+    public ResponseEntity<GeneralResponse<ParentSummaryResponse>> getSummary() {
+        return ok("Fetched parent summary", parentService.getSummary(getCurrentTenantId()));
     }
 
     @PostMapping

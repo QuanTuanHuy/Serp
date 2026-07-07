@@ -9,6 +9,7 @@ import serp.project.school_bus_service.enums.SubscriptionStatus;
 import serp.project.school_bus_service.enums.TripOption;
 import serp.project.school_bus_service.entity.StudentSubscriptionEntity;
 import serp.project.school_bus_service.repository.projection.GreedyFillCandidateProjection;
+import serp.project.school_bus_service.repository.projection.SubscriptionSummaryProjection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 
 import java.time.LocalDate;
@@ -119,6 +120,23 @@ public interface StudentSubscriptionRepository extends BaseRepository<StudentSub
             SubscriptionStatus status);
 
     long countByTenantIdAndStatusAndIsDeletedFalse(Long tenantId, SubscriptionStatus status);
+
+    @Query(value = """
+            SELECT
+                COUNT(sub.id) AS totalSubscriptions,
+                COALESCE(SUM(CASE WHEN sub.status = 'ACTIVE' THEN 1 ELSE 0 END), 0) AS activeSubscriptions,
+                COALESCE(SUM(CASE WHEN sub.status <> 'ACTIVE' THEN 1 ELSE 0 END), 0) AS inactiveSubscriptions
+              FROM public.school_bus_student_subscription sub
+              JOIN public.school_bus_student student
+                ON student.id = sub.student_id
+               AND student.is_deleted = false
+             WHERE sub.tenant_id = :tenantId
+               AND sub.is_deleted = false
+               AND (CAST(:parentProfileId AS bigint) IS NULL OR student.parent_profile_id = :parentProfileId)
+            """, nativeQuery = true)
+    SubscriptionSummaryProjection getSubscriptionSummary(
+            @Param("tenantId") Long tenantId,
+            @Param("parentProfileId") Long parentProfileId);
 
     /**
      * Single query that pushes most eligibility filters into the DB:

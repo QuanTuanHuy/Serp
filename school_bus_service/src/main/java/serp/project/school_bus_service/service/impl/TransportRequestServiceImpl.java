@@ -13,6 +13,7 @@ import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RequestStudentResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestResponse;
+import serp.project.school_bus_service.dto.response.TransportRequestSummaryResponse;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
@@ -630,6 +631,20 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
         return response;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public TransportRequestSummaryResponse getSummary(Long tenantId) {
+        Long parentProfileId = securityService.isParentOnly()
+                ? schoolBusDataScopeService.getCurrentParentProfileIdRequired()
+                : null;
+        var summary = transportRequestRepository.getTransportRequestSummary(tenantId, parentProfileId);
+        return new TransportRequestSummaryResponse(
+                value(summary.getTotalRequests()),
+                value(summary.getSubmittedRequests()),
+                value(summary.getApprovedRequests()),
+                value(summary.getRejectedRequests()));
+    }
+
     private void applySchoolSummaries(List<TransportRequestResponse> items, List<Long> requestIds, Long tenantId) {
         Map<Long, Object[]> schoolMap = requestStudentRepository.findSchoolSummariesByRequestIds(requestIds, tenantId)
                 .stream()
@@ -679,5 +694,9 @@ public class TransportRequestServiceImpl extends AbstractBaseService<TransportRe
                 .anyMatch(student -> student != null
                         && student.getSchool() != null
                         && schoolId.equals(student.getSchool().getId()));
+    }
+
+    private long value(Long value) {
+        return value == null ? 0L : value;
     }
 }

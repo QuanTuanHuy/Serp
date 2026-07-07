@@ -8,6 +8,7 @@ import serp.project.school_bus_service.dto.params.SchoolParamsRequest;
 import serp.project.school_bus_service.dto.request.SchoolUpsertRequest;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
+import serp.project.school_bus_service.dto.response.SchoolRegistrySummaryResponse;
 import serp.project.school_bus_service.dto.response.SchoolResponse;
 import serp.project.school_bus_service.service.ISchoolService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
@@ -33,6 +34,12 @@ public class SchoolController extends AbstractBaseController {
             @ModelAttribute SchoolParamsRequest params) {
         return ok(messageCommon.getMessage("school.fetch.list"),
                 schoolService.getSchools(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
+    public ResponseEntity<GeneralResponse<SchoolRegistrySummaryResponse>> getSummary() {
+        return ok(messageCommon.getMessage("school.fetch.list"), schoolService.getSummary(getCurrentTenantId()));
     }
 
     @PostMapping

@@ -30,7 +30,7 @@ import { cn } from '@/shared/utils';
 import {
   useGetSchoolBusReportAttendanceQuery,
   useGetSchoolBusReportCapacityQuery,
-  useGetSchoolBusReportQuery,
+  useGetSchoolBusReportOverviewQuery,
   useGetSchoolBusReportTripsQuery,
   useGetSchoolDropdownOptionsQuery,
 } from '../api/schoolBusApi';
@@ -125,10 +125,10 @@ export function SchoolBusReportsPage() {
   const summaryParams = useMemo(
     () =>
       ({
-        fromDate: filters.fromDate || undefined,
-        toDate: filters.toDate || undefined,
+        dateFrom: filters.fromDate || undefined,
+        dateTo: filters.toDate || undefined,
         schoolId: filters.schoolId || undefined,
-        status: filters.status || undefined,
+        tripStatus: filters.status || undefined,
         direction: filters.direction || undefined,
       }) as any,
     [filters]
@@ -138,10 +138,10 @@ export function SchoolBusReportsPage() {
     () =>
       ({
         ...tripPagination.params,
-        fromDate: filters.fromDate || undefined,
-        toDate: filters.toDate || undefined,
+        dateFrom: filters.fromDate || undefined,
+        dateTo: filters.toDate || undefined,
         schoolId: filters.schoolId || undefined,
-        status: filters.status || undefined,
+        tripStatus: filters.status || undefined,
         direction: filters.direction || undefined,
         keyword: debouncedKeyword || undefined,
       }) as any,
@@ -152,10 +152,10 @@ export function SchoolBusReportsPage() {
     () =>
       ({
         ...attendancePagination.params,
-        fromDate: filters.fromDate || undefined,
-        toDate: filters.toDate || undefined,
+        dateFrom: filters.fromDate || undefined,
+        dateTo: filters.toDate || undefined,
         schoolId: filters.schoolId || undefined,
-        status: filters.status || undefined,
+        tripStatus: filters.status || undefined,
         direction: filters.direction || undefined,
         keyword: debouncedKeyword || undefined,
       }) as any,
@@ -166,10 +166,10 @@ export function SchoolBusReportsPage() {
     () =>
       ({
         ...capacityPagination.params,
-        fromDate: filters.fromDate || undefined,
-        toDate: filters.toDate || undefined,
+        dateFrom: filters.fromDate || undefined,
+        dateTo: filters.toDate || undefined,
         schoolId: filters.schoolId || undefined,
-        status: filters.status || undefined,
+        tripStatus: filters.status || undefined,
         direction: filters.direction || undefined,
         keyword: debouncedKeyword || undefined,
       }) as any,
@@ -177,8 +177,10 @@ export function SchoolBusReportsPage() {
   );
 
   // --- Queries ---------------------------------------------------------------
-  const { data: summaryData, isLoading: loadingSummary } =
-    useGetSchoolBusReportQuery(summaryParams);
+  const { data: overviewData, isLoading: loadingOverview } =
+    useGetSchoolBusReportOverviewQuery(summaryParams, {
+      refetchOnMountOrArgChange: true,
+    });
   const { data: tripsData, isLoading: loadingTrips } =
     useGetSchoolBusReportTripsQuery(tripsParams);
   const { data: attendanceData, isLoading: loadingAttendance } =
@@ -189,7 +191,7 @@ export function SchoolBusReportsPage() {
   // School list query for filters dropdown
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
 
-  const report = summaryData?.data;
+  const overview = overviewData?.data;
   const trips = getPageItems(tripsData?.data);
   const attendance = getPageItems(attendanceData?.data);
   const capacity = getPageItems(capacityData?.data);
@@ -610,55 +612,7 @@ export function SchoolBusReportsPage() {
             )}
           </Button>
         </div>
-        <div className='text-xs text-slate-400 font-semibold uppercase tracking-wider'>
-          Bản ghi trên trang
-        </div>
       </div>
-
-      {activeTab === 'attendance' && attendance.length > 0 && (
-        <div className='grid grid-cols-2 sm:grid-cols-5 gap-3 border-t border-slate-100 pt-3.5'>
-          <div className='bg-blue-50/50 border border-blue-100/50 rounded-xl p-2.5 text-center'>
-            <p className='text-[10px] font-bold text-blue-500 uppercase tracking-wider'>
-              Đã lên xe
-            </p>
-            <p className='text-lg font-bold text-blue-700 mt-1'>
-              {boardedCount}
-            </p>
-          </div>
-          <div className='bg-emerald-50/50 border border-emerald-100/50 rounded-xl p-2.5 text-center'>
-            <p className='text-[10px] font-bold text-emerald-500 uppercase tracking-wider'>
-              Đã xuống xe
-            </p>
-            <p className='text-lg font-bold text-emerald-700 mt-1'>
-              {droppedOffCount}
-            </p>
-          </div>
-          <div className='bg-amber-50/50 border border-amber-100/50 rounded-xl p-2.5 text-center'>
-            <p className='text-[10px] font-bold text-amber-500 uppercase tracking-wider'>
-              Vắng mặt
-            </p>
-            <p className='text-lg font-bold text-amber-700 mt-1'>
-              {absentCount}
-            </p>
-          </div>
-          <div className='bg-rose-50/50 border border-rose-100/50 rounded-xl p-2.5 text-center'>
-            <p className='text-[10px] font-bold text-rose-500 uppercase tracking-wider'>
-              Không có mặt
-            </p>
-            <p className='text-lg font-bold text-rose-700 mt-1'>
-              {noShowCount}
-            </p>
-          </div>
-          <div className='bg-slate-50 border border-slate-200/50 rounded-xl p-2.5 text-center col-span-2 sm:col-span-1'>
-            <p className='text-[10px] font-bold text-slate-500 uppercase tracking-wider'>
-              Chưa phục vụ
-            </p>
-            <p className='text-lg font-bold text-slate-700 mt-1'>
-              {notServedCount}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -678,7 +632,7 @@ export function SchoolBusReportsPage() {
       >
         <div className='space-y-6'>
           {/* --- 1. Operations Summary Metrics ---------------------------------- */}
-          {loadingSummary || !report ? (
+          {loadingOverview || !overview ? (
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               {[1, 2, 3, 4].map((i) => (
                 <div
@@ -691,28 +645,28 @@ export function SchoolBusReportsPage() {
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               <SchoolBusMetricCard
                 label='Yêu cầu đưa đón'
-                value={report.totalRequests}
+                value={overview.totalRequests}
                 hint='Yêu cầu trong phạm vi dữ liệu'
                 icon={FileText}
                 tone='info'
               />
               <SchoolBusMetricCard
                 label='Yêu cầu đã duyệt'
-                value={report.approvedRequests}
+                value={overview.approvedRequests}
                 hint='Đã chuyển thành đăng ký'
                 icon={CheckCircle2}
                 tone='success'
               />
               <SchoolBusMetricCard
                 label='Chuyến đã hoàn thành'
-                value={report.completedRoutes}
+                value={overview.completedTrips}
                 hint='Tuyến đã hoàn tất vận hành'
                 icon={Milestone}
                 tone='success'
               />
               <SchoolBusMetricCard
                 label='Sự kiện điểm danh'
-                value={report.attendanceEvents}
+                value={overview.attendanceEvents}
                 hint='Lên xe, xuống xe và vắng mặt'
                 icon={Fingerprint}
                 tone='info'
@@ -726,17 +680,17 @@ export function SchoolBusReportsPage() {
               {
                 key: 'trips',
                 label: 'Chuyến xe',
-                count: tripsData?.data?.totalElements || 0,
+                count: overview?.tripCount || 0,
               },
               {
                 key: 'attendance',
                 label: 'Điểm danh',
-                count: attendanceData?.data?.totalElements || 0,
+                count: overview?.attendanceCount || 0,
               },
               {
                 key: 'capacity',
                 label: 'Sức chứa',
-                count: capacityData?.data?.totalElements || 0,
+                count: overview?.capacityCount || 0,
               },
             ]}
             activeTab={activeTab}

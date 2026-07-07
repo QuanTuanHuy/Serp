@@ -178,6 +178,65 @@ export interface SchoolBusDepot extends SchoolBusBaseRecord {
   description?: string | null;
 }
 
+export interface SchoolBusFleetSummary {
+  totalBuses: number;
+  availableBuses: number;
+  totalDrivers: number;
+  availableDrivers: number;
+  unavailableDrivers: number;
+  totalAttendants: number;
+  availableAttendants: number;
+  unavailableAttendants: number;
+  totalDepots: number;
+  depotsWithCoordinates: number;
+}
+
+export interface SchoolBusSchoolRegistrySummary {
+  totalSchools: number;
+  totalPickupPoints: number;
+  linkedPickupPoints: number;
+  missingCoordinates: number;
+}
+
+export interface SchoolBusStudentSummary {
+  totalStudents: number;
+  linkedSchools: number;
+  linkedParents: number;
+  activeStudents: number;
+}
+
+export interface SchoolBusParentSummary {
+  totalParents: number;
+  withEmail: number;
+  withPhone: number;
+  activeParents: number;
+}
+
+export interface SchoolBusTransportRequestSummary {
+  totalRequests: number;
+  submittedRequests: number;
+  approvedRequests: number;
+  rejectedRequests: number;
+}
+
+export interface SchoolBusSubscriptionSummary {
+  totalSubscriptions: number;
+  activeSubscriptions: number;
+  inactiveSubscriptions: number;
+}
+
+export interface SchoolBusRouteDispatchSummary {
+  totalRoutes: number;
+  plannedRoutes: number;
+  tripCreatedRoutes: number;
+}
+
+export interface SchoolBusTripListSummary {
+  totalTrips: number;
+  inProgressTrips: number;
+  completedTrips: number;
+}
+
 export interface SchoolBusRequestStudent extends SchoolBusBaseRecord {
   requestId: number;
   studentId: number;
@@ -628,6 +687,16 @@ export interface OperationalReport {
   completedRoutes: number;
   attendanceEvents: number;
   auditEvents: number;
+}
+
+export interface SchoolBusReportOverview {
+  totalRequests: number;
+  approvedRequests: number;
+  completedTrips: number;
+  attendanceEvents: number;
+  tripCount: number;
+  attendanceCount: number;
+  capacityCount: number;
 }
 
 export interface SchoolBusSchoolUpsertRequest {

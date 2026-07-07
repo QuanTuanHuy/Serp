@@ -6,6 +6,7 @@ import serp.project.school_bus_service.dto.params.StudentSubscriptionParamsReque
 import serp.project.school_bus_service.dto.request.StudentSubscriptionUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
+import serp.project.school_bus_service.dto.response.SubscriptionSummaryResponse;
 
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.enums.TripOption;
@@ -19,6 +20,8 @@ import java.util.List;
 public interface IStudentSubscriptionService extends IBaseService<StudentSubscriptionEntity, Long> {
 
     PageResponse<StudentSubscriptionResponse> getSubscriptions(StudentSubscriptionParamsRequest params, Long tenantId);
+
+    SubscriptionSummaryResponse getSummary(Long tenantId);
 
     StudentSubscriptionResponse getSubscription(Long id, Long tenantId);
 

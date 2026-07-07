@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.SchoolParamsRequest;
 import serp.project.school_bus_service.dto.request.SchoolUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
+import serp.project.school_bus_service.dto.response.SchoolRegistrySummaryResponse;
 import serp.project.school_bus_service.dto.response.SchoolResponse;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.ISchoolService;
@@ -74,6 +75,17 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
                 mapper::toSchoolResponse);
         enrichSchoolListSummaries(pageResponse.getItems(), tenantId);
         return pageResponse;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SchoolRegistrySummaryResponse getSummary(Long tenantId) {
+        var summary = schoolRepository.getRegistrySummary(tenantId);
+        return new SchoolRegistrySummaryResponse(
+                value(summary.getTotalSchools()),
+                value(summary.getTotalPickupPoints()),
+                value(summary.getLinkedPickupPoints()),
+                value(summary.getMissingCoordinates()));
     }
 
     @Override
@@ -227,5 +239,9 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
     @Override
     public long countByTenant(Long tenantId) {
         return schoolRepository.countByTenantIdAndIsDeletedFalse(tenantId);
+    }
+
+    private long value(Long value) {
+        return value == null ? 0L : value;
     }
 }

@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.dto.response.TransportRequestResponse;
+import serp.project.school_bus_service.repository.projection.TransportRequestSummaryProjection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.entity.TransportRequestEntity;
 import serp.project.school_bus_service.enums.RequestStatus;
@@ -123,6 +124,21 @@ public interface TransportRequestRepository extends BaseRepository<TransportRequ
     long countByTenantIdAndParentProfileIdAndStatusAndIsDeletedFalse(Long tenantId, Long parentProfileId, RequestStatus status);
 
     long countByTenantIdAndParentProfileIdAndIsDeletedFalse(Long tenantId, Long parentProfileId);
+
+    @Query(value = """
+            SELECT
+                COUNT(r.id) AS totalRequests,
+                COALESCE(SUM(CASE WHEN r.status = 'SUBMITTED' THEN 1 ELSE 0 END), 0) AS submittedRequests,
+                COALESCE(SUM(CASE WHEN r.status = 'APPROVED' THEN 1 ELSE 0 END), 0) AS approvedRequests,
+                COALESCE(SUM(CASE WHEN r.status = 'REJECTED' THEN 1 ELSE 0 END), 0) AS rejectedRequests
+              FROM public.school_bus_transport_request r
+             WHERE r.tenant_id = :tenantId
+               AND r.is_deleted = false
+               AND (CAST(:parentProfileId AS bigint) IS NULL OR r.parent_profile_id = :parentProfileId)
+            """, nativeQuery = true)
+    TransportRequestSummaryProjection getTransportRequestSummary(
+            @Param("tenantId") Long tenantId,
+            @Param("parentProfileId") Long parentProfileId);
 
     @Query("""
         SELECT r.status, COUNT(r) FROM TransportRequestEntity r

@@ -10,6 +10,7 @@ import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RequestStudentResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestResponse;
+import serp.project.school_bus_service.dto.response.TransportRequestSummaryResponse;
 import serp.project.school_bus_service.entity.RequestStudentEntity;
 import serp.project.school_bus_service.enums.RequestStatus;
 
@@ -19,6 +20,8 @@ import java.util.List;
 public interface ITransportRequestService extends IBaseService<TransportRequestEntity, Long> {
 
     PageResponse<TransportRequestResponse> getTransportRequests(TransportRequestParamsRequest params, Long tenantId);
+
+    TransportRequestSummaryResponse getSummary(Long tenantId);
 
     TransportRequestDetailResponse getTransportRequest(Long id, Long tenantId);
 

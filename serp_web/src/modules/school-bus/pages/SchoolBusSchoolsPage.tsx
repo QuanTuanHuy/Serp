@@ -46,6 +46,7 @@ import {
   useGetDepotsQuery,
   useGetPickupPointsQuery,
   useGetSchoolPickupPointsQuery,
+  useGetSchoolRegistrySummaryQuery,
   useGetSchoolsQuery,
   useLinkSchoolPickupPointMutation,
   useUnlinkSchoolPickupPointMutation,
@@ -551,6 +552,9 @@ function SchoolBusSchoolsPageContent() {
   );
   const { data: allLinksData, refetch: refetchLinks } =
     useGetAllActiveSchoolPickupLinksQuery();
+  const { data: summaryData } = useGetSchoolRegistrySummaryQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
 
   const [createSchool, { isLoading: creatingSchool }] =
     useCreateSchoolMutation();
@@ -685,9 +689,8 @@ function SchoolBusSchoolsPageContent() {
   }, [linkedPickupPoints, linkedSearch]);
 
   // --- Derived stats -----------------------------------------------
-  const missingCoordsCount =
-    schools.filter((s) => typeof s.latitude !== 'number').length +
-    pickupPoints.filter((p) => typeof p.latitude !== 'number').length;
+  const registrySummary = summaryData?.data;
+  const missingCoordsCount = registrySummary?.missingCoordinates ?? 0;
 
   const canFitAll =
     schools.some((s) => typeof s.latitude === 'number') ||
@@ -885,21 +888,21 @@ function SchoolBusSchoolsPageContent() {
             <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
               <SchoolBusMetricCard
                 label='Trường học'
-                value={allSchools.length}
+                value={registrySummary?.totalSchools ?? 0}
                 icon={GraduationCap}
                 tone='school'
                 variant='compact'
               />
               <SchoolBusMetricCard
                 label='Điểm đón/trả'
-                value={pickupPoints.length}
+                value={registrySummary?.totalPickupPoints ?? 0}
                 icon={MapPin}
                 tone='pickup'
                 variant='compact'
               />
               <SchoolBusMetricCard
                 label='Điểm đã liên kết'
-                value={allLinks.length}
+                value={registrySummary?.linkedPickupPoints ?? 0}
                 icon={Link2}
                 tone='linked'
                 variant='compact'
@@ -1868,19 +1871,19 @@ function SchoolBusSchoolsPageContent() {
           <div className='grid gap-3 grid-cols-2 lg:grid-cols-4'>
             <SchoolBusMetricCard
               label='Trường học'
-              value={schools.length}
+              value={registrySummary?.totalSchools ?? 0}
               icon={GraduationCap}
               tone='school'
             />
             <SchoolBusMetricCard
               label='Điểm đón/trả'
-              value={pickupPoints.length}
+              value={registrySummary?.totalPickupPoints ?? 0}
               icon={MapPin}
               tone='pickup'
             />
             <SchoolBusMetricCard
               label='Điểm đã liên kết'
-              value={allLinks.length}
+              value={registrySummary?.linkedPickupPoints ?? 0}
               icon={Link2}
               tone='linked'
             />

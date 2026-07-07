@@ -25,6 +25,7 @@ import {
   useArriveTripStopMutation,
   useCompleteTripMutation,
   useDepartTripStopMutation,
+  useGetTripListSummaryQuery,
   useGetTripsQuery,
   useStartTripMutation,
 } from '../api/schoolBusApi';
@@ -109,6 +110,9 @@ export function SchoolBusTripsPage() {
     isLoading,
     refetch: refetchTrips,
   } = useGetTripsQuery(pagination.params, SCHOOL_BUS_PAGE_QUERY_OPTIONS);
+  const { data: summaryData } = useGetTripListSummaryQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const [startTrip] = useStartTripMutation();
   const [arriveTripStop] = useArriveTripStopMutation();
   const [departTripStop] = useDepartTripStopMutation();
@@ -717,21 +721,11 @@ export function SchoolBusTripsPage() {
       }
     >
       <div className='flex flex-col gap-6'>
-        {/* Polling connection indicator */}
-        {lastUpdated && (
-          <div className='flex items-center justify-end -mb-3'>
-            <span className='text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 bg-slate-50 shrink-0'>
-              <span className='inline-flex h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5 animate-pulse' />
-              Tự làm mới mỗi 20 giây - cập nhật gần nhất: {lastUpdated}
-            </span>
-          </div>
-        )}
-
         {/* Metrics row */}
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
             label={access.isParentOnly ? 'Tổng chuyến theo dõi' : 'Chuyến xe'}
-            value={data?.data?.totalElements || 0}
+            value={summaryData?.data?.totalTrips ?? 0}
             hint={
               access.isParentOnly
                 ? 'Tất cả chuyến hiện tại và lịch sử của học sinh'
@@ -742,7 +736,7 @@ export function SchoolBusTripsPage() {
           />
           <SchoolBusMetricCard
             label='Đang thực hiện'
-            value={trips.filter((trip) => trip.status === 'IN_PROGRESS').length}
+            value={summaryData?.data?.inProgressTrips ?? 0}
             hint={
               access.isParentOnly
                 ? 'Chuyến đang chạy'
@@ -753,7 +747,7 @@ export function SchoolBusTripsPage() {
           />
           <SchoolBusMetricCard
             label='Hoàn thành'
-            value={trips.filter((trip) => trip.status === 'COMPLETED').length}
+            value={summaryData?.data?.completedTrips ?? 0}
             hint={
               access.isParentOnly
                 ? 'Chuyến đã kết thúc'

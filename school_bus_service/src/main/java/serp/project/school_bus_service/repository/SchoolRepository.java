@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.entity.SchoolEntity;
+import serp.project.school_bus_service.repository.projection.SchoolRegistrySummaryProjection;
 
 import java.util.Collection;
 import java.util.List;
@@ -16,6 +17,37 @@ public interface SchoolRepository extends BaseRepository<SchoolEntity, Long> {
             Collection<Long> ids);
 
     long countByTenantIdAndIsDeletedFalse(Long tenantId);
+
+    @Query(value = """
+            SELECT
+                (SELECT COUNT(s.id)
+                   FROM public.school_bus_school s
+                  WHERE s.tenant_id = :tenantId
+                    AND s.is_deleted = false) AS totalSchools,
+                (SELECT COUNT(p.id)
+                   FROM public.school_bus_pickup_point p
+                  WHERE p.tenant_id = :tenantId
+                    AND p.is_deleted = false) AS totalPickupPoints,
+                (SELECT COUNT(l.id)
+                   FROM public.school_bus_school_pickup_point l
+                  WHERE l.tenant_id = :tenantId
+                    AND l.is_deleted = false
+                    AND l.is_active = true) AS linkedPickupPoints,
+                (
+                    (SELECT COUNT(s.id)
+                       FROM public.school_bus_school s
+                      WHERE s.tenant_id = :tenantId
+                        AND s.is_deleted = false
+                        AND (s.latitude IS NULL OR s.longitude IS NULL))
+                    +
+                    (SELECT COUNT(p.id)
+                       FROM public.school_bus_pickup_point p
+                      WHERE p.tenant_id = :tenantId
+                        AND p.is_deleted = false
+                        AND (p.latitude IS NULL OR p.longitude IS NULL))
+                ) AS missingCoordinates
+            """, nativeQuery = true)
+    SchoolRegistrySummaryProjection getRegistrySummary(@Param("tenantId") Long tenantId);
 
     @Query("""
             SELECT DISTINCT s FROM SchoolEntity s
