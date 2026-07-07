@@ -5,7 +5,8 @@
 
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useState, useEffect } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -18,6 +19,8 @@ import {
 import { cn } from '@/shared/utils';
 import { Loader2 } from 'lucide-react';
 import type { SubscriptionPlan } from '../../types';
+import { useGetModulesQuery } from '@/modules/admin/services/modules/modulesApi';
+import { useGetPlanModulesQuery } from '@/modules/admin/services/plans/plansApi';
 
 // Validation schema
 const planFormSchema = z
@@ -64,6 +67,31 @@ const planFormSchema = z
       (val) => (val === '' ? 0 : Number(val)),
       z.number().int().min(0)
     ),
+    modules: z
+      .array(
+        z.object({
+          moduleId: z.number(),
+          moduleName: z.string(),
+          moduleCode: z.string(),
+          isIncluded: z.boolean(),
+          licenseType: z.enum([
+            'FREE',
+            'BASIC',
+            'PROFESSIONAL',
+            'ENTERPRISE',
+            'TRIAL',
+            'CUSTOM',
+          ]),
+          maxUsersPerModule: z.preprocess(
+            (val) =>
+              val === '' || val === null || val === undefined
+                ? undefined
+                : Number(val),
+            z.number().int().min(1).optional()
+          ),
+        })
+      )
+      .optional(),
   })
   .refine(
     (data) => {
@@ -114,12 +142,20 @@ export const PlanForm: React.FC<PlanFormProps> = ({
 }) => {
   const isEditing = !!plan;
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<PlanFormData>({
+  // Step state for wizard
+  const [step, setStep] = useState<1 | 2>(1);
+
+  // Queries for modules
+  const { data: allModules = [] } = useGetModulesQuery();
+  const { data: planModules = [] } = useGetPlanModulesQuery(
+    String(plan?.id || ''),
+    {
+      skip: !plan?.id,
+    }
+  );
+
+  const form = useForm<PlanFormData>({
+    resolver: zodResolver(planFormSchema),
     defaultValues: plan
       ? {
           planName: plan.planName,
@@ -133,6 +169,7 @@ export const PlanForm: React.FC<PlanFormProps> = ({
           isCustom: plan.isCustom,
           organizationId: plan.organizationId || undefined,
           displayOrder: plan.displayOrder || 0,
+          modules: [],
         }
       : {
           planName: '',
@@ -146,8 +183,43 @@ export const PlanForm: React.FC<PlanFormProps> = ({
           isCustom: false,
           organizationId: undefined,
           displayOrder: 0,
+          modules: [],
         },
   });
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    control,
+    trigger,
+    formState: { errors, isSubmitting },
+  } = form;
+
+  const { fields, replace } = useFieldArray({
+    control,
+    name: 'modules',
+  });
+
+  // Merge system modules and plan modules when they resolve
+  useEffect(() => {
+    if (allModules.length > 0) {
+      const merged = allModules.map((sysMod) => {
+        const matchedPlanMod = planModules.find(
+          (pm) => pm.moduleId === sysMod.id
+        );
+        return {
+          moduleId: sysMod.id,
+          moduleName: sysMod.moduleName,
+          moduleCode: sysMod.code,
+          isIncluded: !!matchedPlanMod,
+          licenseType: (matchedPlanMod?.licenseType || 'BASIC') as any,
+          maxUsersPerModule: matchedPlanMod?.maxUsersPerModule || undefined,
+        };
+      });
+      replace(merged);
+    }
+  }, [allModules, planModules, replace]);
 
   const isCustom = watch('isCustom');
 
