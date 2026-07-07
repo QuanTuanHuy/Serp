@@ -120,6 +120,36 @@ export const buildHubLabel = (
   return hub.code || hub.name || `Hub #${hubId}`;
 };
 
+export const buildVehicleDriverLabel = (
+  vehicle?: Pick<
+    SecondMileVehicle,
+    'assignedStaffCode' | 'assignedStaffFullName' | 'assignedStaffId'
+  >,
+  driverLabelByStaffId?: Record<number, string>
+): string => {
+  if (!vehicle?.assignedStaffId) {
+    return '-';
+  }
+
+  const code = vehicle.assignedStaffCode?.trim();
+  const name = vehicle.assignedStaffFullName?.trim();
+
+  if (code && name) {
+    return `${code} - ${name}`;
+  }
+  if (name) {
+    return name;
+  }
+  if (code) {
+    return code;
+  }
+
+  return (
+    driverLabelByStaffId?.[vehicle.assignedStaffId] ??
+    `Tài xế #${vehicle.assignedStaffId}`
+  );
+};
+
 export const parseOptionalNumber = (value: string): number | undefined => {
   const trimmedValue = value.trim();
   if (!trimmedValue) {

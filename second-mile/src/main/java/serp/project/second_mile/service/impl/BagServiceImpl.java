@@ -292,7 +292,7 @@ public class BagServiceImpl implements BagService {
                         order,
                         OrderStatus.BAGGED,
                         List.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.BAGGING_IN_PROGRESS),
-                        "Order assigned to second-mile bag.",
+                        "Đơn hàng đã được gán vào bao trung chuyển.",
                         buildBagContext(bag)
                 ))
         );
@@ -334,7 +334,7 @@ public class BagServiceImpl implements BagService {
                         bagOrder,
                         OrderStatus.INBOUND_AT_ORIGIN_HUB,
                         List.of(OrderStatus.BAGGED, OrderStatus.INBOUND_AT_ORIGIN_HUB),
-                        "Order removed from second-mile bag.",
+                        "Đơn hàng đã được gỡ khỏi bao trung chuyển.",
                         buildBagContext(bag)
                 ))
         );
@@ -378,7 +378,7 @@ public class BagServiceImpl implements BagService {
                                 item,
                                 OrderStatus.BAG_SEALED,
                                 List.of(OrderStatus.BAGGED),
-                                "Second-mile bag sealed.",
+                                "Bao trung chuyển đã được niêm phong.",
                                 buildBagContext(savedBag)
                         ))
                         .toList()
@@ -425,7 +425,7 @@ public class BagServiceImpl implements BagService {
                                 item,
                                 OrderStatus.BAGGED,
                                 List.of(OrderStatus.BAG_SEALED),
-                                "Second-mile bag reopened. Reason: " + reason,
+                                "Bao trung chuyển đã được mở lại. Lý do: " + reason,
                                 buildBagContext(savedBag)
                         ))
                         .toList()
@@ -617,7 +617,7 @@ public class BagServiceImpl implements BagService {
                         order,
                         OrderStatus.BAGGED,
                         List.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.BAGGING_IN_PROGRESS),
-                        "Order auto-assigned to second-mile bag.",
+                        "Đơn hàng đã được tự động gán vào bao trung chuyển.",
                         context
                 ));
                 bagOrder.setLastKnownStatus(OrderStatus.BAGGED.name());

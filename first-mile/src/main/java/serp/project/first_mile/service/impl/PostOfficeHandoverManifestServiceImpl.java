@@ -219,7 +219,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                     order,
                     List.of(OrderStatus.AT_ORIGIN_POST_OFFICE),
                     OrderStatus.OUTBOUND_READY_FROM_PO,
-                    "Order scanned out from origin post office.",
+                    "Đơn hàng đã được quét xuất khỏi bưu cục gốc.",
                     new OrderTimelineContext(
                             now,
                             null,
@@ -234,7 +234,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                             null,
                             null,
                             null,
-                            "Post office handover manifest"
+                            "Biên bản bàn giao bưu cục"
                     )
             )), tenantId);
             manifestOrderRepository.save(manifestOrder);
@@ -348,7 +348,7 @@ public class PostOfficeHandoverManifestServiceImpl implements PostOfficeHandover
                         order,
                         List.of(OrderStatus.OUTBOUND_READY_FROM_PO),
                         OrderStatus.AT_ORIGIN_POST_OFFICE,
-                        "Handover manifest cancelled; order returned to origin post office.",
+                        "Biên bản bàn giao đã bị hủy; đơn hàng được trả về bưu cục gốc.",
                         OrderTimelineContext.empty()
                 ));
             }

@@ -89,4 +89,23 @@ public interface HubStaffAssignmentRepository extends JpaRepository<HubStaffAssi
             @Param("staffRole") HubStaffRole staffRole,
             @Param("staffStatus") HubStaffStatus staffStatus
     );
+
+    @Query("""
+            select a
+            from HubStaffAssignment a
+            join fetch a.hub h
+            join fetch a.staff s
+            where a.hub.id = :hubId
+                and a.tenantId = :tenantId
+                and a.assignedFrom <= :today
+                and (a.assignedTo is null or a.assignedTo >= :today)
+                and s.role = :staffRole
+            order by s.fullName asc
+            """)
+    List<HubStaffAssignment> findActiveAssignmentsByHubIdAndTenantIdAndStaffRole(
+            @Param("hubId") Long hubId,
+            @Param("tenantId") Long tenantId,
+            @Param("today") LocalDate today,
+            @Param("staffRole") HubStaffRole staffRole
+    );
 }

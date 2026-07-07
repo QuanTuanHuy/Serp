@@ -473,8 +473,26 @@ export function SecondMileVehicleListPage({
                   setImportFile(null);
                   setValidateResult(null);
                   setImportFileKey((k) => k + 1);
-                  notification.success(`Đã tạo lệnh nhập #${job.id}.`);
-                  void refetch();
+                  if (job.success_records > 0) {
+                    notification.success(
+                      `Đã nhập ${job.success_records}/${job.total_records} phương tiện thành công.`
+                    );
+                  }
+                  if (job.failed_records > 0) {
+                    notification.warning(
+                      `${job.failed_records} phương tiện nhập thất bại.`,
+                      {
+                        description: job.error_message,
+                      }
+                    );
+                  }
+                  if (
+                    job.success_records === 0 &&
+                    job.failed_records === 0
+                  ) {
+                    notification.success(`Đã tạo lệnh nhập #${job.id}.`);
+                  }
+                  await refetch();
                 } catch (error) {
                   notification.error('Không thể nhập phương tiện.', {
                     description: getErrorMessage(error),

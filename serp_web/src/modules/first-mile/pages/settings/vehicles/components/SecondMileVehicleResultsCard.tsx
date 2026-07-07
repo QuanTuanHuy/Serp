@@ -40,6 +40,7 @@ import type {
 } from '../../../../types';
 import {
   buildHubLabel,
+  buildVehicleDriverLabel,
   formatOptionalNumber,
   formatStatusLabel,
   formatVehicleType,
@@ -532,7 +533,9 @@ export const SecondMileVehicleResultsCard: React.FC<
                       </Popover>
                     </TableHead>
                     <TableHead>Sức chứa</TableHead>
-                    <TableHead className='text-right'>Thao tác</TableHead>
+                    <TableHead className='sticky right-0 z-20 min-w-[152px] bg-background text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]'>
+                      Thao tác
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -543,10 +546,10 @@ export const SecondMileVehicleResultsCard: React.FC<
                         imageUrl && imageRefreshKey
                           ? `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}v=${imageRefreshKey}`
                           : imageUrl;
-                      const driverLabel = vehicle.assignedStaffId
-                        ? (driverLabelByStaffId[vehicle.assignedStaffId] ??
-                          `Tài xế #${vehicle.assignedStaffId}`)
-                        : '-';
+                      const driverLabel = buildVehicleDriverLabel(
+                        vehicle,
+                        driverLabelByStaffId
+                      );
 
                       return (
                         <TableRow key={vehicle.id}>
@@ -594,7 +597,7 @@ export const SecondMileVehicleResultsCard: React.FC<
                             {formatOptionalNumber(vehicle.maxWeight)} kg |{' '}
                             {formatOptionalNumber(vehicle.maxVolume)} m3
                           </TableCell>
-                          <TableCell className='text-right'>
+                          <TableCell className='sticky right-0 z-10 bg-background text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.45)]'>
                             <div className='flex justify-end gap-1'>
                               <Button
                                 type='button'

@@ -184,7 +184,7 @@ public class OrderDropOffServiceImpl implements OrderDropOffService {
         orderTimelineService.recordStatusEvent(
                 order,
                 OrderStatus.AT_ORIGIN_POST_OFFICE,
-                "Drop-off order confirmed at origin post office.",
+                "Đơn hàng gửi tại bưu cục đã được xác nhận ở bưu cục gốc.",
                 null
         );
     }

@@ -54,6 +54,7 @@ public class HubStaffAssignmentServiceImpl implements HubStaffAssignmentService 
             return toResponse(existingAssignment);
         }
 
+        ensureHubDoesNotHaveAnotherActiveManager(staff, hubId, tenantId, today);
         closeOtherActiveAssignments(staffId, hubId, tenantId, today);
 
         HubStaffAssignment assignment = HubStaffAssignment.builder()
@@ -192,6 +193,38 @@ public class HubStaffAssignmentServiceImpl implements HubStaffAssignmentService 
         }
         if (!assignmentsToDelete.isEmpty()) {
             hubStaffAssignmentRepository.deleteAll(assignmentsToDelete);
+        }
+    }
+
+    private void ensureHubDoesNotHaveAnotherActiveManager(
+            HubStaff staff,
+            Long hubId,
+            Long tenantId,
+            LocalDate today
+    ) {
+        if (staff == null || !HubStaffRole.MANAGER.equals(staff.getRole())) {
+            return;
+        }
+
+        List<HubStaffAssignment> activeManagerAssignments = hubStaffAssignmentRepository
+                .findActiveAssignmentsByHubIdAndTenantIdAndStaffRole(
+                        hubId,
+                        tenantId,
+                        today,
+                        HubStaffRole.MANAGER
+                );
+        for (HubStaffAssignment activeAssignment : activeManagerAssignments) {
+            if (activeAssignment.getStaff() != null
+                    && staff.getId().equals(activeAssignment.getStaff().getId())) {
+                return;
+            }
+        }
+
+        if (!activeManagerAssignments.isEmpty()) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Hub đã có trưởng. Vui lòng gỡ phân công trưởng hiện tại trước khi phân công trưởng mới."
+            );
         }
     }
 

@@ -27,6 +27,16 @@ import {
 import { cn } from '@/shared/utils';
 import type { ValidateImportFileResponse } from '../../types';
 
+export interface TmsImportPreviewColumn<T extends object> {
+  key: string;
+  label: string;
+  className?: string;
+  render: (
+    item: T,
+    context: { rowNumber: number; sourceRowIndex: number }
+  ) => React.ReactNode;
+}
+
 interface TmsImportValidationResultDialogProps<T extends object> {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,6 +44,7 @@ interface TmsImportValidationResultDialogProps<T extends object> {
   entityLabel: string;
   isImporting?: boolean;
   onConfirmImport?: () => void;
+  previewColumns?: Array<TmsImportPreviewColumn<T>>;
 }
 
 interface TmsImportValidationResultPanelProps<T extends object> {
@@ -43,6 +54,7 @@ interface TmsImportValidationResultPanelProps<T extends object> {
   onBack?: () => void;
   onClose: () => void;
   onConfirmImport?: () => void;
+  previewColumns?: Array<TmsImportPreviewColumn<T>>;
 }
 
 interface DisplayRow {
@@ -191,6 +203,7 @@ export function TmsImportValidationResultDialog<T extends object>({
   entityLabel,
   isImporting = false,
   onConfirmImport,
+  previewColumns,
 }: TmsImportValidationResultDialogProps<T>) {
   if (!result) {
     return null;
@@ -205,6 +218,7 @@ export function TmsImportValidationResultDialog<T extends object>({
           isImporting={isImporting}
           onClose={() => onOpenChange(false)}
           onConfirmImport={onConfirmImport}
+          previewColumns={previewColumns}
         />
       </DialogContent>
     </Dialog>
@@ -218,11 +232,16 @@ export function TmsImportValidationResultPanel<T extends object>({
   onBack,
   onClose,
   onConfirmImport,
+  previewColumns,
 }: TmsImportValidationResultPanelProps<T>) {
   const columns = React.useMemo(
     () => Object.entries(result.header ?? {}),
     [result.header]
   );
+  const hasCustomPreviewColumns = Boolean(previewColumns?.length);
+  const previewColumnCount = hasCustomPreviewColumns
+    ? previewColumns?.length ?? 0
+    : columns.length;
 
   const errorMessages = React.useMemo(
     () => splitErrorMessages(result.error_message),
@@ -279,11 +298,20 @@ export function TmsImportValidationResultPanel<T extends object>({
             <TableHeader className='sticky top-0 z-10 bg-background'>
               <TableRow>
                 <TableHead className='min-w-20'>Dòng</TableHead>
-                {columns.map(([key, label]) => (
-                  <TableHead key={key} className='min-w-44'>
-                    {label || key}
-                  </TableHead>
-                ))}
+                {hasCustomPreviewColumns
+                  ? previewColumns?.map((column) => (
+                      <TableHead
+                        key={column.key}
+                        className={cn('min-w-44', column.className)}
+                      >
+                        {column.label}
+                      </TableHead>
+                    ))
+                  : columns.map(([key, label]) => (
+                      <TableHead key={key} className='min-w-44'>
+                        {label || key}
+                      </TableHead>
+                    ))}
                 <TableHead className='min-w-72'>Lỗi</TableHead>
               </TableRow>
             </TableHeader>
@@ -304,21 +332,36 @@ export function TmsImportValidationResultPanel<T extends object>({
                       <TableCell className='font-medium'>
                         {row.rowNumber}
                       </TableCell>
-                      {columns.map(([key]) => (
-                        <TableCell
-                          key={key}
-                          className='max-w-72 min-w-44 truncate'
-                        >
-                          {toDisplayValue(
-                            getCellValue(
-                              row.item,
-                              key,
-                              row.rowNumber,
-                              row.sourceRowIndex
-                            )
-                          )}
-                        </TableCell>
-                      ))}
+                      {hasCustomPreviewColumns
+                        ? previewColumns?.map((column) => (
+                            <TableCell
+                              key={column.key}
+                              className={cn(
+                                'max-w-72 min-w-44 truncate',
+                                column.className
+                              )}
+                            >
+                              {column.render(row.item as T, {
+                                rowNumber: row.rowNumber,
+                                sourceRowIndex: row.sourceRowIndex,
+                              })}
+                            </TableCell>
+                          ))
+                        : columns.map(([key]) => (
+                            <TableCell
+                              key={key}
+                              className='max-w-72 min-w-44 truncate'
+                            >
+                              {toDisplayValue(
+                                getCellValue(
+                                  row.item,
+                                  key,
+                                  row.rowNumber,
+                                  row.sourceRowIndex
+                                )
+                              )}
+                            </TableCell>
+                          ))}
                       <TableCell
                         className={cn(
                           'whitespace-normal text-muted-foreground',
@@ -335,7 +378,7 @@ export function TmsImportValidationResultPanel<T extends object>({
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={columns.length + 2}
+                    colSpan={previewColumnCount + 2}
                     className='h-24 text-center text-muted-foreground'
                   >
                     {errorMessages.length > 0

@@ -60,9 +60,10 @@ const readField = <T>(
 const readOptionalNumber = (
   raw: Record<string, unknown>,
   snakeKey: string,
-  camelKey: string
+  camelKey: string,
+  ...alternateKeys: string[]
 ): number | undefined => {
-  const value = readField<unknown>(raw, snakeKey, camelKey);
+  const value = readField<unknown>(raw, snakeKey, camelKey, ...alternateKeys);
   if (value === undefined || value === null || value === '') {
     return undefined;
   }
@@ -240,21 +241,33 @@ export const normalizeSecondMileVehicle = (raw: unknown): SecondMileVehicle => {
     assignedStaffId: readOptionalNumber(
       record,
       'assigned_staff_id',
-      'assignedStaffId'
+      'assignedStaffId',
+      'driver_id',
+      'driverId',
+      'staff_id',
+      'staffId'
     ),
     assignedStaffCode: readField<string>(
       record,
       'assigned_staff_code',
       'assignedStaffCode',
       'driver_code',
-      'driverCode'
+      'driverCode',
+      'staff_code',
+      'staffCode'
     ),
     assignedStaffFullName: readField<string>(
       record,
       'assigned_staff_full_name',
       'assignedStaffFullName',
+      'assigned_staff_name',
+      'assignedStaffName',
       'driver_name',
-      'driverName'
+      'driverName',
+      'staff_full_name',
+      'staffFullName',
+      'staff_name',
+      'staffName'
     ),
     status:
       readField<SecondMileVehicleStatus>(record, 'status', 'status') ??

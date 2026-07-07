@@ -362,16 +362,29 @@ export type SecondMileUpdateVehicleRequest = SecondMileCreateVehicleRequest;
 
 export interface SecondMileVehicleImportItem {
   license_plate?: string;
+  licensePlate?: string;
   max_bags?: number;
+  maxBags?: number;
   max_weight?: number;
+  maxWeight?: number;
   max_volume?: number;
+  maxVolume?: number;
+  hub?: string;
   hub_id?: number;
+  hubId?: number;
   hub_code?: string;
+  hubCode?: string;
   hub_name?: string;
+  hubName?: string;
   assigned_staff_id?: number;
+  assignedStaffId?: number;
+  driver?: string;
   driver_code?: string;
+  driverCode?: string;
   driver_name?: string;
+  driverName?: string;
   vehicle_type?: SecondMileVehicleType;
+  vehicleType?: SecondMileVehicleType;
   status?: SecondMileVehicleStatus;
   source_rows?: number[];
 }

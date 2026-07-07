@@ -619,7 +619,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                     assignedOrder,
                     List.of(OrderStatus.CREATED, OrderStatus.PICKUP_FAILED, OrderStatus.ASSIGNED_TO_PICKUP),
                     OrderStatus.ASSIGNED_TO_PICKUP,
-                    "Order force assigned to pickup trip by manual confirmation.",
+                    "Đơn hàng được gán thủ công vào chuyến gom.",
                     context
             ));
         }
@@ -925,7 +925,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                         assignedOrder,
                         List.of(OrderStatus.CREATED, OrderStatus.PICKUP_FAILED, OrderStatus.ASSIGNED_TO_PICKUP),
                         OrderStatus.ASSIGNED_TO_PICKUP,
-                        "Order assigned to pickup trip.",
+                        "Đơn hàng đã được gán vào chuyến gom.",
                         context
                 ));
             }
@@ -957,7 +957,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                         releasedOrder,
                         List.of(OrderStatus.ASSIGNED_TO_PICKUP),
                         OrderStatus.CREATED,
-                        "Order released from pickup trip and moved back to CREATED.",
+                        "Đơn hàng đã được gỡ khỏi chuyến gom và chuyển về trạng thái đã tạo.",
                         OrderTimelineContext.empty()
                 ));
             }

@@ -17,7 +17,13 @@ import type {
   FirstMileOrderDetail,
   FirstMileOrderStatus,
 } from '../../../../types';
-import { getOrderProductCategoryLabel } from '../orderPageModels';
+import {
+  formatDeliveryRequestTimeLabel,
+  formatFeePayerLabel,
+  formatOrderTypeLabel,
+  formatPaymentStatusLabel,
+  getOrderProductCategoryLabel,
+} from '../orderPageModels';
 import { OrderRoutePreviewMap } from './OrderRoutePreviewMap';
 
 interface OrderDetailDialogProps {
@@ -118,6 +124,45 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
                 <p className='text-muted-foreground'>Phương thức lấy hàng</p>
                 <p className='font-medium'>
                   {formatPickupMethodLabel(detailOrder.pickupMethod)}
+                </p>
+              </div>
+            </div>
+
+            <div className='grid gap-3 md:grid-cols-2'>
+              <div>
+                <p className='text-muted-foreground'>
+                  Thời gian yêu cầu giao hàng
+                </p>
+                <p className='font-medium'>
+                  {formatDeliveryRequestTimeLabel(
+                    detailOrder.deliveryRequestTime
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Loại đơn hàng</p>
+                <p className='font-medium'>
+                  {formatOrderTypeLabel(detailOrder.orderType)}
+                </p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Phân loại hàng hóa</p>
+                <p className='font-medium'>
+                  {getOrderProductCategoryLabel(
+                    detailOrder.orderProductCategory
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Bên trả phí</p>
+                <p className='font-medium'>
+                  {formatFeePayerLabel(detailOrder.feePayer)}
+                </p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Trạng thái thanh toán</p>
+                <p className='font-medium'>
+                  {formatPaymentStatusLabel(detailOrder.paymentStatus)}
                 </p>
               </div>
             </div>
@@ -232,12 +277,14 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
               </div>
               <div>
                 <p className='text-muted-foreground'>Bên trả phí</p>
-                <p className='font-medium'>{detailOrder.feePayer || '--'}</p>
+                <p className='font-medium'>
+                  {formatFeePayerLabel(detailOrder.feePayer)}
+                </p>
               </div>
               <div>
                 <p className='text-muted-foreground'>Trạng thái thanh toán</p>
                 <p className='font-medium'>
-                  {detailOrder.paymentStatus || '--'}
+                  {formatPaymentStatusLabel(detailOrder.paymentStatus)}
                 </p>
               </div>
               <div>

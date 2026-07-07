@@ -284,6 +284,64 @@ export const formatPickupMethodLabel = (
   return 'Nhân viên lấy hàng';
 };
 
+export const formatDeliveryRequestTimeLabel = (
+  deliveryRequestTime?: FirstMileDeliveryRequestTime
+): string => {
+  switch (deliveryRequestTime) {
+    case 'FULL_DAY':
+      return 'Cả ngày';
+    case 'MORNING':
+      return 'Buổi sáng';
+    case 'AFTERNOON':
+      return 'Buổi chiều';
+    case 'SUNDAY':
+      return 'Chủ nhật';
+    case 'HOLIDAY':
+      return 'Ngày lễ';
+    case 'BUSINESS_HOURS':
+      return 'Giờ hành chính';
+    default:
+      return deliveryRequestTime || '--';
+  }
+};
+
+export const formatOrderTypeLabel = (
+  orderType?: FirstMileOrderType
+): string => {
+  switch (orderType) {
+    case 'STANDARD_ORDER':
+      return 'Đơn hàng tiêu chuẩn';
+    default:
+      return orderType || '--';
+  }
+};
+
+export const formatFeePayerLabel = (feePayer?: FirstMileFeePayer): string => {
+  switch (feePayer) {
+    case 'SENDER':
+      return 'Người gửi';
+    case 'RECEIVER':
+      return 'Người nhận';
+    default:
+      return feePayer || '--';
+  }
+};
+
+export const formatPaymentStatusLabel = (
+  paymentStatus?: string | null
+): string => {
+  switch (paymentStatus) {
+    case 'PAID':
+      return 'Đã thanh toán';
+    case 'UNPAID':
+      return 'Chưa thanh toán';
+    case 'PENDING':
+      return 'Đang chờ thanh toán';
+    default:
+      return paymentStatus || '--';
+  }
+};
+
 export const getStatusBadgeVariant = (
   status: FirstMileOrderStatus
 ): BadgeVariant => {

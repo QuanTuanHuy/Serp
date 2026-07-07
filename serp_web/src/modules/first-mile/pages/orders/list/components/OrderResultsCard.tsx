@@ -30,6 +30,11 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/shared/components/ui';
 import {
   Table,
@@ -79,6 +84,8 @@ interface OrderResultsCardProps {
   onOpenManagerDropOffConfirm: (order: FirstMileOrderDetail) => void;
   onPreviousPage: () => void;
   onNextPage: () => void;
+  pageSize: number;
+  onPageSizeChange: (pageSize: number) => void;
   formatStatusLabel: (status: FirstMileOrderStatus) => string;
   formatPickupMethodLabel: (
     pickupMethod?: FirstMileOrderDetail['pickupMethod']
@@ -99,6 +106,7 @@ interface OrderResultsCardProps {
 }
 
 const ALL_POST_OFFICES_VALUE = '__ALL_POST_OFFICES__';
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 type OrderTableFilterKey =
   | 'order'
@@ -206,6 +214,8 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
   onOpenManagerDropOffConfirm,
   onPreviousPage,
   onNextPage,
+  pageSize,
+  onPageSizeChange,
   formatStatusLabel,
   formatPickupMethodLabel,
   getStatusBadgeVariant,
@@ -313,6 +323,15 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
     onFilterFieldChange('updatedSortDirection', nextDirection);
     onApplyFilters(nextValues);
   };
+
+  const pageStartItem = data
+    ? data.totalItems > 0
+      ? data.currentPage * pageSize + 1
+      : 0
+    : 0;
+  const pageEndItem = data
+    ? Math.min((data.currentPage + 1) * pageSize, data.totalItems)
+    : 0;
 
   return (
     <Card>
@@ -1125,24 +1144,53 @@ export const OrderResultsCard: React.FC<OrderResultsCardProps> = ({
               </TableBody>
             </Table>
 
-            <div className='flex items-center justify-between pt-2'>
-              <Button
-                variant='outline'
-                onClick={onPreviousPage}
-                disabled={!data.hasPrevious || isFetching}
-              >
-                Trang trước
-              </Button>
-              <span className='text-sm text-muted-foreground'>
-                Trang {data.currentPage + 1} / {Math.max(data.totalPages, 1)}
-              </span>
-              <Button
-                variant='outline'
-                onClick={onNextPage}
-                disabled={!data.hasNext || isFetching}
-              >
-                Trang sau
-              </Button>
+            <div className='flex flex-col gap-3 pt-2 md:flex-row md:items-center md:justify-between'>
+              <div className='flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
+                <span>Số bản ghi/trang</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => onPageSizeChange(Number(value))}
+                  disabled={isFetching}
+                >
+                  <SelectTrigger className='h-8 w-[88px]'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span>
+                  {data.totalItems > 0
+                    ? `Hiển thị ${pageStartItem} đến ${pageEndItem} / ${data.totalItems} bản ghi`
+                    : 'Không có bản ghi nào'}
+                </span>
+              </div>
+
+              <div className='flex items-center justify-end gap-3'>
+                <span className='text-sm text-muted-foreground'>
+                  Trang {data.currentPage + 1} / {Math.max(data.totalPages, 1)}
+                </span>
+                <div className='flex items-center gap-2'>
+                  <Button
+                    variant='outline'
+                    onClick={onPreviousPage}
+                    disabled={!data.hasPrevious || isFetching}
+                  >
+                    Trang trước
+                  </Button>
+                  <Button
+                    variant='outline'
+                    onClick={onNextPage}
+                    disabled={!data.hasNext || isFetching}
+                  >
+                    Trang sau
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         ) : (

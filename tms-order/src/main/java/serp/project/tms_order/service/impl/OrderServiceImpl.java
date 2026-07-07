@@ -177,7 +177,7 @@ public class OrderServiceImpl implements OrderService {
         orderTimelineService.recordStatusEvent(
                 savedOrder,
                 OrderStatus.CREATED,
-                "Order created.",
+                "Đơn hàng đã được tạo.",
                 null
         );
         log.info("Created TMS order orderCode={} tenantId={}", savedOrder.getOrderCode(), tenantId);
@@ -227,7 +227,7 @@ public class OrderServiceImpl implements OrderService {
         orderTimelineService.recordStatusEvent(
                 cancelledOrder,
                 OrderStatus.CANCELLED,
-                OrderTextUtils.hasText(order.getCancelReason()) ? order.getCancelReason() : "Order cancelled.",
+                OrderTextUtils.hasText(order.getCancelReason()) ? order.getCancelReason() : "Đơn hàng đã bị hủy.",
                 null
         );
         orderEventDispatcher.publishOrderAfterCommit(cancelledOrder);
@@ -462,7 +462,7 @@ public class OrderServiceImpl implements OrderService {
         orderTimelineService.recordStatusEvent(
                 savedOrder,
                 savedOrder.getStatus(),
-                "Order confirmed.",
+                "Đơn hàng đã được xác nhận.",
                 null
         );
         orderEventDispatcher.publishOrderAfterCommit(savedOrder);

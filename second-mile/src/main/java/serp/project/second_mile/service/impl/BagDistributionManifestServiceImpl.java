@@ -413,7 +413,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                         bagOrder,
                         OrderStatus.BAG_IN_TRANSIT,
                         List.of(OrderStatus.BAG_SEALED, OrderStatus.BAG_IN_TRANSIT),
-                        "Second-mile bag distribution outbound confirmed.",
+                        "Đã xác nhận xuất kho phân phối bao trung chuyển.",
                         context
                 ));
             }
@@ -499,7 +499,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                         bagOrder,
                         inboundStatus,
                         List.of(OrderStatus.BAG_IN_TRANSIT, inboundStatus),
-                        "Second-mile bag distribution inbound confirmed.",
+                        "Đã xác nhận nhập kho phân phối bao trung chuyển.",
                         context
                 ));
             }

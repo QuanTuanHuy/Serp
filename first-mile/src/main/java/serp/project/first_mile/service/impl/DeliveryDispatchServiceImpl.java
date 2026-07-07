@@ -349,7 +349,7 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
                 order,
                 List.of(OrderStatus.READY_FOR_DELIVERY, OrderStatus.DELIVERY_FAILED, OrderStatus.OUT_FOR_DELIVERY),
                 OrderStatus.OUT_FOR_DELIVERY,
-                "Order scanned out for delivery.",
+                "Đơn hàng đã được quét xuất để giao.",
                 trip,
                 context,
                 now
@@ -1254,7 +1254,7 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
                 .vehicleLicensePlate(context.vehicleLicensePlate())
                 .latitude(order.getReceiverLatitude())
                 .longitude(order.getReceiverLongitude())
-                .locationLabel("Delivery scan-out")
+                .locationLabel("Quét xuất giao hàng")
                 .build();
 
         return TmsOrderStatusTransitionRequest.Item.builder()
