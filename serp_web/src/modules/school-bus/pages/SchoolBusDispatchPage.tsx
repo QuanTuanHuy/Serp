@@ -184,21 +184,18 @@ export function SchoolBusDispatchPage() {
           <SchoolBusMetricCard
             label='Tuyến khả dụng'
             value={summary?.totalRoutes ?? 0}
-            hint='Các tuyến hiện có trong đơn vị'
             icon={Route}
             tone='info'
           />
           <SchoolBusMetricCard
             label='Sẵn sàng / đã phân công'
             value={plannedRoutes}
-            hint='Tuyến chưa chạy nhưng đã gần đủ điều kiện vận hành'
             icon={Map}
             tone='warning'
           />
           <SchoolBusMetricCard
             label='Đã tạo chuyến'
             value={dispatchedRoutes}
-            hint='Tuyến đã có chuyến vận hành được tạo'
             icon={PlayCircle}
             tone='success'
           />

@@ -508,11 +508,6 @@ export function SchoolBusRequestsPage() {
             <SchoolBusMetricCard
               label='Tổng yêu cầu'
               value={totalRequestsCount}
-              hint={
-                access.isParentOnly
-                  ? 'Tất cả yêu cầu đã gửi'
-                  : 'Các yêu cầu đang lưu trong tenant'
-              }
               icon={FileText}
               tone='info'
             />
@@ -521,31 +516,18 @@ export function SchoolBusRequestsPage() {
                 access.isParentOnly ? 'Yêu cầu chờ xử lý' : 'Yêu cầu chờ duyệt'
               }
               value={pendingRequestsCount}
-              hint={
-                access.isParentOnly
-                  ? 'Đang chờ xem xét'
-                  : 'Cần điều phối viên xử lý'
-              }
               icon={Clock3}
               tone='warning'
             />
             <SchoolBusMetricCard
               label='Yêu cầu đã duyệt'
               value={approvedRequestsCount}
-              hint={
-                access.isParentOnly
-                  ? 'Đã duyệt và đang hiệu lực'
-                  : 'Sẵn sàng đưa vào lập tuyến'
-              }
               icon={CheckCircle2}
               tone='success'
             />
             <SchoolBusMetricCard
               label='Yêu cầu bị từ chối'
               value={rejectedRequestsCount}
-              hint={
-                access.isParentOnly ? 'Không được phê duyệt' : 'Không đưa vào lập tuyến'
-              }
               icon={XCircle}
               tone='default'
             />

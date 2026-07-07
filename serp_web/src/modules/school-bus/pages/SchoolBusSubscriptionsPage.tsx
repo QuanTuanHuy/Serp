@@ -345,33 +345,18 @@ export function SchoolBusSubscriptionsPage() {
           <SchoolBusMetricCard
             label='Đăng ký'
             value={summaryData?.data?.totalSubscriptions ?? 0}
-            hint={
-              access.isParentOnly
-                ? 'Dịch vụ xe bus của học sinh'
-                : 'Đăng ký đang hoạt động và lịch sử'
-            }
             icon={Repeat}
             tone='info'
           />
           <SchoolBusMetricCard
             label='Đang hoạt động'
             value={summaryData?.data?.activeSubscriptions ?? 0}
-            hint={
-              access.isParentOnly
-                ? 'Dịch vụ đang hoạt động'
-                : 'Được dùng trong lập tuyến'
-            }
             icon={PlayCircle}
             tone='success'
           />
           <SchoolBusMetricCard
             label='Tạm dừng hoặc đã dừng'
             value={summaryData?.data?.inactiveSubscriptions ?? 0}
-            hint={
-              access.isParentOnly
-                ? 'Dịch vụ đang tạm dừng hoặc đã dừng'
-                : 'Không tham gia lập tuyến'
-            }
             icon={PauseCircle}
             tone='warning'
           />

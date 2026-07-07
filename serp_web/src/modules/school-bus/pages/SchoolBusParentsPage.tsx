@@ -132,7 +132,6 @@ export function SchoolBusParentsPage() {
   const [deletingParent, setDeletingParent] =
     React.useState<SchoolBusParent | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [filterContact, setFilterContact] = React.useState<string>('');
   const [filterStatus, setFilterStatus] = React.useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
 
@@ -191,18 +190,12 @@ export function SchoolBusParentsPage() {
 
   const filteredParents = React.useMemo(() => {
     let result = parents;
-    if (filterContact === 'has-phone') result = result.filter((p) => p.phone);
-    if (filterContact === 'has-email') result = result.filter((p) => p.email);
-    if (filterContact === 'missing-phone')
-      result = result.filter((p) => !p.phone);
-    if (filterContact === 'missing-email')
-      result = result.filter((p) => !p.email);
     if (filterStatus === 'active')
       result = result.filter((p) => p.isActive !== false);
     if (filterStatus === 'inactive')
       result = result.filter((p) => p.isActive === false);
     return result;
-  }, [parents, filterContact, filterStatus]);
+  }, [parents, filterStatus]);
 
   const parentDialogUsers = React.useMemo(
     () =>
@@ -381,19 +374,6 @@ export function SchoolBusParentsPage() {
         />
       </div>
       <SchoolBusSelect
-        value={filterContact}
-        onChange={setFilterContact}
-        placeholder='Tất cả liên hệ'
-        icon={Phone}
-        options={[
-          { label: 'Có số điện thoại', value: 'has-phone' },
-          { label: 'Có email', value: 'has-email' },
-          { label: 'Thiếu số điện thoại', value: 'missing-phone' },
-          { label: 'Thiếu email', value: 'missing-email' },
-        ]}
-        clearable
-      />
-      <SchoolBusSelect
         value={filterStatus}
         onChange={setFilterStatus}
         placeholder='Tất cả trạng thái'
@@ -438,28 +418,24 @@ export function SchoolBusParentsPage() {
               value={summary?.totalParents ?? 0}
               icon={Users}
               tone='info'
-              hint='Hồ sơ đã liên kết với vận hành xe bus'
             />
             <SchoolBusMetricCard
               label='Có email'
               value={summary?.withEmail ?? 0}
               icon={Mail}
               tone='success'
-              hint='Sẵn sàng nhận thông báo'
             />
             <SchoolBusMetricCard
               label='Có số điện thoại'
               value={summary?.withPhone ?? 0}
               icon={Phone}
               tone='default'
-              hint='Có thể liên hệ khi cần'
             />
             <SchoolBusMetricCard
               label='Phụ huynh đang hoạt động'
               value={summary?.activeParents ?? 0}
               icon={CheckCircle2}
               tone='success'
-              hint='Phụ huynh đang hoạt động trong vận hành xe bus'
             />
           </div>
 

@@ -646,28 +646,24 @@ export function SchoolBusReportsPage() {
               <SchoolBusMetricCard
                 label='Yêu cầu đưa đón'
                 value={overview.totalRequests}
-                hint='Yêu cầu trong phạm vi dữ liệu'
                 icon={FileText}
                 tone='info'
               />
               <SchoolBusMetricCard
                 label='Yêu cầu đã duyệt'
                 value={overview.approvedRequests}
-                hint='Đã chuyển thành đăng ký'
                 icon={CheckCircle2}
                 tone='success'
               />
               <SchoolBusMetricCard
                 label='Chuyến đã hoàn thành'
                 value={overview.completedTrips}
-                hint='Tuyến đã hoàn tất vận hành'
                 icon={Milestone}
                 tone='success'
               />
               <SchoolBusMetricCard
                 label='Sự kiện điểm danh'
                 value={overview.attendanceEvents}
-                hint='Lên xe, xuống xe và vắng mặt'
                 icon={Fingerprint}
                 tone='info'
               />

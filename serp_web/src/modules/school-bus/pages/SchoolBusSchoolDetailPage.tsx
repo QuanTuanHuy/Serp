@@ -520,7 +520,7 @@ export function SchoolBusSchoolDetailPage({
             <div className='rounded-2xl border border-amber-200 bg-amber-50/50 p-5 space-y-3'>
               <h4 className='text-xs font-bold text-amber-800 flex items-center gap-1.5'>
                 <AlertTriangle className='h-4 w-4 shrink-0 text-amber-600' />{' '}
-                Cảnh báo mạng lưới
+                Cảnh báo
               </h4>
               <div className='text-xs text-amber-700 space-y-1.5 leading-relaxed'>
                 {!school.latitude && (
@@ -596,7 +596,7 @@ export function SchoolBusSchoolDetailPage({
         {/* Left rail filter panel */}
         <div className='w-full lg:w-[280px] shrink-0 border-r border-slate-200 p-5 space-y-5 bg-slate-50/40'>
           <h3 className='text-xs font-bold text-slate-400 uppercase tracking-widest'>
-            Bộ lọc mạng lưới
+            Bộ lọc
           </h3>
 
           <div className='space-y-4'>
@@ -674,7 +674,7 @@ export function SchoolBusSchoolDetailPage({
                   Chưa có điểm đón/trả được liên kết
                 </p>
                 <p className='text-xs text-slate-400 max-w-xs mt-1'>
-                  Liên kết điểm đón/trả từ dữ liệu mạng lưới để phục vụ lập
+                  Liên kết điểm đón/trả để phục vụ lập
                   tuyến.
                 </p>
               </div>

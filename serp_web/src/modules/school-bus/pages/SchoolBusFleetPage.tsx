@@ -1110,28 +1110,24 @@ export function SchoolBusFleetPage() {
             <SchoolBusMetricCard
               label='Xe sẵn sàng'
               value={availableBuses}
-              hint={`${totalBuses} xe đã đăng ký`}
               icon={Bus}
               tone='info'
             />
             <SchoolBusMetricCard
               label='Tài xế sẵn sàng'
               value={availableDrivers}
-              hint={`${totalDrivers} tổng - ${unavailableDrivers} không sẵn sàng`}
               icon={UserCog}
               tone='linked'
             />
             <SchoolBusMetricCard
               label='Phụ xe sẵn sàng'
               value={availableAttendants}
-              hint={`${totalAttendants} tổng - ${unavailableAttendants} không sẵn sàng`}
               icon={ShieldCheck}
               tone='success'
             />
             <SchoolBusMetricCard
               label='Bãi xe'
               value={totalDepots}
-              hint={`${depotsWithCoordinates} đã có tọa độ`}
               icon={Warehouse}
               tone='warning'
             />

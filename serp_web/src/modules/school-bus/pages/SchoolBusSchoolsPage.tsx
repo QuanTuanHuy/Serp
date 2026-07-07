@@ -501,16 +501,10 @@ function SchoolBusSchoolsPageContent() {
   const [schoolStatusFilter, setSchoolStatusFilter] = React.useState<
     'ALL' | 'ACTIVE' | 'INACTIVE'
   >('ALL');
-  const [schoolCoordsFilter, setSchoolCoordsFilter] = React.useState<
-    'ALL' | 'MISSING'
-  >('ALL');
 
   const [pickupSearchValue, setPickupSearchValue] = React.useState('');
   const [pickupUsageFilter, setPickupUsageFilter] = React.useState<
     'ALL' | 'PICKUP' | 'DROPOFF' | 'PICKUP_DROPOFF'
-  >('ALL');
-  const [pickupCoordsFilter, setPickupCoordsFilter] = React.useState<
-    'ALL' | 'MISSING'
   >('ALL');
   const [linkedSearch, setLinkedSearch] = React.useState('');
   const schoolsPagination = useSchoolBusPagination({
@@ -651,14 +645,9 @@ function SchoolBusSchoolsPageContent() {
           : schoolStatusFilter === 'ACTIVE'
             ? school.isActive
             : !school.isActive;
-      const matchesCoords =
-        schoolCoordsFilter === 'ALL'
-          ? true
-          : typeof school.latitude !== 'number' ||
-            typeof school.longitude !== 'number';
-      return matchesStatus && matchesCoords;
+      return matchesStatus;
     });
-  }, [schools, schoolStatusFilter, schoolCoordsFilter]);
+  }, [schools, schoolStatusFilter]);
 
   const filteredPickupsTable = React.useMemo(() => {
     return pickupPoints.filter((pp) => {
@@ -670,13 +659,9 @@ function SchoolBusSchoolsPageContent() {
             : pickupUsageFilter === 'DROPOFF'
               ? pp.usageType === 'DROPOFF' || pp.usageType === 'DROPOFF_ONLY'
               : pp.usageType === 'PICKUP_DROPOFF';
-      const matchesCoords =
-        pickupCoordsFilter === 'ALL'
-          ? true
-          : typeof pp.latitude !== 'number' || typeof pp.longitude !== 'number';
-      return matchesUsage && matchesCoords;
+      return matchesUsage;
     });
-  }, [pickupPoints, pickupUsageFilter, pickupCoordsFilter]);
+  }, [pickupPoints, pickupUsageFilter]);
 
   const filteredLinkedPickupsTable = React.useMemo(() => {
     if (!linkedSearch) return linkedPickupPoints;
@@ -830,7 +815,7 @@ function SchoolBusSchoolsPageContent() {
         )}
         onClick={() => setViewMode('network')}
       >
-        <Map className='h-3.5 w-3.5' /> Bản đồ mạng lưới
+        <Map className='h-3.5 w-3.5' /> Bản đồ
       </button>
     </div>
   );
@@ -848,7 +833,7 @@ function SchoolBusSchoolsPageContent() {
       <>
         <SchoolBusPageShell
           compact
-          title='Mạng lưới trường học và điểm đón/trả'
+          title='Trường học và điểm đón/trả'
           description='Quản lý trường học, điểm đón/trả và bãi xe trên bản đồ.'
           breadcrumb={
             <SchoolBusBreadcrumb
@@ -925,7 +910,7 @@ function SchoolBusSchoolsPageContent() {
               <div className='flex w-[300px] shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white'>
                 <div className='shrink-0 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-3.5 py-3'>
                   <p className='text-[10px] font-bold uppercase tracking-widest text-slate-500'>
-                    Danh sách mạng lưới
+                    Danh sách
                   </p>
                 </div>
                 {/* Search */}
@@ -1248,7 +1233,7 @@ function SchoolBusSchoolsPageContent() {
     },
     {
       key: 'network',
-      header: 'Mạng lưới',
+      header: 'Điểm liên kết',
       render: (school) => {
         const linkedCount = school.pickupPointCount || 0;
         const missingLinked = school.anyLinkedPointMissingCoordinates;
@@ -1579,14 +1564,6 @@ function SchoolBusSchoolsPageContent() {
           />
         </div>
         <SchoolBusSelect
-          value={schoolCoordsFilter}
-          onChange={(val) => setSchoolCoordsFilter(val || 'ALL')}
-          options={[
-            { label: 'Tất cả trạng thái tọa độ', value: 'ALL' },
-            { label: 'Thiếu tọa độ', value: 'MISSING' },
-          ]}
-        />
-        <SchoolBusSelect
           value={schoolStatusFilter}
           onChange={(val) => setSchoolStatusFilter(val || 'ALL')}
           options={[
@@ -1596,16 +1573,6 @@ function SchoolBusSchoolsPageContent() {
           ]}
         />
       </div>
-      <Button
-        variant='outline'
-        className='rounded-full border-[#F6CDD5] text-[#A61B31] bg-[#FDECEF]/40 hover:bg-[#FDECEF] hover:text-[#99182D] hover:border-[#F6CDD5] h-9 px-4 text-xs font-semibold'
-        onClick={() => {
-          setEditingSchool(null);
-          setSchoolDialogOpen(true);
-        }}
-      >
-        <Plus className='h-4 w-4 mr-1.5' /> Thêm trường
-      </Button>
     </div>
   );
 
@@ -1626,14 +1593,6 @@ function SchoolBusSchoolsPageContent() {
           />
         </div>
         <SchoolBusSelect
-          value={pickupCoordsFilter}
-          onChange={(val) => setPickupCoordsFilter(val || 'ALL')}
-          options={[
-            { label: 'Tất cả trạng thái tọa độ', value: 'ALL' },
-            { label: 'Thiếu tọa độ', value: 'MISSING' },
-          ]}
-        />
-        <SchoolBusSelect
           value={pickupUsageFilter}
           onChange={(val) => setPickupUsageFilter(val || 'ALL')}
           options={[
@@ -1644,16 +1603,6 @@ function SchoolBusSchoolsPageContent() {
           ]}
         />
       </div>
-      <Button
-        variant='outline'
-        className='rounded-full border-[#F6CDD5] text-[#A61B31] bg-[#FDECEF]/40 hover:bg-[#FDECEF] hover:text-[#99182D] hover:border-[#F6CDD5] h-9 px-4 text-xs font-semibold'
-        onClick={() => {
-          setEditingPickup(null);
-          setPickupDialogOpen(true);
-        }}
-      >
-        <Plus className='h-4 w-4 mr-1.5' /> Thêm điểm đón/trả
-      </Button>
     </div>
   );
 
@@ -1831,7 +1780,7 @@ function SchoolBusSchoolsPageContent() {
   return (
     <>
       <SchoolBusPageShell
-        title='Trường học và mạng lưới điểm đón/trả'
+        title='Trường học và điểm đón/trả'
         description='Quản lý trường học và các điểm đón/trả phục vụ đăng ký dịch vụ và lập tuyến.'
         breadcrumb={
           <SchoolBusBreadcrumb

@@ -179,7 +179,6 @@ export function SchoolBusTripsPage() {
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [filterStatus, setFilterStatus] = React.useState('');
   const [filterDirection, setFilterDirection] = React.useState('');
-  const [filterDate, setFilterDate] = React.useState('');
 
   React.useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -198,29 +197,8 @@ export function SchoolBusTripsPage() {
     if (filterDirection) {
       result = result.filter((t) => t.routeDirection === filterDirection);
     }
-    if (filterDate) {
-      result = result.filter((t) => t.serviceDate === filterDate);
-    }
     return result;
-  }, [trips, filterStatus, filterDirection, filterDate]);
-
-  const uniqueDates = React.useMemo(() => {
-    const dates = new Set<string>();
-    trips.forEach((t) => {
-      if (t.serviceDate) dates.add(t.serviceDate);
-    });
-    return Array.from(dates).sort((a, b) => b.localeCompare(a));
-  }, [trips]);
-
-  const dateOptions = React.useMemo(() => {
-    return [
-      { label: 'Tất cả ngày phục vụ', value: '' },
-      ...uniqueDates.map((date) => ({
-        label: formatDate(date),
-        value: date,
-      })),
-    ];
-  }, [uniqueDates]);
+  }, [trips, filterStatus, filterDirection]);
 
   const statusOptions = [
     { label: 'Tất cả trạng thái', value: '' },
@@ -684,14 +662,6 @@ export function SchoolBusTripsPage() {
           placeholder='Tất cả chiều tuyến'
           className='w-36'
         />
-        <SchoolBusSelect
-          value={filterDate}
-          onChange={setFilterDate}
-          options={dateOptions}
-          placeholder='Tất cả ngày phục vụ'
-          className='w-40'
-          disabled={uniqueDates.length === 0}
-        />
       </div>
     </div>
   );
@@ -726,33 +696,18 @@ export function SchoolBusTripsPage() {
           <SchoolBusMetricCard
             label={access.isParentOnly ? 'Tổng chuyến theo dõi' : 'Chuyến xe'}
             value={summaryData?.data?.totalTrips ?? 0}
-            hint={
-              access.isParentOnly
-                ? 'Tất cả chuyến hiện tại và lịch sử của học sinh'
-                : 'Bản ghi vận hành chuyến'
-            }
             icon={Route}
             tone='info'
           />
           <SchoolBusMetricCard
             label='Đang thực hiện'
             value={summaryData?.data?.inProgressTrips ?? 0}
-            hint={
-              access.isParentOnly
-                ? 'Chuyến đang chạy'
-                : 'Chuyến đang vận hành'
-            }
             icon={PlayCircle}
             tone='info'
           />
           <SchoolBusMetricCard
             label='Hoàn thành'
             value={summaryData?.data?.completedTrips ?? 0}
-            hint={
-              access.isParentOnly
-                ? 'Chuyến đã kết thúc'
-                : 'Chuyến đã đóng vận hành'
-            }
             icon={CheckCircle2}
             tone='success'
           />

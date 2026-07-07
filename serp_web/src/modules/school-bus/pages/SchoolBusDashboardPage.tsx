@@ -259,28 +259,24 @@ export function SchoolBusDashboardPage() {
               <SchoolBusMetricCard
                 label='Trường đã thiết lập'
                 value={summary.schoolCount}
-                hint='Trường trong phạm vi dữ liệu hiện tại'
                 icon={GraduationCap}
                 tone='school'
               />
               <SchoolBusMetricCard
                 label='Phụ huynh đã liên kết'
                 value={summary.parentCount}
-                hint='Phụ huynh trong phạm vi đã chọn'
                 icon={Users}
                 tone='default'
               />
               <SchoolBusMetricCard
                 label='Học sinh đang quản lý'
                 value={summary.studentCount}
-                hint='Học sinh trong phạm vi đã chọn'
                 icon={User}
                 tone='student'
               />
               <SchoolBusMetricCard
                 label='Yêu cầu chờ xử lý'
                 value={summary.pendingRequestCount}
-                hint='Yêu cầu chờ thao tác trong phạm vi truy cập'
                 icon={FileText}
                 tone='warning'
               />
