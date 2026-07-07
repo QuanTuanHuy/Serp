@@ -51,7 +51,7 @@ const planFormSchema = z
     ),
     maxUsers: z.preprocess(
       (val) => (val === '' || val === null ? undefined : Number(val)),
-      z.number().int().min(1)
+      z.number().int().min(1).optional()
     ).optional(),
     trialDays: z.preprocess(
       (val) => (val === '' ? 0 : Number(val)),
@@ -61,7 +61,7 @@ const planFormSchema = z
     isCustom: z.boolean(),
     organizationId: z.preprocess(
       (val) => (val === '' || val === null ? undefined : Number(val)),
-      z.number().int().positive()
+      z.number().int().positive().optional()
     ).optional(),
     displayOrder: z.preprocess(
       (val) => (val === '' ? 0 : Number(val)),
@@ -87,7 +87,7 @@ const planFormSchema = z
               val === '' || val === null || val === undefined
                 ? undefined
                 : Number(val),
-            z.number().int().min(1)
+            z.number().int().min(1).optional()
           ).optional(),
         })
       )
@@ -144,10 +144,11 @@ export const PlanForm: React.FC<PlanFormProps> = ({
 
   // Step state for wizard
   const [step, setStep] = useState<1 | 2>(1);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Queries for modules
   const { data: allModules = [] } = useGetModulesQuery();
-  const { data: planModules = [] } = useGetPlanModulesQuery(
+  const { data: planModules = [], isLoading: isLoadingPlanModules } = useGetPlanModulesQuery(
     String(plan?.id || ''),
     {
       skip: !plan?.id,
@@ -201,9 +202,14 @@ export const PlanForm: React.FC<PlanFormProps> = ({
     name: 'modules',
   });
 
-  // Merge system modules and plan modules when they resolve
+  // Merge system modules and plan modules once when loaded
   useEffect(() => {
-    if (allModules.length > 0) {
+    const shouldInitialize =
+      !isInitialized &&
+      allModules.length > 0 &&
+      (!plan?.id || planModules.length > 0 || !isLoadingPlanModules);
+
+    if (shouldInitialize) {
       const merged = allModules.map((sysMod) => {
         const matchedPlanMod = planModules.find(
           (pm) => pm.moduleId === sysMod.id
@@ -218,8 +224,9 @@ export const PlanForm: React.FC<PlanFormProps> = ({
         };
       });
       replace(merged);
+      setIsInitialized(true);
     }
-  }, [allModules, planModules, replace]);
+  }, [allModules, planModules, replace, isInitialized, plan?.id, isLoadingPlanModules]);
 
   const isCustom = watch('isCustom');
 
