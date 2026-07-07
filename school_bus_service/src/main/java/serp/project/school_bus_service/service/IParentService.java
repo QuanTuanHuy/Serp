@@ -6,12 +6,15 @@ import serp.project.school_bus_service.dto.params.ParentProfileParamsRequest;
 import serp.project.school_bus_service.dto.request.ParentProfileUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.ParentProfileResponse;
+import serp.project.school_bus_service.dto.response.ParentSummaryResponse;
 import serp.project.school_bus_service.entity.ParentProfileEntity;
 import serp.project.school_bus_service.entity.SchoolBusUserEntity;
 
 public interface IParentService extends IBaseService<ParentProfileEntity, Long> {
 
     PageResponse<ParentProfileResponse> getParents(ParentProfileParamsRequest params, Long tenantId);
+
+    ParentSummaryResponse getSummary(Long tenantId);
 
     ParentProfileResponse getParentResponse(Long id, Long tenantId);
 

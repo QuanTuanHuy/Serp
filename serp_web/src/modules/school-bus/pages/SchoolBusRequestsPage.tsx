@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import Link from 'next/link';
@@ -20,6 +20,7 @@ import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   useApproveTransportRequestMutation,
+  useGetTransportRequestSummaryQuery,
   useGetTransportRequestsQuery,
   useRejectTransportRequestMutation,
   useGetSchoolDropdownOptionsQuery,
@@ -38,6 +39,7 @@ import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import { schoolBusUi } from '../theme';
 import type { SchoolBusTransportRequest } from '../types';
 import { REQUEST_TYPE_OPTIONS } from '../constants';
+import { requestStatusLabel, requestTypeLabel } from '../schoolBusLabels';
 import {
   formatDate,
   formatDateTime,
@@ -60,6 +62,9 @@ export function SchoolBusRequestsPage() {
     pagination.params,
     SCHOOL_BUS_PAGE_QUERY_OPTIONS
   );
+  const { data: summaryData } = useGetTransportRequestSummaryQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
 
   const [approveTransportRequest, { isLoading: approving }] =
@@ -74,16 +79,11 @@ export function SchoolBusRequestsPage() {
   const schools = schoolsData?.data || [];
 
   // Stats (derived from unfiltered requests in current page for dashboard metrics)
-  const totalRequestsCount = data?.data?.totalElements || requests.length;
-  const pendingRequestsCount = requests.filter(
-    (r) => r.status === 'SUBMITTED'
-  ).length;
-  const approvedRequestsCount = requests.filter(
-    (r) => r.status === 'APPROVED'
-  ).length;
-  const rejectedRequestsCount = requests.filter(
-    (r) => r.status === 'REJECTED'
-  ).length;
+  const summary = summaryData?.data;
+  const totalRequestsCount = summary?.totalRequests ?? 0;
+  const pendingRequestsCount = summary?.submittedRequests ?? 0;
+  const approvedRequestsCount = summary?.approvedRequests ?? 0;
+  const rejectedRequestsCount = summary?.rejectedRequests ?? 0;
 
   // Search and Filter states
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -134,10 +134,10 @@ export function SchoolBusRequestsPage() {
     try {
       setProcessingId(id);
       const response = await approveTransportRequest(id).unwrap();
-      toast.success(response.message || 'Transport request approved');
+      toast.success(response.message || 'Đã phê duyệt yêu cầu di chuyển');
     } catch (error: any) {
       toast.error(
-        error?.data?.message || 'Failed to approve transport request'
+        error?.data?.message || 'Không thể phê duyệt yêu cầu di chuyển'
       );
     } finally {
       setProcessingId(null);
@@ -155,10 +155,10 @@ export function SchoolBusRequestsPage() {
         id: rejectingRequest.id,
         body: reason,
       }).unwrap();
-      toast.success(response.message || 'Transport request rejected');
+      toast.success(response.message || 'Đã từ chối yêu cầu di chuyển');
       setRejectingRequest(null);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to reject transport request');
+      toast.error(error?.data?.message || 'Không thể từ chối yêu cầu di chuyển');
     } finally {
       setProcessingId(null);
     }
@@ -168,25 +168,25 @@ export function SchoolBusRequestsPage() {
     switch (type) {
       case 'NEW_SERVICE':
         return {
-          label: 'New service',
+          label: requestTypeLabel.NEW_SERVICE,
           iconColor: 'bg-emerald-50 text-emerald-700 border-emerald-100/50',
           badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-100/50',
         };
       case 'CHANGE_SERVICE':
         return {
-          label: 'Change service',
+          label: requestTypeLabel.CHANGE_SERVICE,
           iconColor: 'bg-blue-50 text-blue-700 border-blue-100/50',
           badgeColor: 'bg-blue-50 text-blue-700 border-blue-100/50',
         };
       case 'STOP_SERVICE':
         return {
-          label: 'Stop service',
+          label: requestTypeLabel.STOP_SERVICE,
           iconColor: 'bg-rose-50 text-rose-700 border-rose-100/50',
           badgeColor: 'bg-rose-50 text-rose-700 border-rose-100/50',
         };
       default:
         return {
-          label: type,
+          label: requestTypeLabel[type] || type,
           iconColor: 'bg-slate-50 text-slate-700 border-slate-100/50',
           badgeColor: 'bg-slate-50 text-slate-700 border-slate-100/50',
         };
@@ -198,7 +198,7 @@ export function SchoolBusRequestsPage() {
       const cols: SchoolBusTableColumn<SchoolBusTransportRequest>[] = [
         {
           key: 'request',
-          header: 'Request',
+          header: 'Yêu cầu',
           className: 'pl-6',
           headerClassName: 'pl-6',
           render: (request) => {
@@ -236,7 +236,7 @@ export function SchoolBusRequestsPage() {
       if (!access.isParentOnly) {
         cols.push({
           key: 'parent',
-          header: 'Parent',
+          header: 'Phụ huynh',
           render: (request) => (
             <div className='flex items-center gap-2'>
               <User className='h-4 w-4 text-slate-400 shrink-0' />
@@ -251,7 +251,7 @@ export function SchoolBusRequestsPage() {
       cols.push(
         {
           key: 'school',
-          header: 'School',
+          header: 'Trường học',
           render: (request) => (
             <div className='flex items-center gap-2'>
               <GraduationCap className='h-4 w-4 text-slate-400 shrink-0' />
@@ -266,12 +266,12 @@ export function SchoolBusRequestsPage() {
         },
         {
           key: 'students',
-          header: 'Students',
+          header: 'Học sinh',
           render: (request: any) => (
             <div className='flex items-center gap-1.5'>
               <span className='font-medium text-xs text-slate-600 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100'>
                 {request.studentCount != null
-                  ? `${request.studentCount} student${request.studentCount !== 1 ? 's' : ''}`
+                  ? `${request.studentCount} học sinh`
                   : '-'}
               </span>
             </div>
@@ -279,20 +279,23 @@ export function SchoolBusRequestsPage() {
         },
         {
           key: 'approvalState',
-          header: 'Status',
+          header: 'Trạng thái',
           render: (request) => (
             <div className='space-y-1'>
-              <SchoolBusStatusBadge status={request.status} />
+              <SchoolBusStatusBadge
+                status={request.status}
+                labelMap={requestStatusLabel}
+              />
               {request.approvedAt ? (
                 <p className='text-[10px] text-slate-400'>
-                  Approved: {formatDateTime(request.approvedAt)}
+                  Đã duyệt: {formatDateTime(request.approvedAt)}
                 </p>
               ) : request.rejectionReason ? (
                 <p
                   className='text-[10px] text-rose-500 truncate max-w-[150px]'
                   title={request.rejectionReason}
                 >
-                  Reason: {request.rejectionReason}
+                  Lý do: {request.rejectionReason}
                 </p>
               ) : null}
             </div>
@@ -300,7 +303,7 @@ export function SchoolBusRequestsPage() {
         },
         {
           key: 'window',
-          header: 'Effective dates',
+          header: 'Thời gian hiệu lực',
           render: (request) => (
             <div className='text-xs text-slate-700 flex items-start gap-1.5'>
               <Calendar className='h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0' />
@@ -311,7 +314,7 @@ export function SchoolBusRequestsPage() {
                 <p className='text-[10px] text-slate-400 mt-1 leading-none'>
                   {request.effectiveTo
                     ? formatDate(request.effectiveTo)
-                    : 'Open ended'}
+                    : 'Không xác định'}
                 </p>
               </div>
             </div>
@@ -319,7 +322,7 @@ export function SchoolBusRequestsPage() {
         },
         {
           key: 'actions',
-          header: 'Actions',
+          header: 'Thao tác',
           className: 'pr-6 text-right',
           headerClassName: 'pr-6 text-right',
           render: (request) => {
@@ -337,7 +340,7 @@ export function SchoolBusRequestsPage() {
                 >
                   <Link
                     href={`/school-bus/requests/${request.id}`}
-                    title='View Details'
+                    title='Xem chi tiết'
                   >
                     <Eye className='h-4 w-4 text-slate-600' />
                   </Link>
@@ -353,7 +356,7 @@ export function SchoolBusRequestsPage() {
                       >
                         <Link
                           href={`/school-bus/requests/${request.id}/edit`}
-                          title='Edit Request'
+                          title='Sửa yêu cầu'
                         >
                           <Pencil className='h-4 w-4 text-slate-600' />
                         </Link>
@@ -361,7 +364,7 @@ export function SchoolBusRequestsPage() {
                     )}
                     {!canEdit && (
                       <span className='inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400 border border-slate-200/50'>
-                        Locked
+                        Đã khóa
                       </span>
                     )}
                   </>
@@ -376,7 +379,7 @@ export function SchoolBusRequestsPage() {
                     >
                       <Link
                         href={`/school-bus/requests/${request.id}/edit`}
-                        title='Edit Request'
+                        title='Sửa yêu cầu'
                       >
                         <Pencil className='h-4 w-4 text-slate-600' />
                       </Link>
@@ -388,7 +391,7 @@ export function SchoolBusRequestsPage() {
                       disabled={rejecting && processingId === request.id}
                       onClick={() => setRejectingRequest(request)}
                     >
-                      Reject
+                      Từ chối
                     </Button>
                     <Button
                       size='sm'
@@ -398,12 +401,12 @@ export function SchoolBusRequestsPage() {
                     >
                       {approving && processingId === request.id
                         ? '...'
-                        : 'Approve'}
+                        : 'Duyệt'}
                     </Button>
                   </>
                 ) : (
                   <span className='inline-flex items-center rounded-md bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400 border border-slate-200/50'>
-                    {request.status === 'SUBMITTED' ? 'Pending' : 'Locked'}
+                    {request.status === 'SUBMITTED' ? 'Đang chờ' : 'Đã khóa'}
                   </span>
                 )}
               </div>
@@ -427,7 +430,7 @@ export function SchoolBusRequestsPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search by parent, school or code...'
+          placeholder='Tìm theo phụ huynh, trường học hoặc mã yêu cầu...'
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
@@ -437,7 +440,7 @@ export function SchoolBusRequestsPage() {
       <SchoolBusSelect
         value={filterSchool}
         onChange={setFilterSchool}
-        placeholder='All schools'
+        placeholder='Tất cả trường học'
         options={schoolOptions}
         clearable
         searchable
@@ -446,7 +449,7 @@ export function SchoolBusRequestsPage() {
       <SchoolBusSelect
         value={filterRequestType}
         onChange={setFilterRequestType}
-        placeholder='All types'
+        placeholder='Tất cả loại yêu cầu'
         options={REQUEST_TYPE_OPTIONS.map((opt) => ({
           label: opt.label,
           value: opt.value,
@@ -457,11 +460,11 @@ export function SchoolBusRequestsPage() {
       <SchoolBusSelect
         value={filterStatus}
         onChange={setFilterStatus}
-        placeholder='All states'
+        placeholder='Tất cả trạng thái'
         options={[
-          { label: 'Submitted (Pending)', value: 'SUBMITTED' },
-          { label: 'Approved', value: 'APPROVED' },
-          { label: 'Rejected', value: 'REJECTED' },
+          { label: 'Chờ duyệt', value: 'SUBMITTED' },
+          { label: 'Đã duyệt', value: 'APPROVED' },
+          { label: 'Từ chối', value: 'REJECTED' },
         ]}
         clearable
       />
@@ -471,17 +474,17 @@ export function SchoolBusRequestsPage() {
   return (
     <>
       <SchoolBusPageShell
-        title='Transport Requests'
+        title='Yêu cầu xe bus'
         description={
           access.isParentOnly
-            ? 'Track transport request status and create new service requests.'
-            : 'Manage the approval queue and move valid demand into planning without leaving the module.'
+            ? 'Theo dõi trạng thái yêu cầu xe bus và tạo yêu cầu dịch vụ mới.'
+            : 'Quản lý hàng đợi phê duyệt và chuyển nhu cầu hợp lệ sang lập tuyến.'
         }
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Transport Requests', current: true },
+              { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
+              { label: 'Yêu cầu xe bus', current: true },
             ]}
           />
         }
@@ -493,7 +496,7 @@ export function SchoolBusRequestsPage() {
             >
               <Link href='/school-bus/requests/new'>
                 <Plus className='h-4 w-4' />
-                New request
+                Tạo yêu cầu
               </Link>
             </Button>
           ) : undefined
@@ -503,46 +506,28 @@ export function SchoolBusRequestsPage() {
           {/* Metrics grid */}
           <div className='grid gap-4 md:grid-cols-4'>
             <SchoolBusMetricCard
-              label='Total requests'
+              label='Tổng yêu cầu'
               value={totalRequestsCount}
-              hint={
-                access.isParentOnly
-                  ? 'All requests submitted'
-                  : 'Demand records currently stored in the tenant'
-              }
               icon={FileText}
               tone='info'
             />
             <SchoolBusMetricCard
               label={
-                access.isParentOnly ? 'Pending requests' : 'Pending approvals'
+                access.isParentOnly ? 'Yêu cầu chờ xử lý' : 'Yêu cầu chờ duyệt'
               }
               value={pendingRequestsCount}
-              hint={
-                access.isParentOnly
-                  ? 'Waiting for review'
-                  : 'Requires dispatcher action'
-              }
               icon={Clock3}
               tone='warning'
             />
             <SchoolBusMetricCard
-              label='Approved requests'
+              label='Yêu cầu đã duyệt'
               value={approvedRequestsCount}
-              hint={
-                access.isParentOnly
-                  ? 'Approved and active'
-                  : 'Ready to be included in planning'
-              }
               icon={CheckCircle2}
               tone='success'
             />
             <SchoolBusMetricCard
-              label='Rejected requests'
+              label='Yêu cầu bị từ chối'
               value={rejectedRequestsCount}
-              hint={
-                access.isParentOnly ? 'Not approved' : 'Excluded from planning'
-              }
               icon={XCircle}
               tone='default'
             />
@@ -561,8 +546,8 @@ export function SchoolBusRequestsPage() {
               access.canApproveRequests &&
               !access.isParentOnly && (
                 <SchoolBusSection
-                  title='Approval focus'
-                  description='The pending subset remains the highest-value operational queue.'
+                  title='Yêu cầu cần phê duyệt'
+                  description='Danh sách yêu cầu chờ duyệt cần được xử lý trước.'
                 >
                   <div className='space-y-3 max-h-[600px] overflow-y-auto pr-1'>
                     {pendingRequests.map((request) => {
@@ -605,7 +590,7 @@ export function SchoolBusRequestsPage() {
                                 <Link
                                   href={`/school-bus/requests/${request.id}`}
                                 >
-                                  Review
+                                  Xem xét
                                 </Link>
                               </Button>
                               <Button
@@ -617,7 +602,7 @@ export function SchoolBusRequestsPage() {
                                 }
                                 onClick={() => setRejectingRequest(request)}
                               >
-                                Reject
+                                Từ chối
                               </Button>
                               <Button
                                 size='sm'
@@ -629,7 +614,7 @@ export function SchoolBusRequestsPage() {
                               >
                                 {approving && processingId === request.id
                                   ? '...'
-                                  : 'Approve'}
+                                  : 'Duyệt'}
                               </Button>
                             </div>
                           </div>
@@ -637,7 +622,7 @@ export function SchoolBusRequestsPage() {
                           <div className='grid grid-cols-2 gap-2 border-t border-slate-50 pt-2.5 text-[11px] text-muted-foreground'>
                             <div>
                               <span className='font-bold text-slate-500 uppercase tracking-wider text-[9px] block'>
-                                School
+                                Trường học
                               </span>
                               <span
                                 className='font-medium text-slate-700 truncate block max-w-[155px]'
@@ -648,14 +633,14 @@ export function SchoolBusRequestsPage() {
                             </div>
                             <div>
                               <span className='font-bold text-slate-500 uppercase tracking-wider text-[9px] block'>
-                                Effective window
+                                Thời gian hiệu lực
                               </span>
                               <span className='font-medium text-slate-700 flex items-center gap-1'>
                                 <Calendar className='h-3 w-3 text-slate-400 shrink-0' />
                                 {formatDate(request.effectiveFrom)}
                                 {request.effectiveTo
                                   ? ` - ${formatDate(request.effectiveTo)}`
-                                  : ' (Open)'}
+                                  : ' (không giới hạn)'}
                               </span>
                             </div>
                           </div>
@@ -668,8 +653,8 @@ export function SchoolBusRequestsPage() {
 
             <div className={pendingRequests.length === 0 ? 'w-full' : ''}>
               <SchoolBusSection
-                title='All requests'
-                description='Review, inspect, approve, reject, and edit transport demand.'
+                title='Tất cả yêu cầu'
+                description='Xem xét, phê duyệt, từ chối và chỉnh sửa nhu cầu xe bus.'
               >
                 {pendingRequests.length === 0 && !access.isParentOnly && (
                   <div className='mb-4 flex items-center justify-between p-4 bg-emerald-50/50 border border-emerald-100/50 rounded-2xl text-emerald-800 text-xs shadow-sm'>
@@ -679,10 +664,10 @@ export function SchoolBusRequestsPage() {
                       </div>
                       <div>
                         <span className='font-bold text-emerald-900'>
-                          No pending approvals
+                          Không có yêu cầu chờ duyệt
                         </span>
                         <span className='text-slate-500 ml-1.5'>
-                          The approval queue is currently clear.
+                          Hàng đợi phê duyệt hiện đang trống.
                         </span>
                       </div>
                     </div>
@@ -702,13 +687,13 @@ export function SchoolBusRequestsPage() {
                   emptyIcon={FileText}
                   emptyTitle={
                     requests.length === 0
-                      ? 'No transport requests found'
-                      : 'No requests match current filters'
+                      ? 'Không tìm thấy yêu cầu xe bus'
+                      : 'Không có yêu cầu phù hợp với bộ lọc'
                   }
                   emptyDescription={
                     requests.length === 0
-                      ? 'No requests match the current filters. Modify your search criteria or create a request.'
-                      : 'Try adjusting your search query or clear the active filters.'
+                      ? 'Không có yêu cầu phù hợp. Hãy điều chỉnh tiêu chí hoặc tạo yêu cầu mới.'
+                      : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
                   }
                   className='border border-slate-200/80 shadow-sm'
                 />

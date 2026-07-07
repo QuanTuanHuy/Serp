@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -73,23 +73,23 @@ export function SchoolBusRequestFormPage({
             body: values,
           }).unwrap()
         : await createTransportRequest(values).unwrap();
-      toast.success(response.message || 'Transport request saved');
+      toast.success(response.message || 'Đã lưu yêu cầu vận chuyển');
       router.push(`/school-bus/requests/${response.data.id}`);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save transport request');
+      toast.error(error?.data?.message || 'Không thể lưu yêu cầu xe bus');
     }
   };
 
   const breadcrumb = (
     <SchoolBusBreadcrumb
       items={[
-        { label: 'School Bus Ops', href: '/school-bus/dispatch' },
+        { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
         {
-          label: 'Transport Requests',
+          label: 'Yêu cầu xe bus',
           href: '/school-bus/requests',
         },
         {
-          label: isEditMode ? `Edit #${requestId}` : 'New Request',
+          label: isEditMode ? `Sửa #${requestId}` : 'Yêu cầu mới',
           current: true,
         },
       ]}
@@ -99,13 +99,13 @@ export function SchoolBusRequestFormPage({
   if (isEditMode && loadingRequest) {
     return (
       <SchoolBusPageShell
-        title='Edit Transport Request'
-        description='Loading request details...'
+        title='Sửa yêu cầu đưa đón'
+        description='Đang tải chi tiết yêu cầu...'
         breadcrumb={breadcrumb}
       >
         <SchoolBusEmptyState
-          title='Loading request'
-          description='Fetching the current request snapshot for editing.'
+          title='Đang tải yêu cầu'
+          description='Đang tải dữ liệu yêu cầu hiện tại để chỉnh sửa.'
         />
       </SchoolBusPageShell>
     );
@@ -113,11 +113,11 @@ export function SchoolBusRequestFormPage({
 
   return (
     <SchoolBusPageShell
-      title={isEditMode ? 'Edit Transport Request' : 'New Transport Request'}
+      title={isEditMode ? 'Sửa yêu cầu đưa đón' : 'Tạo yêu cầu đưa đón'}
       description={
         access.isParentOnly
-          ? 'Submit a transport request for your child. Our team will review and process it shortly.'
-          : 'Capture transport demand with effective dates, a parent profile, and the student list to be served.'
+          ? 'Gửi yêu cầu đưa đón cho con. Nhà trường sẽ xem xét và xử lý trong thời gian sớm nhất.'
+          : 'Ghi nhận nhu cầu đưa đón theo thời gian hiệu lực, phụ huynh và danh sách học sinh cần phục vụ.'
       }
       breadcrumb={breadcrumb}
     >
@@ -127,7 +127,7 @@ export function SchoolBusRequestFormPage({
         schools={schoolsData?.data || []}
         students={students}
         isLoading={creating || updating}
-        submitLabel={isEditMode ? 'Update request' : 'Create request'}
+        submitLabel={isEditMode ? 'Cập nhật yêu cầu' : 'Tạo yêu cầu'}
         isParentRole={access.isParentOnly}
         currentParentId={currentParentId}
         onCancel={() =>

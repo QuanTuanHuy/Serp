@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 public class AddRouteStopRequest {
 
-    @NotNull(message = "pickupPointId is required")
+    @NotNull(message = "Vui lòng chọn điểm đón/trả")
     private Long pickupPointId;
 
     private String stopType;

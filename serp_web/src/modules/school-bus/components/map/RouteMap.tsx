@@ -6,7 +6,7 @@ export const RouteMap = dynamic(() => import('./RouteMapClient'), {
   ssr: false,
   loading: () => (
     <div className='flex h-full min-h-[320px] w-full items-center justify-center text-sm text-slate-500'>
-      Loading route map...
+      Đang tải tuyến map...
     </div>
   ),
 });

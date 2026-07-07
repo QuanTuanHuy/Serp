@@ -64,7 +64,7 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
           {/* Module name */}
           {!isCollapsed && (
             <span className='text-sm font-semibold group-hover:text-primary transition-colors'>
-              {currentModule?.moduleName || 'School Bus'}
+              {currentModule?.moduleName || 'Xe bus trường học'}
             </span>
           )}
         </Link>
@@ -91,7 +91,7 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
             size='icon'
             className='w-full mt-4'
             onClick={toggleSidebar}
-            title='Expand sidebar'
+            title='Mở rộng thanh bên'
           >
             <PanelLeftOpen className='h-4 w-4' />
           </Button>
@@ -101,7 +101,7 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
         {isLoading && (
           <div className='flex flex-col items-center justify-center py-8 text-muted-foreground'>
             <Loader2 className='h-6 w-6 animate-spin mb-2' />
-            {!isCollapsed && <p className='text-xs'>Loading menus...</p>}
+            {!isCollapsed && <p className='text-xs'>Đang tải menu...</p>}
           </div>
         )}
 
@@ -116,7 +116,7 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
                 <>
                   <div className='space-y-1'>
                     <p className='text-sm font-medium text-destructive'>
-                      Failed to load menus
+                      Không thể tải menu
                     </p>
                     <p className='text-xs text-muted-foreground'>
                       Please try again
@@ -142,7 +142,7 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
             {!isCollapsed ? (
               <div className='text-center space-y-2'>
                 <p className='text-sm font-medium text-muted-foreground'>
-                  No menus available
+                  Chưa có menu khả dụng
                 </p>
                 <p className='text-xs text-muted-foreground'>
                   Contact your administrator
@@ -175,7 +175,7 @@ export const SchoolBusSidebar: React.FC<SchoolBusSidebarProps> = ({
           <div className='rounded-lg bg-muted p-3 text-xs text-muted-foreground'>
             <p className='font-medium'>{currentModule.moduleName}</p>
             <p className='mt-1'>
-              {currentModule.moduleDescription || 'Module Description'}
+              {currentModule.moduleDescription || 'Mô tả module'}
             </p>
           </div>
         </div>

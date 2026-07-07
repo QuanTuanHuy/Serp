@@ -5,6 +5,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.dto.response.RoutePlanListItemResponse;
+import serp.project.school_bus_service.repository.projection.RouteDispatchSummaryProjection;
+import serp.project.school_bus_service.repository.projection.RouteReadinessCountProjection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.entity.RoutePlanEntity;
 import serp.project.school_bus_service.enums.RouteDirection;
@@ -82,6 +84,19 @@ public interface RoutePlanRepository extends BaseRepository<RoutePlanEntity, Lon
     List<RoutePlanEntity> findByTenantIdAndIsDeletedFalseOrderByServiceDateDescIdDesc(@Param("tenantId") Long tenantId);
 
     long countByTenantIdAndStatusAndIsDeletedFalse(Long tenantId, RouteStatus status);
+
+    @Query(value = """
+            SELECT
+                COUNT(route.id) AS totalRoutes,
+                COALESCE(SUM(CASE
+                    WHEN route.status IN ('DRAFT', 'GENERATED', 'REVIEWING', 'PUBLISHED', 'ASSIGNED')
+                    THEN 1 ELSE 0 END), 0) AS plannedRoutes,
+                COALESCE(SUM(CASE WHEN route.status = 'TRIP_CREATED' THEN 1 ELSE 0 END), 0) AS tripCreatedRoutes
+              FROM public.school_bus_route_plan route
+             WHERE route.tenant_id = :tenantId
+               AND route.is_deleted = false
+            """, nativeQuery = true)
+    RouteDispatchSummaryProjection getDispatchSummary(@Param("tenantId") Long tenantId);
 
     @Query("SELECT r FROM RoutePlanEntity r WHERE r.planningSession.id = :sessionId AND r.tenantId = :tenantId AND r.isDeleted = false ORDER BY r.id ASC")
     List<RoutePlanEntity> findByPlanningSessionIdAndTenantId(@Param("sessionId") Long sessionId,
@@ -253,6 +268,85 @@ public interface RoutePlanRepository extends BaseRepository<RoutePlanEntity, Lon
             @Param("serviceDate") LocalDate serviceDate,
             @Param("schoolId") Long schoolId,
             @Param("direction") RouteDirection direction,
+            @Param("tenantWide") boolean tenantWide,
+            @Param("driverProfileId") Long driverProfileId,
+            @Param("attendantProfileId") Long attendantProfileId,
+            @Param("parentProfileId") Long parentProfileId);
+
+    @Query(value = """
+            SELECT
+                COALESCE(SUM(CASE
+                    WHEN current_assignment.bus_id IS NOT NULL
+                     AND current_assignment.driver_id IS NOT NULL
+                     AND current_assignment.attendant_id IS NOT NULL
+                    THEN 1 ELSE 0 END), 0) AS readyCount,
+                COALESCE(SUM(CASE WHEN current_assignment.bus_id IS NULL THEN 1 ELSE 0 END), 0) AS missingBusCount,
+                COALESCE(SUM(CASE WHEN current_assignment.driver_id IS NULL THEN 1 ELSE 0 END), 0) AS missingDriverCount,
+                COALESCE(SUM(CASE WHEN current_assignment.attendant_id IS NULL THEN 1 ELSE 0 END), 0) AS missingAttendantCount
+              FROM public.school_bus_route_plan route
+              JOIN public.school_bus_route_planning_session session
+                ON session.id = route.planning_session_id
+               AND session.is_deleted = false
+              LEFT JOIN LATERAL (
+                    SELECT assignment.bus_id,
+                           assignment.driver_id,
+                           assignment.attendant_id
+                      FROM public.school_bus_route_assignment assignment
+                     WHERE assignment.route_id = route.id
+                       AND assignment.tenant_id = :tenantId
+                       AND assignment.is_deleted = false
+                       AND assignment.status IN ('ASSIGNED', 'CONFIRMED')
+                     ORDER BY assignment.assigned_at DESC, assignment.id DESC
+                     LIMIT 1
+              ) current_assignment ON true
+             WHERE route.tenant_id = :tenantId
+               AND route.is_deleted = false
+               AND session.service_date = :serviceDate
+               AND route.status IN ('PUBLISHED', 'ASSIGNED', 'TRIP_CREATED')
+               AND (CAST(:schoolId AS bigint) IS NULL OR session.school_id = :schoolId)
+               AND (CAST(:direction AS varchar) IS NULL OR session.route_direction = :direction)
+               AND (
+                    :tenantWide = true
+                    OR (CAST(:driverProfileId AS bigint) IS NOT NULL AND EXISTS (
+                        SELECT 1
+                          FROM public.school_bus_route_assignment driver_assignment
+                         WHERE driver_assignment.route_id = route.id
+                           AND driver_assignment.driver_id = :driverProfileId
+                           AND driver_assignment.tenant_id = :tenantId
+                           AND driver_assignment.is_deleted = false
+                           AND driver_assignment.status IN ('ASSIGNED', 'CONFIRMED')
+                    ))
+                    OR (CAST(:attendantProfileId AS bigint) IS NOT NULL AND EXISTS (
+                        SELECT 1
+                          FROM public.school_bus_route_assignment attendant_assignment
+                         WHERE attendant_assignment.route_id = route.id
+                           AND attendant_assignment.attendant_id = :attendantProfileId
+                           AND attendant_assignment.tenant_id = :tenantId
+                           AND attendant_assignment.is_deleted = false
+                           AND attendant_assignment.status IN ('ASSIGNED', 'CONFIRMED')
+                    ))
+                    OR (CAST(:parentProfileId AS bigint) IS NOT NULL AND EXISTS (
+                        SELECT 1
+                          FROM public.school_bus_route_plan_student route_student
+                          JOIN public.school_bus_student_subscription subscription
+                            ON subscription.id = route_student.subscription_id
+                           AND subscription.is_deleted = false
+                          JOIN public.school_bus_student student
+                            ON student.id = subscription.student_id
+                           AND student.is_deleted = false
+                           AND student.is_active = true
+                         WHERE route_student.route_id = route.id
+                           AND route_student.tenant_id = :tenantId
+                           AND route_student.is_deleted = false
+                           AND student.parent_profile_id = :parentProfileId
+                    ))
+               )
+            """, nativeQuery = true)
+    RouteReadinessCountProjection countDashboardRouteReadiness(
+            @Param("tenantId") Long tenantId,
+            @Param("serviceDate") LocalDate serviceDate,
+            @Param("schoolId") Long schoolId,
+            @Param("direction") String direction,
             @Param("tenantWide") boolean tenantWide,
             @Param("driverProfileId") Long driverProfileId,
             @Param("attendantProfileId") Long attendantProfileId,

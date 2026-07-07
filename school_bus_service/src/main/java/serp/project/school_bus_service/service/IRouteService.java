@@ -20,6 +20,7 @@ import serp.project.school_bus_service.dto.response.RoutePlanListItemResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanStudentResponse;
 import serp.project.school_bus_service.dto.response.RouteStopResponse;
+import serp.project.school_bus_service.dto.response.RouteDispatchSummaryResponse;
 import serp.project.school_bus_service.enums.RouteStatus;
 
 import java.util.List;
@@ -29,6 +30,8 @@ public interface IRouteService extends IBaseService<RoutePlanEntity, Long> {
     RoutePlanEntity getRouteEntity(Long id, Long tenantId);
 
     PageResponse<RoutePlanListItemResponse> getRoutes(RoutePlanParamsRequest params, Long tenantId);
+
+    RouteDispatchSummaryResponse getDispatchSummary(Long tenantId);
 
     RouteDetailResponse getRoute(Long id, Long tenantId);
 

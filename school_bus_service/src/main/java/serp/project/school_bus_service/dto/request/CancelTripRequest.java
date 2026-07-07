@@ -8,6 +8,6 @@ import lombok.Setter;
 @Setter
 public class CancelTripRequest extends BaseCommandRequest {
 
-    @NotBlank(message = "reason is required")
+    @NotBlank(message = "Vui lòng nhập lý do")
     private String reason;
 }

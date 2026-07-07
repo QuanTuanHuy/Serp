@@ -18,6 +18,7 @@ import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestDetailResponse;
 import serp.project.school_bus_service.dto.response.TransportRequestResponse;
+import serp.project.school_bus_service.dto.response.TransportRequestSummaryResponse;
 import serp.project.school_bus_service.service.ITransportRequestService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
@@ -39,6 +40,12 @@ public class TransportRequestController extends AbstractBaseController {
             @ModelAttribute TransportRequestParamsRequest params) {
         return ok("Fetched transport requests",
                 transportRequestService.getTransportRequests(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.request.read')")
+    public ResponseEntity<GeneralResponse<TransportRequestSummaryResponse>> getSummary() {
+        return ok("Fetched transport request summary", transportRequestService.getSummary(getCurrentTenantId()));
     }
 
     @PostMapping

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { Marker, Popup, useMap } from 'react-leaflet';
@@ -104,11 +104,11 @@ export default function OperationsMapClient({
             popup: (
               <div className='space-y-0.5'>
                 <p className='text-xs font-semibold text-slate-700'>
-                   School
+                   Trường học
                 </p>
                 <p className='font-medium text-slate-950'>{s.name}</p>
                 <p className='text-xs text-slate-500'>
-                  {s.address || 'No address'}
+                  {s.address || 'Chưa có địa chỉ'}
                 </p>
               </div>
             ),
@@ -131,10 +131,10 @@ export default function OperationsMapClient({
             onClick: () => onDepotSelect?.(d.id),
             popup: (
               <div className='space-y-0.5'>
-                <p className='text-xs font-semibold text-amber-700'> Depot</p>
+                <p className='text-xs font-semibold text-amber-700'>Bãi xe</p>
                 <p className='font-medium text-slate-950'>{d.name}</p>
                 <p className='text-xs text-slate-500'>
-                  {d.address || 'No address'}
+                  {d.address || 'Chưa có địa chỉ'}
                 </p>
               </div>
             ),
@@ -158,7 +158,7 @@ export default function OperationsMapClient({
             popup: (
               <div className='space-y-0.5'>
                 <p className='text-xs font-semibold text-sky-700'>
-                   Pickup point
+                   Điểm đón/trả
                 </p>
                 <p className='font-medium text-slate-950'>{p.name}</p>
                 <p className='text-xs text-slate-500'>{p.address}</p>
@@ -182,7 +182,7 @@ export default function OperationsMapClient({
               </p>
               <p className='font-medium text-slate-950'>{sm.studentName}</p>
               <p className='text-xs text-slate-500'>
-                {sm.role === 'pickup' ? 'Pickup' : 'Drop-off'}: {sm.pointName}
+                {sm.role === 'pickup' ? 'Điểm đón' : 'Điểm trả'}: {sm.pointName}
               </p>
             </div>
           ),

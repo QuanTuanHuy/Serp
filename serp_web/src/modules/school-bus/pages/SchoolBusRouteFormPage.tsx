@@ -39,22 +39,22 @@ export function SchoolBusRouteFormPage({
         id: routeId as number,
         body: values,
       }).unwrap();
-      toast.success(response.message || 'Route saved');
+      toast.success(response.message || 'Đã lưu tuyến');
       router.push(`/school-bus/dispatch/${response.data.id}`);
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to save route');
+      toast.error(error?.data?.message || 'Không thể lưu tuyến');
     }
   };
 
   if (loadingRoute) {
     return (
       <SchoolBusPageShell
-        title='Edit route'
-        description='Loading route detail...'
+        title='Sửa tuyến'
+        description='Đang tải chi tiết tuyến...'
       >
         <SchoolBusEmptyState
-          title='Loading route'
-          description='Fetching the route snapshot for editing.'
+          title='Đang tải tuyến'
+          description='Đang tải dữ liệu tuyến để chỉnh sửa.'
         />
       </SchoolBusPageShell>
     );
@@ -62,15 +62,15 @@ export function SchoolBusRouteFormPage({
 
   return (
     <SchoolBusPageShell
-      title='Edit route'
-      description='Prepare the route shell before generating plans, assigning resources, and running attendance.'
+      title='Sửa tuyến'
+      description='Chuẩn bị thông tin tuyến trước khi lập kế hoạch, phân công nguồn lực và vận hành điểm danh.'
     >
       <RoutePlanForm
         initialData={routeData?.data?.route}
         schools={schoolsData?.data || []}
         depots={getPageItems(depotsData?.data)}
         isLoading={updating}
-        submitLabel='Update route'
+        submitLabel='Cập nhật tuyến'
         onCancel={() => router.push(`/school-bus/dispatch/${routeId}`)}
         onSubmit={handleSubmit}
       />

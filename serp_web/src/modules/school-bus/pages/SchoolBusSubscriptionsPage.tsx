@@ -19,6 +19,7 @@ import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
   useGetSchoolDropdownOptionsQuery,
+  useGetSchoolBusSubscriptionSummaryQuery,
   useGetSchoolBusSubscriptionsQuery,
 } from '../api/schoolBusApi';
 import { SchoolBusMetricCard } from '../components/SchoolBusMetricCard';
@@ -35,6 +36,10 @@ import {
   SCHOOL_BUS_PAGE_QUERY_OPTIONS,
 } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
+import {
+  subscriptionStatusLabel,
+  tripOptionLabel,
+} from '../schoolBusLabels';
 
 export function SchoolBusSubscriptionsPage() {
   const access = useSchoolBusAccess();
@@ -48,6 +53,10 @@ export function SchoolBusSubscriptionsPage() {
   const { data, isLoading } = useGetSchoolBusSubscriptionsQuery(
     pagination.params,
     SCHOOL_BUS_PAGE_QUERY_OPTIONS
+  );
+  const { data: summaryData } = useGetSchoolBusSubscriptionSummaryQuery(
+    undefined,
+    { refetchOnMountOrArgChange: true }
   );
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
   const subscriptions = getPageItems(data?.data);
@@ -85,7 +94,7 @@ export function SchoolBusSubscriptionsPage() {
 
   const schoolOptions = React.useMemo(() => {
     return [
-      { label: 'All schools', value: '' },
+      { label: 'Tất cả trường học', value: '' },
       ...schools.map((s: any) => ({
         label: s.label,
         value: s.label,
@@ -94,24 +103,25 @@ export function SchoolBusSubscriptionsPage() {
   }, [schools]);
 
   const statusOptions = [
-    { label: 'All statuses', value: '' },
-    { label: 'Active', value: 'ACTIVE', color: 'green' as const },
-    { label: 'Paused', value: 'PAUSED', color: 'orange' as const },
-    { label: 'Stopped', value: 'STOPPED', color: 'red' as const },
-    { label: 'Expired', value: 'EXPIRED', color: 'slate' as const },
+    { label: 'Tất cả trạng thái', value: '' },
+    { label: subscriptionStatusLabel.PENDING, value: 'PENDING', color: 'slate' as const },
+    { label: subscriptionStatusLabel.ACTIVE, value: 'ACTIVE', color: 'green' as const },
+    { label: subscriptionStatusLabel.PAUSED, value: 'PAUSED', color: 'orange' as const },
+    { label: subscriptionStatusLabel.STOPPED, value: 'STOPPED', color: 'red' as const },
+    { label: subscriptionStatusLabel.EXPIRED, value: 'EXPIRED', color: 'slate' as const },
   ];
 
   const tripOptionOptions = [
-    { label: 'All trip options', value: '' },
-    { label: 'Round trip', value: 'ROUND_TRIP' },
-    { label: 'To school only', value: 'MORNING' },
-    { label: 'From school only', value: 'AFTERNOON' },
+    { label: 'Tất cả loại chuyến', value: '' },
+    { label: tripOptionLabel.ROUND_TRIP, value: 'ROUND_TRIP' },
+    { label: tripOptionLabel.MORNING, value: 'MORNING' },
+    { label: tripOptionLabel.AFTERNOON, value: 'AFTERNOON' },
   ];
 
   const subscriptionColumns: SchoolBusTableColumn<any>[] = [
     {
       key: 'code',
-      header: 'Subscription',
+      header: 'Đăng ký dịch vụ',
       className: 'pl-6',
       headerClassName: 'pl-6',
       render: (subscription) => (
@@ -128,7 +138,7 @@ export function SchoolBusSubscriptionsPage() {
             </Link>
             {subscription.sourceRequestId && (
               <span className='text-[10px] text-slate-400 font-normal mt-0.5'>
-                From req #{subscription.sourceRequestId}
+                Từ yêu cầu #{subscription.sourceRequestId}
               </span>
             )}
           </div>
@@ -137,7 +147,7 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'student',
-      header: 'Student',
+      header: 'Học sinh',
       render: (subscription) => (
         <div className='flex items-center gap-2.5'>
           <div className='flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-full bg-violet-50 text-violet-600 border border-violet-100/40'>
@@ -151,7 +161,7 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'school',
-      header: 'School',
+      header: 'Trường học',
       render: (subscription) => (
         <div className='flex items-center gap-2'>
           <GraduationCap className='h-4 w-4 text-slate-400 shrink-0' />
@@ -163,20 +173,15 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'tripOption',
-      header: 'Trip option',
+      header: 'Phương án đi xe',
       render: (subscription) => {
-        const labels: Record<string, string> = {
-          ROUND_TRIP: 'Round trip',
-          MORNING: 'To school only',
-          AFTERNOON: 'From school only',
-        };
         const colors: Record<string, string> = {
           ROUND_TRIP: 'bg-blue-50/50 text-blue-700 border-blue-100/50',
           MORNING: 'bg-sky-50/50 text-sky-700 border-sky-100/50',
           AFTERNOON: 'bg-indigo-50/50 text-indigo-700 border-indigo-100/50',
         };
         const label =
-          labels[subscription.tripOption] || subscription.tripOption;
+          tripOptionLabel[subscription.tripOption] || subscription.tripOption;
         const colorClass =
           colors[subscription.tripOption] ||
           'bg-slate-50 text-slate-600 border-slate-100';
@@ -194,7 +199,7 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'pickupDropoff',
-      header: 'Pickup / Drop-off',
+      header: 'Điểm đón / trả',
       render: (subscription) => (
         <div className='flex flex-col gap-1.5 text-xs'>
           <div className='flex items-center gap-1.5'>
@@ -210,7 +215,7 @@ export function SchoolBusSubscriptionsPage() {
               </span>
             ) : (
               <span className='font-medium text-amber-600 italic bg-amber-50 px-1 py-0.5 rounded shrink-0'>
-                Missing
+                Thiếu cấu hình
               </span>
             )}
           </div>
@@ -227,7 +232,7 @@ export function SchoolBusSubscriptionsPage() {
               </span>
             ) : (
               <span className='font-medium text-amber-600 italic bg-amber-50 px-1 py-0.5 rounded shrink-0'>
-                Missing
+                Thiếu cấu hình
               </span>
             )}
           </div>
@@ -236,31 +241,34 @@ export function SchoolBusSubscriptionsPage() {
     },
     {
       key: 'effective',
-      header: 'Effective',
+      header: 'Hiệu lực',
       render: (subscription) => (
         <div className='flex flex-col text-xs text-slate-600 gap-0.5'>
           <span className='font-medium text-slate-700'>
             {formatDate(subscription.effectiveFrom)}
           </span>
           <span className='text-[10px] text-slate-400'>
-            to{' '}
+            đến{' '}
             {subscription.effectiveTo
               ? formatDate(subscription.effectiveTo)
-              : 'Ongoing'}
+              : 'Đang áp dụng'}
           </span>
         </div>
       ),
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       render: (subscription) => (
-        <SchoolBusStatusBadge status={subscription.status} />
+        <SchoolBusStatusBadge
+          status={subscription.status}
+          labelMap={subscriptionStatusLabel}
+        />
       ),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: 'Thao tác',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (subscription) => (
@@ -288,7 +296,7 @@ export function SchoolBusSubscriptionsPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search code or student name...'
+          placeholder='Tìm theo mã đăng ký hoặc tên học sinh...'
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
@@ -300,7 +308,7 @@ export function SchoolBusSubscriptionsPage() {
           value={filterSchool}
           onChange={setFilterSchool}
           options={schoolOptions}
-          placeholder='All schools'
+          placeholder='Tất cả trường học'
           searchable
           className='w-48'
         />
@@ -308,14 +316,14 @@ export function SchoolBusSubscriptionsPage() {
           value={filterStatus}
           onChange={setFilterStatus}
           options={statusOptions}
-          placeholder='All statuses'
+          placeholder='Tất cả trạng thái'
           className='w-40'
         />
         <SchoolBusSelect
           value={filterTripOption}
           onChange={setFilterTripOption}
           options={tripOptionOptions}
-          placeholder='All trip options'
+          placeholder='Tất cả phương án'
           className='w-44'
         />
       </div>
@@ -324,50 +332,31 @@ export function SchoolBusSubscriptionsPage() {
 
   return (
     <SchoolBusPageShell
-      title='Subscriptions'
+      title='Đăng ký'
       description={
         access.isParentOnly
-          ? 'Track active transport services for your children.'
-          : 'Long-term student transport demand. Approved requests are converted into active subscriptions and route planning reads from this source.'
+          ? 'Theo dõi các dịch vụ xe bus đang áp dụng cho học sinh.'
+          : 'Quản lý nhu cầu sử dụng xe bus dài hạn. Yêu cầu đã duyệt được chuyển thành đăng ký để phục vụ lập tuyến.'
       }
     >
       <div className='flex flex-col gap-6'>
         {/* Stats */}
         <div className='grid gap-4 md:grid-cols-3'>
           <SchoolBusMetricCard
-            label='Subscriptions'
-            value={data?.data?.totalElements || 0}
-            hint={
-              access.isParentOnly
-                ? 'Transport services for your children'
-                : 'Active and historical service contracts'
-            }
+            label='Đăng ký'
+            value={summaryData?.data?.totalSubscriptions ?? 0}
             icon={Repeat}
             tone='info'
           />
           <SchoolBusMetricCard
-            label='Active'
-            value={
-              subscriptions.filter((item) => item.status === 'ACTIVE').length
-            }
-            hint={
-              access.isParentOnly
-                ? 'Currently active services'
-                : 'Visible in route planning'
-            }
+            label='Đang hoạt động'
+            value={summaryData?.data?.activeSubscriptions ?? 0}
             icon={PlayCircle}
             tone='success'
           />
           <SchoolBusMetricCard
-            label='Paused or stopped'
-            value={
-              subscriptions.filter((item) => item.status !== 'ACTIVE').length
-            }
-            hint={
-              access.isParentOnly
-                ? 'Paused or stopped services'
-                : 'Excluded from route generation'
-            }
+            label='Tạm dừng hoặc đã dừng'
+            value={summaryData?.data?.inactiveSubscriptions ?? 0}
             icon={PauseCircle}
             tone='warning'
           />
@@ -375,11 +364,11 @@ export function SchoolBusSubscriptionsPage() {
 
         {/* Data Table */}
         <SchoolBusDataTable
-          title='Subscription directory'
+          title='Danh sách đăng ký dịch vụ'
           description={
             access.isParentOnly
-              ? 'View subscription details for your children.'
-              : 'Use status actions to control whether a student is eligible for daily routing.'
+              ? 'Xem chi tiết đăng ký dịch vụ của học sinh.'
+              : 'Theo dõi trạng thái đăng ký để xác định học sinh đủ điều kiện tham gia lập tuyến hằng ngày.'
           }
           toolbar={subscriptionToolbar}
           data={filteredSubscriptions}
@@ -394,13 +383,13 @@ export function SchoolBusSubscriptionsPage() {
           emptyIcon={Repeat}
           emptyTitle={
             subscriptions.length === 0
-              ? 'No subscriptions yet'
-              : 'No subscriptions match current filters'
+              ? 'Chưa có đăng ký'
+              : 'Không có đăng ký phù hợp với bộ lọc'
           }
           emptyDescription={
             subscriptions.length === 0
-              ? 'Approve a transport request to create subscriptions automatically, or create subscriptions through the API.'
-              : 'Try adjusting your search query or clear the active filters.'
+              ? 'Duyệt yêu cầu xe bus để hệ thống tự tạo đăng ký dịch vụ.'
+              : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
           }
         />
       </div>

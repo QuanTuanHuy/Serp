@@ -13,6 +13,7 @@ import serp.project.school_bus_service.shared.base.AbstractBaseService;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
+import serp.project.school_bus_service.shared.i18n.MessageCommon;
 
 import org.springframework.context.annotation.Lazy;
 import serp.project.school_bus_service.service.IParentService;
@@ -39,6 +40,7 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
     private final IAttendantService attendantService;
     private final ISchoolBusUserRoleService schoolBusUserRoleService;
     private final ObjectMapper objectMapper;
+    private final MessageCommon messageCommon;
 
     public SchoolBusUserServiceImpl(SchoolBusUserRepository schoolBusUserRepository,
                                     SchoolBusUserMapper schoolBusUserMapper,
@@ -46,7 +48,8 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
                                     @Lazy IDriverService driverService,
                                     @Lazy IAttendantService attendantService,
                                     ISchoolBusUserRoleService schoolBusUserRoleService,
-                                    ObjectMapper objectMapper) {
+                                    ObjectMapper objectMapper,
+                                    MessageCommon messageCommon) {
         this.schoolBusUserRepository = schoolBusUserRepository;
         this.schoolBusUserMapper = schoolBusUserMapper;
         this.parentService = parentService;
@@ -54,6 +57,7 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
         this.attendantService = attendantService;
         this.schoolBusUserRoleService = schoolBusUserRoleService;
         this.objectMapper = objectMapper;
+        this.messageCommon = messageCommon;
     }
 
     @Override
@@ -65,13 +69,14 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public SchoolBusUserEntity upsertFromAccountUser(SchoolBusUserUpsertCommand command) {
         if (command == null) {
-            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "Command is null");
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    messageCommon.getMessage("sync.command.required"));
         }
 
         if (command.getAccountUserId() == null) {
             throw new AppException(
                     AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "Account user ID is required for School Bus user synchronization");
+                    messageCommon.getMessage("sync.accountUserId.required"));
         }
 
         SchoolBusUserEntity entity = schoolBusUserRepository
@@ -187,14 +192,16 @@ public class SchoolBusUserServiceImpl extends AbstractBaseService<SchoolBusUserE
     @Transactional(readOnly = true)
     public SchoolBusUserEntity getRequiredByAccountUserId(Long accountUserId) {
         return findByAccountUserId(accountUserId)
-                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, "School bus shadow user not found by account user ID: " + accountUserId));
+                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND,
+                        messageCommon.getMessage("sync.shadowUser.notFoundByAccountUserId", accountUserId)));
     }
 
     @Override
     @Transactional(readOnly = true)
     public SchoolBusUserEntity getRequiredByKeycloakId(String keycloakId) {
         return findByKeycloakId(keycloakId)
-                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND, "School bus shadow user not found by Keycloak ID: " + keycloakId));
+                .orElseThrow(() -> new AppException(AppErrorCode.NOT_FOUND,
+                        messageCommon.getMessage("sync.shadowUser.notFoundByKeycloakId", keycloakId)));
     }
 
     @Override

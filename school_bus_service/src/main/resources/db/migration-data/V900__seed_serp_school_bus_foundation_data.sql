@@ -261,9 +261,9 @@ BEGIN
     VALUES
         (
             v_tenant_id,
-            'Serp Kindergarten',
+            'Trường Mầm non Serp',
             'SBU000001',
-            'Serp International Campus, Minh Khai, Hai Ba Trung District, Hanoi',
+            'Khuôn viên Quốc tế Serp, Minh Khai, quận Hai Bà Trưng, Hà Nội',
             '02439001001',
             'kindergarten@serp-school.edu.vn',
             20.994700,
@@ -277,9 +277,9 @@ BEGIN
         ),
         (
             v_tenant_id,
-            'Serp Primary School',
+            'Trường Tiểu học Serp',
             'SBU000002',
-            'Serp International Campus, Minh Khai, Hai Ba Trung District, Hanoi',
+            'Khuôn viên Quốc tế Serp, Minh Khai, quận Hai Bà Trưng, Hà Nội',
             '02439001002',
             'primary@serp-school.edu.vn',
             20.995050,
@@ -293,9 +293,9 @@ BEGIN
         ),
         (
             v_tenant_id,
-            'Serp Secondary School',
+            'Trường THCS Serp',
             'SBU000003',
-            'Serp International Campus, Minh Khai, Hai Ba Trung District, Hanoi',
+            'Khuôn viên Quốc tế Serp, Minh Khai, quận Hai Bà Trưng, Hà Nội',
             '02439001003',
             'secondary@serp-school.edu.vn',
             20.995450,
@@ -318,12 +318,12 @@ BEGIN
         (
             v_tenant_id,
             'DPT000001',
-            'Serp Operations Depot - West',
-            'My Dinh, Nam Tu Liem District, Hanoi',
+            'Bãi xe vận hành Serp - phía Tây',
+            'Mỹ Đình, quận Nam Từ Liêm, Hà Nội',
             21.028877,
             105.778137,
             '02439002001',
-            'Western fleet operations and maintenance base',
+            'Bãi vận hành và bảo dưỡng đội xe khu phía Tây',
             true,
             false,
             CURRENT_TIMESTAMP,
@@ -334,12 +334,12 @@ BEGIN
         (
             v_tenant_id,
             'DPT000002',
-            'Serp Operations Depot - East',
-            'Long Bien District, Hanoi',
+            'Bãi xe vận hành Serp - phía Đông',
+            'Quận Long Biên, Hà Nội',
             21.027809,
             105.899211,
             '02439002002',
-            'Eastern fleet operations and dispatch base',
+            'Bãi vận hành và điều phối đội xe khu phía Đông',
             true,
             false,
             CURRENT_TIMESTAMP,
@@ -355,30 +355,30 @@ BEGIN
         created_at, created_by, updated_at, updated_by
     )
     VALUES
-        (v_tenant_id, 'PKP000001', 'Times City', '458 Minh Khai, Hai Ba Trung District, Hanoi', 20.994102, 105.868334, 'PICKUP_DROPOFF', 'Meet beside the main residential lobby on Minh Khai Street.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000002', 'Royal City', '72A Nguyen Trai, Thanh Xuan District, Hanoi', 21.002504, 105.815117, 'PICKUP_DROPOFF', 'Wait at the designated vehicle bay near the R2 entrance.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000003', 'Trung Hoa Residential Area', 'Hoang Dao Thuy, Cau Giay District, Hanoi', 21.006521, 105.801284, 'PICKUP_DROPOFF', 'Gather at the community gate facing Hoang Dao Thuy Street.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000004', 'Cau Giay Intersection', 'Cau Giay Street, Cau Giay District, Hanoi', 21.033239, 105.800387, 'PICKUP_DROPOFF', 'Use the marked passenger area near the public bus shelter.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000005', 'Nghia Do Park', 'Nguyen Van Huyen Street, Cau Giay District, Hanoi', 21.041875, 105.797231, 'PICKUP_DROPOFF', 'Meet at the south gate beside Nguyen Van Huyen Street.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000006', 'Keangnam Landmark', 'Pham Hung Street, Nam Tu Liem District, Hanoi', 21.017312, 105.783122, 'PICKUP_DROPOFF', 'Wait at the service road passenger bay outside the tower complex.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000007', 'My Dinh Bus Hub', 'Pham Hung Street, Nam Tu Liem District, Hanoi', 21.028952, 105.778842, 'PICKUP_DROPOFF', 'Gather at the northern passenger pick-up lane.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000008', 'Ciputra Urban Area', 'Nguyen Hoang Ton Street, Tay Ho District, Hanoi', 21.074734, 105.789426, 'PICKUP_DROPOFF', 'Meet at the main community reception gate.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000009', 'West Lake Residence', 'Lac Long Quan Street, Tay Ho District, Hanoi', 21.067418, 105.810724, 'PICKUP_DROPOFF', 'Wait at the residential vehicle entrance on Lac Long Quan Street.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000010', 'Lotte Center Hanoi', '54 Lieu Giai, Ba Dinh District, Hanoi', 21.032078, 105.812887, 'PICKUP_DROPOFF', 'Meet at the passenger bay on Dao Tan Street.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000011', 'Giang Vo Residence', 'Giang Vo Street, Ba Dinh District, Hanoi', 21.027109, 105.823782, 'PICKUP_DROPOFF', 'Gather beside the community cultural center entrance.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000012', 'Kim Ma Residence', 'Kim Ma Street, Ba Dinh District, Hanoi', 21.030297, 105.821464, 'PICKUP_DROPOFF', 'Wait at the wide curb opposite the local post office.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000013', 'Van Quan Urban Area', 'Nguyen Khuyen Street, Ha Dong District, Hanoi', 20.980912, 105.787615, 'PICKUP_DROPOFF', 'Meet near the lakeside community gate.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000014', 'Linh Dam Urban Area', 'Nguyen Huu Tho Street, Hoang Mai District, Hanoi', 20.964817, 105.826927, 'PICKUP_DROPOFF', 'Gather at the main taxi and passenger waiting area.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000015', 'Giai Phong Residence', 'Giai Phong Street, Hoang Mai District, Hanoi', 20.982884, 105.841625, 'PICKUP_DROPOFF', 'Wait at the residential gate away from the intersection.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000016', 'Bach Mai Residence', 'Bach Mai Street, Hai Ba Trung District, Hanoi', 21.000463, 105.849769, 'PICKUP_DROPOFF', 'Meet beside the community hall entrance.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000017', 'Minh Khai Residence', 'Minh Khai Street, Hai Ba Trung District, Hanoi', 20.997018, 105.858936, 'PICKUP_DROPOFF', 'Wait at the internal road exit facing Minh Khai Street.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000018', 'Aeon Mall Long Bien', '27 Co Linh, Long Bien District, Hanoi', 21.027732, 105.899985, 'PICKUP_DROPOFF', 'Meet at the morning passenger zone near the western entrance.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000019', 'Long Bien Riverside', 'Ngoc Thuy Street, Long Bien District, Hanoi', 21.047119, 105.859754, 'PICKUP_ONLY', 'Morning collection is at the riverside community gate.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000020', 'Hoan Kiem Lakeside', 'Dinh Tien Hoang Street, Hoan Kiem District, Hanoi', 21.028666, 105.852448, 'PICKUP_ONLY', 'Morning collection is beside the designated tour bus bay.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000021', 'Van Phuc Residence', 'To Huu Street, Ha Dong District, Hanoi', 20.982147, 105.769863, 'PICKUP_ONLY', 'Morning collection is at the main residential security gate.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000022', 'Ha Dong Residential Area', 'Quang Trung Street, Ha Dong District, Hanoi', 20.971542, 105.778491, 'DROPOFF_ONLY', 'Afternoon drop-off is at the sheltered community entrance.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000023', 'Ecopark Residence', 'Ecopark Urban Area, Van Giang District, Hung Yen', 20.956233, 105.930416, 'DROPOFF_ONLY', 'Afternoon drop-off is at the central residential reception.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
-        (v_tenant_id, 'PKP000024', 'Hoang Mai Residence', 'Tam Trinh Street, Hoang Mai District, Hanoi', 20.983613, 105.867412, 'DROPOFF_ONLY', 'Afternoon drop-off is beside the community playground gate.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by);
+        (v_tenant_id, 'PKP000001', 'Times City', '458 Minh Khai, quận Hai Bà Trưng, Hà Nội', 20.994102, 105.868334, 'PICKUP_DROPOFF', 'Tập trung cạnh sảnh cư dân chính trên phố Minh Khai.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000002', 'Royal City', '72A Nguyễn Trãi, quận Thanh Xuân, Hà Nội', 21.002504, 105.815117, 'PICKUP_DROPOFF', 'Chờ tại khu vực đón xe gần lối vào R2.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000003', 'Khu dân cư Trung Hòa', 'Hoàng Đạo Thúy, quận Cầu Giấy, Hà Nội', 21.006521, 105.801284, 'PICKUP_DROPOFF', 'Tập trung tại cổng khu dân cư phía đường Hoàng Đạo Thúy.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000004', 'Nút giao Cầu Giấy', 'Đường Cầu Giấy, quận Cầu Giấy, Hà Nội', 21.033239, 105.800387, 'PICKUP_DROPOFF', 'Đứng tại khu vực đón khách gần nhà chờ xe bus công cộng.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000005', 'Công viên Nghĩa Đô', 'Nguyễn Văn Huyên, quận Cầu Giấy, Hà Nội', 21.041875, 105.797231, 'PICKUP_DROPOFF', 'Tập trung tại cổng phía nam cạnh đường Nguyễn Văn Huyên.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000006', 'Keangnam Landmark', 'Đường Phạm Hùng, quận Nam Từ Liêm, Hà Nội', 21.017312, 105.783122, 'PICKUP_DROPOFF', 'Chờ tại làn đón khách ngoài khu tòa nhà.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000007', 'Bến xe Mỹ Đình', 'Đường Phạm Hùng, quận Nam Từ Liêm, Hà Nội', 21.028952, 105.778842, 'PICKUP_DROPOFF', 'Tập trung tại làn đón khách phía bắc.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000008', 'Khu đô thị Ciputra', 'Nguyễn Hoàng Tôn, quận Tây Hồ, Hà Nội', 21.074734, 105.789426, 'PICKUP_DROPOFF', 'Tập trung tại cổng lễ tân chính của khu dân cư.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000009', 'Khu dân cư Hồ Tây', 'Lạc Long Quân, quận Tây Hồ, Hà Nội', 21.067418, 105.810724, 'PICKUP_DROPOFF', 'Chờ tại lối xe ra vào trên đường Lạc Long Quân.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000010', 'Lotte Center Hanoi', '54 Liễu Giai, quận Ba Đình, Hà Nội', 21.032078, 105.812887, 'PICKUP_DROPOFF', 'Tập trung tại khu vực đón khách trên phố Đào Tấn.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000011', 'Khu dân cư Giảng Võ', 'Phố Giảng Võ, quận Ba Đình, Hà Nội', 21.027109, 105.823782, 'PICKUP_DROPOFF', 'Tập trung cạnh lối vào nhà văn hóa khu dân cư.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000012', 'Khu dân cư Kim Mã', 'Phố Kim Mã, quận Ba Đình, Hà Nội', 21.030297, 105.821464, 'PICKUP_DROPOFF', 'Chờ tại phần vỉa hè rộng đối diện bưu điện địa phương.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000013', 'Khu đô thị Văn Quán', 'Nguyễn Khuyến, quận Hà Đông, Hà Nội', 20.980912, 105.787615, 'PICKUP_DROPOFF', 'Tập trung gần cổng khu dân cư ven hồ.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000014', 'Khu đô thị Linh Đàm', 'Nguyễn Hữu Thọ, quận Hoàng Mai, Hà Nội', 20.964817, 105.826927, 'PICKUP_DROPOFF', 'Tập trung tại khu vực chờ taxi và đón khách chính.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000015', 'Khu dân cư Giải Phóng', 'Đường Giải Phóng, quận Hoàng Mai, Hà Nội', 20.982884, 105.841625, 'PICKUP_DROPOFF', 'Chờ tại cổng khu dân cư, tránh khu vực giao cắt.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000016', 'Khu dân cư Bạch Mai', 'Phố Bạch Mai, quận Hai Bà Trưng, Hà Nội', 21.000463, 105.849769, 'PICKUP_DROPOFF', 'Tập trung cạnh lối vào nhà sinh hoạt cộng đồng.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000017', 'Khu dân cư Minh Khai', 'Phố Minh Khai, quận Hai Bà Trưng, Hà Nội', 20.997018, 105.858936, 'PICKUP_DROPOFF', 'Chờ tại lối ra đường nội bộ hướng ra phố Minh Khai.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000018', 'Aeon Mall Long Biên', '27 Cổ Linh, quận Long Biên, Hà Nội', 21.027732, 105.899985, 'PICKUP_DROPOFF', 'Tập trung tại khu đón khách buổi sáng gần lối vào phía tây.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000019', 'Khu ven sông Long Biên', 'Ngọc Thụy, quận Long Biên, Hà Nội', 21.047119, 105.859754, 'PICKUP_ONLY', 'Điểm đón buổi sáng tại cổng khu dân cư ven sông.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000020', 'Khu vực Hồ Hoàn Kiếm', 'Đinh Tiên Hoàng, quận Hoàn Kiếm, Hà Nội', 21.028666, 105.852448, 'PICKUP_ONLY', 'Điểm đón buổi sáng cạnh khu vực xe du lịch được chỉ định.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000021', 'Khu dân cư Vạn Phúc', 'Đường Tố Hữu, quận Hà Đông, Hà Nội', 20.982147, 105.769863, 'PICKUP_ONLY', 'Điểm đón buổi sáng tại cổng bảo vệ chính của khu dân cư.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000022', 'Khu dân cư Hà Đông', 'Đường Quang Trung, quận Hà Đông, Hà Nội', 20.971542, 105.778491, 'DROPOFF_ONLY', 'Điểm trả buổi chiều tại lối vào khu dân cư có mái che.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000023', 'Ecopark Residence', 'Khu đô thị Ecopark, huyện Văn Giang, Hưng Yên', 20.956233, 105.930416, 'DROPOFF_ONLY', 'Điểm trả buổi chiều tại sảnh lễ tân trung tâm khu dân cư.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by),
+        (v_tenant_id, 'PKP000024', 'Khu dân cư Hoàng Mai', 'Đường Tam Trinh, quận Hoàng Mai, Hà Nội', 20.983613, 105.867412, 'DROPOFF_ONLY', 'Điểm trả buổi chiều cạnh cổng sân chơi cộng đồng.', true, false, CURRENT_TIMESTAMP, v_seed_by, CURRENT_TIMESTAMP, v_seed_by);
 
     -- School-to-point service coverage: 16 kindergarten, 22 primary, 20 secondary.
     INSERT INTO public.school_bus_school_pickup_point (
@@ -498,9 +498,9 @@ BEGIN
             '0901' || lpad(i::text, 6, '0'),
             'parent' || lpad(i::text, 3, '0') || '@serp-school.edu.vn',
             CASE
-                WHEN i <= 20 THEN 'Hai Ba Trung District, Hanoi'
-                WHEN i <= 50 THEN 'Cau Giay District, Hanoi'
-                ELSE 'Long Bien District, Hanoi'
+                WHEN i <= 20 THEN 'Quận Hai Bà Trưng, Hà Nội'
+                WHEN i <= 50 THEN 'Quận Cầu Giấy, Hà Nội'
+                ELSE 'Quận Long Biên, Hà Nội'
             END,
             true,
             false,
@@ -801,8 +801,8 @@ BEGIN
             v_birth_date,
             CASE WHEN i % 2 = 0 THEN 'FEMALE' ELSE 'MALE' END,
             CASE
-                WHEN i % 17 = 0 THEN 'Family requests a front-row seat when available.'
-                WHEN i % 23 = 0 THEN 'Please remind the student before the scheduled stop.'
+                WHEN i % 17 = 0 THEN 'Gia đình mong muốn học sinh ngồi hàng ghế đầu khi còn chỗ.'
+                WHEN i % 23 = 0 THEN 'Vui lòng nhắc học sinh chuẩn bị trước khi đến điểm dừng.'
                 ELSE NULL
             END,
             true,

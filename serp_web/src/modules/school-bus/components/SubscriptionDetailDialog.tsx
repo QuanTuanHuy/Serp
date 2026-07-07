@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import {
   X,
@@ -14,6 +14,7 @@ import { useGetSchoolBusSubscriptionByIdQuery } from '../api/schoolBusApi';
 import { SchoolBusStatusBadge } from './SchoolBusStatusBadge';
 import { formatDate } from '../utils';
 import { cn } from '@/shared/utils';
+import { subscriptionStatusLabel } from '../schoolBusLabels';
 
 /* -- Day chip helpers ------------------------------------------------------- */
 const DAYS: { key: keyof DayFields; label: string }[] = [
@@ -121,11 +122,16 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
             </div>
           </div>
           <div className='flex items-center gap-2'>
-            {sub && <SchoolBusStatusBadge status={sub.status} />}
+            {sub && (
+              <SchoolBusStatusBadge
+                status={sub.status}
+                labelMap={subscriptionStatusLabel}
+              />
+            )}
             <button
               onClick={onClose}
               className='flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground'
-              aria-label='Close'
+              aria-label='Đóng'
             >
               <X className='h-4 w-4' />
             </button>
@@ -142,56 +148,61 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
 
           {!isLoading && !sub && (
             <p className='py-8 text-center text-sm text-slate-400'>
-              Could not load subscription detail.
+              Không tải được chi tiết đăng ký.
             </p>
           )}
 
           {!isLoading && sub && (
             <>
               {/* Identity */}
-              <Section title='Identity' icon={Hash}>
+              <Section title='Thông tin định danh' icon={Hash}>
                 <Field
-                  label='Subscription Code'
+                  label='Mã đăng ký'
                   value={sub.subscriptionCode}
                   mono
                 />
                 <Field
-                  label='Status'
-                  value={<SchoolBusStatusBadge status={sub.status} />}
+                  label='Trạng thái'
+                  value={
+                    <SchoolBusStatusBadge
+                      status={sub.status}
+                      labelMap={subscriptionStatusLabel}
+                    />
+                  }
                 />
                 <Field
-                  label='Source Request ID'
+                  label='ID yêu cầu nguồn'
                   value={sub.sourceRequestId || '-'}
                 />
                 <div /> {/* spacer */}
               </Section>
 
               {/* Student & School */}
-              <Section title='Student & School' icon={User}>
-                <Field label='Student' value={sub.studentName} />
-                <Field label='School' value={sub.schoolName} />
-                <Field label='Trip Option' value={sub.tripOption} />
+              <Section title='Học sinh và trường học' icon={User}>
+                <Field label='Học sinh' value={sub.studentName} />
+                <Field label='Trường học' value={sub.schoolName} />
+                <Field label='Phương án đi xe' value={sub.tripOption} />
                 <div />
               </Section>
 
               {/* Pickup & Dropoff */}
-              <Section title='Pickup & Dropoff' icon={MapPin}>
+              <Section title='Điểm đón và điểm trả' icon={MapPin}>
                 <Field
-                  label='Pickup Point'
+                  label='Điểm đón'
                   value={sub.pickupPointName || '-'}
                 />
                 <Field
-                  label='Dropoff Point'
+                  label='Điểm trả'
                   value={sub.dropoffPointName || '-'}
                 />
               </Section>
 
               {/* Active days */}
-              <Section title='Active Days' icon={CalendarDays}>
+              <Section title='Ngày hoạt động' icon={CalendarDays}>
                 {/* Active days */}
                 <div className='col-span-2'>
                   <span className='text-[11px] font-medium uppercase tracking-wide text-slate-400'>
-                    Active Days
+                    Ngày hoạt động
                   </span>
                   <div className='mt-1.5 flex flex-wrap gap-1.5'>
                     {DAYS.map(({ key, label }) => (
@@ -212,12 +223,12 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
               </Section>
 
               {/* Effective Period */}
-              <Section title='Effective Period' icon={Clock}>
-                <Field label='From' value={formatDate(sub.effectiveFrom)} />
+              <Section title='Thời gian hiệu lực' icon={Clock}>
+                <Field label='Từ ngày' value={formatDate(sub.effectiveFrom)} />
                 <Field
-                  label='To'
+                  label='Đến ngày'
                   value={
-                    sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Indefinite'
+                    sub.effectiveTo ? formatDate(sub.effectiveTo) : 'Không xác định'
                   }
                 />
               </Section>
@@ -231,7 +242,7 @@ export function SubscriptionDetailDialog({ subscriptionId, onClose }: Props) {
             onClick={onClose}
             className='rounded-xl bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground transition hover:text-foreground'
           >
-            Close
+            Đóng
           </button>
         </div>
       </div>

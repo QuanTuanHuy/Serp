@@ -24,13 +24,13 @@ export function DashboardChartCard({
       {isLoading ? (
         <div className='space-y-4'>
           <div className='h-4 w-40 animate-pulse rounded bg-muted' />
-          <div className='h-[220px] animate-pulse rounded-xl bg-muted/60' />
+          <div className='h-[260px] animate-pulse rounded-xl bg-muted/60' />
         </div>
       ) : isError ? (
-        <div className='flex min-h-[240px] flex-col items-center justify-center text-center'>
+        <div className='flex min-h-[280px] flex-col items-center justify-center text-center'>
           <p className='text-sm font-semibold text-foreground'>{title}</p>
           <p className='mt-2 text-sm text-muted-foreground'>
-            This dashboard block could not be loaded.
+            Không thể tải khối thông tin này.
           </p>
         </div>
       ) : (

@@ -6,6 +6,7 @@ import serp.project.school_bus_service.dto.params.StudentParamsRequest;
 import serp.project.school_bus_service.dto.request.StudentUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.StudentResponse;
+import serp.project.school_bus_service.dto.response.StudentSummaryResponse;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IPickupPointService;
 import serp.project.school_bus_service.service.ISchoolService;
@@ -88,6 +89,20 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
                 response -> response);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public StudentSummaryResponse getSummary(Long tenantId) {
+        Long parentProfileId = securityService.isParentOnly()
+                ? schoolBusDataScopeService.getCurrentParentProfileIdRequired()
+                : null;
+        var summary = studentRepository.getStudentSummary(tenantId, parentProfileId);
+        return new StudentSummaryResponse(
+                value(summary.getTotalStudents()),
+                value(summary.getLinkedSchools()),
+                value(summary.getLinkedParents()),
+                value(summary.getActiveStudents()));
+    }
+
     private String keywordPattern(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return null;
@@ -157,7 +172,8 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
         }
 
         if (parentProfileId == null) {
-            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, "Parent profile ID is required");
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    messageCommon.getMessage("student.parentProfile.required"));
         }
         student.setParentProfile(parentService.getParent(parentProfileId, tenantId));
 
@@ -189,5 +205,9 @@ public class StudentServiceImpl extends AbstractBaseService<StudentEntity, Long>
     @Override
     public long countByTenant(Long tenantId) {
         return studentRepository.countByTenantIdAndIsDeletedFalse(tenantId);
+    }
+
+    private long value(Long value) {
+        return value == null ? 0L : value;
     }
 }

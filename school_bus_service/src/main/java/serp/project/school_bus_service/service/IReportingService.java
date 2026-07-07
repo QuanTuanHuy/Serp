@@ -5,11 +5,14 @@ import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.CapacityUtilizationReportResponse;
 import serp.project.school_bus_service.dto.response.OperationalReportResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
+import serp.project.school_bus_service.dto.response.ReportOverviewResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
 
 public interface IReportingService {
 
     OperationalReportResponse getOperationsSummary(ReportFilterParamsRequest params, Long tenantId);
+
+    ReportOverviewResponse getReportOverview(ReportFilterParamsRequest params, Long tenantId);
 
     String exportOperationsSummaryCsv(ReportFilterParamsRequest params, Long tenantId);
 

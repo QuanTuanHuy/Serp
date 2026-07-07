@@ -23,6 +23,7 @@ import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionListItemResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
+import serp.project.school_bus_service.dto.response.TripListSummaryResponse;
 import serp.project.school_bus_service.dto.response.TripStopLogResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceManifestResponse;
 import serp.project.school_bus_service.dto.response.TripAttendanceSummaryResponse;
@@ -68,6 +69,12 @@ public class TripController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<PageResponse<TripExecutionListItemResponse>>> getTrips(
             @ModelAttribute TripExecutionParamsRequest params) {
         return ok("Fetched trips", tripExecutionService.getTrips(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.trip.read')")
+    public ResponseEntity<GeneralResponse<TripListSummaryResponse>> getSummary() {
+        return ok("Fetched trip summary", tripExecutionService.getSummary(getCurrentTenantId()));
     }
 
     @GetMapping("/{id}")

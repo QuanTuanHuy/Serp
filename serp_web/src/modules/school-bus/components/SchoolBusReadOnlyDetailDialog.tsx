@@ -46,11 +46,11 @@ export function SchoolBusReadOnlyDetailDialog({
       {isLoading ? (
         <div className='flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground'>
           <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-          Loading detail...
+          Đang tải chi tiết...
         </div>
       ) : isError ? (
         <div className='rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive'>
-          Could not load detail. Please close and try again.
+          Không thể tải thông tin chi tiết. Vui lòng đóng và thử lại.
         </div>
       ) : (
         <div className='space-y-6'>
@@ -73,7 +73,7 @@ export function SchoolBusReadOnlyDetailDialog({
               className={schoolBusUi.outlineButton}
               onClick={() => onOpenChange(false)}
             >
-              Close
+              Đóng
             </Button>
           </div>
         </div>

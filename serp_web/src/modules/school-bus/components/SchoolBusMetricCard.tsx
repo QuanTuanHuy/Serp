@@ -18,7 +18,6 @@ type MetricTone =
 interface SchoolBusMetricCardProps {
   label: string;
   value: number | string;
-  hint?: string;
   icon?: LucideIcon;
   tone?: MetricTone;
   variant?: 'comfortable' | 'compact';
@@ -44,7 +43,6 @@ const toneClasses: Record<MetricTone, string> = {
 export function SchoolBusMetricCard({
   label,
   value,
-  hint,
   icon: Icon,
   tone = 'default',
   variant = 'comfortable',
@@ -84,11 +82,6 @@ export function SchoolBusMetricCard({
           <p className={cn('text-3xl font-semibold', schoolBusUi.heading)}>
             {value}
           </p>
-          {hint ? (
-            <p className={cn('text-xs leading-5', schoolBusUi.mutedText)}>
-              {hint}
-            </p>
-          ) : null}
         </div>
         {Icon ? (
           <div

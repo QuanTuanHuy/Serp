@@ -8,6 +8,7 @@ import serp.project.school_bus_service.dto.response.AttendanceResponse;
 import serp.project.school_bus_service.dto.response.CapacityUtilizationReportResponse;
 import serp.project.school_bus_service.dto.response.OperationalReportResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
+import serp.project.school_bus_service.dto.response.ReportOverviewResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
 import serp.project.school_bus_service.service.IReportingService;
 import serp.project.school_bus_service.service.ITransportRequestService;
@@ -25,6 +26,7 @@ import serp.project.school_bus_service.entity.TripExecutionEntity;
 import serp.project.school_bus_service.repository.AttendanceRepository;
 import serp.project.school_bus_service.repository.RouteAssignmentRepository;
 import serp.project.school_bus_service.repository.TripExecutionRepository;
+import serp.project.school_bus_service.repository.projection.ReportOverviewProjection;
 import serp.project.school_bus_service.repository.projection.RouteAssignmentSummaryProjection;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
 
@@ -154,6 +156,36 @@ public class ReportingServiceImpl implements IReportingService {
     }
 
     @Override
+    public ReportOverviewResponse getReportOverview(ReportFilterParamsRequest params, Long tenantId) {
+        LocalDateTime dateFromTime = params == null || params.getDateFrom() == null
+                ? null
+                : params.getDateFrom().atStartOfDay();
+        LocalDateTime dateToTime = params == null || params.getDateTo() == null
+                ? null
+                : params.getDateTo().plusDays(1).atStartOfDay();
+        ReportOverviewProjection overview = tripExecutionRepository.getReportOverview(
+                tenantId,
+                params == null ? null : params.getDateFrom(),
+                params == null ? null : params.getDateTo(),
+                dateFromTime,
+                dateToTime,
+                params == null ? null : params.getSchoolId(),
+                params == null ? null : params.getRouteId(),
+                params == null ? null : params.getTripId(),
+                parseDirectionValue(params == null ? null : params.getDirection()),
+                parseTripStatusValue(params == null ? null : params.getTripStatus()));
+
+        return new ReportOverviewResponse(
+                safeLong(overview.getTotalRequests()),
+                safeLong(overview.getApprovedRequests()),
+                safeLong(overview.getCompletedTrips()),
+                safeLong(overview.getAttendanceEvents()),
+                safeLong(overview.getTripCount()),
+                safeLong(overview.getAttendanceCount()),
+                safeLong(overview.getCapacityCount()));
+    }
+
+    @Override
     public PageResponse<CapacityUtilizationReportResponse> getCapacityUtilization(ReportFilterParamsRequest params,
             Long tenantId) {
         var page = tripExecutionRepository.findReportTrips(
@@ -195,6 +227,20 @@ public class ReportingServiceImpl implements IReportingService {
 
     private TripStatus parseTripStatus(String value) {
         return value == null || value.isBlank() ? null : TripStatus.valueOf(value.toUpperCase());
+    }
+
+    private String parseDirectionValue(String value) {
+        RouteDirection direction = parseDirection(value);
+        return direction == null ? null : direction.name();
+    }
+
+    private String parseTripStatusValue(String value) {
+        TripStatus status = parseTripStatus(value);
+        return status == null ? null : status.name();
+    }
+
+    private long safeLong(Long value) {
+        return value == null ? 0L : value;
     }
 
     private void populateAssignment(TripExecutionEntity trip, Long tenantId) {

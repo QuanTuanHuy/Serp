@@ -10,10 +10,10 @@ import lombok.Setter;
 @NoArgsConstructor
 public class PickupPointUpsertRequest extends BaseCommandRequest {
 
-    @NotBlank
+    @NotBlank(message = "Vui lòng nhập tên điểm đón/trả.")
     private String name;
 
-    @NotBlank
+    @NotBlank(message = "Vui lòng nhập địa chỉ điểm đón/trả.")
     private String address;
 
     private Double latitude;

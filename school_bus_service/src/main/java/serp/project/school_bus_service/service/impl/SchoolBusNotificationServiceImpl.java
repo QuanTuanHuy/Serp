@@ -22,6 +22,7 @@ import serp.project.school_bus_service.enums.NotificationType;
 import serp.project.school_bus_service.service.ISchoolBusNotificationService;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
+import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
@@ -44,18 +45,21 @@ public class SchoolBusNotificationServiceImpl implements ISchoolBusNotificationS
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final MessageCommon messageCommon;
     private final String notificationTopic;
     private final String sourceService;
 
     public SchoolBusNotificationServiceImpl(
             KafkaTemplate<String, String> kafkaTemplate,
             ObjectMapper objectMapper,
+            MessageCommon messageCommon,
             @Value("${school-bus.kafka.topics.user-notifications:serp.notification.user.events}")
             String notificationTopic,
             @Value("${school-bus.notification.source-service:school-bus-service}")
             String sourceService) {
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
+        this.messageCommon = messageCommon;
         this.notificationTopic = notificationTopic;
         this.sourceService = sourceService;
     }
@@ -63,7 +67,7 @@ public class SchoolBusNotificationServiceImpl implements ISchoolBusNotificationS
     @Override
     public String sendNotification(NotificationSendCommand command) {
         validateBaseCommand(command);
-        requirePositive(command.getUserId(), "Notification userId is required");
+        requirePositive(command.getUserId(), "notification.userId.required");
 
         String eventId = UUID.randomUUID().toString();
         NotificationCreateMessage data = toCreateMessage(command, eventId);
@@ -79,7 +83,7 @@ public class SchoolBusNotificationServiceImpl implements ISchoolBusNotificationS
         validateBaseCommand(command);
         List<Long> userIds = normalizeUserIds(command.getUserIds());
         if (userIds.isEmpty()) {
-            throw validationException("Notification userIds are required");
+            throw validationException("notification.userIds.required");
         }
 
         String eventId = UUID.randomUUID().toString();
@@ -93,12 +97,12 @@ public class SchoolBusNotificationServiceImpl implements ISchoolBusNotificationS
 
     private void validateBaseCommand(BaseNotificationCommand command) {
         if (command == null) {
-            throw validationException("Notification command is required");
+            throw validationException("notification.command.required");
         }
 
-        requirePositive(command.getTenantId(), "Notification tenantId is required");
-        requireText(command.getTitle(), MAX_TITLE_LENGTH, "Notification title");
-        requireText(command.getMessage(), MAX_MESSAGE_LENGTH, "Notification message");
+        requirePositive(command.getTenantId(), "notification.tenantId.required");
+        requireText(command.getTitle(), MAX_TITLE_LENGTH, "notification.title.required", "notification.title.maxLength");
+        requireText(command.getMessage(), MAX_MESSAGE_LENGTH, "notification.message.required", "notification.message.maxLength");
 
     }
 
@@ -242,7 +246,7 @@ public class SchoolBusNotificationServiceImpl implements ISchoolBusNotificationS
             log.error("Failed to serialize notification event", exception);
             throw new AppException(
                     AppErrorCode.UNEXPECTED_EXCEPTION,
-                    "Failed to serialize notification event");
+                    messageCommon.getMessage("notification.serialize.failed"));
         }
     }
 
@@ -253,7 +257,7 @@ public class SchoolBusNotificationServiceImpl implements ISchoolBusNotificationS
 
         LinkedHashSet<Long> uniqueUserIds = new LinkedHashSet<>();
         for (Long userId : userIds) {
-            requirePositive(userId, "Notification userId must be positive");
+            requirePositive(userId, "notification.userId.positive");
             uniqueUserIds.add(userId);
         }
         return new ArrayList<>(uniqueUserIds);
@@ -298,18 +302,20 @@ public class SchoolBusNotificationServiceImpl implements ISchoolBusNotificationS
                 : NotificationPriority.MEDIUM;
     }
 
-    private void requirePositive(Long value, String message) {
+    private void requirePositive(Long value, String messageKey) {
         if (value == null || value <= 0) {
-            throw validationException(message);
+            throw validationException(messageKey);
         }
     }
 
-    private void requireText(String value, int maxLength, String fieldName) {
+    private void requireText(String value, int maxLength, String requiredKey, String maxLengthKey) {
         if (!StringUtils.hasText(value)) {
-            throw validationException(fieldName + " is required");
+            throw validationException(requiredKey);
         }
         if (value.trim().length() > maxLength) {
-            throw validationException(fieldName + " must not exceed " + maxLength + " characters");
+            throw new AppException(
+                    AppErrorCode.REQUEST_VALIDATION_FAILED,
+                    messageCommon.getMessage(maxLengthKey, maxLength));
         }
     }
 
@@ -317,7 +323,7 @@ public class SchoolBusNotificationServiceImpl implements ISchoolBusNotificationS
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
-    private AppException validationException(String message) {
-        return new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, message);
+    private AppException validationException(String messageKey) {
+        return new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, messageCommon.getMessage(messageKey));
     }
 }

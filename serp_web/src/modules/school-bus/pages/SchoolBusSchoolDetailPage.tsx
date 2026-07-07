@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import {
@@ -63,6 +63,7 @@ import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { MapMarkerVisibilityProvider } from '../components/map/MapMarkerVisibilityContext';
 import { formatDate, getPageItems, SCHOOL_BUS_OPTION_QUERY } from '../utils';
+import { getLabel, pickupUsageTypeLabel } from '../schoolBusLabels';
 import type {
   SchoolBusSchool,
   SchoolBusSchoolPickupPoint,
@@ -75,10 +76,7 @@ interface SchoolBusSchoolDetailPageProps {
 }
 
 const formatUsageType = (type: string | undefined | null) => {
-  if (type === 'PICKUP' || type === 'PICKUP_ONLY') return 'Pickup only';
-  if (type === 'DROPOFF' || type === 'DROPOFF_ONLY') return 'Drop-off only';
-  if (type === 'PICKUP_DROPOFF') return 'Pickup & drop-off';
-  return type || 'N/A';
+  return type ? getLabel(pickupUsageTypeLabel, type) : 'Chưa xác định';
 };
 
 const getUsageTypeBadgeClasses = (type: string | undefined | null) => {
@@ -210,11 +208,11 @@ export function SchoolBusSchoolDetailPage({
         id: cleanSchoolId,
         body: values,
       }).unwrap();
-      toast.success(response.message || 'School details updated');
+      toast.success(response.message || 'Cập nhật thông tin trường thành công');
       setSchoolDialogOpen(false);
       refetchSchool();
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to update school');
+      toast.error(error?.data?.message || 'Không thể cập nhật trường');
     }
   };
 
@@ -224,11 +222,11 @@ export function SchoolBusSchoolDetailPage({
         schoolId: cleanSchoolId,
         body: values,
       }).unwrap();
-      toast.success(response.message || 'Pickup point linked successfully');
+      toast.success(response.message || 'Liên kết điểm đón/trả thành công');
       setLinkDialogOpen(false);
       refetchAll();
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to link pickup point');
+      toast.error(error?.data?.message || 'Không thể liên kết điểm đón/trả');
     }
   };
 
@@ -240,12 +238,12 @@ export function SchoolBusSchoolDetailPage({
           schoolId: cleanSchoolId,
           pickupPointId: deleteTarget.id,
         }).unwrap();
-        toast.success(response.message || 'Pickup point unlinked');
+        toast.success(response.message || 'Hủy liên kết điểm đón/trả thành công');
       }
       setDeleteTarget(null);
       refetchAll();
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Delete operation failed');
+      toast.error(error?.data?.message || 'Không thể thực hiện thao tác xóa');
     }
   };
 
@@ -316,7 +314,7 @@ export function SchoolBusSchoolDetailPage({
       <div className='flex h-screen items-center justify-center bg-slate-50 text-slate-500'>
         <div className='flex flex-col items-center gap-3'>
           <div className='h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-[#C81E3A]' />
-          <p className='text-sm font-semibold'>Loading school workspace...</p>
+          <p className='text-sm font-semibold'>Đang tải không gian trường...</p>
         </div>
       </div>
     );
@@ -327,13 +325,13 @@ export function SchoolBusSchoolDetailPage({
       <div className='flex h-screen flex-col items-center justify-center gap-4 bg-slate-50 text-center'>
         <GraduationCap className='h-12 w-12 text-slate-300 animate-bounce' />
         <div>
-          <h3 className='text-lg font-bold text-slate-800'>School Not Found</h3>
+          <h3 className='text-lg font-bold text-slate-800'>Không tìm thấy trường học</h3>
           <p className='text-sm text-slate-400'>
-            The requested school details could not be loaded.
+            Không thể tải thông tin trường học đã yêu cầu.
           </p>
         </div>
         <Button onClick={onClose} variant='outline' className='rounded-full'>
-          <ArrowLeft className='mr-2 h-4 w-4' /> Go back
+          <ArrowLeft className='mr-2 h-4 w-4' /> Quay lại
         </Button>
       </div>
     );
@@ -356,7 +354,7 @@ export function SchoolBusSchoolDetailPage({
         title={school.name}
         description={
           school.address ||
-          'Manage school profiles and associated pickup points.'
+          'Quản lý hồ sơ trường học và các điểm đón/trả liên kết.'
         }
         actions={
           <div className='flex items-center gap-2'>
@@ -365,14 +363,14 @@ export function SchoolBusSchoolDetailPage({
               variant='outline'
               className='rounded-full bg-white text-slate-600 hover:bg-slate-50 border-slate-200'
             >
-              <ArrowLeft className='mr-2 h-4 w-4' /> Back to directory
+              <ArrowLeft className='mr-2 h-4 w-4' /> Quay lại danh sách
             </Button>
             <Button
               onClick={() => setSchoolDialogOpen(true)}
               variant='outline'
               className='rounded-full bg-white text-slate-600 hover:bg-slate-50 border-slate-200'
             >
-              <Edit2 className='mr-2 h-3.5 w-3.5' /> Edit Profile
+              <Edit2 className='mr-2 h-3.5 w-3.5' /> Chỉnh sửa trường
             </Button>
             <Button
               className='rounded-full bg-[#C81E3A] hover:bg-[#A6172D] text-white'
@@ -381,7 +379,7 @@ export function SchoolBusSchoolDetailPage({
               }}
             >
               <Plus className='mr-1.5 h-4 w-4' />
-              Link Pickup
+              Liên kết điểm đón/trả
             </Button>
           </div>
         }
@@ -390,18 +388,18 @@ export function SchoolBusSchoolDetailPage({
           {/* Summary metrics bar */}
           <div className='grid gap-3 grid-cols-2'>
             <SchoolBusMetricCard
-              label='Linked Pickups'
+              label='Điểm đã liên kết'
               value={schoolPickupPointCount}
               icon={MapPin}
               tone='pickup'
               variant='compact'
             />
             <SchoolBusMetricCard
-              label='Coordinated points'
+              label='Trạng thái tọa độ'
               value={
                 schoolPickupPointCount && hasMissingCoords
-                  ? 'Warning'
-                  : 'Configured'
+                  ? 'Cần kiểm tra'
+                  : 'Đã cấu hình'
               }
               icon={AlertTriangle}
               tone={hasMissingCoords ? 'warning' : 'success'}
@@ -420,7 +418,7 @@ export function SchoolBusSchoolDetailPage({
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               )}
             >
-              General Info
+              Thông tin chung
             </button>
             <button
               onClick={() => setActiveTab('pickups')}
@@ -431,7 +429,7 @@ export function SchoolBusSchoolDetailPage({
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               )}
             >
-              Linked Pickups ({school.pickupPointCount || 0})
+              Điểm đã liên kết ({school.pickupPointCount || 0})
             </button>
           </div>
 
@@ -455,12 +453,12 @@ export function SchoolBusSchoolDetailPage({
         <div className='w-full lg:w-[380px] shrink-0 border-r border-slate-200 p-6 space-y-6'>
           <div className='space-y-4'>
             <h3 className='text-xs font-bold text-slate-400 uppercase tracking-widest'>
-              School Profile
+              Hồ sơ trường học
             </h3>
             <div className='bg-slate-50/50 border border-slate-100 rounded-2xl p-5 space-y-4'>
               <div className='flex flex-col gap-0.5'>
                 <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
-                  Identity Code
+                  Mã định danh
                 </span>
                 <span className='text-sm font-mono font-bold text-slate-800'>
                   {school.code || '-'}
@@ -468,7 +466,7 @@ export function SchoolBusSchoolDetailPage({
               </div>
               <div className='flex flex-col gap-0.5'>
                 <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
-                  Operational Status
+                  Trạng thái hoạt động
                 </span>
                 <div>
                   <SchoolBusStatusBadge
@@ -478,7 +476,7 @@ export function SchoolBusSchoolDetailPage({
               </div>
               <div className='flex flex-col gap-0.5'>
                 <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
-                  Contact Phone
+                  Số điện thoại liên hệ
                 </span>
                 <span className='text-xs font-semibold text-slate-700'>
                   {school.contactPhone || '-'}
@@ -486,7 +484,7 @@ export function SchoolBusSchoolDetailPage({
               </div>
               <div className='flex flex-col gap-0.5'>
                 <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
-                  Contact Email
+                  Email liên hệ
                 </span>
                 <span className='text-xs font-semibold text-slate-700'>
                   {school.contactEmail || '-'}
@@ -494,7 +492,7 @@ export function SchoolBusSchoolDetailPage({
               </div>
               <div className='flex flex-col gap-0.5'>
                 <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
-                  Address
+                  Địa chỉ
                 </span>
                 <span className='text-xs leading-relaxed text-slate-600'>
                   {school.address || '-'}
@@ -502,7 +500,7 @@ export function SchoolBusSchoolDetailPage({
               </div>
               <div className='flex flex-col gap-0.5'>
                 <span className='text-[10px] font-bold text-slate-400 uppercase tracking-wider'>
-                  Coordinates
+                  Tọa độ
                 </span>
                 {school.latitude != null ? (
                   <span className='text-xs font-mono font-medium text-slate-700'>
@@ -510,7 +508,7 @@ export function SchoolBusSchoolDetailPage({
                   </span>
                 ) : (
                   <span className='text-xs text-amber-600 font-semibold flex items-center gap-1'>
-                    <AlertTriangle className='h-3.5 w-3.5' /> Coords missing
+                    <AlertTriangle className='h-3.5 w-3.5' /> Thiếu tọa độ
                   </span>
                 )}
               </div>
@@ -522,19 +520,18 @@ export function SchoolBusSchoolDetailPage({
             <div className='rounded-2xl border border-amber-200 bg-amber-50/50 p-5 space-y-3'>
               <h4 className='text-xs font-bold text-amber-800 flex items-center gap-1.5'>
                 <AlertTriangle className='h-4 w-4 shrink-0 text-amber-600' />{' '}
-                Network Warnings
+                Cảnh báo
               </h4>
               <div className='text-xs text-amber-700 space-y-1.5 leading-relaxed'>
                 {!school.latitude && (
                   <p>
-                    - The school itself is missing coordinates, preventing it
-                    from showing on map overlays.
+                    - Trường học chưa có tọa độ nên chưa thể hiển thị trên bản đồ.
                   </p>
                 )}
                 {school.anyLinkedPointMissingCoordinates && (
                   <p>
-                    - One or more linked pickup points do not have coordinates
-                    set. Check Linked Pickups list.
+                    - Một hoặc nhiều điểm đón/trả đã liên kết chưa có tọa độ.
+                    Hãy kiểm tra danh sách điểm đã liên kết.
                   </p>
                 )}
               </div>
@@ -570,11 +567,11 @@ export function SchoolBusSchoolDetailPage({
                   </div>
                   <div>
                     <p className='text-sm font-semibold text-slate-600'>
-                      No map markers yet
+                      Chưa có điểm trên bản đồ
                     </p>
                     <p className='mt-1 max-w-[240px] text-xs leading-5 text-slate-400'>
-                      Map markers will appear once coordinates are configured
-                      for the school or linked points.
+                      Điểm bản đồ sẽ hiển thị sau khi trường hoặc các điểm liên
+                      kết được cấu hình tọa độ.
                     </p>
                   </div>
                 </div>
@@ -585,7 +582,7 @@ export function SchoolBusSchoolDetailPage({
             onFitRoute={handleFitSelected}
             canFitAll={hasMapData}
             canFitRoute={!!cleanSchoolId || !!selectedPickupPointId}
-            fitRouteLabel='Fit Selected'
+                fitRouteLabel='Thu phóng tới điểm đang chọn'
           />
         </div>
       </div>
@@ -599,20 +596,20 @@ export function SchoolBusSchoolDetailPage({
         {/* Left rail filter panel */}
         <div className='w-full lg:w-[280px] shrink-0 border-r border-slate-200 p-5 space-y-5 bg-slate-50/40'>
           <h3 className='text-xs font-bold text-slate-400 uppercase tracking-widest'>
-            Network Filter
+            Bộ lọc
           </h3>
 
           <div className='space-y-4'>
             {/* Search */}
             <div className='space-y-1.5'>
               <label className='text-[10px] font-bold uppercase tracking-wider text-slate-400'>
-                Search Point
+                Tìm điểm
               </label>
               <div className='relative'>
                 <Search className='absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400' />
                 <input
                   type='text'
-                  placeholder='Search name, code...'
+                  placeholder='Tìm theo tên hoặc mã...'
                   value={pickupSearch}
                   onChange={(e) => setPickupSearch(e.target.value)}
                   className='w-full rounded-xl border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200 shadow-sm'
@@ -622,18 +619,18 @@ export function SchoolBusSchoolDetailPage({
             {/* Usage Filter */}
             <div className='space-y-1.5'>
               <label className='text-[10px] font-bold uppercase tracking-wider text-slate-400'>
-                Usage Type
+                Loại sử dụng
               </label>
               <SchoolBusSelect
                 value={pickupUsageFilter}
                 onChange={(val) => setPickupUsageFilter(val as any)}
                 options={[
-                  { label: 'All usage types', value: 'ALL' },
-                  { label: 'Pickup only', value: 'PICKUP' },
-                  { label: 'Drop-off only', value: 'DROPOFF' },
-                  { label: 'Pickup & Drop-off', value: 'PICKUP_DROPOFF' },
+                  { label: 'Tất cả loại sử dụng', value: 'ALL' },
+                  { label: 'Chỉ đón', value: 'PICKUP' },
+                  { label: 'Chỉ trả', value: 'DROPOFF' },
+                  { label: 'Đón và trả', value: 'PICKUP_DROPOFF' },
                 ]}
-                placeholder='Select usage type'
+                placeholder='Chọn loại sử dụng'
                 fullWidth
                 className='border-slate-200 hover:border-slate-350 rounded-lg text-xs'
               />
@@ -641,7 +638,7 @@ export function SchoolBusSchoolDetailPage({
             {/* Coordinate filter */}
             <div className='space-y-1.5'>
               <label className='text-[10px] font-bold uppercase tracking-wider text-slate-400'>
-                Coordinates
+                Trạng thái tọa độ
               </label>
               <div className='grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1'>
                 {(['ALL', 'CONFIGURED', 'MISSING'] as const).map((mode) => (
@@ -655,7 +652,11 @@ export function SchoolBusSchoolDetailPage({
                         : 'text-slate-500 hover:text-slate-800'
                     )}
                   >
-                    {mode === 'ALL' ? 'All' : mode.toLowerCase()}
+                    {mode === 'ALL'
+                      ? 'Tất cả'
+                      : mode === 'CONFIGURED'
+                        ? 'Đã cấu hình'
+                        : 'Thiếu tọa độ'}
                   </button>
                 ))}
               </div>
@@ -670,11 +671,11 @@ export function SchoolBusSchoolDetailPage({
               <Link2 className='h-10 w-10 text-slate-300 animate-pulse' />
               <div>
                 <p className='text-sm font-semibold text-slate-600'>
-                  No linked pickup points found
+                  Chưa có điểm đón/trả được liên kết
                 </p>
                 <p className='text-xs text-slate-400 max-w-xs mt-1'>
-                  Connect pickup points from the network database to establish
-                  routing paths.
+                  Liên kết điểm đón/trả để phục vụ lập
+                  tuyến.
                 </p>
               </div>
             </div>
@@ -703,12 +704,12 @@ export function SchoolBusSchoolDetailPage({
                             </h4>
                             {lp.isDefault && (
                               <span className='bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[9px] font-bold border border-indigo-100'>
-                                Default
+                                Mặc định
                               </span>
                             )}
                           </div>
                           <p className='text-xs text-slate-400 mt-0.5 max-w-xl truncate'>
-                            {lp.pickupPointAddress || 'No address'}
+                            {lp.pickupPointAddress || 'Chưa có địa chỉ'}
                           </p>
                         </div>
                       </div>
@@ -726,11 +727,11 @@ export function SchoolBusSchoolDetailPage({
 
                         {hasCoords ? (
                           <span className='inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10'>
-                            <MapPinCheck className='h-3 w-3' /> Coords
+                            <MapPinCheck className='h-3 w-3' /> Có tọa độ
                           </span>
                         ) : (
                           <span className='inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-600/15'>
-                            <AlertTriangle className='h-3 w-3' /> No coords
+                            <AlertTriangle className='h-3 w-3' /> Chưa có tọa độ
                           </span>
                         )}
 
@@ -743,9 +744,9 @@ export function SchoolBusSchoolDetailPage({
                               setDeleteTarget({
                                 type: 'link',
                                 id: lp.pickupPointId,
-                                title: 'Unlink Pickup Point',
+                                title: 'Hủy liên kết điểm đón/trả',
                                 description:
-                                  'Unlink this pickup point? Associated time windows will also be deleted.',
+                                  'Hủy liên kết điểm đón/trả này khỏi trường?',
                               })
                             }
                           >
@@ -794,9 +795,9 @@ export function SchoolBusSchoolDetailPage({
           onOpenChange={(open) => {
             if (!open) setDeleteTarget(null);
           }}
-          title={deleteTarget?.title || 'Delete confirmation'}
+          title={deleteTarget?.title || 'Xác nhận xóa'}
           description={
-            deleteTarget?.description || 'This operation is permanent.'
+            deleteTarget?.description || 'Thao tác này không thể hoàn tác.'
           }
           isLoading={linkingPickup || unlinkingPickup}
           onConfirm={handleConfirmDelete}

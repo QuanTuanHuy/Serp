@@ -21,6 +21,7 @@ import { Search, Settings, ChevronDown, Home } from 'lucide-react';
 import { NotificationButton } from '@/modules/notifications';
 import { cn } from '@/shared/utils';
 import { useUser } from '@/modules/account';
+import { useSchoolBusNavigationLabels } from '../useSchoolBusNavigationLabels';
 
 interface SchoolBusTopbarProps {
   className?: string;
@@ -39,6 +40,7 @@ export function SchoolBusTopbar({
   const pathname = usePathname();
 
   const { getInitials, getDisplayName, user } = useUser();
+  const { moduleLabel, getSegmentLabel } = useSchoolBusNavigationLabels();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,18 +59,19 @@ export function SchoolBusTopbar({
     const decodedPath = decodeURIComponent(pathname);
     const segments = decodedPath.split('/').filter(Boolean);
     return segments.map((segment, index) => {
-      let name = segment.replace(/-/g, ' ');
-      if (name.includes('&')) {
-        name = name.split('&')[0];
-      }
+      const href = '/' + segments.slice(0, index + 1).join('/');
+      let name = getSegmentLabel(segment, href);
       if (segment.toLowerCase() === 'school-bus') {
-        name = 'School Bus';
-      } else {
-        name = name.charAt(0).toUpperCase() + name.slice(1);
+        return {
+          name: moduleLabel,
+          href,
+          isLast: index === segments.length - 1,
+        };
       }
+      name = name.charAt(0).toUpperCase() + name.slice(1);
       return {
         name,
-        href: '/' + segments.slice(0, index + 1).join('/'),
+        href,
         isLast: index === segments.length - 1,
       };
     });
@@ -150,7 +153,7 @@ export function SchoolBusTopbar({
           <form onSubmit={handleSearch} className='relative'>
             <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
             <Input
-              placeholder='Search trips, students, routes...'
+              placeholder='Tìm chuyến xe, học sinh, tuyến...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='pl-10 pr-4'
@@ -201,7 +204,7 @@ export function SchoolBusTopbar({
                       onClick={() => router.push('/school-bus/settings')}
                     >
                       <Settings className='mr-2 h-4 w-4' />
-                      Settings
+                      Cài đặt
                     </Button>
                     <Button
                       variant='ghost'
@@ -209,7 +212,7 @@ export function SchoolBusTopbar({
                       onClick={() => router.push('/')}
                     >
                       <Home className='mr-2 h-4 w-4' />
-                      Back to SERP
+                      Quay về SERP
                     </Button>
                   </div>
 
@@ -219,7 +222,7 @@ export function SchoolBusTopbar({
                       className='w-full justify-start text-destructive hover:text-destructive'
                       onClick={handleLogout}
                     >
-                      Logout
+                      Đăng xuất
                     </Button>
                   </div>
                 </div>

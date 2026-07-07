@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -143,27 +143,27 @@ function getRowReadiness(
 function RowStatusBadge({ readiness }: { readiness: RowReadiness }) {
   const configs: Record<string, { label: string; className: string }> = {
     'missing-student': {
-      label: 'Missing required fields',
+      label: 'Thiếu thông tin bắt buộc',
       className: 'bg-red-50 text-red-700 ring-red-200',
     },
     'missing-tripopt': {
-      label: 'Missing required fields',
+      label: 'Thiếu thông tin bắt buộc',
       className: 'bg-red-50 text-red-700 ring-red-200',
     },
     'missing-pickup': {
-      label: 'Missing required fields',
+      label: 'Thiếu thông tin bắt buộc',
       className: 'bg-red-50 text-red-700 ring-red-200',
     },
     'missing-dropoff': {
-      label: 'Missing required fields',
+      label: 'Thiếu thông tin bắt buộc',
       className: 'bg-red-50 text-red-700 ring-red-200',
     },
     'missing-target': {
-      label: 'Missing required fields',
+      label: 'Thiếu thông tin bắt buộc',
       className: 'bg-red-50 text-red-700 ring-red-200',
     },
     ready: {
-      label: 'Complete',
+      label: 'Hoàn tất',
       className: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
     },
   };
@@ -182,17 +182,17 @@ function RowStatusBadge({ readiness }: { readiness: RowReadiness }) {
 
 const transportRequestSchema = z
   .object({
-    parentProfileId: z.coerce.number().min(1, 'Parent is required'),
-    schoolId: z.coerce.number().min(1, 'School is required'),
-    requestType: z.string().min(1, 'Request type is required'),
-    effectiveFrom: z.string().min(1, 'Effective from is required'),
+    parentProfileId: z.coerce.number().min(1, 'Vui lòng chọn phụ huynh'),
+    schoolId: z.coerce.number().min(1, 'Vui lòng chọn trường học'),
+    requestType: z.string().min(1, 'Vui lòng chọn loại yêu cầu'),
+    effectiveFrom: z.string().min(1, 'Vui lòng chọn ngày hiệu lực'),
     effectiveTo: z.string().optional(),
     notes: z.string().optional(),
     changeReason: z.string().optional(),
     students: z
       .array(
         z.object({
-          studentId: z.coerce.number().min(1, 'Student is required'),
+          studentId: z.coerce.number().min(1, 'Vui lòng chọn học sinh'),
           pickupPointId: z.string().optional(),
           dropoffPointId: z.string().optional(),
           tripOption: z.string().optional(),
@@ -222,7 +222,7 @@ const transportRequestSchema = z
       if (!student.studentId || Number(student.studentId) === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Student is required',
+          message: 'Vui lòng chọn học sinh',
           path: ['students', index, 'studentId'],
         });
         return;
@@ -236,7 +236,7 @@ const transportRequestSchema = z
         ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `Target subscription is required for request type ${reqType}`,
+            message: `Vui lòng chọn đăng ký dịch vụ cần áp dụng cho loại yêu cầu ${reqType}`,
             path: ['students', index, 'targetSubscriptionId'],
           });
         }
@@ -250,7 +250,7 @@ const transportRequestSchema = z
         ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'Trip option is required',
+            message: 'Vui lòng chọn phương án đi xe',
             path: ['students', index, 'tripOption'],
           });
         }
@@ -267,7 +267,7 @@ const transportRequestSchema = z
         ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'Pickup point is required',
+            message: 'Vui lòng chọn điểm đón',
             path: ['students', index, 'pickupPointId'],
           });
         }
@@ -280,7 +280,7 @@ const transportRequestSchema = z
         ) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'Drop-off point is required',
+            message: 'Vui lòng chọn điểm trả',
             path: ['students', index, 'dropoffPointId'],
           });
         }
@@ -296,7 +296,7 @@ const transportRequestSchema = z
         if (!hasDays) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'At least one day must be selected',
+            message: 'Vui lòng chọn ít nhất một ngày hoạt động',
             path: ['students', index, 'monday'],
           });
         }
@@ -305,25 +305,25 @@ const transportRequestSchema = z
   });
 
 const routeSchema = z.object({
-  schoolId: z.coerce.number().min(1, 'School is required'),
+  schoolId: z.coerce.number().min(1, 'Vui lòng chọn trường học'),
   routeDirection: z.enum(['OUTBOUND', 'RETURN']),
   startLocationType: z.enum(['SCHOOL', 'DEPOT']),
   startDepotId: z.string().optional(),
   endLocationType: z.enum(['SCHOOL', 'DEPOT']),
   endDepotId: z.string().optional(),
-  routeName: z.string().min(1, 'Route name is required'),
-  serviceDate: z.string().min(1, 'Service date is required'),
+  routeName: z.string().min(1, 'Vui lòng nhập tên tuyến'),
+  serviceDate: z.string().min(1, 'Vui lòng chọn ngày phục vụ'),
   planningNotes: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
 const rejectSchema = z.object({
-  reason: z.string().min(1, 'Reason is required'),
+  reason: z.string().min(1, 'Vui lòng nhập lý do'),
 });
 
 const assignmentSchema = z.object({
-  busId: z.coerce.number().min(1, 'Bus is required'),
-  driverId: z.coerce.number().min(1, 'Driver is required'),
+  busId: z.coerce.number().min(1, 'Vui lòng chọn xe bus'),
+  driverId: z.coerce.number().min(1, 'Vui lòng chọn tài xế'),
   attendantId: z.string().optional(),
   assignmentNote: z.string().optional(),
   reason: z.string().optional(),
@@ -372,7 +372,8 @@ function PickupDropoffPointsFields({
   const makePickupOptions = React.useMemo(
     () =>
       pickupCapablePoints.map((pp) => {
-        const name: string = pp.pickupPointName || `Point #${pp.pickupPointId}`;
+        const name: string =
+          pp.pickupPointName || `Điểm #${pp.pickupPointId}`;
         return { value: String(pp.pickupPointId), label: name };
       }),
     [pickupCapablePoints]
@@ -381,7 +382,8 @@ function PickupDropoffPointsFields({
   const makeDropoffOptions = React.useMemo(
     () =>
       dropoffCapablePoints.map((pp) => {
-        const name: string = pp.pickupPointName || `Point #${pp.pickupPointId}`;
+        const name: string =
+          pp.pickupPointName || `Điểm #${pp.pickupPointId}`;
         return { value: String(pp.pickupPointId), label: name };
       }),
     [dropoffCapablePoints]
@@ -393,10 +395,10 @@ function PickupDropoffPointsFields({
         <SelectField
           form={form}
           name={`students.${index}.pickupPointId`}
-          label={pickupRequired ? 'Pickup point *' : 'Pickup point'}
+          label={pickupRequired ? 'Điểm đón *' : 'Điểm đón/trả'}
           allowEmpty
           emptyValue='__none__'
-          emptyLabel='No pickup point'
+          emptyLabel='Chưa có điểm đón/trả'
           options={makePickupOptions}
         />
       </div>
@@ -405,10 +407,10 @@ function PickupDropoffPointsFields({
         <SelectField
           form={form}
           name={`students.${index}.dropoffPointId`}
-          label={dropoffRequired ? 'Drop-off point *' : 'Drop-off point'}
+          label={dropoffRequired ? 'Điểm trả *' : 'Điểm trả'}
           allowEmpty
           emptyValue='__none__'
-          emptyLabel='No drop-off point'
+          emptyLabel='Chưa có điểm trả'
           options={makeDropoffOptions}
         />
       </div>
@@ -440,7 +442,7 @@ export function TransportRequestForm({
   onSubmit,
   isLoading = false,
   onCancel,
-  submitLabel = 'Save request',
+  submitLabel = 'Lưu yêu cầu',
   isParentRole = false,
   currentParentId,
 }: TransportRequestFormProps) {
@@ -803,7 +805,7 @@ export function TransportRequestForm({
     const markers: StudentMapMarker[] = [];
     allStudentValues.forEach((sv, idx) => {
       const st = filteredStudents.find((s) => s.id === Number(sv.studentId));
-      const name = st?.fullName || `Student ${idx + 1}`;
+      const name = st?.fullName || `Học sinh ${idx + 1}`;
       if (sv.pickupPointId) {
         const pp = linkedPickupPoints.find(
           (lp) => lp.pickupPointId === Number(sv.pickupPointId)
@@ -889,31 +891,31 @@ export function TransportRequestForm({
   allStudentValues.forEach((sv, idx) => {
     const studentName =
       students.find((s) => s.id === Number(sv.studentId))?.fullName ||
-      `Student ${idx + 1}`;
+      `Học sinh ${idx + 1}`;
     const state = rowReadinessList[idx];
 
     switch (state) {
       case 'missing-student':
-        _blockingMessages.push(`${studentName}: Student selection is required`);
+        _blockingMessages.push(`${studentName}: Vui lòng chọn học sinh`);
         break;
       case 'missing-tripopt':
         _blockingMessages.push(
-          `${studentName}: Trip option is required (Morning / Afternoon / Round trip)`
+          `${studentName}: Vui lòng chọn phương án đi xe (sáng / chiều / hai chiều)`
         );
         break;
       case 'missing-pickup':
         _blockingMessages.push(
-          `${studentName}: Pickup point is required for the selected trip option`
+          `${studentName}: Vui lòng chọn điểm đón cho phương án đi xe đã chọn`
         );
         break;
       case 'missing-dropoff':
         _blockingMessages.push(
-          `${studentName}: Drop-off point is required for the selected trip option`
+          `${studentName}: Vui lòng chọn điểm trả cho phương án đi xe đã chọn`
         );
         break;
       case 'missing-target':
         _blockingMessages.push(
-          `${studentName}: Target subscription is required`
+          `${studentName}: Vui lòng chọn đăng ký dịch vụ cần áp dụng`
         );
         break;
       case 'ready':
@@ -973,8 +975,8 @@ export function TransportRequestForm({
           {/* Left panel: Info & Students & Validation */}
           <div className='space-y-6 flex flex-col'>
             <SchoolBusFormSection
-              title='Request Information'
-              description='Effective dates define when this demand can be used for planning.'
+              title='Thông tin yêu cầu'
+              description='Ngày hiệu lực xác định thời gian yêu cầu được dùng cho lập kế hoạch.'
             >
               <div
                 className={cn(
@@ -989,7 +991,7 @@ export function TransportRequestForm({
                   <SelectField
                     form={form}
                     name='parentProfileId'
-                    label='Parent'
+                    label='Phụ huynh'
                     options={parents.map((parent) => ({
                       value: String(parent.id),
                       label: parent.label,
@@ -999,7 +1001,7 @@ export function TransportRequestForm({
                 <SelectField
                   form={form}
                   name='schoolId'
-                  label='School'
+                  label='Trường học'
                   options={schools.map((school) => ({
                     value: String(school.id),
                     label: school.label,
@@ -1008,7 +1010,7 @@ export function TransportRequestForm({
                 <SelectField
                   form={form}
                   name='requestType'
-                  label='Request type'
+                  label='Loại yêu cầu'
                   options={REQUEST_TYPE_OPTIONS.map((option) => ({
                     value: option.value,
                     label: option.label,
@@ -1020,13 +1022,13 @@ export function TransportRequestForm({
                 <TextField
                   form={form}
                   name='effectiveFrom'
-                  label='Effective from'
+                  label='Hiệu lực từ'
                   type='date'
                 />
                 <TextField
                   form={form}
                   name='effectiveTo'
-                  label='Effective to'
+                  label='Hiệu lực đến'
                   type='date'
                 />
               </div>
@@ -1037,7 +1039,7 @@ export function TransportRequestForm({
                   name='notes'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Notes</FormLabel>
+                      <FormLabel>Ghi chú</FormLabel>
                       <FormControl>
                         <Textarea
                           {...field}
@@ -1054,8 +1056,8 @@ export function TransportRequestForm({
             </SchoolBusFormSection>
 
             <SchoolBusFormSection
-              title={`Requested Students (${validationSummary.readyCount} / ${validationSummary.totalCount} ready)`}
-              description='Add students and specify their active days and locations.'
+              title={`Học sinh yêu cầu (${validationSummary.readyCount} / ${validationSummary.totalCount} đã hoàn tất)`}
+              description='Thêm học sinh và khai báo ngày hoạt động, điểm đón/trả tương ứng.'
               action={
                 <Button
                   type='button'
@@ -1064,7 +1066,7 @@ export function TransportRequestForm({
                   className='rounded-lg h-8 border-slate-200 text-slate-800 hover:bg-slate-50 shadow-none'
                   onClick={() => append(EMPTY_STUDENT)}
                 >
-                  <Plus className='h-3.5 w-3.5 mr-1.5' /> Add student
+                  <Plus className='h-3.5 w-3.5 mr-1.5' /> Thêm học sinh
                 </Button>
               }
             >
@@ -1086,7 +1088,7 @@ export function TransportRequestForm({
                           {index + 1}
                         </span>
                         <span className='font-semibold text-slate-800 text-xs'>
-                          Student details
+                          Thông tin học sinh
                         </span>
                         <RowStatusBadge
                           readiness={
@@ -1108,7 +1110,7 @@ export function TransportRequestForm({
                           }
                         }}
                       >
-                        Remove
+                        Xóa
                       </Button>
                     </div>
 
@@ -1116,16 +1118,16 @@ export function TransportRequestForm({
                       <SelectField
                         form={form}
                         name={`students.${index}.studentId`}
-                        label='Student *'
+                        label='Học sinh *'
                         emptyText={
                           isFetchingStudents
-                            ? 'Loading students...'
+                            ? 'Đang tải học sinh...'
                             : !schoolId || Number(schoolId) === 0
-                              ? 'Please select a school first'
+                              ? 'Vui lòng chọn trường học trước'
                               : !parentProfileId ||
                                   Number(parentProfileId) === 0
-                                ? 'Please select a parent first'
-                                : 'No students found matching this school and parent'
+                                ? 'Vui lòng chọn phụ huynh trước'
+                                : 'Không tìm thấy học sinh phù hợp với trường và phụ huynh này'
                         }
                         options={filteredStudents.map((student) => ({
                           value: String(student.id),
@@ -1136,11 +1138,11 @@ export function TransportRequestForm({
                         form={form}
                         name={`students.${index}.tripOption`}
                         label={
-                          requiresRouting ? 'Trip option *' : 'Trip option'
+                          requiresRouting ? 'Phương án đi xe *' : 'Phương án đi xe'
                         }
                         allowEmpty
                         emptyValue='__none__'
-                        emptyLabel='Select trip option'
+                        emptyLabel='Chọn loại chuyến'
                         options={TRIP_OPTION_OPTIONS.map((o) => ({
                           value: o.value,
                           label: o.label,
@@ -1177,10 +1179,10 @@ export function TransportRequestForm({
                         <SelectField
                           form={form}
                           name={`students.${index}.targetSubscriptionId`}
-                          label='Target subscription *'
+                          label='Đăng ký dịch vụ đối tượng *'
                           allowEmpty
                           emptyValue='__none__'
-                          emptyLabel='No target'
+                          emptyLabel='Chưa có đối tượng'
                           options={filteredSubscriptions.map((s) => ({
                             value: String(s.id),
                             label: `${s.subscriptionCode} - ${s.studentName}`,
@@ -1192,17 +1194,17 @@ export function TransportRequestForm({
                     <div>
                       <div className='space-y-1.5'>
                         <FormLabel className='block text-[11px] font-semibold text-slate-700 uppercase tracking-wider'>
-                          Days of week
+                          Ngày trong tuần
                         </FormLabel>
                         <div className='flex flex-wrap gap-1.5'>
                           {[
-                            { field: 'monday' as const, label: 'Mon' },
-                            { field: 'tuesday' as const, label: 'Tue' },
-                            { field: 'wednesday' as const, label: 'Wed' },
-                            { field: 'thursday' as const, label: 'Thu' },
-                            { field: 'friday' as const, label: 'Fri' },
-                            { field: 'saturday' as const, label: 'Sat' },
-                            { field: 'sunday' as const, label: 'Sun' },
+                            { field: 'monday' as const, label: 'T2' },
+                            { field: 'tuesday' as const, label: 'T3' },
+                            { field: 'wednesday' as const, label: 'T4' },
+                            { field: 'thursday' as const, label: 'T5' },
+                            { field: 'friday' as const, label: 'T6' },
+                            { field: 'saturday' as const, label: 'T7' },
+                            { field: 'sunday' as const, label: 'CN' },
                           ].map(({ field, label }) => (
                             <FormField
                               key={field}
@@ -1236,12 +1238,12 @@ export function TransportRequestForm({
                       name={`students.${index}.studentNote`}
                       render={({ field: noteField }) => (
                         <FormItem>
-                          <FormLabel>Student note</FormLabel>
+                          <FormLabel>Ghi chú học sinh</FormLabel>
                           <FormControl>
                             <Input
                               {...noteField}
                               value={noteField.value || ''}
-                              placeholder='Optional note for this student'
+                              placeholder='Ghi chú tùy chọn cho học sinh này'
                               className='text-xs'
                             />
                           </FormControl>
@@ -1264,19 +1266,19 @@ export function TransportRequestForm({
                 )}
               >
                 <div className='flex items-center justify-between font-semibold border-b pb-2 border-slate-100/60'>
-                  <span>Validation summary</span>
+                  <span>Tóm tắt kiểm tra</span>
                   <span>
                     {validationSummary.readyCount} /{' '}
                     {validationSummary.totalCount}
                     {validationSummary.readyCount ===
                       validationSummary.totalCount &&
                     validationSummary.isAllReady
-                      ? ' - All ready'
+                      ? ' - Đã sẵn sàng'
                       : validationSummary.needsConfigCount > 0
-                        ? ' ready - ' +
+                        ? ' sẵn sàng - ' +
                           validationSummary.needsConfigCount +
-                          ' need config'
-                        : ' ready'}
+                          ' cần bổ sung cấu hình'
+                        : ' sẵn sàng'}
                   </span>
                 </div>
 
@@ -1284,7 +1286,7 @@ export function TransportRequestForm({
                 {validationSummary.blockingMessages.length > 0 && (
                   <div className='space-y-1'>
                     <p className='font-bold text-red-700 uppercase text-[10px] tracking-wider'>
-                      Missing required fields - prevent submission:
+                      Thiếu thông tin bắt buộc nên chưa thể gửi:
                     </p>
                     <ul className='list-disc list-inside space-y-1 text-[11px] font-medium'>
                       {validationSummary.blockingMessages.map((msg, i) => (
@@ -1298,7 +1300,7 @@ export function TransportRequestForm({
                 {validationSummary.approvalBlockerMessages.length > 0 && (
                   <div className='space-y-1 pt-1'>
                     <p className='font-bold text-amber-700 uppercase text-[10px] tracking-wider'>
-                      Configuration required - can save but cannot approve:
+                      Cần bổ sung cấu hình - có thể lưu nhưng chưa thể duyệt:
                     </p>
                     <ul className='list-disc list-inside space-y-1 text-[11px] font-medium text-amber-800'>
                       {validationSummary.approvalBlockerMessages.map(
@@ -1315,8 +1317,7 @@ export function TransportRequestForm({
                   validationSummary.blockingMessages.length === 0 &&
                   validationSummary.approvalBlockerMessages.length === 0 && (
                     <p className='text-[11px] font-medium text-emerald-700'>
-                      OK All students are fully configured and ready for
-                      transport planning.
+                      Tất cả học sinh đã đủ thông tin và sẵn sàng để lập kế hoạch.
                     </p>
                   )}
               </div>
@@ -1327,14 +1328,14 @@ export function TransportRequestForm({
           <div className='space-y-4 lg:sticky lg:top-6 lg:self-start'>
             <div className='space-y-1.5 px-1'>
               <h4 className='text-sm font-semibold text-slate-900'>
-                Pickup point map
+                Bản đồ điểm đón/trả
               </h4>
               <p className='text-xs text-slate-500 leading-relaxed'>
-                Select a student row on the left, then click a map marker to
-                assign that point.
+                Chọn một học sinh ở bên trái, sau đó bấm vào điểm trên bản đồ để
+                gán điểm đó.
                 {activeTripOption?.toUpperCase() === 'AFTERNOON'
-                  ? ' Click sets drop-off point.'
-                  : ' Click sets pickup point.'}
+                  ? ' Bấm để đặt điểm trả.'
+                  : ' Bấm để đặt điểm đón.'}
               </p>
             </div>
             <SchoolBusMapWorkspace
@@ -1344,7 +1345,7 @@ export function TransportRequestForm({
               onFitRoute={handleFitSelected}
               canFitAll={canFitAll}
               canFitRoute={canFitSelected}
-              fitRouteLabel='Fit Selected'
+              fitRouteLabel='Thu phóng tuyến đang chọn'
               map={
                 <OperationsMap
                   schools={selectedSchool ? [selectedSchool as any] : []}
@@ -1366,7 +1367,7 @@ export function TransportRequestForm({
                   <div>
                     <p className='text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2 mb-3 flex items-center gap-1.5'>
                       <User className='h-4 w-4 text-slate-400' />
-                      Active student row context
+                      Ngữ cảnh học sinh đang chọn
                     </p>
                     {activeStudentIndex !== null &&
                     activeStudentIndex >= 0 &&
@@ -1374,7 +1375,7 @@ export function TransportRequestForm({
                       <div className='space-y-3.5 bg-slate-50/40 p-4 rounded-xl border border-slate-100'>
                         <div>
                           <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>
-                            Selected student
+                            Học sinh đang chọn
                           </span>
                           {activeStudent ? (
                             <span className='inline-flex items-center gap-1.5 font-semibold text-slate-800 text-xs bg-white px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm'>
@@ -1383,21 +1384,21 @@ export function TransportRequestForm({
                             </span>
                           ) : (
                             <span className='inline-flex items-center text-amber-600 italic font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-100/50'>
-                              Not selected
+                              Chưa chọn
                             </span>
                           )}
                         </div>
                         <div>
                           <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>
-                            Trip option
+                            Phương án đi xe
                           </span>
                           <span className='inline-flex items-center font-semibold text-slate-700 text-xs bg-white px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm'>
-                            {activeTripOption || 'ROUND_TRIP (Default)'}
+                            {activeTripOption || 'Hai chiều (mặc định)'}
                           </span>
                         </div>
                         <div>
                           <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>
-                            Pickup point
+                            Điểm đón
                           </span>
                           {selectedPickupPointId &&
                           selectedPickupPointId !== '__none__' ? (
@@ -1407,17 +1408,17 @@ export function TransportRequestForm({
                                 (lp) =>
                                   String(lp.pickupPointId) ===
                                   selectedPickupPointId
-                              )?.pickupPointName || 'Selected'}
+                              )?.pickupPointName || 'Đã chọn'}
                             </span>
                           ) : (
                             <span className='inline-flex items-center gap-1 text-amber-600 italic font-medium bg-amber-50 px-2 py-1 rounded-md border border-amber-100/50'>
-                              Not selected
+                              Chưa chọn
                             </span>
                           )}
                         </div>
                         <div>
                           <span className='font-bold text-slate-400 block uppercase tracking-wider text-[8px] mb-1'>
-                            Drop-off point
+                            Điểm trả
                           </span>
                           {selectedDropoffPointId &&
                           selectedDropoffPointId !== '__none__' ? (
@@ -1427,28 +1428,28 @@ export function TransportRequestForm({
                                 (lp) =>
                                   String(lp.pickupPointId) ===
                                   selectedDropoffPointId
-                              )?.pickupPointName || 'Selected'}
+                              )?.pickupPointName || 'Đã chọn'}
                             </span>
                           ) : (
                             <span className='inline-flex items-center gap-1 text-slate-400 italic font-medium bg-white px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm'>
-                              Same as pickup
+                              Giống điểm đón
                             </span>
                           )}
                         </div>
                         <div className='pt-2.5 border-t border-slate-100'>
                           <p className='text-[10px] text-slate-400 italic leading-relaxed'>
-                             Click a map marker to assign it to this row as{' '}
+                            Bấm vào điểm trên bản đồ để gán cho dòng này làm{' '}
                             {activeTripOption === 'AFTERNOON'
-                              ? 'Drop-off'
-                              : 'Pickup'}
+                              ? 'điểm trả'
+                              : 'Điểm đón'}
                             .
                           </p>
                         </div>
                       </div>
                     ) : (
                       <div className='py-8 text-center text-slate-400 italic bg-slate-50/50 rounded-xl border border-slate-100 border-dashed'>
-                        Select a student row on the left to assign points using
-                        the map.
+                        Chọn một học sinh ở bên trái để gán điểm bằng
+                        bản đồ.
                       </div>
                     )}
                   </div>
@@ -1458,8 +1459,8 @@ export function TransportRequestForm({
 
             {!selectedSchoolLat || !selectedSchoolLng ? (
               <div className='rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3 text-xs text-amber-800 leading-relaxed shadow-sm'>
-                Warning: Missing coordinates: this school is not pinned yet, so only
-                pickup points with coordinates will appear on the map.
+                Cảnh báo: trường học chưa có tọa độ, nên bản đồ chỉ hiển thị
+                các điểm đón/trả đã có tọa độ.
               </div>
             ) : null}
           </div>
@@ -1474,7 +1475,7 @@ export function TransportRequestForm({
               className='rounded-full border-slate-300 hover:bg-slate-50'
               onClick={onCancel}
             >
-              Cancel
+              Hủy
             </Button>
           ) : null}
           <Button
@@ -1482,7 +1483,7 @@ export function TransportRequestForm({
             className='rounded-full bg-[#C81E3A] hover:bg-[#B31B34] text-white font-semibold shadow-sm'
             disabled={isLoading || !validationSummary.isAllReady}
           >
-            {isLoading ? 'Saving...' : submitLabel}
+            {isLoading ? 'Đang lưu...' : submitLabel}
           </Button>
         </div>
       </form>
@@ -1507,7 +1508,7 @@ export function RoutePlanForm({
   onSubmit,
   isLoading = false,
   onCancel,
-  submitLabel = 'Save route',
+  submitLabel = 'Lưu tuyến',
 }: RoutePlanFormProps) {
   const form = useForm<RouteFormValues>({
     resolver: zodResolver(routeSchema) as any,
@@ -1601,26 +1602,26 @@ export function RoutePlanForm({
           <SelectField
             form={form}
             name='schoolId'
-            label='School'
+            label='Trường học'
             options={schools.map((school) => ({
               value: String(school.id),
               label: school.label,
             }))}
           />
           {initialData?.routeCode ? (
-            <ReadOnlyField label='Route code' value={initialData.routeCode} />
+            <ReadOnlyField label='Mã tuyến' value={initialData.routeCode} />
           ) : null}
-          <TextField form={form} name='routeName' label='Route name' />
+          <TextField form={form} name='routeName' label='Tên tuyến' />
           <TextField
             form={form}
             name='serviceDate'
-            label='Service date'
+            label='Ngày phục vụ'
             type='date'
           />
           <SelectField
             form={form}
             name='routeDirection'
-            label='Route direction'
+            label='Chiều tuyến'
             options={ROUTE_DIRECTION_OPTIONS.map((option) => ({
               value: option.value,
               label: option.label,
@@ -1631,18 +1632,17 @@ export function RoutePlanForm({
         <div className={schoolBusUi.subtlePanel}>
           <div className='mb-4'>
             <p className='text-sm font-semibold text-slate-950'>
-              Fixed start and end points
+              Điểm đầu và điểm cuối cố định
             </p>
             <p className='mt-1 text-xs text-slate-500'>
-              Routes must explicitly model where the bus starts and where it
-              ends.
+              Tuyến cần xác định rõ xe bắt đầu và kết thúc ở đâu.
             </p>
           </div>
           <div className='grid gap-4 md:grid-cols-2'>
             <SelectField
               form={form}
               name='startLocationType'
-              label='Start location'
+              label='Vị trí bắt đầu'
               disabled={routeDirection === 'RETURN'}
               options={ROUTE_LOCATION_TYPE_OPTIONS.map((option) => ({
                 value: option.value,
@@ -1653,7 +1653,7 @@ export function RoutePlanForm({
               <SelectField
                 form={form}
                 name='startDepotId'
-                label='Start depot'
+                label='Bãi xe bắt đầu'
                 options={depots.map((depot) => ({
                   value: String(depot.id),
                   label: depot.name,
@@ -1661,12 +1661,12 @@ export function RoutePlanForm({
               />
             ) : (
               <ReadOnlyField
-                label='Start school'
+                label='Trường bắt đầu'
                 value={(() => {
                   const found = schools.find(
                     (school) => school.id === schoolId
                   );
-                  return found ? found.label : 'Select a school';
+                  return found ? found.label : 'Chọn trường';
                 })()}
               />
             )}
@@ -1674,7 +1674,7 @@ export function RoutePlanForm({
             <SelectField
               form={form}
               name='endLocationType'
-              label='End location'
+              label='Vị trí kết thúc'
               disabled={routeDirection === 'OUTBOUND'}
               options={ROUTE_LOCATION_TYPE_OPTIONS.map((option) => ({
                 value: option.value,
@@ -1685,7 +1685,7 @@ export function RoutePlanForm({
               <SelectField
                 form={form}
                 name='endDepotId'
-                label='End depot'
+                label='Bãi xe kết thúc'
                 options={depots.map((depot) => ({
                   value: String(depot.id),
                   label: depot.name,
@@ -1693,12 +1693,12 @@ export function RoutePlanForm({
               />
             ) : (
               <ReadOnlyField
-                label='End school'
+                label='Trường kết thúc'
                 value={(() => {
                   const found = schools.find(
                     (school) => school.id === schoolId
                   );
-                  return found ? found.label : 'Select a school';
+                  return found ? found.label : 'Chọn trường';
                 })()}
               />
             )}
@@ -1706,8 +1706,8 @@ export function RoutePlanForm({
           {depots.length === 0 &&
           (startLocationType === 'DEPOT' || endLocationType === 'DEPOT') ? (
             <p className='mt-3 text-xs font-medium text-amber-700'>
-              No depots available. Create a depot from Schools / Depots before
-              saving this route.
+              Chưa có bãi xe. Hãy tạo bãi xe trong mục Trường học / Bãi xe trước khi
+              lưu tuyến này.
             </p>
           ) : null}
         </div>
@@ -1717,7 +1717,7 @@ export function RoutePlanForm({
           name='planningNotes'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Planning notes</FormLabel>
+              <FormLabel>Ghi chú lập tuyến</FormLabel>
               <FormControl>
                 <Textarea {...field} value={field.value || ''} />
               </FormControl>
@@ -1734,7 +1734,7 @@ export function RoutePlanForm({
               className={schoolBusUi.outlineButton}
               onClick={onCancel}
             >
-              Cancel
+              Hủy
             </Button>
           ) : null}
           <Button
@@ -1742,7 +1742,7 @@ export function RoutePlanForm({
             className={schoolBusUi.primaryButton}
             disabled={isLoading}
           >
-            {isLoading ? 'Saving...' : submitLabel}
+            {isLoading ? 'Đang lưu...' : submitLabel}
           </Button>
         </div>
       </form>
@@ -1778,8 +1778,8 @@ export function RejectTransportRequestDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title='Reject transport request'
-      description='Capture the rejection reason before closing this request.'
+      title='Từ chối yêu cầu xe bus'
+      description='Nhập lý do từ chối trước khi đóng yêu cầu này.'
     >
       <Form {...form}>
         <form
@@ -1791,7 +1791,7 @@ export function RejectTransportRequestDialog({
             name='reason'
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Reason</FormLabel>
+                <FormLabel>Lý do</FormLabel>
                 <FormControl>
                   <Textarea {...field} value={field.value || ''} />
                 </FormControl>
@@ -1807,14 +1807,14 @@ export function RejectTransportRequestDialog({
               className={schoolBusUi.outlineButton}
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               type='submit'
               className={schoolBusUi.dangerButton}
               disabled={isLoading}
             >
-              {isLoading ? 'Rejecting...' : 'Reject request'}
+              {isLoading ? 'Đang từ chối...' : 'Từ chối yêu cầu'}
             </Button>
           </div>
         </form>
@@ -1879,8 +1879,8 @@ export function RouteAssignmentDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title='Assign route resources'
-      description='Assign a driver and optional attendant to this route.'
+      title='Phân công nguồn lực cho tuyến'
+      description='Chọn tài xế và phụ xe nếu có cho tuyến này.'
     >
       <Form {...form}>
         <form
@@ -1902,7 +1902,7 @@ export function RouteAssignmentDialog({
             <SelectField
               form={form}
               name='busId'
-              label='Bus'
+              label='Xe'
               options={buses.map((bus) => ({
                 value: String(bus.id),
                 label: bus.label,
@@ -1911,7 +1911,7 @@ export function RouteAssignmentDialog({
             <SelectField
               form={form}
               name='driverId'
-              label='Driver'
+              label='Tài xế'
               options={drivers.map((driver) => ({
                 value: String(driver.id),
                 label: driver.label,
@@ -1920,10 +1920,10 @@ export function RouteAssignmentDialog({
             <SelectField
               form={form}
               name='attendantId'
-              label='Attendant'
+              label='Phụ xe'
               allowEmpty
               emptyValue='__none__'
-              emptyLabel='No attendant'
+              emptyLabel='Chưa có phụ xe'
               options={attendants.map((attendant) => ({
                 value: String(attendant.id),
                 label: attendant.label,
@@ -1935,9 +1935,9 @@ export function RouteAssignmentDialog({
             <TextField
               form={form}
               name='assignmentNote'
-              label='Assignment Note'
+              label='Ghi chú phân công'
             />
-            <TextField form={form} name='reason' label='Reason for change' />
+            <TextField form={form} name='reason' label='Lý do thay đổi' />
           </div>
 
           <div className='flex justify-end gap-2 border-t pt-4'>
@@ -1947,14 +1947,14 @@ export function RouteAssignmentDialog({
               className={schoolBusUi.outlineButton}
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               type='submit'
               className={schoolBusUi.primaryButton}
               disabled={isLoading}
             >
-              {isLoading ? 'Assigning...' : 'Assign route'}
+              {isLoading ? 'Đang phân công...' : 'Phân công tuyến'}
             </Button>
           </div>
         </form>
@@ -2087,7 +2087,7 @@ function SelectField({
                   onChange(val);
                 }
               }}
-              placeholder={placeholder || `Select ${label.toLowerCase()}`}
+              placeholder={placeholder || `Chọn ${label.toLowerCase()}`}
               options={selectOptions}
               searchable={isSearchable}
               emptyText={emptyText}

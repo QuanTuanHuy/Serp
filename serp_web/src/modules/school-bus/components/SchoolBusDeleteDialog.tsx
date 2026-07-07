@@ -48,14 +48,14 @@ export function SchoolBusDeleteDialog({
             className={schoolBusUi.outlineButton}
             disabled={isLoading}
           >
-            Cancel
+            Hủy
           </AlertDialogCancel>
           <AlertDialogAction
             className={schoolBusUi.dangerButton}
             disabled={isLoading}
             onClick={onConfirm}
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? 'Đang xóa...' : 'Xóa'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

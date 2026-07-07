@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 /**
  * Configures Spring's {@link MessageSource} to load i18n message bundles from
@@ -21,7 +22,7 @@ public class MessageSourceConfig {
         ReloadableResourceBundleMessageSource source = new ReloadableResourceBundleMessageSource();
         source.setBasename("classpath:i18n/messages");
         source.setDefaultEncoding(StandardCharsets.UTF_8.name());
-        source.setDefaultLocale(java.util.Locale.ENGLISH);
+        source.setDefaultLocale(Locale.forLanguageTag("vi-VN"));
         source.setUseCodeAsDefaultMessage(true);
         return source;
     }

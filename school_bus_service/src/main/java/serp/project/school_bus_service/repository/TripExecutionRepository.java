@@ -4,6 +4,8 @@ import serp.project.school_bus_service.enums.TripStatus;
 import serp.project.school_bus_service.enums.RouteDirection;
 import serp.project.school_bus_service.dto.response.TripExecutionListItemResponse;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
+import serp.project.school_bus_service.repository.projection.ReportOverviewProjection;
+import serp.project.school_bus_service.repository.projection.TripListSummaryProjection;
 import serp.project.school_bus_service.repository.projection.TripOperationHeaderProjection;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import org.springframework.data.domain.Page;
@@ -230,6 +232,164 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
             @Param("status") TripStatus status,
             Pageable pageable);
 
+    @Query(value = """
+            SELECT
+                (
+                    SELECT COUNT(DISTINCT request.id)
+                      FROM public.school_bus_transport_request request
+                     WHERE request.tenant_id = :tenantId
+                       AND request.is_deleted = false
+                       AND (CAST(:schoolId AS bigint) IS NULL OR EXISTS (
+                            SELECT 1
+                              FROM public.school_bus_request_student request_student
+                              JOIN public.school_bus_student student
+                                ON student.id = request_student.student_id
+                               AND student.is_deleted = false
+                             WHERE request_student.request_id = request.id
+                               AND request_student.is_deleted = false
+                               AND student.school_id = :schoolId
+                       ))
+                       AND (CAST(:dateFrom AS date) IS NULL OR request.effective_from >= :dateFrom)
+                       AND (CAST(:dateTo AS date) IS NULL OR request.effective_from <= :dateTo)
+                ) AS totalRequests,
+                (
+                    SELECT COUNT(DISTINCT request.id)
+                      FROM public.school_bus_transport_request request
+                     WHERE request.tenant_id = :tenantId
+                       AND request.is_deleted = false
+                       AND request.status = 'APPROVED'
+                       AND (CAST(:schoolId AS bigint) IS NULL OR EXISTS (
+                            SELECT 1
+                              FROM public.school_bus_request_student request_student
+                              JOIN public.school_bus_student student
+                                ON student.id = request_student.student_id
+                               AND student.is_deleted = false
+                             WHERE request_student.request_id = request.id
+                               AND request_student.is_deleted = false
+                               AND student.school_id = :schoolId
+                       ))
+                       AND (CAST(:dateFrom AS date) IS NULL OR request.effective_from >= :dateFrom)
+                       AND (CAST(:dateTo AS date) IS NULL OR request.effective_from <= :dateTo)
+                ) AS approvedRequests,
+                (
+                    SELECT COUNT(trip.id)
+                      FROM public.school_bus_trip_execution trip
+                      JOIN public.school_bus_route_plan route
+                        ON route.id = trip.route_id
+                       AND route.is_deleted = false
+                      JOIN public.school_bus_route_planning_session session
+                        ON session.id = route.planning_session_id
+                       AND session.is_deleted = false
+                     WHERE trip.tenant_id = :tenantId
+                       AND trip.is_deleted = false
+                       AND trip.status = 'COMPLETED'
+                       AND (CAST(:dateFrom AS date) IS NULL OR session.service_date >= :dateFrom)
+                       AND (CAST(:dateTo AS date) IS NULL OR session.service_date <= :dateTo)
+                       AND (CAST(:schoolId AS bigint) IS NULL OR session.school_id = :schoolId)
+                       AND (CAST(:routeId AS bigint) IS NULL OR route.id = :routeId)
+                       AND (CAST(:tripId AS bigint) IS NULL OR trip.id = :tripId)
+                       AND (CAST(:direction AS varchar) IS NULL OR session.route_direction = :direction)
+                       AND (CAST(:status AS varchar) IS NULL OR trip.status = :status)
+                ) AS completedTrips,
+                (
+                    SELECT COUNT(attendance.id)
+                      FROM public.school_bus_attendance attendance
+                      JOIN public.school_bus_trip_student trip_student
+                        ON trip_student.id = attendance.trip_student_id
+                       AND trip_student.is_deleted = false
+                      JOIN public.school_bus_trip_execution trip
+                        ON trip.id = trip_student.trip_id
+                       AND trip.is_deleted = false
+                      JOIN public.school_bus_route_plan route
+                        ON route.id = trip.route_id
+                       AND route.is_deleted = false
+                      JOIN public.school_bus_route_planning_session session
+                        ON session.id = route.planning_session_id
+                       AND session.is_deleted = false
+                     WHERE attendance.tenant_id = :tenantId
+                       AND attendance.is_deleted = false
+                       AND (CAST(:dateFromTime AS timestamp) IS NULL OR attendance.recorded_at >= :dateFromTime)
+                       AND (CAST(:dateToTime AS timestamp) IS NULL OR attendance.recorded_at < :dateToTime)
+                       AND (CAST(:schoolId AS bigint) IS NULL OR session.school_id = :schoolId)
+                       AND (CAST(:routeId AS bigint) IS NULL OR route.id = :routeId)
+                       AND (CAST(:tripId AS bigint) IS NULL OR trip.id = :tripId)
+                       AND (CAST(:direction AS varchar) IS NULL OR session.route_direction = :direction)
+                ) AS attendanceEvents,
+                (
+                    SELECT COUNT(trip.id)
+                      FROM public.school_bus_trip_execution trip
+                      JOIN public.school_bus_route_plan route
+                        ON route.id = trip.route_id
+                       AND route.is_deleted = false
+                      JOIN public.school_bus_route_planning_session session
+                        ON session.id = route.planning_session_id
+                       AND session.is_deleted = false
+                     WHERE trip.tenant_id = :tenantId
+                       AND trip.is_deleted = false
+                       AND (CAST(:dateFrom AS date) IS NULL OR session.service_date >= :dateFrom)
+                       AND (CAST(:dateTo AS date) IS NULL OR session.service_date <= :dateTo)
+                       AND (CAST(:schoolId AS bigint) IS NULL OR session.school_id = :schoolId)
+                       AND (CAST(:routeId AS bigint) IS NULL OR route.id = :routeId)
+                       AND (CAST(:tripId AS bigint) IS NULL OR trip.id = :tripId)
+                       AND (CAST(:direction AS varchar) IS NULL OR session.route_direction = :direction)
+                       AND (CAST(:status AS varchar) IS NULL OR trip.status = :status)
+                ) AS tripCount,
+                (
+                    SELECT COUNT(attendance.id)
+                      FROM public.school_bus_attendance attendance
+                      JOIN public.school_bus_trip_student trip_student
+                        ON trip_student.id = attendance.trip_student_id
+                       AND trip_student.is_deleted = false
+                      JOIN public.school_bus_trip_execution trip
+                        ON trip.id = trip_student.trip_id
+                       AND trip.is_deleted = false
+                      JOIN public.school_bus_route_plan route
+                        ON route.id = trip.route_id
+                       AND route.is_deleted = false
+                      JOIN public.school_bus_route_planning_session session
+                        ON session.id = route.planning_session_id
+                       AND session.is_deleted = false
+                     WHERE attendance.tenant_id = :tenantId
+                       AND attendance.is_deleted = false
+                       AND (CAST(:dateFromTime AS timestamp) IS NULL OR attendance.recorded_at >= :dateFromTime)
+                       AND (CAST(:dateToTime AS timestamp) IS NULL OR attendance.recorded_at < :dateToTime)
+                       AND (CAST(:schoolId AS bigint) IS NULL OR session.school_id = :schoolId)
+                       AND (CAST(:routeId AS bigint) IS NULL OR route.id = :routeId)
+                       AND (CAST(:tripId AS bigint) IS NULL OR trip.id = :tripId)
+                       AND (CAST(:direction AS varchar) IS NULL OR session.route_direction = :direction)
+                ) AS attendanceCount,
+                (
+                    SELECT COUNT(trip.id)
+                      FROM public.school_bus_trip_execution trip
+                      JOIN public.school_bus_route_plan route
+                        ON route.id = trip.route_id
+                       AND route.is_deleted = false
+                      JOIN public.school_bus_route_planning_session session
+                        ON session.id = route.planning_session_id
+                       AND session.is_deleted = false
+                     WHERE trip.tenant_id = :tenantId
+                       AND trip.is_deleted = false
+                       AND (CAST(:dateFrom AS date) IS NULL OR session.service_date >= :dateFrom)
+                       AND (CAST(:dateTo AS date) IS NULL OR session.service_date <= :dateTo)
+                       AND (CAST(:schoolId AS bigint) IS NULL OR session.school_id = :schoolId)
+                       AND (CAST(:routeId AS bigint) IS NULL OR route.id = :routeId)
+                       AND (CAST(:tripId AS bigint) IS NULL OR trip.id = :tripId)
+                       AND (CAST(:direction AS varchar) IS NULL OR session.route_direction = :direction)
+                       AND (CAST(:status AS varchar) IS NULL OR trip.status = :status)
+                ) AS capacityCount
+            """, nativeQuery = true)
+    ReportOverviewProjection getReportOverview(
+            @Param("tenantId") Long tenantId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo,
+            @Param("dateFromTime") java.time.LocalDateTime dateFromTime,
+            @Param("dateToTime") java.time.LocalDateTime dateToTime,
+            @Param("schoolId") Long schoolId,
+            @Param("routeId") Long routeId,
+            @Param("tripId") Long tripId,
+            @Param("direction") String direction,
+            @Param("status") String status);
+
     @Query("""
         SELECT t FROM TripExecutionEntity t
         WHERE t.tenantId = :tenantId
@@ -242,6 +402,63 @@ public interface TripExecutionRepository extends BaseRepository<TripExecutionEnt
             @Param("serviceDate") LocalDate serviceDate);
 
     long countByTenantIdAndStatusAndIsDeletedFalse(Long tenantId, TripStatus status);
+
+    @Query(value = """
+            SELECT
+                COUNT(trip.id) AS totalTrips,
+                COALESCE(SUM(CASE WHEN trip.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS inProgressTrips,
+                COALESCE(SUM(CASE WHEN trip.status = 'COMPLETED' THEN 1 ELSE 0 END), 0) AS completedTrips
+              FROM public.school_bus_trip_execution trip
+              JOIN public.school_bus_route_plan route
+                ON route.id = trip.route_id
+               AND route.is_deleted = false
+              JOIN public.school_bus_route_planning_session session
+                ON session.id = route.planning_session_id
+               AND session.is_deleted = false
+             WHERE trip.tenant_id = :tenantId
+               AND trip.is_deleted = false
+               AND (
+                    :tenantWide = true
+                    OR (CAST(:driverProfileId AS bigint) IS NOT NULL AND EXISTS (
+                        SELECT 1
+                          FROM public.school_bus_route_assignment assignment
+                         WHERE assignment.route_id = route.id
+                           AND assignment.driver_id = :driverProfileId
+                           AND assignment.tenant_id = :tenantId
+                           AND assignment.is_deleted = false
+                           AND assignment.status IN ('ASSIGNED', 'CONFIRMED')
+                    ))
+                    OR (CAST(:attendantProfileId AS bigint) IS NOT NULL AND EXISTS (
+                        SELECT 1
+                          FROM public.school_bus_route_assignment assignment
+                         WHERE assignment.route_id = route.id
+                           AND assignment.attendant_id = :attendantProfileId
+                           AND assignment.tenant_id = :tenantId
+                           AND assignment.is_deleted = false
+                           AND assignment.status IN ('ASSIGNED', 'CONFIRMED')
+                    ))
+                    OR (CAST(:parentProfileId AS bigint) IS NOT NULL AND EXISTS (
+                        SELECT 1
+                          FROM public.school_bus_trip_student trip_student
+                          JOIN public.school_bus_student_subscription subscription
+                            ON subscription.id = trip_student.subscription_id
+                           AND subscription.is_deleted = false
+                          JOIN public.school_bus_student student
+                            ON student.id = subscription.student_id
+                           AND student.is_deleted = false
+                         WHERE trip_student.trip_id = trip.id
+                           AND trip_student.tenant_id = :tenantId
+                           AND trip_student.is_deleted = false
+                           AND student.parent_profile_id = :parentProfileId
+                    ))
+               )
+            """, nativeQuery = true)
+    TripListSummaryProjection getTripListSummary(
+            @Param("tenantId") Long tenantId,
+            @Param("tenantWide") boolean tenantWide,
+            @Param("driverProfileId") Long driverProfileId,
+            @Param("attendantProfileId") Long attendantProfileId,
+            @Param("parentProfileId") Long parentProfileId);
 
     @Query("SELECT MAX(t.route.planningSession.serviceDate) FROM TripExecutionEntity t WHERE t.tenantId = :tenantId AND t.isDeleted = false")
     Optional<LocalDate> findLatestServiceDate(@Param("tenantId") Long tenantId);
