@@ -16,6 +16,8 @@ public class TransportPlanResponseDTO {
     private String driverName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private LocalDateTime actualStartTime;
+    private LocalDateTime actualEndTime;
     private TransportPlanStatus status;
     private int stopCount;
     private LocalDateTime createdStamp;

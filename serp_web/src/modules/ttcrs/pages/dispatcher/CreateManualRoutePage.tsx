@@ -880,7 +880,7 @@ export function CreateManualRoutePage() {
     if (errors.length > 0) {
       setValidationErrors(errors);
       setEtaByCardId({});
-      toast.error(errors[0]);
+      toast.error('Validation failed — please check the error details below.');
       return;
     }
 
@@ -950,7 +950,7 @@ export function CreateManualRoutePage() {
     if (errors.length > 0) {
       setValidationErrors(errors);
       setEtaByCardId({});
-      toast.error(errors[0]);
+      toast.error('Validation failed — please check the error details below.');
       return;
     }
 
@@ -1345,6 +1345,30 @@ export function CreateManualRoutePage() {
         </div>
       ) : (
         <div className='space-y-4'>
+          <div className='flex items-center justify-between'>
+            <Button variant='outline' onClick={() => setStep(1)}>
+              Back
+            </Button>
+            <div className='flex items-center gap-2'>
+              <Button variant='outline' onClick={runValidateAndCalculateEta}>
+                <Route className='mr-1 h-4 w-4' />
+                Validate & Calculate ETA
+              </Button>
+              <Button
+                className='bg-orange-600 text-white hover:bg-orange-700'
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className='mr-1 h-4 w-4 animate-spin' />
+                ) : (
+                  <CheckCircle2 className='mr-1 h-4 w-4' />
+                )}
+                Finish
+              </Button>
+            </div>
+          </div>
+
           <Card>
             <CardContent className='flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between'>
               <div className='space-y-1'>
@@ -1568,29 +1592,6 @@ export function CreateManualRoutePage() {
             </Card>
           )}
 
-          <div className='flex items-center justify-between'>
-            <Button variant='outline' onClick={() => setStep(1)}>
-              Back
-            </Button>
-            <div className='flex items-center gap-2'>
-              <Button variant='outline' onClick={runValidateAndCalculateEta}>
-                <Route className='mr-1 h-4 w-4' />
-                Validate & Calculate ETA
-              </Button>
-              <Button
-                className='bg-orange-600 text-white hover:bg-orange-700'
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <Loader2 className='mr-1 h-4 w-4 animate-spin' />
-                ) : (
-                  <CheckCircle2 className='mr-1 h-4 w-4' />
-                )}
-                Save Manual Route
-              </Button>
-            </div>
-          </div>
         </div>
       )}
 

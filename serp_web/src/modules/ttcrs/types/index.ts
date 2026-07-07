@@ -11,6 +11,44 @@ export type RequestStatus =
 
 export type RequestType = 'OF' | 'IF' | 'OE' | 'IE';
 
+// Time window fields visibility per request type.
+// OF / IE: only earliest at origin & latest at destination are required.
+// IF / OE: all four time windows are required.
+export const TIME_WINDOW_FIELDS: Record<
+  RequestType,
+  {
+    earlyAtSrc: boolean;
+    lateAtSrc: boolean;
+    earlyAtDest: boolean;
+    lateAtDest: boolean;
+  }
+> = {
+  OF: {
+    earlyAtSrc: true,
+    lateAtSrc: false,
+    earlyAtDest: false,
+    lateAtDest: true,
+  },
+  IF: {
+    earlyAtSrc: true,
+    lateAtSrc: true,
+    earlyAtDest: true,
+    lateAtDest: true,
+  },
+  OE: {
+    earlyAtSrc: true,
+    lateAtSrc: true,
+    earlyAtDest: true,
+    lateAtDest: true,
+  },
+  IE: {
+    earlyAtSrc: true,
+    lateAtSrc: false,
+    earlyAtDest: false,
+    lateAtDest: true,
+  },
+};
+
 export type ContainerSize = 'TWENTY_FEET' | 'FORTY_FEET' | 'FORTY_FIVE_FEET';
 
 // -------------------------------------------------------------------------
@@ -293,6 +331,8 @@ export interface TransportPlanSavedItem {
   driverName: string | null;
   startTime: string | null;
   endTime: string | null;
+  actualStartTime: string | null;
+  actualEndTime: string | null;
   status: TransportPlanStatus;
   stopCount: number;
   createdStamp: string | null;
