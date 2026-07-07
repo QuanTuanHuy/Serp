@@ -8,7 +8,11 @@ package serp.project.account.core.usecase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,7 @@ import serp.project.account.core.domain.dto.request.CreateSubscriptionPlanReques
 import serp.project.account.core.domain.dto.request.GetSubscriptionPlanParams;
 import serp.project.account.core.domain.dto.request.UpdateSubscriptionPlanRequest;
 import serp.project.account.core.domain.entity.RoleEntity;
+import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IModuleService;
@@ -59,6 +64,8 @@ public class SubscriptionPlanUseCase {
     public GeneralResponse<?> createPlan(CreateSubscriptionPlanRequest request, Long createdBy) {
         try {
             var plan = subscriptionPlanService.createPlan(request, createdBy);
+            addModulesToCreatedPlan(plan.getId(), request.getModules(), createdBy);
+
             log.info("[UseCase] Successfully created subscription plan with ID: {}", plan.getId());
             return responseUtils.success(plan);
         } catch (AppException e) {
@@ -74,6 +81,7 @@ public class SubscriptionPlanUseCase {
     public GeneralResponse<?> updatePlan(Long planId, UpdateSubscriptionPlanRequest request, Long updatedBy) {
         try {
             var plan = subscriptionPlanService.updatePlan(planId, request, updatedBy);
+            syncPlanModules(planId, request.getModules(), updatedBy);
 
             log.info("[UseCase] Successfully updated subscription plan: {}", planId);
             return responseUtils.success(plan);
@@ -370,5 +378,105 @@ public class SubscriptionPlanUseCase {
                 asyncTaskExecutor.execute(task);
             }
         });
+    }
+
+    private void addModulesToCreatedPlan(
+            Long planId,
+            List<CreateSubscriptionPlanRequest.PlanModuleDto> requestedModules,
+            Long createdBy) {
+        if (CollectionUtils.isEmpty(requestedModules)) {
+            return;
+        }
+
+        validateUniqueModuleIds(requestedModules.stream()
+                .map(CreateSubscriptionPlanRequest.PlanModuleDto::getModuleId)
+                .toList());
+
+        requestedModules.forEach(requestedModule -> {
+            validateAvailableModule(requestedModule.getModuleId());
+            subscriptionPlanService.addModuleToPlan(
+                    planId,
+                    requestedModule.getModuleId(),
+                    requestedModule.getLicenseType().name(),
+                    requestedModule.getIsIncluded(),
+                    requestedModule.getMaxUsersPerModule(),
+                    createdBy);
+        });
+    }
+
+    private void syncPlanModules(
+            Long planId,
+            List<UpdateSubscriptionPlanRequest.PlanModuleDto> requestedModules,
+            Long updatedBy) {
+        if (requestedModules == null) {
+            return;
+        }
+
+        validateUniqueModuleIds(requestedModules.stream()
+                .map(UpdateSubscriptionPlanRequest.PlanModuleDto::getModuleId)
+                .toList());
+
+        requestedModules.forEach(requestedModule -> validateAvailableModule(requestedModule.getModuleId()));
+
+        var existingModulesByModuleId = subscriptionPlanService.getPlanModules(planId).stream()
+                .collect(Collectors.toMap(SubscriptionPlanModuleEntity::getModuleId, Function.identity()));
+        var requestedModuleIds = requestedModules.stream()
+                .map(UpdateSubscriptionPlanRequest.PlanModuleDto::getModuleId)
+                .collect(Collectors.toSet());
+
+        requestedModules.forEach(requestedModule -> {
+            var existingModule = existingModulesByModuleId.get(requestedModule.getModuleId());
+            if (existingModule == null) {
+                subscriptionPlanService.addModuleToPlan(
+                        planId,
+                        requestedModule.getModuleId(),
+                        requestedModule.getLicenseType().name(),
+                        requestedModule.getIsIncluded(),
+                        requestedModule.getMaxUsersPerModule(),
+                        updatedBy);
+                if (Boolean.TRUE.equals(requestedModule.getIsIncluded())) {
+                    addModuleAccessForExistedSubscriptions(planId, requestedModule.getModuleId());
+                }
+                return;
+            }
+
+            boolean wasAccessible = existingModule.isAccessible();
+            existingModule.setIsIncluded(requestedModule.getIsIncluded());
+            existingModule.setLicenseType(requestedModule.getLicenseType());
+            existingModule.setMaxUsersPerModule(requestedModule.getMaxUsersPerModule());
+            existingModule.setUpdatedBy(updatedBy);
+            existingModule.setUpdatedAt(Instant.now().toEpochMilli());
+            subscriptionPlanService.updatePlanModule(existingModule);
+
+            if (wasAccessible && !existingModule.isAccessible()) {
+                removeModuleAccessFromExistedSubscriptions(planId, existingModule.getModuleId());
+            } else if (!wasAccessible && existingModule.isAccessible()) {
+                addModuleAccessForExistedSubscriptions(planId, existingModule.getModuleId());
+            }
+        });
+
+        existingModulesByModuleId.values().stream()
+                .filter(existingModule -> !requestedModuleIds.contains(existingModule.getModuleId()))
+                .forEach(existingModule -> {
+                    subscriptionPlanService.removeModuleFromPlan(planId, existingModule.getModuleId());
+                    if (existingModule.isAccessible()) {
+                        removeModuleAccessFromExistedSubscriptions(planId, existingModule.getModuleId());
+                    }
+                });
+    }
+
+    private void validateUniqueModuleIds(List<Long> moduleIds) {
+        var uniqueModuleIds = new HashSet<Long>();
+        boolean hasDuplicate = moduleIds.stream().anyMatch(moduleId -> !uniqueModuleIds.add(moduleId));
+        if (hasDuplicate) {
+            throw new AppException(Constants.ErrorMessage.MODULE_ALREADY_IN_PLAN);
+        }
+    }
+
+    private void validateAvailableModule(Long moduleId) {
+        var module = moduleService.getModuleByIdFromCache(moduleId);
+        if (module == null || !module.isAvailable()) {
+            throw new AppException(Constants.ErrorMessage.MODULE_NOT_FOUND);
+        }
     }
 }
