@@ -1122,3 +1122,8 @@ export interface SchoolBusDropdownOption {
   metadata?: Record<string, any>;
 }
 
+export interface SchoolBusNamedDropdownOption {
+  id: number;
+  name: string;
+}
+

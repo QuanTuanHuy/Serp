@@ -781,7 +781,7 @@ export function SchoolBusReportsPage() {
               />
               <div className='flex flex-col gap-1.5 w-full'>
                 <label className='text-xs font-semibold text-slate-700'>
-                  School
+                  Trường học
                 </label>
                 <SchoolBusSelect
                   value={tempFilters.schoolId}
@@ -797,7 +797,7 @@ export function SchoolBusReportsPage() {
               </div>
               <div className='flex flex-col gap-1.5 w-full'>
                 <label className='text-xs font-semibold text-slate-700'>
-                  Status
+                  Trạng thái
                 </label>
                 <SchoolBusSelect
                   value={tempFilters.status}

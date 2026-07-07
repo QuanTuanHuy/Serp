@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.DepotParamsRequest;
 import serp.project.school_bus_service.dto.request.DepotUpsertRequest;
 import serp.project.school_bus_service.dto.response.DepotResponse;
+import serp.project.school_bus_service.dto.response.NamedDropdownOptionResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IDepotService;
@@ -21,6 +22,7 @@ import serp.project.school_bus_service.shared.i18n.MessageCommon;
 import serp.project.school_bus_service.shared.pagination.PageableUtils;
 
 import java.util.Set;
+import java.util.List;
 
 @Service
 public class DepotServiceImpl extends AbstractBaseService<DepotEntity, Long> implements IDepotService {
@@ -57,6 +59,15 @@ public class DepotServiceImpl extends AbstractBaseService<DepotEntity, Long> imp
                 PageableUtils.from(params,
                         Set.of("id", "name", "code", "createdAt", "updatedAt"), "name")),
                 mapper::toDepotResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<NamedDropdownOptionResponse> getActiveDepotDropdownOptions(Long tenantId) {
+        return depotRepository.findActiveDropdownOptions(tenantId)
+                .stream()
+                .map(item -> new NamedDropdownOptionResponse(item.getId(), item.getName()))
+                .toList();
     }
 
     @Override
