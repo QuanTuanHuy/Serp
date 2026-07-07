@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.account.core.domain.enums.LicenseType;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -73,8 +74,8 @@ public class UpdateSubscriptionPlanRequest {
         @Builder.Default
         private Boolean isIncluded = true;
 
-        @NotBlank(message = "License type is required")
-        private String licenseType;
+        @NotNull(message = "License type is required")
+        private LicenseType licenseType;
 
         private Integer maxUsersPerModule;
     }
