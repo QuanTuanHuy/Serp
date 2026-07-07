@@ -262,7 +262,7 @@ export function LocationsPage() {
         </div>
 
         <div className='flex items-center gap-2'>
-          <Button
+          {/* <Button
             id='locations-import-btn'
             variant='outline'
             size='sm'
@@ -270,7 +270,7 @@ export function LocationsPage() {
           >
             <Upload className='h-4 w-4' />
             Import from Excel
-          </Button>
+          </Button> */}
 
           <Button
             id='locations-create-btn'
