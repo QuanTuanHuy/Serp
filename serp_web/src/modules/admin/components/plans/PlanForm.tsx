@@ -51,8 +51,8 @@ const planFormSchema = z
     ),
     maxUsers: z.preprocess(
       (val) => (val === '' || val === null ? undefined : Number(val)),
-      z.number().int().min(1).optional()
-    ),
+      z.number().int().min(1)
+    ).optional(),
     trialDays: z.preprocess(
       (val) => (val === '' ? 0 : Number(val)),
       z.number().int().min(0).max(365)
@@ -61,8 +61,8 @@ const planFormSchema = z
     isCustom: z.boolean(),
     organizationId: z.preprocess(
       (val) => (val === '' || val === null ? undefined : Number(val)),
-      z.number().int().positive().optional()
-    ),
+      z.number().int().positive()
+    ).optional(),
     displayOrder: z.preprocess(
       (val) => (val === '' ? 0 : Number(val)),
       z.number().int().min(0)
@@ -87,8 +87,8 @@ const planFormSchema = z
               val === '' || val === null || val === undefined
                 ? undefined
                 : Number(val),
-            z.number().int().min(1).optional()
-          ),
+            z.number().int().min(1)
+          ).optional(),
         })
       )
       .optional(),
@@ -155,7 +155,7 @@ export const PlanForm: React.FC<PlanFormProps> = ({
   );
 
   const form = useForm<PlanFormData>({
-    resolver: zodResolver(planFormSchema),
+    resolver: zodResolver(planFormSchema) as any,
     defaultValues: plan
       ? {
           planName: plan.planName,
@@ -226,8 +226,8 @@ export const PlanForm: React.FC<PlanFormProps> = ({
   const handleFormSubmit = handleSubmit(async (data) => {
     try {
       const requestModules = data.modules
-        ?.filter((m) => m.isIncluded)
-        .map((m) => ({
+        ?.filter((m: any) => m.isIncluded)
+        .map((m: any) => ({
           moduleId: m.moduleId,
           licenseType: m.licenseType,
           maxUsersPerModule: m.maxUsersPerModule ? Number(m.maxUsersPerModule) : null,
