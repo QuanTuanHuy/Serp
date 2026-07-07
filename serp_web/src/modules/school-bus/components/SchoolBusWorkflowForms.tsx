@@ -1367,7 +1367,7 @@ export function TransportRequestForm({
                   <div>
                     <p className='text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2 mb-3 flex items-center gap-1.5'>
                       <User className='h-4 w-4 text-slate-400' />
-                      Ngữ cảnh học sinh đang chọn
+                      Thông tin học sinh đang chọn
                     </p>
                     {activeStudentIndex !== null &&
                     activeStudentIndex >= 0 &&

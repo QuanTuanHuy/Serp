@@ -23,7 +23,7 @@ import {
   useGetTransportRequestSummaryQuery,
   useGetTransportRequestsQuery,
   useRejectTransportRequestMutation,
-  useGetSchoolDropdownOptionsQuery,
+  useGetBasicSchoolDropdownOptionsQuery,
 } from '../api/schoolBusApi';
 import { RejectTransportRequestDialog } from '../components/SchoolBusWorkflowForms';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -44,7 +44,6 @@ import {
   formatDate,
   formatDateTime,
   getPageItems,
-  SCHOOL_BUS_OPTION_QUERY,
   SCHOOL_BUS_PAGE_QUERY_OPTIONS,
 } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
@@ -65,7 +64,7 @@ export function SchoolBusRequestsPage() {
   const { data: summaryData } = useGetTransportRequestSummaryQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
-  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
+  const { data: schoolsData } = useGetBasicSchoolDropdownOptionsQuery();
 
   const [approveTransportRequest, { isLoading: approving }] =
     useApproveTransportRequestMutation();
@@ -106,7 +105,7 @@ export function SchoolBusRequestsPage() {
   const filteredRequests = React.useMemo(() => {
     let result = requests;
     if (filterSchool) {
-      result = result.filter((r) => r.schoolName === filterSchool);
+      result = result.filter((r) => r.schoolId === Number(filterSchool));
     }
     if (filterRequestType) {
       result = result.filter((r) => r.requestType === filterRequestType);
@@ -120,8 +119,8 @@ export function SchoolBusRequestsPage() {
   // School options derived from actual list
   const schoolOptions = React.useMemo(() => {
     return schools.map((s) => ({
-      label: s.label,
-      value: s.label,
+      label: s.name,
+      value: String(s.id),
     }));
   }, [schools]);
 

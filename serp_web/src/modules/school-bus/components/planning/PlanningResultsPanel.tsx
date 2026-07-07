@@ -232,14 +232,14 @@ function CreateRoutePanel({
                   <span>
                     Đến trường - Bãi xe {'->'} Trường{' '}
                     <span className='text-[10px] font-medium text-slate-400 ml-1'>
-                      (Lấy từ ngữ cảnh phiên)
+                      (Lấy từ thông tin phiên)
                     </span>
                   </span>
                 ) : (
                   <span>
                     Về nhà - Trường {'->'} Bãi xe{' '}
                     <span className='text-[10px] font-medium text-slate-400 ml-1'>
-                      (Lấy từ ngữ cảnh phiên)
+                      (Lấy từ thông tin phiên)
                     </span>
                   </span>
                 )}
@@ -1451,7 +1451,7 @@ export function PlanningResultsPanel({
                   Bản xem trước đã cũ
                 </p>
                 <p className='mt-1 text-xs text-slate-455 max-w-[240px] leading-relaxed'>
-                  Ngữ cảnh lập tuyến đã thay đổi. Bấm Xem trước để tải lại.
+                  Thông tin lập tuyến đã thay đổi. Bấm Xem trước để tải lại.
                 </p>
                 {onPreviewDemandClick && (
                   <Button
@@ -1480,7 +1480,7 @@ export function PlanningResultsPanel({
                 <p className='mt-1 text-xs text-slate-455 max-w-[240px] leading-relaxed'>
                   {activeSession
                     ? 'Xem trước nhu cầu của phiên này để kiểm tra học sinh đủ điều kiện và bị chặn.'
-                    : 'Hoàn tất ngữ cảnh lập tuyến rồi bấm Xem trước để kiểm tra học sinh đủ điều kiện.'}
+                    : 'Hoàn tất thông tin lập tuyến rồi bấm Xem trước để kiểm tra học sinh đủ điều kiện.'}
                 </p>
                 {onPreviewDemandClick && (
                   <Button
@@ -1630,7 +1630,7 @@ export function PlanningResultsPanel({
                             : 'border-transparent text-slate-400 hover:text-slate-600'
                         )}
                       >
-                        Ngữ cảnh
+                        Thông tin
                       </button>
                     </div>
 
@@ -1645,7 +1645,7 @@ export function PlanningResultsPanel({
                                 Chưa có dữ liệu xem trước
                               </p>
                               <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
-                                Điền ngữ cảnh bên trái và bấm "Xem trước" để
+                                Điền thông tin bên trái và bấm "Xem trước" để
                                 tải danh sách học sinh.
                               </p>
                             </div>
@@ -1706,7 +1706,7 @@ export function PlanningResultsPanel({
                                 Chưa có dữ liệu xem trước
                               </p>
                               <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
-                                Điền ngữ cảnh bên trái và bấm "Xem trước" để
+                                Điền thông tin bên trái và bấm "Xem trước" để
                                 tải danh sách điểm.
                               </p>
                             </div>
@@ -1843,10 +1843,10 @@ export function PlanningResultsPanel({
                             <div className='flex flex-col items-center justify-center py-10 px-4 text-center bg-slate-50/40 rounded-2xl border border-dashed border-slate-200 mt-2 w-full'>
                               <Calendar className='h-8 w-8 text-slate-355 mb-2' />
                               <p className='text-xs font-bold text-slate-650'>
-                                Chọn ngữ cảnh
+                                Chọn thông tin
                               </p>
                               <p className='text-[10px] text-slate-455 mt-1 max-w-[200px]'>
-                                Chọn ngữ cảnh lập kế hoạch và xem trước nhu cầu.
+                                Chọn thông tin lập kế hoạch và xem trước nhu cầu.
                               </p>
                             </div>
                           );

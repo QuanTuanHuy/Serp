@@ -5,12 +5,17 @@ import serp.project.school_bus_service.shared.base.IBaseService;
 import serp.project.school_bus_service.dto.params.DepotParamsRequest;
 import serp.project.school_bus_service.dto.request.DepotUpsertRequest;
 import serp.project.school_bus_service.dto.response.DepotResponse;
+import serp.project.school_bus_service.dto.response.NamedDropdownOptionResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.entity.DepotEntity;
+
+import java.util.List;
 
 public interface IDepotService extends IBaseService<DepotEntity, Long> {
 
     PageResponse<DepotResponse> getDepots(DepotParamsRequest params, Long tenantId);
+
+    List<NamedDropdownOptionResponse> getActiveDepotDropdownOptions(Long tenantId);
 
     DepotResponse getDepotResponse(Long id, Long tenantId);
 

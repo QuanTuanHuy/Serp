@@ -23,6 +23,7 @@ import {
   useGetStudentByIdQuery,
   useGetStudentSummaryQuery,
   useGetStudentsQuery,
+  useGetBasicSchoolDropdownOptionsQuery,
   useUpdateStudentMutation,
   useGetSchoolDropdownOptionsQuery,
   useGetParentDropdownOptionsQuery,
@@ -84,6 +85,7 @@ export function SchoolBusStudentsPage() {
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery(undefined, {
     skip: !dialogOpen,
   });
+  const { data: basicSchoolsData } = useGetBasicSchoolDropdownOptionsQuery();
   const { data: parentsData } = useGetParentDropdownOptionsQuery(undefined, {
     skip: !dialogOpen || access.isParentOnly,
   });
@@ -104,6 +106,7 @@ export function SchoolBusStudentsPage() {
 
   const students = getPageItems(data?.data);
   const schools = schoolsData?.data || [];
+  const basicSchools = basicSchoolsData?.data || [];
   const parents = parentsData?.data || [];
 
   // --- Stats -------------------------------------------------------
@@ -128,7 +131,7 @@ export function SchoolBusStudentsPage() {
   const filteredStudents = React.useMemo(() => {
     let result = students;
     if (filterSchool)
-      result = result.filter((s) => s.schoolName === filterSchool);
+      result = result.filter((s) => s.schoolId === Number(filterSchool));
     if (filterStatus === 'active')
       result = result.filter((s) => s.isActive !== false);
     if (filterStatus === 'inactive')
@@ -136,11 +139,13 @@ export function SchoolBusStudentsPage() {
     return result;
   }, [students, filterSchool, filterStatus]);
 
-  // Unique school names for filter
-  const schoolNames = React.useMemo(
+  const schoolFilterOptions = React.useMemo(
     () =>
-      [...new Set(students.map((s) => s.schoolName).filter(Boolean))].sort(),
-    [students]
+      basicSchools.map((school) => ({
+        label: school.name,
+        value: String(school.id),
+      })),
+    [basicSchools]
   );
 
   // --- Dialog state ------------------------------------------------
@@ -320,18 +325,7 @@ export function SchoolBusStudentsPage() {
         value={filterSchool}
         onChange={setFilterSchool}
         placeholder='Tất cả trường học'
-        options={schoolNames.map((name) => {
-          const count = students.filter((s) => s.schoolName === name).length;
-          return {
-            label: name,
-            value: name,
-            badge: (
-              <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
-                {count}
-              </span>
-            ),
-          };
-        })}
+        options={schoolFilterOptions}
         clearable
         searchable
       />

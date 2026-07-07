@@ -57,7 +57,7 @@ type MapEmptyStep = 'pick-school' | 'preview' | 'no-coords' | null;
 function MapEmptyState({ step }: { step: MapEmptyStep }) {
   const steps: { label: string; done: boolean }[] = [
     {
-      label: 'Chọn trường trong ngữ cảnh lập kế hoạch',
+      label: 'Chọn trường trong thông tin lập kế hoạch',
       done: step !== 'pick-school',
     },
     {
@@ -618,7 +618,7 @@ export default function SchoolBusRoutePlanningPage() {
     setFitTarget('all');
     setFitKey((k) => k + 1);
     clearSessionQueryParams();
-    toast.success('Đã đặt lại không gian làm việc về ngữ cảnh lập kế hoạch phiên mới');
+    toast.success('Đã đặt lại không gian làm việc về thông tin lập kế hoạch phiên mới');
   }, [clearSessionQueryParams]);
 
   // -- Derived values ---------------------------------------------------------
@@ -804,7 +804,7 @@ export default function SchoolBusRoutePlanningPage() {
     <MapMarkerVisibilityProvider>
       <SchoolBusPageShell
         compact
-        title='Không gian lập tuyến'
+        title='Lập tuyến'
         description='Xây dựng tuyến học sinh theo điểm đón/trả, sức chứa xe và ngày phục vụ.'
         breadcrumb={
           <SchoolBusBreadcrumb

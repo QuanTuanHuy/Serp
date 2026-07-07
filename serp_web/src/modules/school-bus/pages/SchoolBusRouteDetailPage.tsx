@@ -252,13 +252,13 @@ export function SchoolBusRouteDetailPage({
         <div className='grid gap-6 xl:grid-cols-[0.95fr_1.05fr] items-start'>
           {/* Left Column */}
           <div className='flex flex-col gap-6'>
-            {/* Tóm tắt tuyến compact card */}
+            {/* Thông tin tuyến compact card */}
             <div className='bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-4'>
               <div className='flex items-center justify-between pb-2.5 border-b border-slate-100'>
                 <div className='flex items-center gap-2'>
                   <Route className='h-4.5 w-4.5 text-indigo-600 shrink-0' />
                   <h3 className='font-bold text-slate-900 text-sm'>
-                    Tóm tắt tuyến
+                    Thông tin tuyến
                   </h3>
                 </div>
                 <span className='rounded-full px-2.5 py-0.5 text-[10px] font-extrabold border shadow-none bg-slate-50 border-slate-200 text-slate-600 uppercase tracking-wider'>

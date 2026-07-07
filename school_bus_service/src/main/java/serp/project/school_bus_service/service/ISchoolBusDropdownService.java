@@ -1,10 +1,13 @@
 package serp.project.school_bus_service.service;
 
 import serp.project.school_bus_service.dto.response.DropdownOptionResponse;
+import serp.project.school_bus_service.dto.response.NamedDropdownOptionResponse;
 
 import java.util.List;
 
 public interface ISchoolBusDropdownService {
+    List<NamedDropdownOptionResponse> getBasicSchoolsDropdown(Long tenantId);
+    List<NamedDropdownOptionResponse> getBasicDepotsDropdown(Long tenantId);
     List<DropdownOptionResponse> getSchoolsDropdown(Long tenantId);
     List<DropdownOptionResponse> getSchoolPickupPointsDropdown(Long schoolId, Long tenantId);
     List<DropdownOptionResponse> getParentsDropdown(Long tenantId);
