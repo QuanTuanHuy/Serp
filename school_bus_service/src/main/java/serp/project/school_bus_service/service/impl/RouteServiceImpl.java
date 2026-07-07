@@ -17,6 +17,7 @@ import serp.project.school_bus_service.dto.response.RoutePathResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanListItemResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanStudentResponse;
+import serp.project.school_bus_service.dto.response.RouteDispatchSummaryResponse;
 import serp.project.school_bus_service.dto.response.RouteStopResponse;
 import serp.project.school_bus_service.entity.RoutePlanStudentEntity;
 import serp.project.school_bus_service.service.IRoutePlanStudentService;
@@ -124,6 +125,16 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
                         "updatedAt", "lastModifiedDate"), "lastModifiedDate"));
         enrichRouteListItems(page.getContent(), tenantId);
         return PageResponse.from(page, route -> route);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RouteDispatchSummaryResponse getDispatchSummary(Long tenantId) {
+        var summary = routePlanRepository.getDispatchSummary(tenantId);
+        return new RouteDispatchSummaryResponse(
+                value(summary.getTotalRoutes()),
+                value(summary.getPlannedRoutes()),
+                value(summary.getTripCreatedRoutes()));
     }
 
     @Override
@@ -695,5 +706,9 @@ public class RouteServiceImpl extends AbstractBaseService<RoutePlanEntity, Long>
     @Override
     public long countByTenantAndStatus(Long tenantId, RouteStatus status) {
         return routePlanRepository.countByTenantIdAndStatusAndIsDeletedFalse(tenantId, status);
+    }
+
+    private long value(Long value) {
+        return value == null ? 0L : value;
     }
 }

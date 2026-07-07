@@ -57,6 +57,7 @@ import type {
   TransportPlanStopDetail,
   UpdateRequestPayload,
 } from '../../types';
+import { TIME_WINDOW_FIELDS } from '../../types';
 
 // -------------------------------------------------------------------------
 // Constants / helpers
@@ -466,7 +467,7 @@ export function RequestDetailPage({ requestId }: Props) {
                 <Label>Destination</Label>
                 {isPending && request.type === 'IE' ? (
                   <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                    Destination for IE requests is determined by the algorithm when building a route.
+                    Destination for IE requests is determined by the algorithm/dispatcher when building a route.
                   </div>
                 ) : isPending ? (
                   <Select value={destLocationCode} onValueChange={setDestLocationCode}>
@@ -491,6 +492,7 @@ export function RequestDetailPage({ requestId }: Props) {
             </div>
 
             {/* Container Code */}
+            {!(request.type === 'OF' && isPending) && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="rd-container-code">Container Code</Label>
@@ -509,6 +511,7 @@ export function RequestDetailPage({ requestId }: Props) {
                 )}
               </div>
             </div>
+            )}
 
             {/* Weight + Container Size */}
             {/* <div className="grid grid-cols-2 gap-4">
@@ -547,24 +550,31 @@ export function RequestDetailPage({ requestId }: Props) {
 
             {/* Time windows */}
             {isPending ? (
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { id: 'rd-early-src', label: 'Early at Origin', val: earlyAtSrc, set: setEarlyAtSrc },
-                  { id: 'rd-late-src', label: 'Late at Origin', val: lateAtSrc, set: setLateAtSrc },
-                  { id: 'rd-early-dest', label: 'Early at Dest', val: earlyAtDest, set: setEarlyAtDest },
-                  { id: 'rd-late-dest', label: 'Late at Dest', val: lateAtDest, set: setLateAtDest },
-                ].map(({ id, label, val, set }) => (
-                  <div key={id} className="space-y-1.5">
-                    <Label htmlFor={id}>{label}</Label>
-                    <Input
-                      id={id}
-                      type="datetime-local"
-                      value={val}
-                      onChange={(e) => set(e.target.value)}
-                    />
+              (() => {
+                const fields = TIME_WINDOW_FIELDS[request.type];
+                const items = [
+                  { show: fields.earlyAtSrc, id: 'rd-early-src', label: 'Early at Origin', val: earlyAtSrc, set: setEarlyAtSrc },
+                  { show: fields.lateAtSrc, id: 'rd-late-src', label: 'Late at Origin', val: lateAtSrc, set: setLateAtSrc },
+                  { show: fields.earlyAtDest, id: 'rd-early-dest', label: 'Early at Dest', val: earlyAtDest, set: setEarlyAtDest },
+                  { show: fields.lateAtDest, id: 'rd-late-dest', label: 'Late at Dest', val: lateAtDest, set: setLateAtDest },
+                ].filter((it) => it.show);
+                if (items.length === 0) return null;
+                return (
+                  <div className="grid grid-cols-2 gap-4">
+                    {items.map(({ id, label, val, set }) => (
+                      <div key={id} className="space-y-1.5">
+                        <Label htmlFor={id}>{label}</Label>
+                        <Input
+                          id={id}
+                          type="datetime-local"
+                          value={val}
+                          onChange={(e) => set(e.target.value)}
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()
             ) : timeWindows.length > 0 ? (
               <div className="grid grid-cols-2 gap-3">
                 {timeWindows.map(({ label, value }) => (

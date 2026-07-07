@@ -42,6 +42,7 @@ import type {
   ContainerSize,
   UpdateRequestPayload,
 } from '../types';
+import { TIME_WINDOW_FIELDS } from '../types';
 
 // -------------------------------------------------------------------------
 // Constants
@@ -338,48 +339,63 @@ export function RequestDetailSheet({
             </div>
 
             {/* Time windows */}
-            <div className='grid grid-cols-2 gap-4'>
-              <div className='space-y-1.5'>
-                <Label htmlFor='req-early-src'>Early at Origin</Label>
-                <Input
-                  id='req-early-src'
-                  type='datetime-local'
-                  value={earlyAtSrc}
-                  onChange={(e) => setEarlyAtSrc(e.target.value)}
-                  disabled={!isPending}
-                />
-              </div>
-              <div className='space-y-1.5'>
-                <Label htmlFor='req-late-src'>Late at Origin</Label>
-                <Input
-                  id='req-late-src'
-                  type='datetime-local'
-                  value={lateAtSrc}
-                  onChange={(e) => setLateAtSrc(e.target.value)}
-                  disabled={!isPending}
-                />
-              </div>
-              <div className='space-y-1.5'>
-                <Label htmlFor='req-early-dest'>Early at Dest</Label>
-                <Input
-                  id='req-early-dest'
-                  type='datetime-local'
-                  value={earlyAtDest}
-                  onChange={(e) => setEarlyAtDest(e.target.value)}
-                  disabled={!isPending}
-                />
-              </div>
-              <div className='space-y-1.5'>
-                <Label htmlFor='req-late-dest'>Late at Dest</Label>
-                <Input
-                  id='req-late-dest'
-                  type='datetime-local'
-                  value={lateAtDest}
-                  onChange={(e) => setLateAtDest(e.target.value)}
-                  disabled={!isPending}
-                />
-              </div>
-            </div>
+            {(() => {
+              const fields = TIME_WINDOW_FIELDS[request.type];
+              const hasAny = fields.earlyAtSrc || fields.lateAtSrc || fields.earlyAtDest || fields.lateAtDest;
+              if (!hasAny) return null;
+              return (
+                <div className='grid grid-cols-2 gap-4'>
+                  {fields.earlyAtSrc && (
+                    <div className='space-y-1.5'>
+                      <Label htmlFor='req-early-src'>Early at Origin</Label>
+                      <Input
+                        id='req-early-src'
+                        type='datetime-local'
+                        value={earlyAtSrc}
+                        onChange={(e) => setEarlyAtSrc(e.target.value)}
+                        disabled={!isPending}
+                      />
+                    </div>
+                  )}
+                  {fields.lateAtSrc && (
+                    <div className='space-y-1.5'>
+                      <Label htmlFor='req-late-src'>Late at Origin</Label>
+                      <Input
+                        id='req-late-src'
+                        type='datetime-local'
+                        value={lateAtSrc}
+                        onChange={(e) => setLateAtSrc(e.target.value)}
+                        disabled={!isPending}
+                      />
+                    </div>
+                  )}
+                  {fields.earlyAtDest && (
+                    <div className='space-y-1.5'>
+                      <Label htmlFor='req-early-dest'>Early at Dest</Label>
+                      <Input
+                        id='req-early-dest'
+                        type='datetime-local'
+                        value={earlyAtDest}
+                        onChange={(e) => setEarlyAtDest(e.target.value)}
+                        disabled={!isPending}
+                      />
+                    </div>
+                  )}
+                  {fields.lateAtDest && (
+                    <div className='space-y-1.5'>
+                      <Label htmlFor='req-late-dest'>Late at Dest</Label>
+                      <Input
+                        id='req-late-dest'
+                        type='datetime-local'
+                        value={lateAtDest}
+                        onChange={(e) => setLateAtDest(e.target.value)}
+                        disabled={!isPending}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Drop trailer */}
             <div className='flex items-center gap-3'>

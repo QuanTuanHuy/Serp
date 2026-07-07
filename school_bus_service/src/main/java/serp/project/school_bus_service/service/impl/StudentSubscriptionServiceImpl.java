@@ -9,6 +9,7 @@ import serp.project.school_bus_service.dto.request.BaseParamsRequest;
 import serp.project.school_bus_service.dto.request.StudentSubscriptionUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.StudentSubscriptionResponse;
+import serp.project.school_bus_service.dto.response.SubscriptionSummaryResponse;
 
 import serp.project.school_bus_service.service.ICodeGeneratorService;
 import serp.project.school_bus_service.service.IMasterDataService;
@@ -105,6 +106,19 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
                 pageable(params, Set.of("id", "subscriptionCode", "effectiveFrom", "effectiveTo", "status",
                         "createdAt", "updatedAt"), "createdAt")),
                 response -> response);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SubscriptionSummaryResponse getSummary(Long tenantId) {
+        Long parentProfileId = securityService.isParentOnly()
+                ? schoolBusDataScopeService.getCurrentParentProfileIdRequired()
+                : null;
+        var summary = subscriptionRepository.getSubscriptionSummary(tenantId, parentProfileId);
+        return new SubscriptionSummaryResponse(
+                value(summary.getTotalSubscriptions()),
+                value(summary.getActiveSubscriptions()),
+                value(summary.getInactiveSubscriptions()));
     }
 
     private String keywordPattern(String keyword) {
@@ -453,5 +467,9 @@ public class StudentSubscriptionServiceImpl extends AbstractBaseService<StudentS
     public boolean hasActiveOrScheduledPause(Long subscriptionId, Long tenantId) {
         // Pause period table removed in V31.
         return false;
+    }
+
+    private long value(Long value) {
+        return value == null ? 0L : value;
     }
 }

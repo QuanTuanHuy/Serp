@@ -109,8 +109,8 @@ public class BagServiceImpl implements BagService {
         secondMileAccessUtils.ensureCurrentUserHasActiveHubStaffRoleOrThrow();
 
         Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
         BagFilterRequest normalizedFilterRequest = BagMapper.normalizeFilterRequest(filterRequest);
+        Pageable pageable = PageRequest.of(page, size, resolveBagSort(normalizedFilterRequest));
 
         Page<Bag> bagPage = bagRepository.findAll(
                 BagSpecification.byFilter(tenantId, normalizedFilterRequest),
@@ -127,6 +127,17 @@ public class BagServiceImpl implements BagService {
                 .hasNext(mappedPage.hasNext())
                 .hasPrevious(mappedPage.hasPrevious())
                 .build();
+    }
+
+    private Sort resolveBagSort(BagFilterRequest filterRequest) {
+        if (!"sealed_at".equals(filterRequest.getSortBy())) {
+            return Sort.by(Sort.Direction.DESC, "id");
+        }
+
+        Sort.Direction direction = "asc".equals(filterRequest.getSortDirection())
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        return Sort.by(direction, "sealedAt").and(Sort.by(Sort.Direction.DESC, "id"));
     }
 
     @Override

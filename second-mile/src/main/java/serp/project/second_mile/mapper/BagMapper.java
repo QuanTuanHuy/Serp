@@ -102,6 +102,16 @@ public final class BagMapper {
                 .destinationPostOfficeCode(normalizeText(filterRequest.getDestinationPostOfficeCode()))
                 .vehicleId(filterRequest.getVehicleId())
                 .status(filterRequest.getStatus())
+                .minOrders(filterRequest.getMinOrders())
+                .maxOrders(filterRequest.getMaxOrders())
+                .minWeight(filterRequest.getMinWeight())
+                .maxWeight(filterRequest.getMaxWeight())
+                .minVolume(filterRequest.getMinVolume())
+                .maxVolume(filterRequest.getMaxVolume())
+                .sealedFrom(filterRequest.getSealedFrom())
+                .sealedTo(filterRequest.getSealedTo())
+                .sortBy(normalizeText(filterRequest.getSortBy()))
+                .sortDirection(normalizeText(filterRequest.getSortDirection()))
                 .build();
     }
 

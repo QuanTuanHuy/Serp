@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import {
@@ -21,6 +21,7 @@ import {
   useCreateStudentMutation,
   useDeleteStudentMutation,
   useGetStudentByIdQuery,
+  useGetStudentSummaryQuery,
   useGetStudentsQuery,
   useUpdateStudentMutation,
   useGetSchoolDropdownOptionsQuery,
@@ -37,15 +38,20 @@ import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import type { SchoolBusStudent, SchoolBusStudentUpsertRequest } from '../types';
-import { getPageItems, SCHOOL_BUS_PAGE_QUERY_OPTIONS } from '../utils';
+import { formatDate, getPageItems, SCHOOL_BUS_PAGE_QUERY_OPTIONS } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
+import { genderLabel, getLabel, profileStatusLabel } from '../schoolBusLabels';
 
 function UnassignedBadge() {
   return (
     <span className='inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 ring-1 ring-slate-200'>
-      Unassigned
+      Chưa gán
     </span>
   );
+}
+
+function formatStudentDate(value?: string | null) {
+  return value ? formatDate(value) : '-';
 }
 
 // -- Main Page -----------------------------------------------------------------
@@ -72,6 +78,9 @@ export function SchoolBusStudentsPage() {
     pagination.params,
     SCHOOL_BUS_PAGE_QUERY_OPTIONS
   );
+  const { data: summaryData } = useGetStudentSummaryQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
   const { data: schoolsData } = useGetSchoolDropdownOptionsQuery(undefined, {
     skip: !dialogOpen,
   });
@@ -98,13 +107,7 @@ export function SchoolBusStudentsPage() {
   const parents = parentsData?.data || [];
 
   // --- Stats -------------------------------------------------------
-  const uniqueSchools = new Set(
-    students.map((s) => s.schoolName).filter(Boolean)
-  ).size;
-  const linkedParents = new Set(
-    students.map((s) => s.parentProfileId).filter(Boolean)
-  ).size;
-  const activeStudents = students.filter((s) => s.isActive !== false).length;
+  const summary = summaryData?.data;
 
   // --- Filter state ------------------------------------------------
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -151,11 +154,11 @@ export function SchoolBusStudentsPage() {
       const response = editingStudentId
         ? await updateStudent({ id: editingStudentId, body: values }).unwrap()
         : await createStudent(values).unwrap();
-      toast.success(response.message || 'Student saved');
+      toast.success(response.message || 'Đã lưu học sinh');
       setDialogOpen(false);
       setEditingStudentId(null);
     } catch {
-      toast.error('Failed to save student');
+      toast.error('Không thể lưu học sinh');
     }
   };
 
@@ -163,17 +166,17 @@ export function SchoolBusStudentsPage() {
     if (!deletingStudent) return;
     try {
       const response = await deleteStudent(deletingStudent.id).unwrap();
-      toast.success(response.message || 'Student deleted');
+      toast.success(response.message || 'Đã xóa học sinh');
       setDeletingStudent(null);
     } catch {
-      toast.error('Failed to delete student');
+      toast.error('Không thể xóa học sinh');
     }
   };
 
   const studentColumns: SchoolBusTableColumn<SchoolBusStudent>[] = [
     {
       key: 'student',
-      header: 'Student',
+      header: 'Học sinh',
       className: 'pl-6',
       headerClassName: 'pl-6',
       render: (student) => (
@@ -191,13 +194,13 @@ export function SchoolBusStudentsPage() {
                   {student.studentCode}
                 </span>
               ) : (
-                <span className='text-slate-400'>No code</span>
+                <span className='text-slate-400'>Chưa có mã</span>
               )}
               <span className='text-slate-300'>-</span>
               <span>
                 {[student.grade, student.className]
                   .filter(Boolean)
-                  .join(' / ') || 'No grade'}
+                  .join(' / ') || 'Chưa có khối/lớp'}
               </span>
             </p>
           </div>
@@ -206,16 +209,16 @@ export function SchoolBusStudentsPage() {
     },
     {
       key: 'school',
-      header: 'School',
+      header: 'Trường học',
       render: (student) => (
         <span className='font-medium text-slate-700'>
-          {student.schoolName || 'Not available'}
+          {student.schoolName || 'Chưa có'}
         </span>
       ),
     },
     {
       key: 'parent',
-      header: 'Parent / Contact',
+      header: 'Phụ huynh / Liên hệ',
       render: (student) => (
         <div>
           <p className='text-sm font-medium text-slate-700'>
@@ -231,17 +234,17 @@ export function SchoolBusStudentsPage() {
     },
     {
       key: 'pickup',
-      header: 'Default pickup',
+      header: 'Điểm đón mặc định',
       render: (student) => student.pickupPointName || '-',
     },
     {
       key: 'dropoff',
-      header: 'Default drop-off',
+      header: 'Điểm trả mặc định',
       render: (student) => student.defaultDropoffPointName || '-',
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       render: (student) => (
         <SchoolBusStatusBadge
           status={student.isActive ? 'ACTIVE' : 'INACTIVE'}
@@ -250,7 +253,7 @@ export function SchoolBusStudentsPage() {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: 'Thao tác',
       className: 'pr-6 text-right',
       headerClassName: 'pr-6 text-right',
       render: (student) => (
@@ -307,7 +310,7 @@ export function SchoolBusStudentsPage() {
         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400' />
         <input
           type='text'
-          placeholder='Search by name or code...'
+          placeholder='Tìm theo tên hoặc mã học sinh...'
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className='w-full h-9 rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-3 text-xs outline-none focus:border-slate-300 focus:ring-1 focus:ring-slate-200'
@@ -316,7 +319,7 @@ export function SchoolBusStudentsPage() {
       <SchoolBusSelect
         value={filterSchool}
         onChange={setFilterSchool}
-        placeholder='All schools'
+        placeholder='Tất cả trường học'
         options={schoolNames.map((name) => {
           const count = students.filter((s) => s.schoolName === name).length;
           return {
@@ -335,10 +338,10 @@ export function SchoolBusStudentsPage() {
       <SchoolBusSelect
         value={filterStatus}
         onChange={setFilterStatus}
-        placeholder='All statuses'
+        placeholder='Tất cả trạng thái'
         options={[
           {
-            label: 'Active',
+            label: 'Đang hoạt động',
             value: 'active',
             badge: (
               <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
@@ -347,7 +350,7 @@ export function SchoolBusStudentsPage() {
             ),
           },
           {
-            label: 'Inactive',
+            label: 'Ngừng hoạt động',
             value: 'inactive',
             badge: (
               <span className='inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600'>
@@ -364,13 +367,13 @@ export function SchoolBusStudentsPage() {
   return (
     <>
       <SchoolBusPageShell
-        title='Students'
-        description='Operational student directory powering route planning, requests, and attendance.'
+        title='Học sinh'
+        description='Quản lý hồ sơ học sinh phục vụ lập tuyến, yêu cầu xe bus và điểm danh.'
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Students', current: true },
+              { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
+              { label: 'Học sinh', current: true },
             ]}
           />
         }
@@ -383,7 +386,7 @@ export function SchoolBusStudentsPage() {
                 setDialogOpen(true);
               }}
             >
-              <Plus className='h-4 w-4' /> Add student
+              <Plus className='h-4 w-4' /> Thêm học sinh
             </Button>
           ) : undefined
         }
@@ -399,36 +402,36 @@ export function SchoolBusStudentsPage() {
             )}
           >
             <SchoolBusMetricCard
-              label='Students'
-              value={students.length}
+              label='Học sinh'
+              value={summary?.totalStudents ?? 0}
               icon={User}
               tone='student'
             />
             <SchoolBusMetricCard
-              label='Schools'
-              value={uniqueSchools}
+              label='Trường học'
+              value={summary?.linkedSchools ?? 0}
               icon={GraduationCap}
               tone='school'
             />
             {!access.isParentOnly && (
               <SchoolBusMetricCard
-                label='Linked parents'
-                value={linkedParents}
+                label='Phụ huynh đã liên kết'
+                value={summary?.linkedParents ?? 0}
                 icon={Users}
                 tone='default'
               />
             )}
             <SchoolBusMetricCard
-              label='Active students'
-              value={activeStudents}
+              label='Học sinh đang hoạt động'
+              value={summary?.activeStudents ?? 0}
               icon={CheckCircle2}
               tone='success'
             />
           </div>
 
           <SchoolBusDataTable
-            title='Student roster'
-            description='Manage student profiles, schools, parents, and default transport points.'
+            title='Danh sách học sinh'
+            description='Quản lý hồ sơ học sinh, trường học, phụ huynh và điểm đón/trả mặc định.'
             toolbar={toolbar}
             data={filteredStudents}
             columns={visibleColumns}
@@ -439,13 +442,13 @@ export function SchoolBusStudentsPage() {
             emptyIcon={User}
             emptyTitle={
               students.length === 0
-                ? 'No students yet'
-                : 'No students match your filters'
+                ? 'Chưa có học sinh'
+                : 'Không có học sinh phù hợp với bộ lọc'
             }
             emptyDescription={
               students.length === 0
-                ? 'Create students and link them to parents and transport defaults.'
-                : 'Try adjusting your search query or clear the active filters.'
+                ? 'Hãy tạo học sinh và liên kết với phụ huynh, điểm đón/trả mặc định.'
+                : 'Hãy thử điều chỉnh từ khóa tìm kiếm hoặc xóa bộ lọc.'
             }
           />
         </div>
@@ -470,52 +473,60 @@ export function SchoolBusStudentsPage() {
         onOpenChange={(open) => {
           if (!open) setViewingStudentId(null);
         }}
-        title='Student detail'
-        description='Read-only student information loaded from the detail API.'
+        title='Chi tiết học sinh'
+        description='Thông tin học sinh được tải từ hệ thống.'
         isLoading={loadingViewingStudent}
         isError={viewingStudentError}
         sections={[
           {
-            title: 'Basic information',
+            title: 'Thông tin cơ bản',
             fields: [
-              { label: 'Student name', value: viewingStudent?.fullName },
-              { label: 'Student code', value: viewingStudent?.studentCode },
-              { label: 'School', value: viewingStudent?.schoolName },
+              { label: 'Họ tên học sinh', value: viewingStudent?.fullName },
+              { label: 'Mã học sinh', value: viewingStudent?.studentCode },
+              { label: 'Trường học', value: viewingStudent?.schoolName },
               {
-                label: 'Grade / class',
+                label: 'Khối / lớp',
                 value:
                   [viewingStudent?.grade, viewingStudent?.className]
                     .filter(Boolean)
                     .join(' / ') || null,
               },
-              { label: 'Date of birth', value: viewingStudent?.dateOfBirth },
-              { label: 'Gender', value: viewingStudent?.gender },
               {
-                label: 'Status',
-                value:
-                  viewingStudent?.isActive === false ? 'Inactive' : 'Active',
+                label: 'Ngày sinh',
+                value: formatStudentDate(viewingStudent?.dateOfBirth),
+              },
+              {
+                label: 'Giới tính',
+                value: getLabel(genderLabel, viewingStudent?.gender),
+              },
+              {
+                label: 'Trạng thái',
+                value: getLabel(
+                  profileStatusLabel,
+                  viewingStudent?.isActive === false ? 'INACTIVE' : 'ACTIVE'
+                ),
               },
             ],
           },
           {
-            title: 'Parent and transport defaults',
+            title: 'Phụ huynh và thông tin đón/trả mặc định',
             fields: [
-              { label: 'Parent', value: viewingStudent?.parentProfileName },
+              { label: 'Phụ huynh', value: viewingStudent?.parentProfileName },
               {
-                label: 'Default pickup point',
+                label: 'Điểm đón mặc định',
                 value: viewingStudent?.pickupPointName,
               },
               {
-                label: 'Default drop-off point',
+                label: 'Điểm trả mặc định',
                 value: viewingStudent?.defaultDropoffPointName,
               },
               {
-                label: 'Home address',
+                label: 'Địa chỉ nhà',
                 value: viewingStudent?.homeAddress,
                 fullWidth: true,
               },
               {
-                label: 'Special note',
+                label: 'Ghi chú đặc biệt',
                 value: viewingStudent?.specialNote,
                 fullWidth: true,
               },
@@ -529,8 +540,8 @@ export function SchoolBusStudentsPage() {
         onOpenChange={(open) => {
           if (!open) setDeletingStudent(null);
         }}
-        title='Delete student'
-        description='This will soft-delete the student record from active school-bus operations.'
+        title='Xóa học sinh'
+        description='Học sinh sẽ được xóa mềm khỏi danh sách đang sử dụng trong vận hành xe bus.'
         isLoading={deleting}
         onConfirm={handleDelete}
       />

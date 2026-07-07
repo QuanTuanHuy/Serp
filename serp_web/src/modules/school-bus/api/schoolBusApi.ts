@@ -18,28 +18,36 @@ import type {
   SchoolBusDepotUpsertRequest,
   SchoolBusDriver,
   SchoolBusDriverUpsertRequest,
+  SchoolBusFleetSummary,
   SchoolBusParent,
+  SchoolBusParentSummary,
   SchoolBusParentUpsertRequest,
   SchoolBusPickupPoint,
   SchoolBusPickupPointUpsertRequest,
+  SchoolBusReportOverview,
   SchoolBusRejectRequest,
   SchoolBusManualDispatchRequest,
   SchoolBusRoute,
   SchoolBusRouteAssignment,
   SchoolBusRouteAssignmentRequest,
   SchoolBusRouteDetail,
+  SchoolBusRouteDispatchSummary,
   SchoolBusRouteMapDetail,
   SchoolBusRoutePath,
   SchoolBusRouteStop,
   SchoolBusRouteUpsertRequest,
   SchoolBusSchool,
+  SchoolBusSchoolRegistrySummary,
   SchoolBusSchoolUpsertRequest,
   SchoolBusStudent,
+  SchoolBusStudentSummary,
   SchoolBusStudentUpsertRequest,
   SchoolBusSubscription,
+  SchoolBusSubscriptionSummary,
   SchoolBusSubscriptionUpsertRequest,
   SchoolBusTransportRequest,
   SchoolBusTransportRequestDetail,
+  SchoolBusTransportRequestSummary,
   SchoolBusTransportRequestUpsertRequest,
   SchoolBusTripAttendanceActionRequest,
   SchoolBusBatchAttendanceRequest,
@@ -51,6 +59,7 @@ import type {
   TripAttendanceStudentItem,
   SchoolBusTripExecution,
   SchoolBusTripExecutionListItem,
+  SchoolBusTripListSummary,
   SchoolBusTripStopLog,
   SchoolBusTripStudent,
   SchoolBusSchoolPickupPoint,
@@ -139,6 +148,22 @@ export const schoolBusApi = api.injectEndpoints({
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<OperationalReport>(),
       providesTags: [{ type: 'schoolBus/Report', id: 'SUMMARY' }],
+    }),
+    getSchoolBusReportOverview: builder.query<
+      ApiResponse<SchoolBusReportOverview>,
+      SchoolBusListParams | void
+    >({
+      query: (params) => ({
+        url: '/dashboard/reports/overview',
+        method: 'GET',
+        params: params || undefined,
+      }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusReportOverview>(),
+      providesTags: [
+        { type: 'schoolBus/Report', id: 'OVERVIEW' },
+        { type: 'schoolBus/Report', id: 'SUMMARY' },
+      ],
     }),
     getSchoolBusReportTrips: builder.query<
       ApiResponse<PagedResponse<SchoolBusTripExecution>>,
@@ -252,6 +277,15 @@ export const schoolBusApi = api.injectEndpoints({
             ]
           : [{ type: 'schoolBus/School', id: 'LIST' }],
     }),
+    getSchoolRegistrySummary: builder.query<
+      ApiResponse<SchoolBusSchoolRegistrySummary>,
+      void
+    >({
+      query: () => ({ url: '/schools/summary', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSchoolRegistrySummary>(),
+      providesTags: [{ type: 'schoolBus/School', id: 'SUMMARY' }],
+    }),
     getSchoolById: builder.query<ApiResponse<SchoolBusSchool>, number>({
       query: (id) => ({ url: `/schools/${id}`, method: 'GET' }),
       extraOptions: { service: 'school-bus' },
@@ -267,6 +301,7 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusSchool>(),
       invalidatesTags: [
         { type: 'schoolBus/School', id: 'LIST' },
+        { type: 'schoolBus/School', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -284,6 +319,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'schoolBus/School', id: 'LIST' },
         { type: 'schoolBus/School', id },
+        { type: 'schoolBus/School', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -294,6 +330,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: 'schoolBus/School', id: 'LIST' },
         { type: 'schoolBus/School', id },
+        { type: 'schoolBus/School', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -316,6 +353,12 @@ export const schoolBusApi = api.injectEndpoints({
             ]
           : [{ type: 'schoolBus/Parent', id: 'LIST' }],
     }),
+    getParentSummary: builder.query<ApiResponse<SchoolBusParentSummary>, void>({
+      query: () => ({ url: '/parents/summary', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusParentSummary>(),
+      providesTags: [{ type: 'schoolBus/Parent', id: 'SUMMARY' }],
+    }),
     getParentById: builder.query<ApiResponse<SchoolBusParent>, number>({
       query: (id) => ({ url: `/parents/${id}`, method: 'GET' }),
       extraOptions: { service: 'school-bus' },
@@ -331,6 +374,7 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusParent>(),
       invalidatesTags: [
         { type: 'schoolBus/Parent', id: 'LIST' },
+        { type: 'schoolBus/Parent', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -348,6 +392,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'schoolBus/Parent', id: 'LIST' },
         { type: 'schoolBus/Parent', id },
+        { type: 'schoolBus/Parent', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -358,6 +403,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: 'schoolBus/Parent', id: 'LIST' },
         { type: 'schoolBus/Parent', id },
+        { type: 'schoolBus/Parent', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -381,6 +427,14 @@ export const schoolBusApi = api.injectEndpoints({
             ]
           : [{ type: 'schoolBus/Student', id: 'LIST' }],
     }),
+    getStudentSummary: builder.query<ApiResponse<SchoolBusStudentSummary>, void>(
+      {
+        query: () => ({ url: '/students/summary', method: 'GET' }),
+        extraOptions: { service: 'school-bus' },
+        transformResponse: transformApiResponse<SchoolBusStudentSummary>(),
+        providesTags: [{ type: 'schoolBus/Student', id: 'SUMMARY' }],
+      }
+    ),
     getStudentById: builder.query<ApiResponse<SchoolBusStudent>, number>({
       query: (id) => ({ url: `/students/${id}`, method: 'GET' }),
       extraOptions: { service: 'school-bus' },
@@ -398,6 +452,7 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusStudent>(),
       invalidatesTags: [
         { type: 'schoolBus/Student', id: 'LIST' },
+        { type: 'schoolBus/Student', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -415,6 +470,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'schoolBus/Student', id: 'LIST' },
         { type: 'schoolBus/Student', id },
+        { type: 'schoolBus/Student', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -425,7 +481,20 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: 'schoolBus/Student', id: 'LIST' },
         { type: 'schoolBus/Student', id },
+        { type: 'schoolBus/Student', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+      ],
+    }),
+
+    getFleetSummary: builder.query<ApiResponse<SchoolBusFleetSummary>, void>({
+      query: () => ({ url: '/fleet/summary', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusFleetSummary>(),
+      providesTags: [
+        { type: 'schoolBus/Bus', id: 'LIST' },
+        { type: 'schoolBus/Driver', id: 'LIST' },
+        { type: 'schoolBus/Attendant', id: 'LIST' },
+        { type: 'schoolBus/Depot', id: 'LIST' },
       ],
     }),
 
@@ -663,6 +732,7 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusPickupPoint>(),
       invalidatesTags: [
         { type: 'schoolBus/PickupPoint', id: 'LIST' },
+        { type: 'schoolBus/School', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -680,6 +750,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'schoolBus/PickupPoint', id: 'LIST' },
         { type: 'schoolBus/PickupPoint', id },
+        { type: 'schoolBus/School', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -690,6 +761,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: 'schoolBus/PickupPoint', id: 'LIST' },
         { type: 'schoolBus/PickupPoint', id },
+        { type: 'schoolBus/School', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -777,6 +849,16 @@ export const schoolBusApi = api.injectEndpoints({
             ]
           : [{ type: 'schoolBus/TransportRequest', id: 'LIST' }],
     }),
+    getTransportRequestSummary: builder.query<
+      ApiResponse<SchoolBusTransportRequestSummary>,
+      void
+    >({
+      query: () => ({ url: '/transport-requests/summary', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<SchoolBusTransportRequestSummary>(),
+      providesTags: [{ type: 'schoolBus/TransportRequest', id: 'SUMMARY' }],
+    }),
     getTransportRequestById: builder.query<
       ApiResponse<SchoolBusTransportRequestDetail>,
       number
@@ -798,6 +880,7 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusTransportRequest>(),
       invalidatesTags: [
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
+        { type: 'schoolBus/TransportRequest', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
@@ -816,6 +899,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
         { type: 'schoolBus/TransportRequest', id },
+        { type: 'schoolBus/TransportRequest', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
@@ -833,7 +917,9 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
         { type: 'schoolBus/TransportRequest', id },
+        { type: 'schoolBus/TransportRequest', id: 'SUMMARY' },
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTION_SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
@@ -852,7 +938,9 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
         { type: 'schoolBus/TransportRequest', id },
+        { type: 'schoolBus/TransportRequest', id: 'SUMMARY' },
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTION_SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
@@ -870,7 +958,9 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
         { type: 'schoolBus/TransportRequest', id },
+        { type: 'schoolBus/TransportRequest', id: 'SUMMARY' },
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTION_SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
@@ -885,6 +975,17 @@ export const schoolBusApi = api.injectEndpoints({
         transformApiResponse<PagedResponse<SchoolBusSubscription>>(),
       providesTags: [
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+      ],
+    }),
+    getSchoolBusSubscriptionSummary: builder.query<
+      ApiResponse<SchoolBusSubscriptionSummary>,
+      void
+    >({
+      query: () => ({ url: '/subscriptions/summary', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusSubscriptionSummary>(),
+      providesTags: [
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTION_SUMMARY' },
       ],
     }),
     getSchoolBusSubscriptionById: builder.query<
@@ -908,6 +1009,7 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
       invalidatesTags: [
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTION_SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
     }),
@@ -920,6 +1022,7 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
       invalidatesTags: (result, error, id) => [
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTION_SUMMARY' },
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
@@ -934,6 +1037,7 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusSubscription>(),
       invalidatesTags: (result, error, id) => [
         { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTIONS' },
+        { type: 'schoolBus/TransportRequest', id: 'SUBSCRIPTION_SUMMARY' },
         { type: 'schoolBus/TransportRequest', id: 'LIST' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
@@ -970,6 +1074,15 @@ export const schoolBusApi = api.injectEndpoints({
               { type: 'schoolBus/Route', id: 'LIST' },
             ]
           : [{ type: 'schoolBus/Route', id: 'LIST' }],
+    }),
+    getRouteDispatchSummary: builder.query<
+      ApiResponse<SchoolBusRouteDispatchSummary>,
+      void
+    >({
+      query: () => ({ url: '/routes/dispatch-summary', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse: transformApiResponse<SchoolBusRouteDispatchSummary>(),
+      providesTags: [{ type: 'schoolBus/Route', id: 'DISPATCH_SUMMARY' }],
     }),
     getRouteById: builder.query<ApiResponse<SchoolBusRouteDetail>, number>({
       query: (id) => ({ url: `/routes/${id}`, method: 'GET' }),
@@ -1019,6 +1132,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: `MAP-${id}` },
         { type: 'schoolBus/Route', id: `PATH-${id}` },
         { type: 'schoolBus/Route', id: `MANIFEST-${id}` },
+        { type: 'schoolBus/Route', id: 'DISPATCH_SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
       ],
     }),
@@ -1039,6 +1153,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: `DETAIL-${id}` },
         { type: 'schoolBus/Route', id: `MAP-${id}` },
         { type: 'schoolBus/Route', id: `MANIFEST-${id}` },
+        { type: 'schoolBus/Route', id: 'DISPATCH_SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Report', id: 'SUMMARY' },
       ],
@@ -1060,6 +1175,7 @@ export const schoolBusApi = api.injectEndpoints({
         { type: 'schoolBus/Route', id: `DETAIL-${id}` },
         { type: 'schoolBus/Route', id: `MAP-${id}` },
         { type: 'schoolBus/Route', id: `PATH-${id}` },
+        { type: 'schoolBus/Route', id: 'DISPATCH_SUMMARY' },
       ],
     }),
     reorderRouteStops: builder.mutation<
@@ -1209,8 +1325,10 @@ export const schoolBusApi = api.injectEndpoints({
       transformResponse: transformApiResponse<SchoolBusTripExecution>(),
       invalidatesTags: (_result, _error, routePlanId) => [
         { type: 'schoolBus/TripExecution', id: 'LIST' },
+        { type: 'schoolBus/TripExecution', id: 'SUMMARY' },
         { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
         { type: 'schoolBus/Route', id: 'LIST' },
+        { type: 'schoolBus/Route', id: 'DISPATCH_SUMMARY' },
         { type: 'schoolBus/Route', id: routePlanId },
         { type: 'schoolBus/Route', id: `DETAIL-${routePlanId}` },
         { type: 'schoolBus/Route', id: `MAP-${routePlanId}` },
@@ -1226,6 +1344,14 @@ export const schoolBusApi = api.injectEndpoints({
         transformApiResponse<PagedResponse<SchoolBusTripExecutionListItem>>(),
       providesTags: [{ type: 'schoolBus/TripExecution', id: 'TRIPS' }],
     }),
+    getTripListSummary: builder.query<ApiResponse<SchoolBusTripListSummary>, void>(
+      {
+        query: () => ({ url: '/trips/summary', method: 'GET' }),
+        extraOptions: { service: 'school-bus' },
+        transformResponse: transformApiResponse<SchoolBusTripListSummary>(),
+        providesTags: [{ type: 'schoolBus/TripExecution', id: 'SUMMARY' }],
+      }
+    ),
     getTripById: builder.query<ApiResponse<SchoolBusTripExecution>, number>({
       query: (id) => ({ url: `/trips/${id}`, method: 'GET' }),
       extraOptions: { service: 'school-bus' },
@@ -1242,6 +1368,7 @@ export const schoolBusApi = api.injectEndpoints({
         result
           ? [
               { type: 'schoolBus/TripExecution', id: 'TRIPS' },
+              { type: 'schoolBus/TripExecution', id: 'SUMMARY' },
             ]
           : [],
     }),
@@ -1296,6 +1423,7 @@ export const schoolBusApi = api.injectEndpoints({
         result
           ? [
               { type: 'schoolBus/TripExecution', id: 'TRIPS' },
+              { type: 'schoolBus/TripExecution', id: 'SUMMARY' },
               { type: 'schoolBus/TripExecution', id: `TRIP-OVERVIEW-${id}` },
               { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
             ]
@@ -1316,11 +1444,13 @@ export const schoolBusApi = api.injectEndpoints({
         result
           ? [
               { type: 'schoolBus/TripExecution', id: 'TRIPS' },
+              { type: 'schoolBus/TripExecution', id: 'SUMMARY' },
               { type: 'schoolBus/TripExecution', id: `TRIP-OVERVIEW-${id}` },
               { type: 'schoolBus/Attendance', id: `TRIP-RECENT-${id}` },
               { type: 'schoolBus/Attendance', id: `TRIP-STUDENTS-${id}` },
               { type: 'schoolBus/Attendance', id: `TRIP-STUDENTS-${id}-ALL` },
               { type: 'schoolBus/Dashboard', id: 'SUMMARY' },
+              { type: 'schoolBus/Report', id: 'SUMMARY' },
             ]
           : [],
     }),
@@ -1715,6 +1845,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: [
         { type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_LIST' },
         { type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_ACTIVE' },
+        { type: 'schoolBus/School', id: 'SUMMARY' },
       ],
     }),
     updateSchoolPickupPoint: builder.mutation<
@@ -1732,6 +1863,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: [
         { type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_LIST' },
         { type: 'schoolBus/PickupPoint', id: 'SCHOOL_LINK_ACTIVE' },
+        { type: 'schoolBus/School', id: 'SUMMARY' },
       ],
     }),
     unlinkSchoolPickupPoint: builder.mutation<
@@ -1873,6 +2005,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_r, _e, { sessionId }) => [
         { type: 'schoolBus/Route', id: `SESSION-ROUTES-${sessionId}` },
         { type: 'schoolBus/Route', id: 'LIST' },
+        { type: 'schoolBus/Route', id: 'DISPATCH_SUMMARY' },
       ],
     }),
     deleteRouteInSession: builder.mutation<
@@ -1887,6 +2020,7 @@ export const schoolBusApi = api.injectEndpoints({
       invalidatesTags: (_r, _e, { sessionId, routeId }) => [
         { type: 'schoolBus/Route', id: `SESSION-ROUTES-${sessionId}` },
         { type: 'schoolBus/Route', id: 'LIST' },
+        { type: 'schoolBus/Route', id: 'DISPATCH_SUMMARY' },
         { type: 'schoolBus/Route', id: routeId },
         { type: 'schoolBus/Route', id: `DETAIL-${routeId}` },
         { type: 'schoolBus/Route', id: `MAP-${routeId}` },
@@ -1976,6 +2110,7 @@ const {
   useLazySearchMapLocationsQuery,
   useLazyReverseMapLocationQuery,
   useGetSchoolBusReportQuery: useGetSchoolBusReportQueryOrig,
+  useGetSchoolBusReportOverviewQuery: useGetSchoolBusReportOverviewQueryOrig,
   useGetSchoolBusReportTripsQuery: useGetSchoolBusReportTripsQueryOrig,
 
   useGetSchoolBusReportAttendanceQuery:
@@ -1983,20 +2118,24 @@ const {
   useGetSchoolBusReportCapacityQuery: useGetSchoolBusReportCapacityQueryOrig,
   useGetBusTypesQuery: useGetBusTypesQueryOrig,
   useGetSchoolsQuery: useGetSchoolsQueryOrig,
+  useGetSchoolRegistrySummaryQuery: useGetSchoolRegistrySummaryQueryOrig,
   useGetSchoolByIdQuery: useGetSchoolByIdQueryOrig,
   useCreateSchoolMutation,
   useUpdateSchoolMutation,
   useDeleteSchoolMutation,
   useGetParentsQuery: useGetParentsQueryOrig,
+  useGetParentSummaryQuery: useGetParentSummaryQueryOrig,
   useGetParentByIdQuery: useGetParentByIdQueryOrig,
   useCreateParentMutation,
   useUpdateParentMutation,
   useDeleteParentMutation,
   useGetStudentsQuery: useGetStudentsQueryOrig,
+  useGetStudentSummaryQuery: useGetStudentSummaryQueryOrig,
   useGetStudentByIdQuery: useGetStudentByIdQueryOrig,
   useCreateStudentMutation,
   useUpdateStudentMutation,
   useDeleteStudentMutation,
+  useGetFleetSummaryQuery: useGetFleetSummaryQueryOrig,
   useGetBusesQuery: useGetBusesQueryOrig,
   useGetBusByIdQuery: useGetBusByIdQueryOrig,
   useCreateBusMutation,
@@ -2023,6 +2162,7 @@ const {
   useUpdateDepotMutation,
   useDeleteDepotMutation,
   useGetTransportRequestsQuery: useGetTransportRequestsQueryOrig,
+  useGetTransportRequestSummaryQuery: useGetTransportRequestSummaryQueryOrig,
   useGetTransportRequestByIdQuery: useGetTransportRequestByIdQueryOrig,
   useCreateTransportRequestMutation,
   useUpdateTransportRequestMutation,
@@ -2030,6 +2170,8 @@ const {
   useRejectTransportRequestMutation,
   useCancelTransportRequestMutation,
   useGetSchoolBusSubscriptionsQuery: useGetSchoolBusSubscriptionsQueryOrig,
+  useGetSchoolBusSubscriptionSummaryQuery:
+    useGetSchoolBusSubscriptionSummaryQueryOrig,
   useGetSchoolBusSubscriptionByIdQuery:
     useGetSchoolBusSubscriptionByIdQueryOrig,
   useCreateSchoolBusSubscriptionMutation,
@@ -2037,6 +2179,7 @@ const {
   usePauseSchoolBusSubscriptionMutation,
   useStopSchoolBusSubscriptionMutation,
   useGetRoutesQuery: useGetRoutesQueryOrig,
+  useGetRouteDispatchSummaryQuery: useGetRouteDispatchSummaryQueryOrig,
   useGetRouteByIdQuery: useGetRouteByIdQueryOrig,
   useGetRouteMapQuery: useGetRouteMapQueryOrig,
   useGetRoutePathQuery: useGetRoutePathQueryOrig,
@@ -2050,6 +2193,7 @@ const {
   useRemoveRouteStudentMutation,
   useCreateTripFromRouteMutation,
   useGetTripsQuery: useGetTripsQueryOrig,
+  useGetTripListSummaryQuery: useGetTripListSummaryQueryOrig,
   useGetTripByIdQuery: useGetTripByIdQueryOrig,
   useStartTripMutation,
   useArriveTripStopMutation,
@@ -2130,6 +2274,9 @@ export const useGetBusDropdownOptionsQuery = wrapQueryHook(
 export const useGetSchoolBusReportQuery = wrapQueryHook(
   useGetSchoolBusReportQueryOrig
 );
+export const useGetSchoolBusReportOverviewQuery = wrapQueryHook(
+  useGetSchoolBusReportOverviewQueryOrig
+);
 
 export const useGetSchoolBusReportTripsQuery = wrapQueryHook(
   useGetSchoolBusReportTripsQueryOrig
@@ -2142,11 +2289,23 @@ export const useGetSchoolBusReportCapacityQuery = wrapQueryHook(
 );
 export const useGetBusTypesQuery = wrapQueryHook(useGetBusTypesQueryOrig);
 export const useGetSchoolsQuery = wrapQueryHook(useGetSchoolsQueryOrig);
+export const useGetSchoolRegistrySummaryQuery = wrapQueryHook(
+  useGetSchoolRegistrySummaryQueryOrig
+);
 export const useGetSchoolByIdQuery = wrapQueryHook(useGetSchoolByIdQueryOrig);
 export const useGetParentsQuery = wrapQueryHook(useGetParentsQueryOrig);
+export const useGetParentSummaryQuery = wrapQueryHook(
+  useGetParentSummaryQueryOrig
+);
 export const useGetParentByIdQuery = wrapQueryHook(useGetParentByIdQueryOrig);
 export const useGetStudentsQuery = wrapQueryHook(useGetStudentsQueryOrig);
+export const useGetStudentSummaryQuery = wrapQueryHook(
+  useGetStudentSummaryQueryOrig
+);
 export const useGetStudentByIdQuery = wrapQueryHook(useGetStudentByIdQueryOrig);
+export const useGetFleetSummaryQuery = wrapQueryHook(
+  useGetFleetSummaryQueryOrig
+);
 export const useGetBusesQuery = wrapQueryHook(useGetBusesQueryOrig);
 export const useGetBusByIdQuery = wrapQueryHook(useGetBusByIdQueryOrig);
 export const useGetDriversQuery = wrapQueryHook(useGetDriversQueryOrig);
@@ -2166,20 +2325,32 @@ export const useGetDepotByIdQuery = wrapQueryHook(useGetDepotByIdQueryOrig);
 export const useGetTransportRequestsQuery = wrapQueryHook(
   useGetTransportRequestsQueryOrig
 );
+export const useGetTransportRequestSummaryQuery = wrapQueryHook(
+  useGetTransportRequestSummaryQueryOrig
+);
 export const useGetTransportRequestByIdQuery = wrapQueryHook(
   useGetTransportRequestByIdQueryOrig
 );
 export const useGetSchoolBusSubscriptionsQuery = wrapQueryHook(
   useGetSchoolBusSubscriptionsQueryOrig
 );
+export const useGetSchoolBusSubscriptionSummaryQuery = wrapQueryHook(
+  useGetSchoolBusSubscriptionSummaryQueryOrig
+);
 export const useGetSchoolBusSubscriptionByIdQuery = wrapQueryHook(
   useGetSchoolBusSubscriptionByIdQueryOrig
 );
 export const useGetRoutesQuery = wrapQueryHook(useGetRoutesQueryOrig);
+export const useGetRouteDispatchSummaryQuery = wrapQueryHook(
+  useGetRouteDispatchSummaryQueryOrig
+);
 export const useGetRouteByIdQuery = wrapQueryHook(useGetRouteByIdQueryOrig);
 export const useGetRouteMapQuery = wrapQueryHook(useGetRouteMapQueryOrig);
 export const useGetRoutePathQuery = wrapQueryHook(useGetRoutePathQueryOrig);
 export const useGetTripsQuery = wrapQueryHook(useGetTripsQueryOrig);
+export const useGetTripListSummaryQuery = wrapQueryHook(
+  useGetTripListSummaryQueryOrig
+);
 export const useGetTripByIdQuery = wrapQueryHook(useGetTripByIdQueryOrig);
 export const useGetTripStopsQuery = wrapQueryHook(useGetTripStopsQueryOrig);
 export const useGetTripStudentsQuery = wrapQueryHook(

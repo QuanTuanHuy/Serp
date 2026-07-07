@@ -23,6 +23,7 @@ import serp.project.school_bus_service.dto.response.DropdownOptionResponse;
 import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.OperationalReportResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
+import serp.project.school_bus_service.dto.response.ReportOverviewResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
 import serp.project.school_bus_service.service.IDashboardService;
 import serp.project.school_bus_service.service.IReportingService;
@@ -113,6 +114,13 @@ public class DashboardController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<OperationalReportResponse>> getOperationsReport(
             @ModelAttribute ReportFilterParamsRequest params) {
         return ok("Fetched operations report", reportingService.getOperationsSummary(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/reports/overview")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.report.read')")
+    public ResponseEntity<GeneralResponse<ReportOverviewResponse>> getReportOverview(
+            @ModelAttribute ReportFilterParamsRequest params) {
+        return ok("Fetched report overview", reportingService.getReportOverview(params, getCurrentTenantId()));
     }
 
     @GetMapping("/reports/operations-summary/export")

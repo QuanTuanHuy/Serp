@@ -116,7 +116,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         tripStopLogService.save(firstStop);
 
         domainNotificationService.notifyTripStarted(trip, actorId);
-        return actionResponse(trip, firstStop, "Trip started.");
+        return actionResponse(trip, firstStop, messageCommon.getMessage("trip.action.started"));
     }
 
     @Override
@@ -157,7 +157,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
             return completeTrip(tripId, null, tenantId, actorId);
         }
 
-        return actionResponse(trip, stopLog, "Arrived at stop.");
+        return actionResponse(trip, stopLog, messageCommon.getMessage("trip.action.arrived"));
     }
 
     @Override
@@ -182,23 +182,27 @@ public class TripOperationServiceImpl implements ITripOperationService {
 
         if (isOutbound) {
             if (stopPurpose != RouteStopPurpose.PICKUP) {
-                throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Start boarding is only allowed at pickup stops.");
+                throw new AppException(AppErrorCode.Trip.INVALID_STATE,
+                        messageCommon.getMessage("trip.boarding.pickupOnly"));
             }
         } else {
             if (stopPurpose != RouteStopPurpose.DROPOFF) {
-                throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Start dropoff is only allowed at dropoff stops.");
+                throw new AppException(AppErrorCode.Trip.INVALID_STATE,
+                        messageCommon.getMessage("trip.dropoff.dropoffOnly"));
             }
         }
 
         if (countStudentsAtStop(tripId, routeStopId, tenantId, isOutbound) == 0) {
-            throw new AppException(AppErrorCode.Trip.INVALID_STATE, isOutbound ? "Start boarding is only allowed at pickup stops." : "Start dropoff is only allowed at dropoff stops.");
+            throw new AppException(AppErrorCode.Trip.INVALID_STATE,
+                    messageCommon.getMessage(isOutbound ? "trip.boarding.pickupOnly" : "trip.dropoff.dropoffOnly"));
         }
 
         stopLog.setStatus(TripStopStatus.BOARDING);
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
 
-        return actionResponse(trip, stopLog, isOutbound ? "Started boarding." : "Started drop-off.");
+        return actionResponse(trip, stopLog, messageCommon.getMessage(
+                isOutbound ? "trip.action.boardingStarted" : "trip.action.dropoffStarted"));
     }
 
     @Override
@@ -223,9 +227,11 @@ public class TripOperationServiceImpl implements ITripOperationService {
 
         TripStopOperationProjection firstUnfinished = tripStopLogRepository
                 .findFirstUnfinishedOperationStop(tripId, tenantId)
-                .orElseThrow(() -> new AppException(AppErrorCode.Trip.INVALID_STATE, "No active stops to depart."));
+                .orElseThrow(() -> new AppException(AppErrorCode.Trip.INVALID_STATE,
+                        messageCommon.getMessage("trip.depart.noActiveStop")));
         if (!firstUnfinished.getTripStopLogId().equals(currentStop.getTripStopLogId())) {
-            throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Cannot depart stop because there are earlier unfinished stops.");
+            throw new AppException(AppErrorCode.Trip.INVALID_STATE,
+                    messageCommon.getMessage("trip.depart.previousUnfinished"));
         }
 
         RouteStopPurpose stopPurpose = parseStopPurpose(currentStop);
@@ -237,13 +243,14 @@ public class TripOperationServiceImpl implements ITripOperationService {
 
             if (stopStudentCount > 0) {
                 if (currentStatus != TripStopStatus.BOARDING) {
-                    throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Start boarding/dropoff at this stop before departing.");
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE,
+                            messageCommon.getMessage("trip.depart.startBoardingFirst"));
                 }
 
                 long pendingCount = countPendingStudentsAtStop(tripId, routeStopId, tenantId, isOutbound);
                 if (pendingCount > 0) {
                     throw new AppException(AppErrorCode.Trip.INVALID_STATE,
-                            "Cannot depart stop because some planned students have not been processed.");
+                            messageCommon.getMessage("trip.depart.pendingStudents"));
                 }
             }
         }
@@ -253,7 +260,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         stopLog.markUpdated(actor(actorId));
         tripStopLogService.save(stopLog);
 
-        return actionResponse(trip, stopLog, "Departed stop.");
+        return actionResponse(trip, stopLog, messageCommon.getMessage("trip.action.departed"));
     }
 
     @Override
@@ -301,15 +308,15 @@ public class TripOperationServiceImpl implements ITripOperationService {
                 .toList();
         affectedStudents.forEach(ts -> {
                     ts.setStatus(TripStudentStatus.NOT_SERVED);
-                    ts.setNote("Stop skipped: " + request.getReason());
+                    ts.setNote("Bỏ qua điểm dừng: " + request.getReason());
                     ts.markUpdated(actor(actorId));
                     tripStudentService.save(ts);
                     attendanceService.recordNotServedEvent(trip, ts, stopLog.getRouteStop(),
-                            "Stop skipped: " + request.getReason(), tenantId, actorId);
+                            "Bỏ qua điểm dừng: " + request.getReason(), tenantId, actorId);
                 });
 
         domainNotificationService.notifyStopSkipped(trip, affectedStudents, request.getReason(), actorId);
-        return actionResponse(trip, stopLog, "Skipped stop.");
+        return actionResponse(trip, stopLog, messageCommon.getMessage("trip.action.skipped"));
     }
 
     @Override
@@ -332,11 +339,13 @@ public class TripOperationServiceImpl implements ITripOperationService {
             boolean isEndTerminal = (i == stops.size() - 1);
             if (isEndTerminal) {
                 if (stop.getStatus() != TripStopStatus.ARRIVED && stop.getStatus() != TripStopStatus.BOARDING && stop.getStatus() != TripStopStatus.DEPARTED) {
-                    throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Complete all stops and resolve all student attendance before completing this trip.");
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE,
+                            messageCommon.getMessage("trip.complete.resolveStopsStudents"));
                 }
             } else {
                 if (stop.getStatus() != TripStopStatus.DEPARTED && stop.getStatus() != TripStopStatus.SKIPPED) {
-                    throw new AppException(AppErrorCode.Trip.INVALID_STATE, "Complete all stops and resolve all student attendance before completing this trip.");
+                    throw new AppException(AppErrorCode.Trip.INVALID_STATE,
+                            messageCommon.getMessage("trip.complete.resolveStopsStudents"));
                 }
             }
         }
@@ -358,7 +367,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
                 })
                 .forEach(ts -> {
                     ts.setStatus(TripStudentStatus.NOT_SERVED);
-                    ts.setNote("Auto NOT_SERVED: service stop was skipped.");
+                    ts.setNote("Tự động đánh dấu chưa phục vụ: điểm dừng đã bị bỏ qua.");
                     ts.markUpdated(actor(actorId));
                     tripStudentService.save(ts);
                 });
@@ -378,7 +387,8 @@ public class TripOperationServiceImpl implements ITripOperationService {
         boolean hasUnprocessedStudents = tripStudentService.findByTrip(tripId, tenantId).stream()
                 .anyMatch(s -> s.getStatus() == TripStudentStatus.PLANNED);
         if (hasUnprocessedStudents) {
-            throw new AppException(AppErrorCode.Trip.UNPROCESSED_STUDENTS, "Complete all stops and resolve all student attendance before completing this trip.");
+            throw new AppException(AppErrorCode.Trip.UNPROCESSED_STUDENTS,
+                    messageCommon.getMessage("trip.complete.resolveStopsStudents"));
         }
 
         LocalDateTime completedAt = LocalDateTime.now();
@@ -393,7 +403,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
         tripExecutionService.save(trip);
 
         domainNotificationService.notifyTripCompleted(trip, actorId);
-        return actionResponse(trip, lastStop(stops), "Trip completed.");
+        return actionResponse(trip, lastStop(stops), messageCommon.getMessage("trip.action.completed"));
     }
 
     @Override
@@ -425,7 +435,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
                     || stop.getStatus() == TripStopStatus.ARRIVED
                     || stop.getStatus() == TripStopStatus.BOARDING) {
                 stop.setStatus(TripStopStatus.SKIPPED);
-                stop.setNote("Cancelled: " + request.getReason());
+                stop.setNote("Đã hủy: " + request.getReason());
                 stop.markUpdated(actor(actorId));
                 tripStopLogService.save(stop);
             }
@@ -437,18 +447,18 @@ public class TripOperationServiceImpl implements ITripOperationService {
                 .filter(ts -> ts.getStatus() == TripStudentStatus.PLANNED)
                 .forEach(ts -> {
                     ts.setStatus(TripStudentStatus.NOT_SERVED);
-                    ts.setNote("Trip cancelled: " + request.getReason());
+                    ts.setNote("Chuyến xe bị hủy: " + request.getReason());
                     ts.markUpdated(actor(actorId));
                     tripStudentService.save(ts);
                     RouteStopEntity serviceStop = isOutboundCancel ? ts.getPickupStop() : ts.getDropoffStop();
                     attendanceService.recordNotServedEvent(trip, ts, serviceStop,
-                            "Trip cancelled: " + request.getReason(), tenantId, actorId);
+                            "Chuyến xe bị hủy: " + request.getReason(), tenantId, actorId);
                 });
 
         tripExecutionService.save(trip);
 
         domainNotificationService.notifyTripCancelled(trip, actorId);
-        return actionResponse(trip, null, "Trip cancelled.");
+        return actionResponse(trip, null, messageCommon.getMessage("trip.action.cancelled"));
     }
 
     @Override
@@ -505,7 +515,7 @@ public class TripOperationServiceImpl implements ITripOperationService {
                 .orElse(null);
         if (stopLog == null || stopLog.getStatus() != TripStopStatus.BOARDING) {
             throw new AppException(AppErrorCode.Attendance.STOP_NOT_ACTIVE,
-                    "Start boarding/dropoff at this stop before marking attendance.");
+                    messageCommon.getMessage(AppErrorCode.Attendance.STOP_NOT_ACTIVE));
         }
 
         if (tripStudent.getStatus() != TripStudentStatus.PLANNED) {

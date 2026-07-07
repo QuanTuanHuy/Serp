@@ -59,7 +59,7 @@ export const SchoolBusDatePicker = React.forwardRef<
     {
       value,
       onChange,
-      placeholder = 'Select date',
+      placeholder = 'Chọn ngày',
       label,
       required,
       disabled,

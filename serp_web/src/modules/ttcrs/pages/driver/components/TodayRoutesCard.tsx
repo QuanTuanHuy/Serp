@@ -40,7 +40,11 @@ function formatTime(dt: string | null): string {
 }
 
 export function TodayRoutesCard({ plans }: TodayRoutesCardProps) {
-  const todayPlans = plans.filter((p) => isToday(p.startTime));
+  const effectiveTime = (p: TransportPlanListItem) =>
+    p.status === 'EXECUTING' || p.status === 'COMPLETED'
+      ? p.actualStartTime ?? p.startTime
+      : p.startTime;
+  const todayPlans = plans.filter((p) => isToday(effectiveTime(p)));
   const hasExecuting = todayPlans.some((p) => p.status === 'EXECUTING');
   const router = useRouter();
   return (
@@ -90,8 +94,21 @@ export function TodayRoutesCard({ plans }: TodayRoutesCardProps) {
                   {plan.status}
                 </Badge>
                 <span className='text-xs text-muted-foreground tabular-nums'>
-                  {formatTime(plan.startTime)}
-                  {plan.endTime ? ` → ${formatTime(plan.endTime)}` : ''}
+                  {formatTime(
+                    plan.status === 'EXECUTING' || plan.status === 'COMPLETED'
+                      ? plan.actualStartTime ?? plan.startTime
+                      : plan.startTime
+                  )}
+                  {(plan.status === 'COMPLETED'
+                    ? plan.actualEndTime
+                    : plan.status === 'EXECUTING'
+                      ? null
+                      : plan.endTime
+                  ) ? ` → ${formatTime(
+                    plan.status === 'COMPLETED'
+                      ? plan.actualEndTime
+                      : plan.endTime
+                  )}` : ''}
                 </span>
                 <span className='text-xs text-muted-foreground'>
                   {plan.stopCount} stops

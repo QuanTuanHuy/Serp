@@ -9,7 +9,7 @@ export const PlanningMap = dynamic(() => import('./PlanningMapClient'), {
     <div
       className={`flex h-[420px] items-center justify-center text-sm text-slate-500 ${schoolBusUi.mapFrame}`}
     >
-      Loading planning map...
+      Đang tải bản đồ lập kế hoạch...
     </div>
   ),
 });

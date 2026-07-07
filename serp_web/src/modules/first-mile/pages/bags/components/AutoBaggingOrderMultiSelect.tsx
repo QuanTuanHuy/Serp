@@ -64,7 +64,7 @@ export const AutoBaggingOrderMultiSelect: React.FC<
   onSelectionChange,
   disabled = false,
   loading = false,
-  placeholder = 'Select orders...',
+  placeholder = 'Chọn đơn hàng...',
 }) => {
   const [open, setOpen] = React.useState(false);
 
@@ -114,13 +114,13 @@ export const AutoBaggingOrderMultiSelect: React.FC<
           {loading ? (
             <span className='flex items-center gap-2 text-muted-foreground'>
               <Loader2 className='h-4 w-4 animate-spin' />
-              Loading orders...
+              Đang tải đơn hàng...
             </span>
           ) : selectedOrderCodes.length > 0 ? (
             <div className='flex flex-wrap items-center gap-1'>
               {selectedOrderCodes.length > 3 ? (
                 <Badge variant='secondary'>
-                  {selectedOrderCodes.length} orders selected
+                  Đã chọn {selectedOrderCodes.length} đơn
                 </Badge>
               ) : (
                 selectedOrderCodes.map((orderCode) => {
@@ -154,10 +154,10 @@ export const AutoBaggingOrderMultiSelect: React.FC<
         align='start'
       >
         <Command>
-          <CommandInput placeholder='Search by order code, post office...' />
+          <CommandInput placeholder='Tìm theo mã đơn, bưu cục...' />
           <CommandList>
-            <CommandEmpty>No candidate orders found.</CommandEmpty>
-            <CommandGroup heading='Candidate orders'>
+            <CommandEmpty>Không tìm thấy đơn phù hợp.</CommandEmpty>
+            <CommandGroup heading='Đơn hàng phù hợp'>
               {ordersWithCode.map((order) => {
                 const orderCode = String(order.orderCode);
                 const isSelected = selectedOrderCodes.includes(orderCode);

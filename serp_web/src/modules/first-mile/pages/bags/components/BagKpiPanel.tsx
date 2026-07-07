@@ -18,22 +18,22 @@ interface BagKpiPanelProps {
 export function BagKpiPanel({ data, isFetching }: BagKpiPanelProps) {
   const metrics = [
     {
-      label: 'Sealed bags',
+      label: 'Túi đã niêm phong',
       value: formatNumber(data?.sealedBagCount, 0),
       icon: PackageCheck,
     },
     {
-      label: 'Weight fill',
+      label: 'Tỷ lệ đầy theo khối lượng',
       value: formatPercent(data?.avgFillRateWeight),
       icon: Scale,
     },
     {
-      label: 'Volume fill',
+      label: 'Tỷ lệ đầy theo thể tích',
       value: formatPercent(data?.avgFillRateVolume),
       icon: Boxes,
     },
     {
-      label: 'Orders per bag',
+      label: 'Đơn hàng mỗi túi',
       value: formatNumber(data?.avgOrdersPerBag, 1),
       icon: ListChecks,
     },

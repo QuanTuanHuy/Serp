@@ -198,10 +198,10 @@ export default function RouteMapClient({
           <Popup>
             <div className='space-y-1'>
               <p className='text-xs font-semibold text-amber-700'>
-                {route.startLocationType === 'DEPOT' ? ' Depot' : ' School'}
+                {route.startLocationType === 'DEPOT' ? 'Bãi xe' : 'Trường học'}
               </p>
               <p className='font-medium'>{route.startLocationName}</p>
-              <p className='text-xs text-slate-500'>Route start</p>
+              <p className='text-xs text-slate-500'>Điểm đầu tuyến</p>
               {assignment && (
                 <>
                   <p className='text-xs text-slate-500'>
@@ -231,10 +231,10 @@ export default function RouteMapClient({
           <Popup>
             <div className='space-y-1'>
               <p className='text-xs font-semibold text-slate-700'>
-                {route.endLocationType === 'DEPOT' ? ' Depot' : ' School'}
+                {route.endLocationType === 'DEPOT' ? 'Bãi xe' : 'Trường học'}
               </p>
               <p className='font-medium'>{route.endLocationName}</p>
-              <p className='text-xs text-slate-500'>Route end</p>
+              <p className='text-xs text-slate-500'>Điểm cuối tuyến</p>
             </div>
           </Popup>
         </Marker>
@@ -260,15 +260,15 @@ export default function RouteMapClient({
             <Popup>
               <div className='space-y-1'>
                 <p className='text-xs font-semibold text-indigo-700'>
-                  Stop {idx + 1}
+                  Điểm dừng {idx + 1}
                 </p>
                 <p className='font-medium'>
                   {stop.displayName ||
                     stop.pickupPointName ||
-                    `Stop #${stop.id}`}
+                    `Điểm dừng #${stop.id}`}
                 </p>
                 <p className='text-xs text-slate-500'>
-                  {stop.estimatedStudentCount || 0} student(s)
+                  {stop.estimatedStudentCount || 0} học sinh
                 </p>
               </div>
             </Popup>
@@ -332,4 +332,3 @@ export default function RouteMapClient({
     </div>
   );
 }
-

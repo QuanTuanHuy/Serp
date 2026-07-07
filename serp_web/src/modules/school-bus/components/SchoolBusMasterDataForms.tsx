@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -55,16 +55,17 @@ import { toCoordinateString } from '../utils';
 import { SchoolBusFormDialog } from './SchoolBusFormDialog';
 import { LocationPickerMap } from './map/LocationPickerMap';
 import { useGetSchoolPickupPointDropdownOptionsQuery } from '../api/schoolBusApi';
+import { genderLabel, getLabel } from '../schoolBusLabels';
 
 const schoolSchema = z.object({
-  name: z.string().min(1, 'School name is required'),
+  name: z.string().min(1, 'Vui lòng nhập tên trường.'),
   address: z.string().optional(),
   contactPhone: z.string().optional(),
   contactEmail: z
     .string()
     .optional()
     .refine((v) => !v || /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(v), {
-      message: 'Invalid email format',
+      message: 'Email không đúng định dạng.',
     }),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
@@ -72,17 +73,17 @@ const schoolSchema = z.object({
 });
 
 const pickupPointSchema = z.object({
-  name: z.string().min(1, 'Pickup point name is required'),
-  address: z.string().min(1, 'Address is required'),
+  name: z.string().min(1, 'Vui lòng nhập tên điểm đón/trả.'),
+  address: z.string().min(1, 'Vui lòng nhập địa chỉ điểm đón/trả.'),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
-  usageType: z.string().min(1, 'Usage type is required'),
+  usageType: z.string().min(1, 'Vui lòng chọn loại sử dụng.'),
   pickupInstruction: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
 const depotSchema = z.object({
-  name: z.string().min(1, 'Depot name is required'),
+  name: z.string().min(1, 'Vui lòng nhập tên bãi xe'),
   address: z.string().optional(),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
@@ -92,25 +93,25 @@ const depotSchema = z.object({
 });
 
 const parentSchema = z.object({
-  accountUserId: z.coerce.number().min(1, 'User ID is required'),
-  fullName: z.string().min(1, 'Full name is required'),
-  phone: z.string().min(1, 'Phone is required'),
+  accountUserId: z.coerce.number().min(1, 'Vui lòng chọn tài khoản liên kết.'),
+  fullName: z.string().min(1, 'Vui lòng nhập họ và tên.'),
+  phone: z.string().min(1, 'Vui lòng nhập số điện thoại.'),
   email: z
     .string()
     .optional()
     .refine((v) => !v || /^[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(v), {
-      message: 'Invalid email format',
+      message: 'Email không đúng định dạng.',
     }),
   address: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
 const studentSchema = z.object({
-  schoolId: z.coerce.number().min(1, 'School is required'),
-  parentProfileId: z.coerce.number().min(1, 'Parent is required'),
+  schoolId: z.coerce.number().min(1, 'Vui lòng chọn trường học.'),
+  parentProfileId: z.coerce.number().min(1, 'Vui lòng chọn phụ huynh.'),
   pickupPointId: z.string().optional(),
   defaultDropoffPointId: z.string().optional(),
-  fullName: z.string().min(1, 'Full name is required'),
+  fullName: z.string().min(1, 'Vui lòng nhập họ tên học sinh.'),
   grade: z.string().optional(),
   className: z.string().optional(),
   dateOfBirth: z.string().optional(),
@@ -121,27 +122,27 @@ const studentSchema = z.object({
 });
 
 const busSchema = z.object({
-  plateNumber: z.string().min(1, 'Plate number is required'),
+  plateNumber: z.string().min(1, 'Vui lòng nhập biển số xe.'),
   busType: z.string().optional(),
-  capacity: z.coerce.number().min(1, 'Capacity must be at least 1'),
-  status: z.string().min(1, 'Status is required'),
-  homeDepotId: z.string().min(1, 'Home depot is required'),
+  capacity: z.coerce.number().min(1, 'Sức chứa phải lớn hơn hoặc bằng 1.'),
+  status: z.string().min(1, 'Vui lòng chọn trạng thái.'),
+  homeDepotId: z.string().min(1, 'Vui lòng chọn bãi xe mặc định.'),
   isActive: z.boolean().default(true),
 });
 
 const driverSchema = z.object({
-  accountUserId: z.coerce.number().min(1, 'User ID is required'),
-  fullName: z.string().min(1, 'Full name is required'),
+  accountUserId: z.coerce.number().min(1, 'Vui lòng chọn tài khoản người dùng.'),
+  fullName: z.string().min(1, 'Vui lòng nhập họ tên.'),
   phone: z.string().optional(),
-  status: z.string().min(1, 'Status is required'),
+  status: z.string().min(1, 'Vui lòng chọn trạng thái.'),
   isActive: z.boolean().default(true),
 });
 
 const attendantSchema = z.object({
-  accountUserId: z.coerce.number().min(1, 'User ID is required'),
-  fullName: z.string().min(1, 'Full name is required'),
+  accountUserId: z.coerce.number().min(1, 'Vui lòng chọn tài khoản người dùng.'),
+  fullName: z.string().min(1, 'Vui lòng nhập họ tên.'),
   phone: z.string().optional(),
-  status: z.string().min(1, 'Status is required'),
+  status: z.string().min(1, 'Vui lòng chọn trạng thái.'),
   isActive: z.boolean().default(true),
 });
 
@@ -201,8 +202,8 @@ export function SchoolFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit school' : 'Create school'}
-      description='Manage school identity and contact details for the tenant.'
+      title={initialData ? 'Chỉnh sửa trường' : 'Tạo trường'}
+      description='Quản lý thông tin định danh và liên hệ của trường.'
       stickyFooter
     >
       <SimpleForm
@@ -222,41 +223,41 @@ export function SchoolFormDialog({
         onCancel={() => onOpenChange(false)}
         stickyFooter
       >
-        <FormSectionHeader title='1. School information' />
+        <FormSectionHeader title='1. Thông tin trường học' />
         <TextField
           form={form}
           name='name'
-          label='School name *'
+          label='Tên trường *'
           className='md:col-span-2'
         />
         {initialData?.code ? (
           <ReadOnlyField
-            label='School code'
+            label='Mã trường'
             value={initialData.code}
             className='md:col-span-1'
           />
         ) : null}
 
-        <FormSectionHeader title='2. Contact details' />
+        <FormSectionHeader title='2. Thông tin liên hệ' />
         <TextField
           form={form}
           name='contactPhone'
-          label='Contact phone'
+          label='Số điện thoại liên hệ'
           className='md:col-span-1'
         />
         <TextField
           form={form}
           name='contactEmail'
-          label='Contact email'
+          label='Email liên hệ'
           className='md:col-span-1'
         />
-        <TextareaField form={form} name='address' label='Address' />
+        <TextareaField form={form} name='address' label='Địa chỉ' />
 
-        <FormSectionHeader title='3. Coordinates' />
-        <TextField form={form} name='latitude' label='Latitude' />
-        <TextField form={form} name='longitude' label='Longitude' />
+        <FormSectionHeader title='3. Tọa độ' />
+        <TextField form={form} name='latitude' label='Vĩ độ' />
+        <TextField form={form} name='longitude' label='Kinh độ' />
 
-        <FormSectionHeader title='4. School location map' />
+        <FormSectionHeader title='4. Bản đồ vị trí trường' />
         <div className='col-span-full'>
           <LocationPickerMap
             kind='school'
@@ -285,7 +286,7 @@ export function SchoolFormDialog({
             onAddressResolved={(address: string) =>
               form.setValue('address', address, { shouldDirty: true })
             }
-            title='School location'
+            title='Vị trí trường học'
           />
         </div>
       </SimpleForm>
@@ -348,8 +349,8 @@ export function PickupPointFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit pickup point' : 'Create pickup point'}
-      description='Register boarding locations for request intake and route planning.'
+      title={initialData ? 'Chỉnh sửa điểm đón/trả' : 'Tạo điểm đón/trả'}
+      description='Quản lý các điểm đón/trả phục vụ đăng ký và lập tuyến.'
       stickyFooter
     >
       <SimpleForm
@@ -369,10 +370,10 @@ export function PickupPointFormDialog({
         }
         stickyFooter
       >
-        <FormSectionHeader title='1. Pickup point information' />
+        <FormSectionHeader title='1. Thông tin điểm đón/trả' />
         {initialData?.code && (
           <ReadOnlyField
-            label='Pickup point code'
+            label='Mã điểm đón/trả'
             value={initialData.code}
             className='md:col-span-1'
           />
@@ -380,36 +381,36 @@ export function PickupPointFormDialog({
         <TextField
           form={form}
           name='name'
-          label='Pickup point name *'
+          label='Tên điểm đón/trả *'
           className={initialData?.code ? 'md:col-span-1' : 'md:col-span-2'}
         />
 
-        <FormSectionHeader title='2. Usage details' />
+        <FormSectionHeader title='2. Thông tin sử dụng' />
         <SelectField
           form={form}
           name='usageType'
-          label='Usage type *'
+          label='Loại sử dụng *'
           allowEmpty
-          emptyLabel='Not specified'
+          emptyLabel='Chưa chọn'
           options={[
-            { value: 'PICKUP_ONLY', label: 'Pickup only' },
-            { value: 'DROPOFF_ONLY', label: 'Drop-off only' },
-            { value: 'PICKUP_DROPOFF', label: 'Pickup & drop-off' },
+            { value: 'PICKUP_ONLY', label: 'Chỉ đón' },
+            { value: 'DROPOFF_ONLY', label: 'Chỉ trả' },
+            { value: 'PICKUP_DROPOFF', label: 'Đón và trả' },
           ]}
           className='md:col-span-1'
         />
         <TextareaField
           form={form}
           name='pickupInstruction'
-          label='Pickup instruction'
+          label='Hướng dẫn đón/trả'
         />
-        <TextareaField form={form} name='address' label='Address *' />
+        <TextareaField form={form} name='address' label='Địa chỉ *' />
 
-        <FormSectionHeader title='3. Coordinates' />
-        <TextField form={form} name='latitude' label='Latitude' />
-        <TextField form={form} name='longitude' label='Longitude' />
+        <FormSectionHeader title='3. Tọa độ' />
+        <TextField form={form} name='latitude' label='Vĩ độ' />
+        <TextField form={form} name='longitude' label='Kinh độ' />
 
-        <FormSectionHeader title='4. Pickup point location map' />
+        <FormSectionHeader title='4. Bản đồ vị trí điểm đón/trả' />
         <div className='col-span-full'>
           <LocationPickerMap
             kind='pickup'
@@ -452,7 +453,7 @@ export function PickupPointFormDialog({
             onAddressResolved={(address: string) =>
               form.setValue('address', address, { shouldDirty: true })
             }
-            title='Pickup point location'
+            title='Vị trí điểm đón/trả'
           />
         </div>
       </SimpleForm>
@@ -501,8 +502,8 @@ export function DepotFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit depot' : 'Create depot'}
-      description='Register a fixed bus yard used as a route start or end point.'
+      title={initialData ? 'Chỉnh sửa bãi xe' : 'Tạo bãi xe'}
+      description='Đăng ký bãi xe cố định dùng làm điểm bắt đầu hoặc kết thúc tuyến.'
     >
       <SimpleForm
         form={form}
@@ -521,22 +522,22 @@ export function DepotFormDialog({
         }
       >
         {/* -- Section: Depot information -- */}
-        <FormSectionHeader title='Depot information' />
-        <TextField form={form} name='name' label='Depot name *' />
+        <FormSectionHeader title='Thông tin bãi xe' />
+        <TextField form={form} name='name' label='Tên bãi xe *' />
         {initialData?.code ? (
-          <ReadOnlyField label='Depot code' value={initialData.code} />
+          <ReadOnlyField label='Mã bãi xe' value={initialData.code} />
         ) : null}
-        <TextField form={form} name='contactPhone' label='Contact phone' />
-        <TextareaField form={form} name='address' label='Address' />
-        <TextareaField form={form} name='description' label='Description' />
+        <TextField form={form} name='contactPhone' label='Số điện thoại liên hệ' />
+        <TextareaField form={form} name='address' label='Địa chỉ' />
+        <TextareaField form={form} name='description' label='Mô tả' />
 
         {/* -- Section: Coordinates -- */}
-        <FormSectionHeader title='Coordinates' />
-        <TextField form={form} name='latitude' label='Latitude' />
-        <TextField form={form} name='longitude' label='Longitude' />
+        <FormSectionHeader title='Tọa độ' />
+        <TextField form={form} name='latitude' label='Vĩ độ' />
+        <TextField form={form} name='longitude' label='Kinh độ' />
 
         {/* -- Section: Map picker -- */}
-        <FormSectionHeader title='Map picker' />
+        <FormSectionHeader title='Chọn vị trí trên bản đồ' />
         <div className='md:col-span-2'>
           <LocationPickerMap
             kind='depot'
@@ -648,8 +649,8 @@ export function ParentFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit parent profile' : 'Create parent profile'}
-      description='Store the school-bus operational profile linked to an account user.'
+      title={initialData ? 'Chỉnh sửa hồ sơ phụ huynh' : 'Tạo hồ sơ phụ huynh'}
+      description='Lưu hồ sơ phụ huynh dùng trong vận hành xe bus và liên kết với tài khoản người dùng.'
     >
       <SimpleForm
         form={form}
@@ -658,28 +659,28 @@ export function ParentFormDialog({
         onSubmit={onSubmit}
       >
         {/* -- Section: Linked account -- */}
-        <FormSectionHeader title='Linked account' />
+        <FormSectionHeader title='Tài khoản liên kết' />
         <SelectField
           form={form}
           name='accountUserId'
-          label='Linked account user *'
+          label='Tài khoản liên kết *'
           className='md:col-span-2'
           disabled={
             isLoadingAccountUsers || isEditMode || accountUsers.length === 0
           }
           description={
             isEditMode
-              ? 'Account user is locked after the profile is linked.'
+              ? 'Tài khoản người dùng sẽ không thể thay đổi sau khi hồ sơ được liên kết.'
               : accountUsers.length === 0
-                ? 'No users with School Bus module access found. Grant access in Account settings first.'
+                ? 'Chưa có người dùng có quyền truy cập module School Bus. Vui lòng cấp quyền trong Account trước.'
                 : selectedUser
-                  ? `Selected: ${selectedUser.email}`
-                  : 'This links the parent profile to a platform login account.'
+                  ? `Đã chọn: ${selectedUser.email}`
+                  : 'Liên kết hồ sơ phụ huynh với tài khoản đăng nhập trên nền tảng.'
           }
           placeholder={
             isLoadingAccountUsers
-              ? 'Loading account users...'
-              : 'Select account user'
+              ? 'Đang tải người dùng Account...'
+              : 'Chọn người dùng Account'
           }
           options={accountUsers.map((user) => ({
             value: String(user.id),
@@ -689,14 +690,14 @@ export function ParentFormDialog({
         />
 
         {/* -- Section: Contact information -- */}
-        <FormSectionHeader title='Contact information' />
-        <TextField form={form} name='fullName' label='Full name *' />
-        <TextField form={form} name='phone' label='Phone *' />
+        <FormSectionHeader title='Thông tin liên hệ' />
+        <TextField form={form} name='fullName' label='Họ và tên *' />
+        <TextField form={form} name='phone' label='Số điện thoại *' />
         <TextField form={form} name='email' label='Email' />
 
         {/* -- Section: Address -- */}
-        <FormSectionHeader title='Address' />
-        <TextareaField form={form} name='address' label='Address' />
+        <FormSectionHeader title='Địa chỉ' />
+        <TextareaField form={form} name='address' label='Địa chỉ' />
       </SimpleForm>
     </SchoolBusFormDialog>
   );
@@ -708,7 +709,7 @@ function getAccountUserFullName(user: SchoolBusAccountUser) {
 
 function getAccountUserOptionLabel(user: SchoolBusAccountUser) {
   const fullName =
-    getAccountUserFullName(user) || user.email || `User #${user.id}`;
+    getAccountUserFullName(user) || user.email || `Người dùng #${user.id}`;
   return `${fullName} - ${user.email} - #${user.id}`;
 }
 
@@ -839,8 +840,8 @@ export function StudentFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit student' : 'Create student'}
-      description='Manage the roster used by transport requests, routing, and attendance.'
+      title={initialData ? 'Chỉnh sửa học sinh' : 'Tạo học sinh'}
+      description='Quản lý hồ sơ học sinh phục vụ yêu cầu xe bus, lập tuyến và điểm danh.'
       stickyFooter
     >
       <SimpleForm
@@ -870,43 +871,43 @@ export function StudentFormDialog({
         }
       >
         {/* -- Section: Basic information -- */}
-        <FormSectionHeader title='Basic information' />
+        <FormSectionHeader title='Thông tin cơ bản' />
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <SelectField
             form={form}
             name='schoolId'
-            label='School *'
+            label='Trường học *'
             options={schools.map((school) => ({
               value: String(school.id),
               label: school.label,
             }))}
           />
-          <TextField form={form} name='fullName' label='Student name *' />
+          <TextField form={form} name='fullName' label='Họ tên học sinh *' />
         </div>
         {initialData?.studentCode ? (
-          <ReadOnlyField label='Student code' value={initialData.studentCode} />
+          <ReadOnlyField label='Mã học sinh' value={initialData.studentCode} />
         ) : null}
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-          <TextField form={form} name='grade' label='Grade' />
-          <TextField form={form} name='className' label='Class name' />
+          <TextField form={form} name='grade' label='Khối' />
+          <TextField form={form} name='className' label='Lớp' />
         </div>
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <TextField
             form={form}
             name='dateOfBirth'
-            label='Date of birth'
+            label='Ngày sinh'
             type='date'
           />
           <SelectField
             form={form}
             name='gender'
-            label='Gender'
+            label='Giới tính'
             allowEmpty
-            emptyLabel='Not specified'
+            emptyLabel='Chưa chọn'
             options={[
-              { value: 'MALE', label: 'Male' },
-              { value: 'FEMALE', label: 'Female' },
-              { value: 'OTHER', label: 'Other' },
+              { value: 'MALE', label: getLabel(genderLabel, 'MALE') },
+              { value: 'FEMALE', label: getLabel(genderLabel, 'FEMALE') },
+              { value: 'OTHER', label: getLabel(genderLabel, 'OTHER') },
             ]}
           />
         </div>
@@ -914,11 +915,11 @@ export function StudentFormDialog({
         {/* -- Section: Parent & contact -- */}
         {!isParent && (
           <>
-            <FormSectionHeader title='Parent & contact' />
+            <FormSectionHeader title='Phụ huynh và liên hệ' />
             <SelectField
               form={form}
               name='parentProfileId'
-              label='Parent *'
+              label='Phụ huynh *'
               options={parents.map((parent) => ({
                 value: String(parent.id),
                 label: parent.label,
@@ -928,19 +929,19 @@ export function StudentFormDialog({
         )}
 
         {/* -- Section: Transport defaults -- */}
-        <FormSectionHeader title='Transport defaults' />
+        <FormSectionHeader title='Thông tin đón/trả mặc định' />
         <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
           <SelectField
             form={form}
             name='pickupPointId'
-            label='Default pickup point'
+            label='Điểm đón mặc định'
             allowEmpty
             emptyLabel={
               isFetching
-                ? 'Loading pickup points...'
+                ? 'Đang tải điểm đón/trả...'
                 : noSchoolSelected
-                  ? 'Select a school first'
-                  : 'No pickup point'
+                  ? 'Chọn trường trước'
+                  : 'Chưa có điểm đón/trả'
             }
             options={pickupOptions}
             disabled={noSchoolSelected || isFetching}
@@ -948,24 +949,24 @@ export function StudentFormDialog({
           <SelectField
             form={form}
             name='defaultDropoffPointId'
-            label='Default drop-off point'
+            label='Điểm trả mặc định'
             allowEmpty
             emptyLabel={
               isFetching
-                ? 'Loading drop-off points...'
+                ? 'Đang tải điểm trả...'
                 : noSchoolSelected
-                  ? 'Select a school first'
-                  : 'No drop-off point'
+                  ? 'Chọn trường trước'
+                  : 'Chưa có điểm trả'
             }
             options={dropoffOptions}
             disabled={noSchoolSelected || isFetching}
           />
         </div>
-        <TextareaField form={form} name='homeAddress' label='Home address' />
+        <TextareaField form={form} name='homeAddress' label='Địa chỉ nhà' />
 
         {/* -- Section: Notes -- */}
-        <FormSectionHeader title='Notes' />
-        <TextareaField form={form} name='specialNote' label='Special note' />
+        <FormSectionHeader title='Ghi chú' />
+        <TextareaField form={form} name='specialNote' label='Ghi chú đặc biệt' />
       </SimpleForm>
     </SchoolBusFormDialog>
   );
@@ -1085,8 +1086,8 @@ export function BusFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit bus' : 'Create bus'}
-      description='Maintain the fleet inventory used for assignment.'
+      title={initialData ? 'Chỉnh sửa xe' : 'Tạo xe'}
+      description='Quản lý danh mục xe dùng cho phân công tuyến.'
     >
       <SimpleForm
         form={form}
@@ -1100,22 +1101,22 @@ export function BusFormDialog({
         }
       >
         {/* -- Section: Bus information -- */}
-        <FormSectionHeader title='Bus information' />
-        <TextField form={form} name='plateNumber' label='Plate number *' />
+        <FormSectionHeader title='Thông tin xe' />
+        <TextField form={form} name='plateNumber' label='Biển số xe *' />
         <SelectField
           form={form}
           name='busType'
-          label='Bus type'
+          label='Loại xe'
           disabled={isLoadingBusTypes || busTypeOptions.length === 0}
           description={
             busTypeOptions.length === 0
-              ? 'No bus types available from backend.'
+              ? 'Chưa có loại xe khả dụng từ backend.'
               : selectedBusType
-                ? `${selectedBusType.description} - capacity ${selectedBusType.value || 'custom'}`
-                : 'Select a bus type.'
+                ? `${selectedBusType.description} - sức chứa ${selectedBusType.value || 'tùy chỉnh'}`
+                : 'Chọn loại xe.'
           }
           placeholder={
-            isLoadingBusTypes ? 'Loading bus types...' : 'Select bus type'
+            isLoadingBusTypes ? 'Đang tải loại xe...' : 'Chọn loại xe'
           }
           options={busTypeOptions.map((busType) => ({
             value: busType.code,
@@ -1126,24 +1127,24 @@ export function BusFormDialog({
         <TextField
           form={form}
           name='capacity'
-          label='Capacity *'
+          label='Sức chứa *'
           type='number'
           disabled={!isCustomBusType}
           description={
             isCustomBusType
-              ? 'Custom bus capacity can be edited.'
-              : 'Capacity is auto-filled from the selected bus type.'
+              ? 'Có thể chỉnh sửa sức chứa với loại xe tùy chỉnh.'
+              : 'Sức chứa được tự động điền theo loại xe đã chọn.'
           }
         />
 
         {/* -- Section: Assignment defaults -- */}
-        <FormSectionHeader title='Assignment defaults' />
+        <FormSectionHeader title='Cấu hình phân công mặc định' />
         <SelectField
           form={form}
           name='homeDepotId'
-          label='Home depot'
+          label='Bãi xe mặc định'
           allowEmpty
-          emptyLabel='No home depot'
+          emptyLabel='Chưa có bãi xe mặc định'
           options={depots.map((depot) => ({
             value: String(depot.id),
             label: `${depot.name}${depot.code ? ` (${depot.code})` : ''}`,
@@ -1151,11 +1152,11 @@ export function BusFormDialog({
         />
 
         {/* -- Section: Operational status -- */}
-        <FormSectionHeader title='Operational status' />
+        <FormSectionHeader title='Trạng thái vận hành' />
         <SelectField
           form={form}
           name='status'
-          label='Status *'
+          label='Trạng thái *'
           options={BUS_STATUS_OPTIONS.map((option) => ({
             value: option.value,
             label: option.label,
@@ -1236,8 +1237,8 @@ export function DriverFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit driver' : 'Create driver'}
-      description='Manage driver availability.'
+      title={initialData ? 'Chỉnh sửa tài xế' : 'Tạo tài xế'}
+      description='Quản lý trạng thái sẵn sàng của tài xế.'
     >
       <SimpleForm
         form={form}
@@ -1246,28 +1247,28 @@ export function DriverFormDialog({
         onSubmit={onSubmit}
       >
         {/* -- Section: Account link -- */}
-        <FormSectionHeader title='ACCOUNT LINK' />
+        <FormSectionHeader title='Liên kết tài khoản' />
         <SelectField
           form={form}
           name='accountUserId'
-          label='Linked account user *'
+          label='Tài khoản liên kết *'
           className='md:col-span-2'
           disabled={
             isLoadingAccountUsers || isEditMode || accountUsers.length === 0
           }
           description={
             isEditMode
-              ? 'Account user is locked after the driver profile is linked.'
+              ? 'Tài khoản bị khóa chỉnh sửa sau khi hồ sơ tài xế đã được liên kết.'
               : accountUsers.length === 0
-                ? 'No users with School Bus module access found. Grant access in Account settings first.'
+                ? 'Chưa có người dùng có quyền truy cập module School Bus. Vui lòng cấp quyền trong Account trước.'
                 : selectedUser
-                  ? `Selected: ${selectedUser.email}`
-                  : 'Choose an existing user account if this driver can log in.'
+                  ? `Đã chọn: ${selectedUser.email}`
+                  : 'Chọn tài khoản người dùng hiện có nếu tài xế cần đăng nhập.'
           }
           placeholder={
             isLoadingAccountUsers
-              ? 'Loading account users...'
-              : 'Select account user'
+              ? 'Đang tải người dùng Account...'
+              : 'Chọn người dùng Account'
           }
           options={accountUsers.map((user) => ({
             value: String(user.id),
@@ -1277,16 +1278,16 @@ export function DriverFormDialog({
         />
 
         {/* -- Section: Driver information -- */}
-        <FormSectionHeader title='DRIVER INFORMATION' />
-        <TextField form={form} name='fullName' label='Full name *' />
-        <TextField form={form} name='phone' label='Phone' />
+        <FormSectionHeader title='Thông tin tài xế' />
+        <TextField form={form} name='fullName' label='Họ tên *' />
+        <TextField form={form} name='phone' label='Số điện thoại' />
 
         {/* -- Section: Operational status -- */}
-        <FormSectionHeader title='OPERATIONAL STATUS' />
+        <FormSectionHeader title='Trạng thái vận hành' />
         <SelectField
           form={form}
           name='status'
-          label='Status *'
+          label='Trạng thái *'
           options={STAFF_STATUS_OPTIONS.map((option) => ({
             value: option.value,
             label: option.label,
@@ -1367,8 +1368,8 @@ export function AttendantFormDialog({
     <SchoolBusFormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={initialData ? 'Edit attendant' : 'Create attendant'}
-      description='Manage on-board support staff for route execution.'
+      title={initialData ? 'Chỉnh sửa phụ xe' : 'Tạo phụ xe'}
+      description='Quản lý phụ xe hỗ trợ vận hành tuyến.'
     >
       <SimpleForm
         form={form}
@@ -1377,28 +1378,28 @@ export function AttendantFormDialog({
         onSubmit={onSubmit}
       >
         {/* -- Section: Account link -- */}
-        <FormSectionHeader title='Account link' />
+        <FormSectionHeader title='Liên kết tài khoản' />
         <SelectField
           form={form}
           name='accountUserId'
-          label='Linked account user *'
+          label='Tài khoản liên kết *'
           className='md:col-span-2'
           disabled={
             isLoadingAccountUsers || isEditMode || accountUsers.length === 0
           }
           description={
             isEditMode
-              ? 'Account user is locked after the attendant profile is linked.'
+              ? 'Tài khoản bị khóa chỉnh sửa sau khi hồ sơ phụ xe đã được liên kết.'
               : accountUsers.length === 0
-                ? 'No users with School Bus module access found. Grant access in Account settings first.'
+                ? 'Chưa có người dùng có quyền truy cập module School Bus. Vui lòng cấp quyền trong Account trước.'
                 : selectedUser
-                  ? `Selected: ${selectedUser.email}`
-                  : 'Choose an existing user account if this attendant can log in.'
+                  ? `Đã chọn: ${selectedUser.email}`
+                  : 'Chọn tài khoản người dùng hiện có nếu phụ xe cần đăng nhập.'
           }
           placeholder={
             isLoadingAccountUsers
-              ? 'Loading account users...'
-              : 'Select account user'
+              ? 'Đang tải người dùng Account...'
+              : 'Chọn người dùng Account'
           }
           options={accountUsers.map((user) => ({
             value: String(user.id),
@@ -1408,16 +1409,16 @@ export function AttendantFormDialog({
         />
 
         {/* -- Section: Attendant information -- */}
-        <FormSectionHeader title='Attendant information' />
-        <TextField form={form} name='fullName' label='Full name *' />
-        <TextField form={form} name='phone' label='Phone' />
+        <FormSectionHeader title='Thông tin phụ xe' />
+        <TextField form={form} name='fullName' label='Họ tên *' />
+        <TextField form={form} name='phone' label='Số điện thoại' />
 
         {/* -- Section: Operational status -- */}
-        <FormSectionHeader title='Operational status' />
+        <FormSectionHeader title='Trạng thái vận hành' />
         <SelectField
           form={form}
           name='status'
-          label='Status *'
+          label='Trạng thái *'
           options={STAFF_STATUS_OPTIONS.map((option) => ({
             value: option.value,
             label: option.label,
@@ -1465,14 +1466,14 @@ function SimpleForm({
               onClick={onCancel}
               disabled={isLoading}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               type='submit'
               className={schoolBusUi.primaryButton}
               disabled={isLoading}
             >
-              {isLoading ? 'Saving...' : 'Save'}
+              {isLoading ? 'Đang lưu...' : 'Lưu'}
             </Button>
           </div>
         </form>
@@ -1492,14 +1493,14 @@ function SimpleForm({
             onClick={onCancel}
             disabled={isLoading}
           >
-            Cancel
+            Hủy
           </Button>
           <Button
             type='submit'
             className={schoolBusUi.primaryButton}
             disabled={isLoading}
           >
-            {isLoading ? 'Saving...' : 'Save'}
+            {isLoading ? 'Đang lưu...' : 'Lưu'}
           </Button>
         </div>
       </form>
@@ -1614,7 +1615,7 @@ function SelectField({
   label,
   options,
   allowEmpty = false,
-  emptyLabel = 'None',
+  emptyLabel = 'Không có',
   emptyValue = '__none__',
   disabled = false,
   description,
@@ -1665,7 +1666,7 @@ function SelectField({
                   onChange(val);
                 }
               }}
-              placeholder={placeholder || `Select ${label.toLowerCase()}`}
+              placeholder={placeholder || `Chọn ${label.toLowerCase()}`}
               options={selectOptions}
               searchable={isSearchable}
             />

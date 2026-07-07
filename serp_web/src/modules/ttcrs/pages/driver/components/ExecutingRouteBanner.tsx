@@ -77,10 +77,10 @@ export function ExecutingRouteBanner({ plan }: ExecutingRouteBannerProps) {
             </span>
             <span className="text-orange-400">·</span>
             <span>{plan.stopCount} stops</span>
-            {plan.startTime && (
+            {(plan.actualStartTime || plan.startTime) && (
               <>
                 <span className="text-orange-400">·</span>
-                <span>Started {plan.startTime.replace('T', ' ').slice(0, 16)}</span>
+                <span>Started {(plan.actualStartTime || plan.startTime)!.replace('T', ' ').slice(0, 16)}</span>
               </>
             )}
           </div>

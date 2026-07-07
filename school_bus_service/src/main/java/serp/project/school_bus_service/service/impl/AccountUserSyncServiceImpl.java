@@ -14,6 +14,8 @@ import serp.project.school_bus_service.repository.SchoolBusSyncCheckpointReposit
 import serp.project.school_bus_service.service.IAccountUserSyncService;
 import serp.project.school_bus_service.service.ISchoolBusUserService;
 import serp.project.school_bus_service.shared.auth.TokenUtils;
+import serp.project.school_bus_service.shared.exception.AppErrorCode;
+import serp.project.school_bus_service.shared.exception.AppException;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -56,17 +58,7 @@ public class AccountUserSyncServiceImpl implements IAccountUserSyncService {
         log.info("Starting Account User Sync job. StartedAt={}", startedAt);
 
         // 1. Fetch or initialize checkpoint
-        SchoolBusSyncCheckpointEntity checkpoint = checkpointRepository
-                .findFirstBySyncCodeAndIsDeletedFalseOrderByUpdatedAtDescIdDesc(SYNC_CODE)
-                .orElseGet(() -> {
-                    SchoolBusSyncCheckpointEntity newCheckpoint = new SchoolBusSyncCheckpointEntity();
-                    newCheckpoint.setSyncCode(SYNC_CODE);
-                    newCheckpoint.setLastSyncedCount(0);
-                    newCheckpoint.markCreated(0L, "SYSTEM");
-                    newCheckpoint.setIsActive(true);
-                    newCheckpoint.setIsDeleted(false);
-                    return checkpointRepository.save(newCheckpoint);
-                });
+        SchoolBusSyncCheckpointEntity checkpoint = getOrCreateCheckpoint();
 
         checkpoint.setLastAttemptSyncAt(startedAt);
 
@@ -193,6 +185,14 @@ public class AccountUserSyncServiceImpl implements IAccountUserSyncService {
                 .message("Sync process completed. Errors: " + failedCount)
                 .errors(errorItems)
                 .build();
+    }
+
+    private SchoolBusSyncCheckpointEntity getOrCreateCheckpoint() {
+        checkpointRepository.insertActiveCheckpointIfAbsent(SYNC_CODE);
+        return checkpointRepository
+                .findFirstBySyncCodeAndIsDeletedFalseOrderByUpdatedAtDescIdDesc(SYNC_CODE)
+                .orElseThrow(() -> new AppException(AppErrorCode.UNEXPECTED_EXCEPTION,
+                        "Không thể khởi tạo checkpoint đồng bộ người dùng từ Account Service."));
     }
 
     @Override

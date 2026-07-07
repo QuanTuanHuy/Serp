@@ -10,10 +10,10 @@ import java.util.List;
 @Setter
 public class ManualDispatchRequest extends BaseCommandRequest {
 
-    @NotNull(message = "busId is required")
+    @NotNull(message = "Vui lòng chọn xe")
     private Long busId;
 
-    @NotNull(message = "driverId is required")
+    @NotNull(message = "Vui lòng chọn tài xế")
     private Long driverId;
 
     private Long attendantId;

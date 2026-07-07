@@ -11,6 +11,7 @@ import com.example.ttcrs.algorithm.models.output.TruckMoocContainerOutputJson;
 import com.example.ttcrs.algorithm.models.places.*;
 import com.example.ttcrs.algorithm.models.requests.*;
 import com.example.ttcrs.algorithm.solver.TruckContainerSolver;
+import com.example.ttcrs.algorithm.solver.init.CheapestInsertionInit;
 import com.example.ttcrs.algorithm.solver.init.FPIUSInit;
 import com.example.ttcrs.algorithm.solver.opt.ALNS;
 import com.example.ttcrs.algorithm.vrp.Checkin;
@@ -474,7 +475,7 @@ public class AlgorithmService {
             solver.cooling_rate = 0.9995;
             solver.nTabu = 5;
 
-            solver.setInitializationStrategy(new FPIUSInit());
+            solver.setInitializationStrategy(new CheapestInsertionInit());
             solver.initializeSolution();
 
             solver.setOptimizationStrategy(new ALNS(solver));

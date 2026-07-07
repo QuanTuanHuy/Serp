@@ -27,28 +27,28 @@ export function DispatchKpiCards({
       )}
     >
       <KpiItem
-        label='Eligible'
+        label='Đủ điều kiện'
         value={eligible}
         icon={Users}
         color='text-violet-600'
         bgColor='bg-violet-50/20'
       />
       <KpiItem
-        label='Planned'
+        label='Đã lập tuyến'
         value={planned}
         icon={CheckCircle2}
         color='text-emerald-600'
         bgColor='bg-emerald-50/20'
       />
       <KpiItem
-        label='Unassigned'
+        label='Chưa gán'
         value={unassigned}
         icon={AlertTriangle}
         color={unassigned > 0 ? 'text-amber-600' : 'text-slate-400'}
         bgColor={unassigned > 0 ? 'bg-amber-50/30' : undefined}
       />
       <KpiItem
-        label='Routes'
+        label='Tuyến'
         value={routes}
         icon={Route}
         color='text-blue-600'

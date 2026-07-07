@@ -16,6 +16,7 @@ interface DashboardBarChartProps {
   colorMap?: Record<string, string>;
   defaultColor?: string;
   title?: string;
+  minHeightClassName?: string;
 }
 
 export function DashboardBarChart({
@@ -23,6 +24,7 @@ export function DashboardBarChart({
   colorMap,
   defaultColor = '#991B1B', // Crimson
   title,
+  minHeightClassName = 'min-h-[240px]',
 }: DashboardBarChartProps) {
   const chartData = data || [];
 
@@ -44,7 +46,7 @@ export function DashboardBarChart({
             </span>
           </div>
           <p className='mt-1 pl-5 text-xs text-muted-foreground'>
-            Count:{' '}
+            Số lượng:{' '}
             <span className='font-bold text-foreground'>{dataPoint.count}</span>
           </p>
         </div>
@@ -60,10 +62,12 @@ export function DashboardBarChart({
       {title && (
         <h3 className='mb-3 text-sm font-semibold text-foreground'>{title}</h3>
       )}
-      <div className='flex-1 min-h-[220px] relative flex items-center justify-center'>
+      <div
+        className={`flex-1 ${minHeightClassName} relative flex items-center justify-center`}
+      >
         {!hasData ? (
           <div className='text-sm italic text-muted-foreground'>
-            No data available
+            Chưa có dữ liệu
           </div>
         ) : (
           <ResponsiveContainer width='100%' height='100%'>

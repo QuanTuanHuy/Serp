@@ -26,6 +26,8 @@ import java.util.Locale;
 @Component
 public class MessageCommon {
 
+    private static final Locale SCHOOL_BUS_LOCALE = Locale.forLanguageTag("vi-VN");
+
     private final MessageSource messageSource;
 
     public MessageCommon(MessageSource messageSource) {
@@ -37,7 +39,7 @@ public class MessageCommon {
      * Falls back to {@code errorInfo.defaultMessage()} if the key is not found.
      */
     public String getMessage(AppErrorCode.ErrorInfo errorInfo) {
-        return messageSource.getMessage(errorInfo.code(), null, errorInfo.defaultMessage(), Locale.ENGLISH);
+        return messageSource.getMessage(errorInfo.code(), null, errorInfo.defaultMessage(), SCHOOL_BUS_LOCALE);
     }
 
     /**
@@ -45,20 +47,20 @@ public class MessageCommon {
      * Arguments map to {@code {0}}, {@code {1}}, … placeholders in the message template.
      */
     public String getMessage(AppErrorCode.ErrorInfo errorInfo, Object... args) {
-        return messageSource.getMessage(errorInfo.code(), args, errorInfo.defaultMessage(), Locale.ENGLISH);
+        return messageSource.getMessage(errorInfo.code(), args, errorInfo.defaultMessage(), SCHOOL_BUS_LOCALE);
     }
 
     /**
      * Resolves a domain-specific message by raw key with no arguments.
      */
     public String getMessage(String key) {
-        return messageSource.getMessage(key, null, key, Locale.ENGLISH);
+        return messageSource.getMessage(key, null, key, SCHOOL_BUS_LOCALE);
     }
 
     /**
      * Resolves a domain-specific message by raw key with positional arguments.
      */
     public String getMessage(String key, Object... args) {
-        return messageSource.getMessage(key, args, key, Locale.ENGLISH);
+        return messageSource.getMessage(key, args, key, SCHOOL_BUS_LOCALE);
     }
 }

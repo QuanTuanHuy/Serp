@@ -11,16 +11,16 @@ import java.time.LocalDate;
 @Setter
 public class StudentSubscriptionUpsertRequest extends BaseCommandRequest {
 
-    @NotNull(message = "studentId is required")
+    @NotNull(message = "Vui lòng chọn học sinh")
     private Long studentId;
 
-    @NotNull(message = "schoolId is required")
+    @NotNull(message = "Vui lòng chọn trường")
     private Long schoolId;
 
     private Long pickupPointId;
     private Long dropoffPointId;
 
-    @NotBlank(message = "tripOption is required")
+    @NotBlank(message = "Vui lòng chọn loại chuyến")
     private String tripOption;
 
     private Boolean monday = Boolean.TRUE;
@@ -31,7 +31,7 @@ public class StudentSubscriptionUpsertRequest extends BaseCommandRequest {
     private Boolean saturday = Boolean.FALSE;
     private Boolean sunday = Boolean.FALSE;
 
-    @NotNull(message = "effectiveFrom is required")
+    @NotNull(message = "Vui lòng chọn ngày bắt đầu hiệu lực")
     private LocalDate effectiveFrom;
 
     private LocalDate effectiveTo;

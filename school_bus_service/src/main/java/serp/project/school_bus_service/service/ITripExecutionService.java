@@ -9,6 +9,7 @@ import serp.project.school_bus_service.dto.request.SkipStopRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionListItemResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
+import serp.project.school_bus_service.dto.response.TripListSummaryResponse;
 import serp.project.school_bus_service.dto.response.TripStopLogResponse;
 import serp.project.school_bus_service.dto.response.TripStudentResponse;
 import serp.project.school_bus_service.entity.TripExecutionEntity;
@@ -20,6 +21,8 @@ import java.util.List;
 public interface ITripExecutionService extends IBaseService<TripExecutionEntity, Long> {
 
     PageResponse<TripExecutionListItemResponse> getTrips(TripExecutionParamsRequest params, Long tenantId);
+
+    TripListSummaryResponse getSummary(Long tenantId);
 
     TripExecutionResponse getTrip(Long id, Long tenantId);
 

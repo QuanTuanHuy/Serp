@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import serp.project.tms_order.enums.OrderPickupMethod;
 import serp.project.tms_order.enums.OrderStatus;
 
 import java.time.LocalDateTime;
@@ -22,16 +23,23 @@ public class OrderFilterRequest {
     private String keyword;
     private String orderCode;
     private String customerOrderCode;
+    private String senderKeyword;
     private String senderPhone;
+    private String receiverKeyword;
     private String receiverPhone;
     private String originPostOfficeCode;
     private List<String> originPostOfficeCodes;
     private String destinationPostOfficeCode;
     private OrderStatus status;
     private List<OrderStatus> statuses;
+    private OrderPickupMethod pickupMethod;
     private Boolean isConfirm;
     private LocalDateTime createdFrom;
     private LocalDateTime createdTo;
     private LocalDateTime pickupFrom;
     private LocalDateTime pickupTo;
+    private LocalDateTime updatedFrom;
+    private LocalDateTime updatedTo;
+    private String sortBy;
+    private String sortDirection;
 }

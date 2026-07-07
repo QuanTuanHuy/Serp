@@ -1,45 +1,45 @@
 export const REQUEST_TYPE_OPTIONS = [
-  { value: 'NEW_SERVICE', label: 'New service' },
-  { value: 'CHANGE_SERVICE', label: 'Change service' },
-  { value: 'PAUSE_SERVICE', label: 'Pause service' },
-  { value: 'RESUME_SERVICE', label: 'Resume service' },
-  { value: 'STOP_SERVICE', label: 'Stop service' },
-  { value: 'RENEW_SERVICE', label: 'Renew service' },
+  { value: 'NEW_SERVICE', label: 'Đăng ký mới' },
+  { value: 'CHANGE_SERVICE', label: 'Thay đổi dịch vụ' },
+  { value: 'PAUSE_SERVICE', label: 'Tạm dừng dịch vụ' },
+  { value: 'RESUME_SERVICE', label: 'Tiếp tục dịch vụ' },
+  { value: 'STOP_SERVICE', label: 'Dừng dịch vụ' },
+  { value: 'RENEW_SERVICE', label: 'Gia hạn dịch vụ' },
 ] as const;
 
 export const TRIP_OPTION_OPTIONS = [
-  { value: 'MORNING', label: 'To school only' },
-  { value: 'AFTERNOON', label: 'From school only' },
-  { value: 'ROUND_TRIP', label: 'Round trip' },
+  { value: 'MORNING', label: 'Chỉ chiều đi học' },
+  { value: 'AFTERNOON', label: 'Chỉ chiều về nhà' },
+  { value: 'ROUND_TRIP', label: 'Hai chiều' },
 ] as const;
 
 export const ROUTE_DIRECTION_OPTIONS = [
-  { value: 'OUTBOUND', label: 'Outbound (To school)' },
-  { value: 'RETURN', label: 'Return (From school)' },
+  { value: 'OUTBOUND', label: 'Chiều đi học' },
+  { value: 'RETURN', label: 'Chiều về nhà' },
 ] as const;
 
 export const ROUTE_LOCATION_TYPE_OPTIONS = [
-  { value: 'SCHOOL', label: 'School' },
-  { value: 'DEPOT', label: 'Depot' },
+  { value: 'SCHOOL', label: 'Trường học' },
+  { value: 'DEPOT', label: 'Bãi xe' },
 ] as const;
 
 export const PROFILE_STATUS_OPTIONS = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'ACTIVE', label: 'Đang hoạt động' },
+  { value: 'INACTIVE', label: 'Ngừng hoạt động' },
 ] as const;
 
 export const STAFF_STATUS_OPTIONS = [
-  { value: 'AVAILABLE', label: 'Available' },
-  { value: 'ASSIGNED', label: 'Assigned' },
-  { value: 'ON_LEAVE', label: 'On leave' },
-  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'AVAILABLE', label: 'Sẵn sàng' },
+  { value: 'ASSIGNED', label: 'Đã phân công' },
+  { value: 'ON_LEAVE', label: 'Nghỉ phép' },
+  { value: 'INACTIVE', label: 'Ngừng hoạt động' },
 ] as const;
 
 export const BUS_STATUS_OPTIONS = [
-  { value: 'AVAILABLE', label: 'Available' },
-  { value: 'ASSIGNED', label: 'Assigned' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'INACTIVE', label: 'Inactive' },
+  { value: 'AVAILABLE', label: 'Sẵn sàng' },
+  { value: 'ASSIGNED', label: 'Đã phân công' },
+  { value: 'MAINTENANCE', label: 'Bảo trì' },
+  { value: 'INACTIVE', label: 'Ngừng hoạt động' },
 ] as const;
 
 export const SCHOOL_BUS_MAP_DEFAULT_CENTER = {

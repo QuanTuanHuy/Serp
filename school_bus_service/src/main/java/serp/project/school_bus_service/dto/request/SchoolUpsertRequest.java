@@ -10,7 +10,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class SchoolUpsertRequest extends BaseCommandRequest {
 
-    @NotBlank
+    @NotBlank(message = "Vui lòng nhập tên trường.")
     private String name;
 
     private String code;

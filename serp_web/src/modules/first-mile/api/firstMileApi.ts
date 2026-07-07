@@ -223,8 +223,21 @@ export const firstMileApi = api.injectEndpoints({
       transformResponse: normalizeHubPostOfficeMappingPage,
     }),
 
+    getAllHubPostOffices: builder.query<
+      FirstMilePaginatedData<HubPostOfficeMapping>,
+      { page?: number; size?: number }
+    >({
+      query: ({ page = 0, size = 20 }) => ({
+        url: '/hubs/post-offices',
+        method: 'GET',
+        params: { page, size },
+      }),
+      extraOptions: SECOND_MILE_SERVICE,
+      transformResponse: normalizeHubPostOfficeMappingPage,
+    }),
+
     assignPostOfficeToHub: builder.mutation<
-      HubPostOfficeMapping,
+      HubPostOfficeMapping[],
       { hubId: number; request: AssignHubPostOfficeRequest }
     >({
       query: ({ hubId, request }) => ({
@@ -234,8 +247,11 @@ export const firstMileApi = api.injectEndpoints({
       }),
       extraOptions: SECOND_MILE_SERVICE,
       transformResponse: (
-        response: FirstMileApiResponse<HubPostOfficeMapping>
-      ) => normalizeHubPostOfficeMapping(unwrapFirstMileResult(response)),
+        response: FirstMileApiResponse<HubPostOfficeMapping[]>
+      ) =>
+        unwrapFirstMileResult(response).map((mapping) =>
+          normalizeHubPostOfficeMapping(mapping)
+        ),
     }),
 
     removePostOfficeFromHub: builder.mutation<
@@ -547,6 +563,16 @@ export const firstMileApi = api.injectEndpoints({
         destinationPostOfficeCode,
         vehicleId,
         status,
+        minOrders,
+        maxOrders,
+        minWeight,
+        maxWeight,
+        minVolume,
+        maxVolume,
+        sealedFrom,
+        sealedTo,
+        sortBy,
+        sortDirection,
       }) => ({
         url: '/bags',
         method: 'GET',
@@ -565,6 +591,16 @@ export const firstMileApi = api.injectEndpoints({
             : {}),
           ...(vehicleId !== undefined ? { vehicle_id: vehicleId } : {}),
           ...(status ? { status } : {}),
+          ...(minOrders !== undefined ? { min_orders: minOrders } : {}),
+          ...(maxOrders !== undefined ? { max_orders: maxOrders } : {}),
+          ...(minWeight !== undefined ? { min_weight: minWeight } : {}),
+          ...(maxWeight !== undefined ? { max_weight: maxWeight } : {}),
+          ...(minVolume !== undefined ? { min_volume: minVolume } : {}),
+          ...(maxVolume !== undefined ? { max_volume: maxVolume } : {}),
+          ...(sealedFrom ? { sealed_from: sealedFrom } : {}),
+          ...(sealedTo ? { sealed_to: sealedTo } : {}),
+          ...(sortBy ? { sort_by: sortBy } : {}),
+          ...(sortDirection ? { sort_direction: sortDirection } : {}),
         },
       }),
       extraOptions: SECOND_MILE_SERVICE,
@@ -1863,18 +1899,25 @@ export const firstMileApi = api.injectEndpoints({
         keyword,
         orderCode,
         customerOrderCode,
+        senderKeyword,
         senderPhone,
+        receiverKeyword,
         receiverPhone,
         originPostOfficeCode,
         originPostOfficeCodes,
         destinationPostOfficeCode,
         status,
         statuses,
+        pickupMethod,
         isConfirm,
         createdFrom,
         createdTo,
         pickupFrom,
         pickupTo,
+        updatedFrom,
+        updatedTo,
+        sortBy,
+        sortDirection,
       }) => ({
         url: '/orders',
         method: 'GET',
@@ -1886,7 +1929,9 @@ export const firstMileApi = api.injectEndpoints({
           ...(customerOrderCode
             ? { customer_order_code: customerOrderCode }
             : {}),
+          ...(senderKeyword ? { sender_keyword: senderKeyword } : {}),
           ...(senderPhone ? { sender_phone: senderPhone } : {}),
+          ...(receiverKeyword ? { receiver_keyword: receiverKeyword } : {}),
           ...(receiverPhone ? { receiver_phone: receiverPhone } : {}),
           ...(originPostOfficeCode
             ? { origin_post_office_code: originPostOfficeCode }
@@ -1899,11 +1944,16 @@ export const firstMileApi = api.injectEndpoints({
             : {}),
           ...(status ? { status } : {}),
           ...(statuses?.length ? { statuses } : {}),
+          ...(pickupMethod ? { pickup_method: pickupMethod } : {}),
           ...(isConfirm !== undefined ? { is_confirm: isConfirm } : {}),
           ...(createdFrom ? { created_from: createdFrom } : {}),
           ...(createdTo ? { created_to: createdTo } : {}),
           ...(pickupFrom ? { pickup_from: pickupFrom } : {}),
           ...(pickupTo ? { pickup_to: pickupTo } : {}),
+          ...(updatedFrom ? { updated_from: updatedFrom } : {}),
+          ...(updatedTo ? { updated_to: updatedTo } : {}),
+          ...(sortBy ? { sort_by: sortBy } : {}),
+          ...(sortDirection ? { sort_direction: sortDirection } : {}),
         },
       }),
       extraOptions: TMS_ORDER_SERVICE,
@@ -2318,6 +2368,7 @@ export const {
   useAssignSecondMileStaffToHubMutation,
   useUnassignSecondMileHubStaffAssignmentMutation,
   useGetHubPostOfficesQuery,
+  useGetAllHubPostOfficesQuery,
   useAssignPostOfficeToHubMutation,
   useRemovePostOfficeFromHubMutation,
   useLazyExportHubTemplateQuery,

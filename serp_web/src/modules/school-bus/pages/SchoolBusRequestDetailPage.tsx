@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
 import * as React from 'react';
@@ -36,32 +36,33 @@ import { schoolBusUi } from '../theme';
 import { formatDate, formatDateTime } from '../utils';
 import type { SchoolBusRequestStudent } from '../types';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
+import { requestStatusLabel, requestTypeLabel, tripOptionLabel } from '../schoolBusLabels';
 
 // --- helpers ----------------------------------------------------------------
 
 const TRIP_OPTION_LABELS: Record<string, string> = {
-  MORNING: 'To school only',
-  AFTERNOON: 'From school only',
-  ROUND_TRIP: 'Round trip',
+  MORNING: tripOptionLabel.MORNING,
+  AFTERNOON: tripOptionLabel.AFTERNOON,
+  ROUND_TRIP: tripOptionLabel.ROUND_TRIP,
 };
 
 const REQUEST_TYPE_LABELS: Record<string, string> = {
-  NEW_SERVICE: 'New service',
-  CHANGE_SERVICE: 'Change service',
-  PAUSE_SERVICE: 'Pause service',
-  RESUME_SERVICE: 'Resume service',
-  STOP_SERVICE: 'Stop service',
-  RENEW_SERVICE: 'Renew service',
+  NEW_SERVICE: requestTypeLabel.NEW_SERVICE,
+  CHANGE_SERVICE: requestTypeLabel.CHANGE_SERVICE,
+  PAUSE_SERVICE: requestTypeLabel.PAUSE_SERVICE,
+  RESUME_SERVICE: requestTypeLabel.RESUME_SERVICE,
+  STOP_SERVICE: requestTypeLabel.STOP_SERVICE,
+  RENEW_SERVICE: requestTypeLabel.RENEW_SERVICE,
 };
 
 const DAY_KEYS: { key: keyof SchoolBusRequestStudent; label: string }[] = [
-  { key: 'monday', label: 'Mon' },
-  { key: 'tuesday', label: 'Tue' },
-  { key: 'wednesday', label: 'Wed' },
-  { key: 'thursday', label: 'Thu' },
-  { key: 'friday', label: 'Fri' },
-  { key: 'saturday', label: 'Sat' },
-  { key: 'sunday', label: 'Sun' },
+  { key: 'monday', label: 'T2' },
+  { key: 'tuesday', label: 'T3' },
+  { key: 'wednesday', label: 'T4' },
+  { key: 'thursday', label: 'T5' },
+  { key: 'friday', label: 'T6' },
+  { key: 'saturday', label: 'T7' },
+  { key: 'sunday', label: 'CN' },
 ];
 
 /** Row-level completeness check derived purely from snapshot data on the detail page. */
@@ -74,15 +75,15 @@ function deriveEligibility(
   issues: string[];
 } {
   const issues: string[] = [];
-  if (!s.studentId) issues.push('Missing student selection');
+  if (!s.studentId) issues.push('Chưa chọn học sinh');
   if (requiresRouting) {
-    if (!s.tripOption) issues.push('Missing trip option');
+    if (!s.tripOption) issues.push('Chưa chọn chiều di chuyển');
     const opt = (s.tripOption || '').toUpperCase();
     const needsPickup = opt === 'MORNING' || opt === 'ROUND_TRIP';
     const needsDropoff = opt === 'AFTERNOON' || opt === 'ROUND_TRIP';
-    if (needsPickup && !s.pickupPointId) issues.push('Missing pickup point');
+    if (needsPickup && !s.pickupPointId) issues.push('Chưa chọn điểm đón');
     if (needsDropoff && !s.dropoffPointId)
-      issues.push('Missing drop-off point');
+      issues.push('Chưa chọn điểm trả');
   }
 
   // Check if at least one day is selected
@@ -95,7 +96,7 @@ function deriveEligibility(
     s.saturday ||
     s.sunday;
   if (!hasDays) {
-    issues.push('Missing selected days');
+    issues.push('Chưa chọn ngày phục vụ');
   }
 
   // Check coordinates if points are selected
@@ -104,19 +105,19 @@ function deriveEligibility(
     (typeof s.pickupPointLatitude !== 'number' ||
       typeof s.pickupPointLongitude !== 'number')
   ) {
-    issues.push('Missing coordinates for pickup point');
+    issues.push('Thiếu tọa độ điểm đón');
   }
   if (
     s.dropoffPointId &&
     (typeof s.dropoffPointLatitude !== 'number' ||
       typeof s.dropoffPointLongitude !== 'number')
   ) {
-    issues.push('Missing coordinates for drop-off point');
+    issues.push('Thiếu tọa độ điểm trả');
   }
 
   if (issues.length > 0)
-    return { state: 'blocking', label: 'Needs configuration', issues };
-  return { state: 'complete', label: 'Complete', issues: [] };
+    return { state: 'blocking', label: 'Cần thiết lập', issues };
+  return { state: 'complete', label: 'Đầy đủ', issues: [] };
 }
 
 // --- sub-components ---------------------------------------------------------
@@ -201,17 +202,17 @@ export function SchoolBusRequestDetailPage({
   const handleApprove = async () => {
     try {
       const res = await approveTransportRequest(requestId).unwrap();
-      toast.success(res.message || 'Transport request approved');
+      toast.success(res.message || 'Đã phê duyệt yêu cầu vận chuyển');
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to approve');
+      toast.error(e?.data?.message || 'Không thể phê duyệt');
     }
   };
   const handleCancel = async () => {
     try {
       const res = await cancelTransportRequest(requestId).unwrap();
-      toast.success(res.message || 'Transport request cancelled');
+      toast.success(res.message || 'Đã hủy yêu cầu vận chuyển');
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to cancel');
+      toast.error(e?.data?.message || 'Không thể hủy');
     }
   };
   const handleReject = async (values: { reason: string }) => {
@@ -220,22 +221,22 @@ export function SchoolBusRequestDetailPage({
         id: requestId,
         body: values,
       }).unwrap();
-      toast.success(res.message || 'Transport request rejected');
+      toast.success(res.message || 'Đã từ chối yêu cầu vận chuyển');
       setRejectOpen(false);
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Failed to reject');
+      toast.error(e?.data?.message || 'Không thể từ chối');
     }
   };
 
   if (isLoading || !detail) {
     return (
       <SchoolBusPageShell
-        title='Transport Request Detail'
-        description='Loading...'
+        title='Chi tiết yêu cầu đưa đón'
+        description='Đang tải...'
       >
         <SchoolBusEmptyState
-          title='Loading request detail'
-          description='Fetching data...'
+          title='Đang tải chi tiết yêu cầu'
+          description='Đang tải dữ liệu...'
         />
       </SchoolBusPageShell>
     );
@@ -271,7 +272,7 @@ export function SchoolBusRequestDetailPage({
       acc.push({
         key: `pickup-${s.id}`,
         studentName: s.studentName,
-        pointName: s.pickupPointName || 'Pickup',
+        pointName: s.pickupPointName || 'Điểm đón',
         latitude: s.pickupPointLatitude,
         longitude: s.pickupPointLongitude,
         role: 'pickup',
@@ -315,7 +316,7 @@ export function SchoolBusRequestDetailPage({
       if (!acc.find((p) => p.id === s.pickupPointId)) {
         acc.push({
           id: s.pickupPointId!,
-          name: s.pickupPointName || 'Pickup',
+          name: s.pickupPointName || 'Điểm đón',
           address: s.pickupPointAddress || '',
           latitude: s.pickupPointLatitude!,
           longitude: s.pickupPointLongitude!,
@@ -355,15 +356,15 @@ export function SchoolBusRequestDetailPage({
   // -- Approval Checklist metrics
   const checklist = [
     {
-      label: 'Students selected',
+      label: 'Học sinh đã chọn',
       passed: students.length > 0 && students.every((s) => s.studentId),
     },
     {
-      label: 'Trip options set',
+      label: 'Đã cấu hình phương án đi xe',
       passed: !requiresRouting || students.every((s) => s.tripOption),
     },
     {
-      label: 'Points selected',
+      label: 'Đã chọn điểm đón/trả',
       passed:
         !requiresRouting ||
         students.every((s) => {
@@ -379,7 +380,7 @@ export function SchoolBusRequestDetailPage({
         }),
     },
     {
-      label: 'Active days active',
+      label: 'Đã chọn ngày hoạt động',
       passed: students.every(
         (s) =>
           s.monday ||
@@ -392,7 +393,7 @@ export function SchoolBusRequestDetailPage({
       ),
     },
     {
-      label: 'Coordinates verified',
+      label: 'Đã kiểm tra tọa độ',
       passed: students.every((s) => {
         if (
           s.pickupPointId &&
@@ -414,17 +415,17 @@ export function SchoolBusRequestDetailPage({
   return (
     <>
       <SchoolBusPageShell
-        title={`Transport Request #${request.requestCode || request.id}`}
+        title={`Yêu cầu vận chuyển #${request.requestCode || request.id}`}
         description={
           access.isParentOnly
-            ? 'View transport request details, student information, and processing status.'
-            : 'Inspect the full request payload, review the student list, and take approval actions.'
+            ? 'Xem chi tiết yêu cầu xe bus, thông tin học sinh và trạng thái xử lý.'
+            : 'Kiểm tra nội dung yêu cầu, danh sách học sinh và thực hiện phê duyệt.'
         }
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
-              { label: 'School Bus Ops', href: '/school-bus/dispatch' },
-              { label: 'Transport Requests', href: '/school-bus/requests' },
+              { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
+              { label: 'Yêu cầu xe bus', href: '/school-bus/requests' },
               { label: `#${request.requestCode || request.id}`, current: true },
             ]}
           />
@@ -437,7 +438,7 @@ export function SchoolBusRequestDetailPage({
                 {(isSubmitted || request.status === 'REJECTED') && (
                   <Button variant='outline' className='rounded-full' asChild>
                     <Link href={`/school-bus/requests/${request.id}/edit`}>
-                      <Pencil className='h-4 w-4' /> Edit
+                      <Pencil className='h-4 w-4' /> Chỉnh sửa
                     </Link>
                   </Button>
                 )}
@@ -447,7 +448,7 @@ export function SchoolBusRequestDetailPage({
                     className='rounded-full'
                     onClick={handleCancel}
                   >
-                    Cancel
+                    Hủy
                   </Button>
                 )}
               </>
@@ -456,7 +457,7 @@ export function SchoolBusRequestDetailPage({
                 {isSubmitted && (
                   <Button variant='outline' className='rounded-full' asChild>
                     <Link href={`/school-bus/requests/${request.id}/edit`}>
-                      <Pencil className='h-4 w-4' /> Edit
+                      <Pencil className='h-4 w-4' /> Chỉnh sửa
                     </Link>
                   </Button>
                 )}
@@ -466,7 +467,7 @@ export function SchoolBusRequestDetailPage({
                     className='rounded-full'
                     onClick={handleCancel}
                   >
-                    Cancel
+                    Hủy
                   </Button>
                 )}
                 {isSubmitted && (
@@ -475,7 +476,7 @@ export function SchoolBusRequestDetailPage({
                     className='rounded-full'
                     onClick={() => setRejectOpen(true)}
                   >
-                    <XCircle className='h-4 w-4' /> Reject
+                    <XCircle className='h-4 w-4' /> Từ chối
                   </Button>
                 )}
                 {isSubmitted && (
@@ -485,7 +486,7 @@ export function SchoolBusRequestDetailPage({
                     onClick={handleApprove}
                   >
                     <CheckCircle2 className='h-4 w-4' />
-                    {approving ? 'Approving...' : 'Approve'}
+                    {approving ? 'Đang duyệt...' : 'Duyệt'}
                   </Button>
                 )}
               </>
@@ -496,14 +497,17 @@ export function SchoolBusRequestDetailPage({
         <div className='space-y-6'>
           {/* -- Status subtitle row */}
           <div className='flex flex-wrap items-center gap-2.5 bg-slate-50 border border-slate-200/60 rounded-xl p-3.5'>
-            <SchoolBusStatusBadge status={request.status} />
+            <SchoolBusStatusBadge
+              status={request.status}
+              labelMap={requestStatusLabel}
+            />
             <span className='text-slate-300'>-</span>
             <span className='text-sm font-semibold text-slate-700'>
               {REQUEST_TYPE_LABELS[request.requestType] || request.requestType}
             </span>
             <span className='text-slate-300'>-</span>
             <span className='text-sm font-medium text-slate-500'>
-              Effective {formatDate(request.effectiveFrom)}
+              Hiệu lực {formatDate(request.effectiveFrom)}
               {request.effectiveTo
                 ? ` - ${formatDate(request.effectiveTo)}`
                 : ''}
@@ -541,23 +545,23 @@ export function SchoolBusRequestDetailPage({
               <div>
                 <span className='text-sm font-bold block'>
                   {request.status === 'SUBMITTED' &&
-                    'Request is waiting for review'}
-                  {request.status === 'APPROVED' && 'Request approved'}
-                  {request.status === 'REJECTED' && 'Request rejected'}
-                  {request.status === 'CANCELLED' && 'Request cancelled'}
-                  {request.status === 'DRAFT' && 'Draft request'}
+                    'Yêu cầu đang chờ xem xét'}
+                  {request.status === 'APPROVED' && 'Yêu cầu đã được phê duyệt'}
+                  {request.status === 'REJECTED' && 'Yêu cầu bị từ chối'}
+                  {request.status === 'CANCELLED' && 'Yêu cầu đã hủy'}
+                  {request.status === 'DRAFT' && 'Yêu cầu nháp'}
                 </span>
                 <span className='text-xs font-medium opacity-80'>
                   {request.status === 'SUBMITTED' &&
-                    'All required information has been submitted.'}
+                    'Mọi thông tin cần thiết đã được gửi thành công.'}
                   {request.status === 'APPROVED' &&
-                    'This transport request has been approved.'}
+                    'Yêu cầu vận chuyển này đã được phê duyệt.'}
                   {request.status === 'REJECTED' &&
-                    'Please review the rejection reason below.'}
+                    'Vui lòng xem lý do từ chối bên dưới.'}
                   {request.status === 'CANCELLED' &&
-                    'This request has been cancelled.'}
+                    'Yêu cầu này đã bị hủy.'}
                   {request.status === 'DRAFT' &&
-                    'This draft has not been submitted yet.'}
+                    'Bản nháp này chưa được gửi.'}
                 </span>
               </div>
             </div>
@@ -586,13 +590,12 @@ export function SchoolBusRequestDetailPage({
                       )}
                     >
                       {allReady
-                        ? 'Eligible for approval'
-                        : `Cannot approve yet - ${blockingIssues.length} approval blocker${blockingIssues.length > 1 ? 's' : ''} must be fixed`}
+                        ? 'Đủ điều kiện phê duyệt'
+                        : `Chưa thể phê duyệt - cần xử lý ${blockingIssues.length} vấn đề`}
                     </p>
                     {allReady ? (
                       <p className='text-xs text-emerald-700 mt-1 font-medium'>
-                        All required student, pickup/drop-off, and coordinate
-                        checks passed.
+                        Các kiểm tra về học sinh, điểm đón/trả và tọa độ đều đạt.
                       </p>
                     ) : (
                       <ul className='mt-2.5 space-y-1 bg-white/50 rounded-xl p-3 border border-amber-200/50'>
@@ -631,8 +634,7 @@ export function SchoolBusRequestDetailPage({
                     <Clock className='h-5 w-5 shrink-0 text-slate-500' />
                   )}
                   <span className='text-sm font-bold'>
-                    Request is currently {request.status.toLowerCase()} - no
-                    further actions required.
+                    Yêu cầu hiện đang ở trạng thái {requestStatusLabel[request.status]?.toLowerCase() || request.status.toLowerCase()} - không cần thực hiện thêm thao tác nào.
                   </span>
                 </div>
               )}
@@ -645,11 +647,11 @@ export function SchoolBusRequestDetailPage({
             <div className='lg:col-span-8 space-y-6'>
               {/* Requested students */}
               <SchoolBusSection
-                title='Requested students'
+                title='Học sinh được yêu cầu'
                 description={
                   access.isParentOnly
-                    ? 'Students included in this transport request.'
-                    : 'Linked students, trip options, stops, and active days.'
+                    ? 'Danh sách học sinh trong yêu cầu vận chuyển này.'
+                    : 'Học sinh liên kết, phương án di chuyển, điểm dừng và ngày hoạt động.'
                 }
               >
                 <div className='grid gap-4 sm:grid-cols-1'>
@@ -698,7 +700,7 @@ export function SchoolBusRequestDetailPage({
                         <div className='grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-xs sm:text-sm'>
                           <div>
                             <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1'>
-                              Trip option
+                              Phương án di chuyển
                             </span>
                             {s.tripOption ? (
                               <Pill
@@ -707,7 +709,7 @@ export function SchoolBusRequestDetailPage({
                               />
                             ) : (
                               <span className='text-red-500 font-bold'>
-                                Not configured
+                                Chưa cấu hình
                               </span>
                             )}
                           </div>
@@ -716,7 +718,7 @@ export function SchoolBusRequestDetailPage({
                           {(needsPickup || !s.tripOption) && (
                             <div className='md:col-span-1'>
                               <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1'>
-                                Pickup point
+                                Điểm đón
                               </span>
                               {s.pickupPointName ? (
                                 <div className='space-y-0.5 min-w-0'>
@@ -740,8 +742,8 @@ export function SchoolBusRequestDetailPage({
                                   )}
                                 >
                                   {needsPickup
-                                    ? 'Required - not configured'
-                                    : 'Not required'}
+                                    ? 'Bắt buộc - chưa cấu hình'
+                                    : 'Không bắt buộc'}
                                 </span>
                               )}
                             </div>
@@ -751,7 +753,7 @@ export function SchoolBusRequestDetailPage({
                           {(needsDropoff || !s.tripOption) && (
                             <div className='md:col-span-1'>
                               <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1'>
-                                Drop-off point
+                                Điểm trả
                               </span>
                               {s.dropoffPointName ? (
                                 <div className='space-y-0.5 min-w-0'>
@@ -775,8 +777,8 @@ export function SchoolBusRequestDetailPage({
                                   )}
                                 >
                                   {needsDropoff
-                                    ? 'Required - not configured'
-                                    : 'Not required'}
+                                    ? 'Bắt buộc - chưa cấu hình'
+                                    : 'Không bắt buộc'}
                                 </span>
                               )}
                             </div>
@@ -785,7 +787,7 @@ export function SchoolBusRequestDetailPage({
                           {/* Days active */}
                           <div className='md:col-span-2 border-t border-slate-100 pt-3'>
                             <span className='text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2'>
-                              Active days
+                              Ngày hoạt động
                             </span>
                             <DayBadges student={s} />
                           </div>
@@ -798,11 +800,11 @@ export function SchoolBusRequestDetailPage({
 
               {/* Request map */}
               <SchoolBusSection
-                title='Request map'
+                title='Bản đồ yêu cầu'
                 description={
                   access.isParentOnly
-                    ? 'Map view of the school and selected pickup/drop-off points.'
-                    : 'Geographical overview of the school hub, configured stops, and students.'
+                    ? 'Hiển thị trường học và các điểm đón/trả đã chọn.'
+                    : 'Tổng quan địa lý của trường học, các điểm đón/trả và học sinh.'
                 }
               >
                 <div className='mt-2 rounded-2xl overflow-hidden border border-slate-200 shadow-sm'>
@@ -844,7 +846,7 @@ export function SchoolBusRequestDetailPage({
                       <div className='space-y-4'>
                         <div>
                           <p className='text-sm font-bold text-slate-900'>
-                            Stop context
+                            Thông tin điểm dừng
                           </p>
                           <p className='text-xs text-slate-500 mt-0.5'>
                             {REQUEST_TYPE_LABELS[request.requestType] ||
@@ -853,13 +855,13 @@ export function SchoolBusRequestDetailPage({
                         </div>
                         <div className='grid grid-cols-3 gap-2 text-center'>
                           {[
-                            { label: 'Students', value: students.length },
+                            { label: 'Học sinh', value: students.length },
                             {
-                              label: 'Pickups',
+                              label: 'Điểm đón',
                               value: uniquePickupPoints.length,
                             },
                             {
-                              label: 'Dropoffs',
+                              label: 'Điểm trả',
                               value: uniqueDropoffPoints.length,
                             },
                           ].map(({ label, value }) => (
@@ -917,45 +919,50 @@ export function SchoolBusRequestDetailPage({
               {/* Request summary */}
               <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
                 <h3 className='font-bold text-slate-900 text-base'>
-                  Request summary
+                  Tóm tắt yêu cầu
                 </h3>
                 <div className='flex flex-col border-t border-slate-100 mt-1'>
                   {!access.isParentOnly && (
                     <InfoRow
-                      label='Parent name'
+                      label='Tên phụ huynh'
                       value={request.parentProfileName}
                     />
                   )}
-                  <InfoRow label='School name' value={request.schoolName} />
+                  <InfoRow label='Tên trường' value={request.schoolName} />
                   <InfoRow
-                    label='Request type'
+                    label='Loại yêu cầu'
                     value={
                       REQUEST_TYPE_LABELS[request.requestType] ||
                       request.requestType
                     }
                   />
                   <InfoRow
-                    label='Status'
-                    value={<SchoolBusStatusBadge status={request.status} />}
-                  />
-                  <InfoRow
-                    label='Effective from'
-                    value={formatDate(request.effectiveFrom)}
-                  />
-                  <InfoRow
-                    label='Effective to'
+                    label='Trạng thái'
                     value={
-                      request.effectiveTo
-                        ? formatDate(request.effectiveTo)
-                        : 'Open-ended'
+                      <SchoolBusStatusBadge
+                        status={request.status}
+                        labelMap={requestStatusLabel}
+                      />
                     }
                   />
                   <InfoRow
-                    label='Submitted at'
+                    label='Hiệu lực từ'
+                    value={formatDate(request.effectiveFrom)}
+                  />
+                  <InfoRow
+                    label='Hiệu lực đến'
+                    value={
+                      request.effectiveTo
+                        ? formatDate(request.effectiveTo)
+                        : 'Không xác định'
+                    }
+                  />
+                  <InfoRow
+                    label='Thời gian gửi'
                     value={formatDateTime(request.requestedAt)}
                   />
                   <InfoRow
-                    label='Approved at'
+                    label='Thời gian duyệt'
                     value={
                       request.approvedAt
                         ? formatDateTime(request.approvedAt)
@@ -964,7 +971,7 @@ export function SchoolBusRequestDetailPage({
                   />
                   {request.rejectionReason && (
                     <InfoRow
-                      label='Rejection reason'
+                      label='Lý do từ chối'
                       value={
                         <span className='text-red-600 font-semibold'>
                           {request.rejectionReason}
@@ -975,7 +982,7 @@ export function SchoolBusRequestDetailPage({
                   {request.notes && (
                     <div className='py-3 text-sm'>
                       <p className='text-slate-500 font-medium mb-1'>
-                        User notes
+                        Ghi chú của người dùng
                       </p>
                       <p className='text-slate-800 bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs font-semibold leading-relaxed'>
                         {request.notes}
@@ -989,7 +996,7 @@ export function SchoolBusRequestDetailPage({
               {isSubmitted && !access.isParentOnly && (
                 <div className='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4'>
                   <h3 className='font-bold text-slate-900 text-base'>
-                    Approval checklist
+                    Danh mục kiểm tra phê duyệt
                   </h3>
                   <div className='space-y-3 mt-1'>
                     {checklist.map((item, idx) => (

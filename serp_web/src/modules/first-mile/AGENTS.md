@@ -32,9 +32,9 @@ Includes: page titles, labels, placeholders, button text, table headers, empty s
 | ------------------------------------ | ----------------------------- |
 | `/first-mile/network/post-office`    | Post offices (first-mile API) |
 | `/first-mile/orders`                 | Orders                        |
-| `/first-mile/pickup`                 | Pickup tracking & check-in    |
+| `/first-mile/pickup-and-delivery/pickup` | Pickup tracking & check-in    |
 | `/first-mile/dispatchers/first-mile` | Pickup dispatch (auto/manual) |
-| `/first-mile/dispatchers/last-mile`  | Delivery courier dispatch     |
+| `/first-mile/pickup-and-delivery/delivery` | Inbound sorting & customer delivery |
 | `/first-mile/network/hub`            | Hubs (second-mile API)        |
 | `/first-mile/network/hub-postoffice` | Hub to post office links      |
 | `/first-mile/network/route`          | Routes (second-mile API)      |
@@ -58,9 +58,10 @@ src/modules/first-mile/
       hubs/               # second-mile page implementation
       routes/
     orders/
-    pickup/
+    pickup-and-delivery/
+      pickup/
     dispatchers/first-mile/
-    dispatchers/last-mile/
+    pickup-and-delivery/delivery/
     vehicles/
       first-mile/         # first-mile service
       second-mile/        # second-mile service

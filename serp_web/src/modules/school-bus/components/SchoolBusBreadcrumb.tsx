@@ -1,9 +1,11 @@
 ﻿'use client';
 
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, Home } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { useSchoolBusNavigationLabels } from './useSchoolBusNavigationLabels';
 
 export interface BreadcrumbItem {
   /** Display text for this crumb. */
@@ -37,6 +39,9 @@ export function SchoolBusBreadcrumb({
   items,
   className,
 }: SchoolBusBreadcrumbProps) {
+  const pathname = usePathname();
+  const { getPathLabel } = useSchoolBusNavigationLabels();
+
   const handleSectionScroll = (sectionId: string) => {
     const el = document.getElementById(sectionId);
     if (el) {
@@ -55,6 +60,9 @@ export function SchoolBusBreadcrumb({
       {items.map((item, index) => {
         const isFirst = index === 0;
         const isLast = index === items.length - 1;
+        const label =
+          getPathLabel(item.href, item.current ? getPathLabel(pathname) : undefined) ??
+          item.label;
 
         // Label + icon content
         const labelNode = (
@@ -79,7 +87,7 @@ export function SchoolBusBreadcrumb({
                 aria-hidden='true'
               />
             ) : null}
-            <span className='truncate'>{item.label}</span>
+            <span className='truncate'>{label}</span>
           </span>
         );
 

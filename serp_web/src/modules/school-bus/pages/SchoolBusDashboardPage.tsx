@@ -14,8 +14,13 @@ import {
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
-  useGetDashboardOperationsQuery,
+  useGetDashboardAttendanceStatusQuery,
+  useGetDashboardRequestStatusQuery,
+  useGetDashboardRouteReadinessQuery,
   useGetDashboardSchoolsQuery,
+  useGetDashboardSummaryQuery,
+  useGetDashboardTripsByDateQuery,
+  useGetDashboardTripStatusQuery,
   type SchoolBusDashboardQueryParams,
 } from '../api/schoolBusDashboardApi';
 import { SchoolBusBreadcrumb } from '../components/SchoolBusBreadcrumb';
@@ -31,8 +36,15 @@ import {
   type DashboardFilters,
 } from '../components/dashboard/DashboardFilterSheet';
 import { DashboardLineChart } from '../components/dashboard/DashboardLineChart';
+import {
+  requestStatusLabel,
+  routeReadinessStatusLabel,
+  tripStudentStatusLabel,
+  tripStatusLabel,
+} from '../schoolBusLabels';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import { schoolBusUi } from '../theme';
+import type { ChartItemDto } from '../types';
 
 const TRIP_STATUS_COLORS = {
   PLANNED: '#6B7280',
@@ -52,10 +64,10 @@ const ATTENDANCE_COLORS = {
 };
 
 const READINESS_COLORS = {
-  Ready: '#10B981',
-  'Missing Bus': '#EF4444',
-  'Missing Driver': '#F59E0B',
-  'Missing Attendant': '#3B82F6',
+  READY: '#10B981',
+  MISSING_BUS: '#EF4444',
+  MISSING_DRIVER: '#F59E0B',
+  MISSING_ATTENDANT: '#3B82F6',
 };
 
 const REQUEST_COLORS = {
@@ -65,6 +77,34 @@ const REQUEST_COLORS = {
   REJECTED: '#EF4444',
   CANCELLED: '#EC4899',
 };
+
+const normalizeChartKey = (value?: string | null) =>
+  (value || '')
+    .trim()
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .replace(/[\s-]+/g, '_')
+    .toUpperCase();
+
+function localizeChartData(
+  data: ChartItemDto[] | undefined,
+  labelMap: Record<string, string>
+) {
+  return (data || []).map((item) => {
+    const normalizedName = normalizeChartKey(item.name);
+    const normalizedLabel = normalizeChartKey(item.label);
+    const label =
+      labelMap[normalizedName] ||
+      labelMap[normalizedLabel] ||
+      item.label ||
+      item.name;
+
+    return {
+      ...item,
+      name: normalizedName || normalizedLabel || item.name,
+      label,
+    };
+  });
+}
 
 function countActiveFilters(filters: DashboardFilters) {
   return (
@@ -88,24 +128,64 @@ export function SchoolBusDashboardPage() {
     userKey: access.userKey,
   };
 
-  const operationsQuery = useGetDashboardOperationsQuery(queryArgs);
-  const schoolsQuery = useGetDashboardSchoolsQuery({
-    userKey: access.userKey,
-  });
+  const queryOptions = { refetchOnMountOrArgChange: true };
+  const summaryQuery = useGetDashboardSummaryQuery(queryArgs, queryOptions);
+  const tripStatusQuery = useGetDashboardTripStatusQuery(
+    queryArgs,
+    queryOptions
+  );
+  const attendanceStatusQuery = useGetDashboardAttendanceStatusQuery(
+    queryArgs,
+    queryOptions
+  );
+  const routeReadinessQuery = useGetDashboardRouteReadinessQuery(
+    queryArgs,
+    queryOptions
+  );
+  const requestStatusQuery = useGetDashboardRequestStatusQuery(
+    queryArgs,
+    queryOptions
+  );
+  const tripsByDateQuery = useGetDashboardTripsByDateQuery(
+    queryArgs,
+    queryOptions
+  );
+  const schoolsQuery = useGetDashboardSchoolsQuery(
+    {
+      userKey: access.userKey,
+    },
+    queryOptions
+  );
 
-  const operations = operationsQuery.data?.data;
-  const summary = operations?.summary;
+  const summary = summaryQuery.data?.data;
   const activeFilterCount = countActiveFilters(filters);
+  const tripStatusChart = localizeChartData(
+    tripStatusQuery.data?.data,
+    tripStatusLabel
+  );
+  const attendanceChart = localizeChartData(
+    attendanceStatusQuery.data?.data,
+    tripStudentStatusLabel
+  );
+  const routeReadinessChart = localizeChartData(
+    routeReadinessQuery.data?.data,
+    routeReadinessStatusLabel
+  );
+  const requestStatusChart = localizeChartData(
+    requestStatusQuery.data?.data,
+    requestStatusLabel
+  );
+  const tripsByDateChart = tripsByDateQuery.data?.data || [];
   const pageTitle = access.isParentOnly
-    ? 'Student transit dashboard'
+    ? 'Tổng quan đưa đón học sinh'
     : access.isDriver
-      ? 'Driver dashboard'
+      ? 'Bảng điều khiển tài xế'
       : access.isAttendant
-        ? 'Attendant dashboard'
-        : 'School bus operations cockpit';
+        ? 'Bảng điều khiển phụ xe'
+        : 'Tổng quan vận hành xe bus trường học';
   const pageDescription = access.isOperator
-    ? 'Modern operational control room offering real-time visibility into route planning, status metrics, and attendance tracking.'
-    : 'Operational metrics are limited to the schools, students, requests, and trips available to your account.';
+    ? 'Theo dõi theo thời gian thực về lập tuyến, trạng thái chuyến và điểm danh.'
+    : 'Các chỉ số vận hành được giới hạn theo trường, học sinh, yêu cầu và chuyến xe thuộc phạm vi tài khoản của bạn.';
 
   return (
     <>
@@ -115,8 +195,8 @@ export function SchoolBusDashboardPage() {
         breadcrumb={
           <SchoolBusBreadcrumb
             items={[
-              { label: 'School Bus Ops', href: '/school-bus/dashboard' },
-              { label: 'Dashboard', current: true },
+              { label: 'Vận hành xe bus', href: '/school-bus/dashboard' },
+              { label: 'Tổng quan', current: true },
             ]}
           />
         }
@@ -129,7 +209,7 @@ export function SchoolBusDashboardPage() {
               onClick={() => setFilterOpen(true)}
             >
               <Filter className='mr-2 h-4 w-4' />
-              Filters
+              Bộ lọc
               {activeFilterCount > 0 && (
                 <span className='ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground'>
                   {activeFilterCount}
@@ -139,7 +219,7 @@ export function SchoolBusDashboardPage() {
 
             {access.canAccessReports && (
               <Button asChild variant='outline' className='rounded-full'>
-                <Link href='/school-bus/reports'>Open reports</Link>
+                <Link href='/school-bus/reports'>Mở báo cáo</Link>
               </Button>
             )}
 
@@ -149,7 +229,7 @@ export function SchoolBusDashboardPage() {
                 className={cn(schoolBusUi.primaryButton, 'rounded-full')}
               >
                 <Link href='/school-bus/dispatch'>
-                  Go to dispatch
+                  Đi tới điều phối
                   <ArrowRight className='ml-1 h-4 w-4' />
                 </Link>
               </Button>
@@ -158,7 +238,7 @@ export function SchoolBusDashboardPage() {
         }
       >
         <div className='space-y-6'>
-          {operationsQuery.isLoading ? (
+          {summaryQuery.isLoading ? (
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               {[0, 1, 2, 3].map((item) => (
                 <div
@@ -167,40 +247,36 @@ export function SchoolBusDashboardPage() {
                 />
               ))}
             </div>
-          ) : operationsQuery.isError || !summary ? (
+          ) : summaryQuery.isError || !summary ? (
             <SchoolBusEmptyState
-              title='Summary metrics unavailable'
-              description='The chart blocks remain available while the summary request is retried.'
+              title='Không thể tải chỉ số tổng quan'
+              description='Các biểu đồ vẫn hiển thị trong khi hệ thống thử tải lại dữ liệu tổng quan.'
               icon={Route}
               className='min-h-[154px]'
             />
           ) : (
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               <SchoolBusMetricCard
-                label='Schools onboarded'
+                label='Trường đã thiết lập'
                 value={summary.schoolCount}
-                hint='Schools inside your current data scope'
                 icon={GraduationCap}
                 tone='school'
               />
               <SchoolBusMetricCard
-                label='Parents linked'
+                label='Phụ huynh đã liên kết'
                 value={summary.parentCount}
-                hint='Parents represented in the selected scope'
                 icon={Users}
                 tone='default'
               />
               <SchoolBusMetricCard
-                label='Students managed'
+                label='Học sinh đang quản lý'
                 value={summary.studentCount}
-                hint='Students represented in the selected scope'
                 icon={User}
                 tone='student'
               />
               <SchoolBusMetricCard
-                label='Pending requests'
+                label='Yêu cầu chờ xử lý'
                 value={summary.pendingRequestCount}
-                hint='Requests awaiting action in your accessible scope'
                 icon={FileText}
                 tone='warning'
               />
@@ -209,37 +285,37 @@ export function SchoolBusDashboardPage() {
 
           <div className='grid gap-6 md:grid-cols-3'>
             <DashboardChartCard
-              title='Trip Status Distribution'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              title='Phân bố trạng thái chuyến'
+              isLoading={tripStatusQuery.isLoading}
+              isError={tripStatusQuery.isError}
             >
               <DashboardDonutChart
-                title='Trip Status Distribution'
-                data={operations?.tripStatusChart || []}
+                title='Phân bố trạng thái chuyến'
+                data={tripStatusChart}
                 colorMap={TRIP_STATUS_COLORS}
               />
             </DashboardChartCard>
 
             <DashboardChartCard
-              title='Student Attendance Status'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              title='Trạng thái điểm danh học sinh'
+              isLoading={attendanceStatusQuery.isLoading}
+              isError={attendanceStatusQuery.isError}
             >
               <DashboardDonutChart
-                title='Student Attendance Status'
-                data={operations?.attendanceChart || []}
+                title='Trạng thái điểm danh học sinh'
+                data={attendanceChart}
                 colorMap={ATTENDANCE_COLORS}
               />
             </DashboardChartCard>
 
             <DashboardChartCard
-              title='Route Assignment Status'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              title='Trạng thái phân công tuyến'
+              isLoading={routeReadinessQuery.isLoading}
+              isError={routeReadinessQuery.isError}
             >
               <DashboardBarChart
-                title='Route Assignment Status'
-                data={operations?.routeReadinessChart || []}
+                title='Trạng thái phân công tuyến'
+                data={routeReadinessChart}
                 colorMap={READINESS_COLORS}
               />
             </DashboardChartCard>
@@ -247,26 +323,26 @@ export function SchoolBusDashboardPage() {
 
           <div className='grid gap-6 md:grid-cols-3'>
             <DashboardChartCard
-              title='Trips Run Over Time'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              title='Số chuyến theo thời gian'
+              isLoading={tripsByDateQuery.isLoading}
+              isError={tripsByDateQuery.isError}
               className='md:col-span-2'
             >
               <DashboardLineChart
-                title='Trips Run Over Time'
-                data={operations?.tripsByDate || []}
+                title='Số chuyến theo thời gian'
+                data={tripsByDateChart}
                 color='#991B1B'
               />
             </DashboardChartCard>
 
             <DashboardChartCard
-              title='Request Workload'
-              isLoading={operationsQuery.isLoading}
-              isError={operationsQuery.isError}
+              title='Khối lượng yêu cầu'
+              isLoading={requestStatusQuery.isLoading}
+              isError={requestStatusQuery.isError}
             >
               <DashboardBarChart
-                title='Request Workload'
-                data={operations?.requestStatusChart || []}
+                title='Khối lượng yêu cầu'
+                data={requestStatusChart}
                 colorMap={REQUEST_COLORS}
               />
             </DashboardChartCard>

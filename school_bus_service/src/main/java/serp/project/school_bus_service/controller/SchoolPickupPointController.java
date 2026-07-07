@@ -11,7 +11,7 @@ import serp.project.school_bus_service.dto.response.SchoolPickupPointResponse;
 import serp.project.school_bus_service.service.ISchoolPickupPointService;
 import serp.project.school_bus_service.shared.auth.AuthUtils;
 import serp.project.school_bus_service.shared.base.AbstractBaseController;
-
+import serp.project.school_bus_service.shared.i18n.MessageCommon;
 
 import java.util.List;
 
@@ -20,10 +20,12 @@ import java.util.List;
 public class SchoolPickupPointController extends AbstractBaseController {
 
     private final ISchoolPickupPointService service;
+    private final MessageCommon messageCommon;
 
-    public SchoolPickupPointController(ISchoolPickupPointService service, AuthUtils authUtils) {
+    public SchoolPickupPointController(ISchoolPickupPointService service, AuthUtils authUtils, MessageCommon messageCommon) {
         super(authUtils);
         this.service = service;
+        this.messageCommon = messageCommon;
     }
 
     @GetMapping("/by-school")
@@ -32,7 +34,7 @@ public class SchoolPickupPointController extends AbstractBaseController {
             @RequestParam Long schoolId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ok("Fetched school pickup points",
+        return ok(messageCommon.getMessage("schoolPickupPoint.fetch.list"),
                 service.getBySchool(schoolId, page, size, getCurrentTenantId()));
     }
 
@@ -40,7 +42,7 @@ public class SchoolPickupPointController extends AbstractBaseController {
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
     public ResponseEntity<GeneralResponse<List<SchoolPickupPointResponse>>> getActiveBySchool(
             @RequestParam Long schoolId) {
-        return ok("Fetched active school pickup points",
+        return ok(messageCommon.getMessage("schoolPickupPoint.fetch.activeList"),
                 service.getActiveBySchool(schoolId, getCurrentTenantId()));
     }
 
@@ -48,7 +50,7 @@ public class SchoolPickupPointController extends AbstractBaseController {
     @GetMapping("/active")
     @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.school.read')")
     public ResponseEntity<GeneralResponse<List<SchoolPickupPointResponse>>> getAllActiveLinks() {
-        return ok("Fetched all active school pickup point links",
+        return ok(messageCommon.getMessage("schoolPickupPoint.fetch.allActiveLinks"),
                 service.getAllActiveLinks(getCurrentTenantId()));
     }
 
@@ -57,7 +59,7 @@ public class SchoolPickupPointController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<SchoolPickupPointResponse>> link(
             @RequestParam Long schoolId,
             @Valid @RequestBody SchoolPickupPointUpsertRequest request) {
-        return created("Linked pickup point to school",
+        return created(messageCommon.getMessage("schoolPickupPoint.link.success"),
                 service.link(schoolId, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
@@ -66,7 +68,7 @@ public class SchoolPickupPointController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<SchoolPickupPointResponse>> update(
             @RequestParam Long id,
             @Valid @RequestBody SchoolPickupPointUpsertRequest request) {
-        return ok("Updated school pickup point config",
+        return ok(messageCommon.getMessage("schoolPickupPoint.update.success"),
                 service.update(id, request, getCurrentTenantId(), getCurrentUserId()));
     }
 
@@ -76,6 +78,6 @@ public class SchoolPickupPointController extends AbstractBaseController {
             @RequestParam Long schoolId,
             @RequestParam Long pickupPointId) {
         service.unlink(schoolId, pickupPointId, getCurrentTenantId(), getCurrentUserId());
-        return ok("Unlinked pickup point from school");
+        return ok(messageCommon.getMessage("schoolPickupPoint.unlink.success"));
     }
 }

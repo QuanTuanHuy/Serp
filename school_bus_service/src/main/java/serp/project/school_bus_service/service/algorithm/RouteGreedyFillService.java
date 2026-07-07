@@ -40,6 +40,7 @@ import serp.project.school_bus_service.service.algorithm.model.StopDemand;
 import serp.project.school_bus_service.service.algorithm.model.StudentCandidate;
 import serp.project.school_bus_service.shared.exception.AppErrorCode;
 import serp.project.school_bus_service.shared.exception.AppException;
+import serp.project.school_bus_service.shared.i18n.MessageCommon;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -75,6 +76,7 @@ public class RouteGreedyFillService {
     private final StudentSubscriptionRepository subscriptionRepository;
     private final RoutePlanStudentRepository routePlanStudentRepository;
     private final RouteAssignmentRepository routeAssignmentRepository;
+    private final MessageCommon messageCommon;
 
     public RouteGreedyFillService(IRoutePlanningSessionService planningSessionService,
                                   IRouteService routeService,
@@ -84,7 +86,8 @@ public class RouteGreedyFillService {
                                   IRouteGeometryService routeGeometryService,
                                   StudentSubscriptionRepository subscriptionRepository,
                                   RoutePlanStudentRepository routePlanStudentRepository,
-                                  RouteAssignmentRepository routeAssignmentRepository) {
+                                  RouteAssignmentRepository routeAssignmentRepository,
+                                  MessageCommon messageCommon) {
         this.planningSessionService = planningSessionService;
         this.routeService = routeService;
         this.routeStopService = routeStopService;
@@ -94,6 +97,7 @@ public class RouteGreedyFillService {
         this.subscriptionRepository = subscriptionRepository;
         this.routePlanStudentRepository = routePlanStudentRepository;
         this.routeAssignmentRepository = routeAssignmentRepository;
+        this.messageCommon = messageCommon;
     }
 
     /**
@@ -145,7 +149,7 @@ public class RouteGreedyFillService {
                                                            Long tenantId) {
         if (!request.preserveExistingAssignments()) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "Replace existing assignments is not supported yet.");
+                    messageCommon.getMessage("greedy.replaceExistingUnsupported"));
         }
 
         RoutePlanningSessionEntity session = planningSessionService.requireSession(sessionId, tenantId);
@@ -153,50 +157,49 @@ public class RouteGreedyFillService {
         if (route.getPlanningSession() == null
                 || !sessionId.equals(route.getPlanningSession().getId())) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "Route does not belong to the requested planning session.");
+                    messageCommon.getMessage("greedy.routeSessionMismatch"));
         }
         if (session.getStatus() == PlanningSessionStatus.PUBLISHED
                 || session.getStatus() == PlanningSessionStatus.CANCELLED) {
             throw new AppException(AppErrorCode.Session.FROZEN,
-                    "Cannot run Greedy Fill on a " + session.getStatus().name().toLowerCase(Locale.ROOT)
-                            + " planning session.");
+                    messageCommon.getMessage("greedy.sessionFrozen", session.getStatus()));
         }
         if (route.getStatus() == RouteStatus.PUBLISHED
                 || route.getStatus() == RouteStatus.ASSIGNED
                 || route.getStatus() == RouteStatus.TRIP_CREATED
                 || route.getStatus() == RouteStatus.CANCELLED) {
             throw new AppException(AppErrorCode.Route.INVALID_STATE,
-                    "Cannot run Greedy Fill when route status is " + route.getStatus() + ".");
+                    messageCommon.getMessage("greedy.routeStatusInvalid", route.getStatus()));
         }
         if (tripExecutionService.existsByRoute(routeId, tenantId)) {
             throw new AppException(AppErrorCode.Route.INVALID_STATE,
-                    "Route already has a trip execution.");
+                    messageCommon.getMessage("greedy.routeHasTrip"));
         }
         if (route.getRouteDirection() == null) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "Route direction is required before running Greedy Fill.");
+                    messageCommon.getMessage("greedy.directionRequired"));
         }
         if (session.getRouteDirection() != route.getRouteDirection()) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "Route direction must match the planning session direction.");
+                    messageCommon.getMessage("greedy.directionMismatch"));
         }
         if (!session.getSchool().getId().equals(route.getSchool().getId())
                 || !session.getServiceDate().equals(route.getServiceDate())) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "Route school and service date must match the planning session.");
+                    messageCommon.getMessage("greedy.sessionContextMismatch"));
         }
         List<RouteStopEntity> stops = routeStopService.findByRoute(routeId, tenantId);
         RouteStopEntity startTerminal = requireTerminal(stops, RouteStopPurpose.START_TERMINAL);
         RouteStopEntity endTerminal = requireTerminal(stops, RouteStopPurpose.END_TERMINAL);
         validateRouteEndpoints(route, startTerminal, endTerminal);
-        validateCoordinate(startTerminal, "Start terminal must have coordinates before running Greedy Fill.");
-        validateCoordinate(endTerminal, "End terminal must have coordinates before running Greedy Fill.");
+        validateCoordinate(startTerminal, "greedy.startTerminalCoordinatesRequired");
+        validateCoordinate(endTerminal, "greedy.endTerminalCoordinatesRequired");
 
         List<RouteStopEntity> serviceStops = stops.stream()
                 .filter(stop -> stop.getStopPurpose() != null && !stop.getStopPurpose().isTerminal())
                 .toList();
         for (RouteStopEntity stop : serviceStops) {
-            validateCoordinate(stop, "Existing service stops must have coordinates before running Greedy Fill.");
+            validateCoordinate(stop, "greedy.serviceStopCoordinatesRequired");
         }
         RouteContext context = new RouteContext();
         context.setSession(session);
@@ -224,17 +227,17 @@ public class RouteGreedyFillService {
         Integer capacity = routeAssignmentRepository.findCurrentBusCapacity(route.getId(), tenantId).orElse(null);
         if (capacity == null) {
             throw new AppException(AppErrorCode.Bus.SELECTED_BUS_REQUIRED,
-                    "Route must have a selected bus before running Greedy Fill.");
+                    messageCommon.getMessage("greedy.busRequired"));
         }
         if (capacity == null || capacity <= 0) {
             throw new AppException(AppErrorCode.Bus.CAPACITY_NOT_CONFIGURED,
-                    "The selected bus must have a positive capacity.");
+                    messageCommon.getMessage("greedy.busCapacityInvalid"));
         }
         int assigned = Math.toIntExact(routePlanStudentService.countDistinctStudentsByRoute(route.getId()));
         int remaining = capacity - assigned;
         if (remaining <= 0) {
             throw new AppException(AppErrorCode.Bus.CAPACITY_EXCEEDED,
-                    "Route is already full.");
+                    messageCommon.getMessage("greedy.routeFull"));
         }
         CapacityState capacityState = new CapacityState();
         capacityState.setCapacity(capacity);
@@ -606,9 +609,10 @@ public class RouteGreedyFillService {
         response.setSkippedAssignedElsewhere(candidates.getAssignedElsewhere());
         response.setSkippedMissingCoordinates(candidates.getMissingCoordinates());
         response.setSkippedInvalidPoint(candidates.getInvalidPoint());
-        response.setMessage("Added " + persisted.getAddedStudents() + " students across "
-                + persisted.getAddedStops() + " stops. " + unassigned
-                + " eligible students remain unassigned.");
+        response.setMessage(messageCommon.getMessage(
+                "greedy.result",
+                persisted.getAddedStudents(),
+                persisted.getAddedStops()));
         return response;
     }
 
@@ -618,19 +622,19 @@ public class RouteGreedyFillService {
         if (startTerminal.getLocationType() == null || startTerminal.getLocationId() == null
                 || endTerminal.getLocationType() == null || endTerminal.getLocationId() == null) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "Route must have start and end terminals before running Greedy Fill.");
+                    messageCommon.getMessage("greedy.terminalsRequired"));
         }
         if (route.getRouteDirection() == RouteDirection.OUTBOUND
                 && (startTerminal.getLocationType() != RouteLocationType.DEPOT
                 || endTerminal.getLocationType() != RouteLocationType.SCHOOL)) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "OUTBOUND Greedy Fill requires Depot to School terminals.");
+                    messageCommon.getMessage("greedy.outboundTerminalsInvalid"));
         }
         if (route.getRouteDirection() == RouteDirection.RETURN
                 && (startTerminal.getLocationType() != RouteLocationType.SCHOOL
                 || endTerminal.getLocationType() != RouteLocationType.DEPOT)) {
             throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                    "RETURN Greedy Fill requires School to Depot terminals.");
+                    messageCommon.getMessage("greedy.returnTerminalsInvalid"));
         }
     }
 
@@ -639,12 +643,12 @@ public class RouteGreedyFillService {
                 .filter(stop -> stop.getStopPurpose() == purpose)
                 .findFirst()
                 .orElseThrow(() -> new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED,
-                        "Route is missing its " + purpose.name().toLowerCase(Locale.ROOT) + " stop."));
+                        messageCommon.getMessage("greedy.terminalMissing", purpose)));
     }
 
-    private void validateCoordinate(RouteStopEntity stop, String message) {
+    private void validateCoordinate(RouteStopEntity stop, String messageKey) {
         if (stop.getLatitude() == null || stop.getLongitude() == null) {
-            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, message);
+            throw new AppException(AppErrorCode.REQUEST_VALIDATION_FAILED, messageCommon.getMessage(messageKey));
         }
     }
 

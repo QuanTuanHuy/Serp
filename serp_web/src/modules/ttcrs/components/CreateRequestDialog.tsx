@@ -29,6 +29,7 @@ import {
   useCreateDispatcherRequestsMutation,
 } from '../api/ttcrsApi';
 import type { RequestType, CreateRequestPayload } from '../types';
+import { TIME_WINDOW_FIELDS } from '../types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -70,41 +71,6 @@ const INITIAL_FORM: FormState = {
   lateAtDest: '',
 };
 
-// Time window fields required for each request type
-const TIME_WINDOW_FIELDS: Record<
-  RequestType,
-  {
-    earlyAtSrc: boolean;
-    lateAtSrc: boolean;
-    earlyAtDest: boolean;
-    lateAtDest: boolean;
-  }
-> = {
-  OF: {
-    earlyAtSrc: true,
-    lateAtSrc: false,
-    earlyAtDest: false,
-    lateAtDest: true,
-  },
-  IF: {
-    earlyAtSrc: true,
-    lateAtSrc: true,
-    earlyAtDest: true,
-    lateAtDest: true,
-  },
-  OE: {
-    earlyAtSrc: true,
-    lateAtSrc: true,
-    earlyAtDest: true,
-    lateAtDest: true,
-  },
-  IE: {
-    earlyAtSrc: true,
-    lateAtSrc: false,
-    earlyAtDest: false,
-    lateAtDest: true,
-  },
-};
 
 const REQUEST_TYPES: { value: RequestType; label: string }[] = [
   { value: 'OF', label: 'Outbound Full (OF)' },
@@ -409,17 +375,17 @@ export function CreateRequestDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {locations
-                      // .filter((loc) => {
-                      //   if (form.type === 'OF' || form.type === 'IE') return loc.type === 'WAREHOUSE';
-                      //   if (form.type === 'IF') return loc.type === 'PORT';
-                      //   return false;
-                      // })
+                      .filter((loc) => {
+                        if (form.type === 'OF' || form.type === 'IE') return loc.type === 'WAREHOUSE';
+                        if (form.type === 'IF') return loc.type === 'PORT';
+                        return false;
+                      })
                       .map((loc) => (
                         <SelectItem key={loc.id} value={loc.locationCode}>
                           {loc.locationCode}
-                          <span>
+                          {/* <span>
                             ({loc.type})
-                          </span>
+                          </span> */}
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -435,7 +401,7 @@ export function CreateRequestDialog({
               <div className="min-w-0 space-y-1.5">
                 <Label>Destination</Label>
                 <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                  Destination for IE requests is determined by the algorithm when building a route.
+                  Destination for IE requests is determined by the algorithm/dispatcher when building a route.
                 </div>
               </div>
             ) : (
@@ -463,18 +429,18 @@ export function CreateRequestDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {locations
-                    // .filter((loc) => {
-                    //       if (form.type === 'OE' || form.type === 'IF') return loc.type === 'WAREHOUSE';
-                    //       if (form.type === 'OF') return loc.type === 'PORT';
-                    //       if (form.type === 'IE') return loc.type === 'DEPOT_TRUCK';
-                    //       return false;
-                    //     })
+                    .filter((loc) => {
+                          if (form.type === 'OE' || form.type === 'IF') return loc.type === 'WAREHOUSE';
+                          if (form.type === 'OF') return loc.type === 'PORT';
+                          if (form.type === 'IE') return loc.type === 'DEPOT_TRUCK';
+                          return false;
+                        })
                     .map((loc) => (
                       <SelectItem key={loc.id} value={loc.locationCode}>
                         {loc.locationCode}
-                        <span>
+                        {/* <span>
                           ({loc.type})
-                        </span>
+                        </span> */}
                       </SelectItem>
                     ))}
                   </SelectContent>

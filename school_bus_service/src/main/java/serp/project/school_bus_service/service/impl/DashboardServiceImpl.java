@@ -28,6 +28,7 @@ import serp.project.school_bus_service.repository.StudentRepository;
 import serp.project.school_bus_service.repository.TransportRequestRepository;
 import serp.project.school_bus_service.repository.TripExecutionRepository;
 import serp.project.school_bus_service.repository.TripStudentRepository;
+import serp.project.school_bus_service.repository.projection.RouteReadinessCountProjection;
 import serp.project.school_bus_service.service.IDashboardService;
 import serp.project.school_bus_service.service.ISchoolBusDataScopeService;
 import serp.project.school_bus_service.service.model.DashboardDataScope;
@@ -283,58 +284,21 @@ public class DashboardServiceImpl implements IDashboardService {
             return List.of();
         }
 
-        List<RoutePlanEntity> routes = getDashboardRoutes(context);
-        if (routes.isEmpty()) {
-            return List.of();
-        }
-
-        List<Long> routeIds = routes.stream().map(RoutePlanEntity::getId).toList();
-        Map<Long, RouteAssignmentEntity> assignmentsByRoute = routeAssignmentRepository
-                .findDashboardAssignments(routeIds, scope.getTenantId())
-                .stream()
-                .collect(Collectors.toMap(
-                        assignment -> assignment.getRoute().getId(),
-                        Function.identity(),
-                        this::latestAssignment));
-        Map<Long, TripExecutionEntity> tripsByRoute = tripExecutionRepository
-                .findByRouteIdInAndTenantIdAndIsDeletedFalse(routeIds, scope.getTenantId())
-                .stream()
-                .collect(Collectors.toMap(
-                        trip -> trip.getRoute().getId(),
-                        Function.identity(),
-                        this::latestTrip));
-
-        long ready = 0L;
-        long missingBus = 0L;
-        long missingDriver = 0L;
-        long missingAttendant = 0L;
-
-        for (RoutePlanEntity route : routes) {
-            DashboardResourceAssignment assignment = resolveAssignment(
-                    route,
-                    assignmentsByRoute.get(route.getId()),
-                    tripsByRoute.get(route.getId()));
-            if (assignment.isBusMissing()) {
-                missingBus++;
-            }
-            if (assignment.isDriverMissing()) {
-                missingDriver++;
-            }
-            if (assignment.isAttendantMissing()) {
-                missingAttendant++;
-            }
-            if (!assignment.isBusMissing()
-                    && !assignment.isDriverMissing()
-                    && !assignment.isAttendantMissing()) {
-                ready++;
-            }
-        }
+        RouteReadinessCountProjection readiness = routePlanRepository.countDashboardRouteReadiness(
+                scope.getTenantId(),
+                context.getServiceDate(),
+                context.getSchoolId(),
+                context.getDirection() == null ? null : context.getDirection().name(),
+                scope.isTenantWide(),
+                scope.getDriverProfileId(),
+                scope.getAttendantProfileId(),
+                scope.getParentProfileId());
 
         return List.of(
-                new ChartItemDto("Ready", ready, "Ready"),
-                new ChartItemDto("Missing Bus", missingBus, "Missing Bus"),
-                new ChartItemDto("Missing Driver", missingDriver, "Missing Driver"),
-                new ChartItemDto("Missing Attendant", missingAttendant, "Missing Attendant"));
+                new ChartItemDto("Ready", safeLong(readiness.getReadyCount()), "Ready"),
+                new ChartItemDto("Missing Bus", safeLong(readiness.getMissingBusCount()), "Missing Bus"),
+                new ChartItemDto("Missing Driver", safeLong(readiness.getMissingDriverCount()), "Missing Driver"),
+                new ChartItemDto("Missing Attendant", safeLong(readiness.getMissingAttendantCount()), "Missing Attendant"));
     }
 
     private List<ChartItemDto> getRequestStatusChart(DashboardQueryContext context) {
@@ -485,6 +449,10 @@ public class DashboardServiceImpl implements IDashboardService {
 
     private TripExecutionEntity latestTrip(TripExecutionEntity first, TripExecutionEntity second) {
         return first.getId() >= second.getId() ? first : second;
+    }
+
+    private long safeLong(Long value) {
+        return value == null ? 0L : value;
     }
 
     private DashboardResourceAssignment resolveAssignment(

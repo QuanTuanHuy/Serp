@@ -13,12 +13,16 @@ interface DashboardDonutChartProps {
   data: ChartItemDto[];
   colorMap: Record<string, string>;
   title?: string;
+  minHeightClassName?: string;
+  legendHeight?: number;
 }
 
 export function DashboardDonutChart({
   data,
   colorMap,
   title,
+  minHeightClassName = 'min-h-[240px]',
+  legendHeight = 64,
 }: DashboardDonutChartProps) {
   // Filter out zero counts to keep the chart clean, but show in legend
   const chartData = data.filter((item) => item.count > 0);
@@ -39,7 +43,7 @@ export function DashboardDonutChart({
             </span>
           </div>
           <p className='mt-1 pl-5 text-xs text-muted-foreground'>
-            Count:{' '}
+            Số lượng:{' '}
             <span className='font-bold text-foreground'>{dataPoint.count}</span>
           </p>
         </div>
@@ -53,10 +57,12 @@ export function DashboardDonutChart({
       {title && (
         <h3 className='mb-3 text-sm font-semibold text-foreground'>{title}</h3>
       )}
-      <div className='flex-1 min-h-[200px] relative flex items-center justify-center'>
+      <div
+        className={`flex-1 ${minHeightClassName} relative flex items-center justify-center`}
+      >
         {chartData.length === 0 ? (
           <div className='text-sm italic text-muted-foreground'>
-            No data available
+            Chưa có dữ liệu
           </div>
         ) : (
           <ResponsiveContainer width='100%' height='100%'>
@@ -84,7 +90,7 @@ export function DashboardDonutChart({
               <Tooltip content={<CustomTooltip />} />
               <Legend
                 verticalAlign='bottom'
-                height={36}
+                height={legendHeight}
                 iconType='circle'
                 iconSize={10}
                 formatter={(value, entry: any) => {

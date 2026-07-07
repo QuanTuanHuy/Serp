@@ -67,33 +67,33 @@ export function BagDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-4xl'>
         <DialogHeader>
-          <DialogTitle>Bag details</DialogTitle>
+          <DialogTitle>Chi tiết túi</DialogTitle>
           <DialogDescription>
-            {bag?.bagCode ?? 'Loading bag information'}
+            {bag?.bagCode ?? 'Đang tải thông tin túi'}
           </DialogDescription>
         </DialogHeader>
 
         {isLoading || !bag ? (
           <div className='py-8 text-center text-sm text-muted-foreground'>
-            Loading bag details...
+            Đang tải chi tiết túi...
           </div>
         ) : (
           <div className='space-y-5'>
             <div className='grid gap-3 text-sm md:grid-cols-3'>
               <DetailItem
-                label='Origin hub'
+                label='Hub gốc'
                 value={getHubLabel(hubs, bag.originHubId)}
               />
               <DetailItem
-                label='Destination'
+                label='Điểm đến'
                 value={getDestinationLabel(bag, hubs)}
               />
               <DetailItem
-                label='Vehicle'
+                label='Xe'
                 value={getVehicleLabel(vehicles, bag.vehicleId)}
               />
               <DetailItem
-                label='Status'
+                label='Trạng thái'
                 value={
                   <Badge variant={getBagStatusVariant(bag.status)}>
                     {getBagStatusLabel(bag.status)}
@@ -101,30 +101,30 @@ export function BagDetailDialog({
                 }
               />
               <DetailItem
-                label='Orders'
+                label='Đơn hàng'
                 value={`${formatNumber(bag.currentOrders, 0)} / ${formatNumber(
                   bag.maxOrders,
                   0
                 )}`}
               />
               <DetailItem
-                label='Weight'
+                label='Khối lượng'
                 value={`${formatNumber(bag.currentWeight)} / ${formatNumber(
                   bag.maxWeight
                 )} kg`}
               />
               <DetailItem
-                label='Volume'
+                label='Thể tích'
                 value={`${formatNumber(bag.currentVolume)} / ${formatNumber(
                   bag.maxVolume
                 )} m3`}
               />
               <DetailItem
-                label='Sealed at'
+                label='Niêm phong lúc'
                 value={formatDateTime(bag.sealedAt)}
               />
               <DetailItem
-                label='Updated at'
+                label='Cập nhật lúc'
                 value={formatDateTime(bag.updatedAt)}
               />
             </div>
@@ -139,9 +139,9 @@ export function BagDetailDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order code</TableHead>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead className='text-right'>Actions</TableHead>
+                    <TableHead>Mã đơn hàng</TableHead>
+                    <TableHead>ID đơn hàng</TableHead>
+                    <TableHead className='text-right'>Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -151,7 +151,7 @@ export function BagDetailDialog({
                         colSpan={3}
                         className='h-20 text-center text-muted-foreground'
                       >
-                        No orders in this bag.
+                        Chưa có đơn hàng trong túi này.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -172,7 +172,7 @@ export function BagDetailDialog({
                                     size='icon'
                                     variant='ghost'
                                     disabled={isRemovingOrder}
-                                    aria-label='Remove order'
+                                    aria-label='Xóa đơn khỏi túi'
                                     onClick={() =>
                                       onRemoveOrder(order.orderCode!)
                                     }
@@ -180,7 +180,7 @@ export function BagDetailDialog({
                                     <Trash2 className='h-4 w-4' />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Remove order</TooltipContent>
+                                <TooltipContent>Xóa đơn khỏi túi</TooltipContent>
                               </Tooltip>
                             )}
                         </TableCell>
@@ -195,7 +195,7 @@ export function BagDetailDialog({
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Close
+            Đóng
           </Button>
         </DialogFooter>
       </DialogContent>

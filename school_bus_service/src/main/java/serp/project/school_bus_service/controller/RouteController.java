@@ -25,6 +25,7 @@ import serp.project.school_bus_service.dto.response.GeneralResponse;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.RouteAssignmentResponse;
 import serp.project.school_bus_service.dto.response.RouteDetailResponse;
+import serp.project.school_bus_service.dto.response.RouteDispatchSummaryResponse;
 import serp.project.school_bus_service.dto.response.RouteMapResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanListItemResponse;
 import serp.project.school_bus_service.dto.response.RoutePlanResponse;
@@ -53,6 +54,12 @@ public class RouteController extends AbstractBaseController {
     public ResponseEntity<GeneralResponse<PageResponse<RoutePlanListItemResponse>>> getRoutes(
             @ModelAttribute RoutePlanParamsRequest params) {
         return ok("Fetched routes", routeService.getRoutes(params, getCurrentTenantId()));
+    }
+
+    @GetMapping("/dispatch-summary")
+    @PreAuthorize("@roleAuthorizer.hasPermission('school-bus.planning.read')")
+    public ResponseEntity<GeneralResponse<RouteDispatchSummaryResponse>> getDispatchSummary() {
+        return ok("Fetched route dispatch summary", routeService.getDispatchSummary(getCurrentTenantId()));
     }
 
     @GetMapping("/{id}")

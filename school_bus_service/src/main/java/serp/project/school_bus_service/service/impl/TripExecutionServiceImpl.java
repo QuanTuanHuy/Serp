@@ -13,6 +13,7 @@ import serp.project.school_bus_service.dto.request.SkipStopRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionListItemResponse;
 import serp.project.school_bus_service.dto.response.TripExecutionResponse;
+import serp.project.school_bus_service.dto.response.TripListSummaryResponse;
 import serp.project.school_bus_service.dto.response.TripStopLogResponse;
 import serp.project.school_bus_service.dto.response.TripStudentResponse;
 import serp.project.school_bus_service.entity.RouteAssignmentEntity;
@@ -174,6 +175,31 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
         applyTripListAssignments(trips, tenantId);
         applyTripListProgress(trips, tenantId);
         return PageResponse.from(tripPage, trip -> trip);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TripListSummaryResponse getSummary(Long tenantId) {
+        boolean tenantWide = securityService.isAdminOrDispatcher();
+        Long driverProfileId = null;
+        Long attendantProfileId = null;
+        Long parentProfileId = null;
+        if (!tenantWide) {
+            if (securityService.isDriver()) {
+                driverProfileId = schoolBusDataScopeService.getCurrentDriverProfileIdRequired();
+            } else if (securityService.isAttendant()) {
+                attendantProfileId = schoolBusDataScopeService.getCurrentAttendantProfileIdRequired();
+            } else if (securityService.isParentOnly()) {
+                parentProfileId = schoolBusDataScopeService.getCurrentParentProfileIdRequired();
+            }
+        }
+
+        var summary = tripRepository.getTripListSummary(
+                tenantId, tenantWide, driverProfileId, attendantProfileId, parentProfileId);
+        return new TripListSummaryResponse(
+                value(summary.getTotalTrips()),
+                value(summary.getInProgressTrips()),
+                value(summary.getCompletedTrips()));
     }
 
     @Override
@@ -926,5 +952,9 @@ public class TripExecutionServiceImpl extends AbstractBaseService<TripExecutionE
     @Override
     public TripExecutionEntity save(TripExecutionEntity entity) {
         return tripRepository.save(entity);
+    }
+
+    private long value(Long value) {
+        return value == null ? 0L : value;
     }
 }

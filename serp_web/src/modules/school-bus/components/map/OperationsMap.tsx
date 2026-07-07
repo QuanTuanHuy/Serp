@@ -9,7 +9,7 @@ export const OperationsMap = dynamic(() => import('./OperationsMapClient'), {
     <div
       className={`flex h-[420px] items-center justify-center text-sm text-slate-500 ${schoolBusUi.mapFrame}`}
     >
-      Loading operations map...
+      Đang tải bản đồ vận hành...
     </div>
   ),
 });

@@ -14,7 +14,7 @@ interface NominatimSearchBoxProps {
 }
 
 export function NominatimSearchBox({
-  placeholder = 'Search address on OpenStreetMap',
+  placeholder = 'Tìm địa chỉ trên OpenStreetMap',
   onSelect,
 }: NominatimSearchBoxProps) {
   const [query, setQuery] = React.useState('');

@@ -254,7 +254,7 @@ function getTableConfig(tab: ResourceKind | 'ALL'): TableConfig {
     case 'CONTAINER':
       return {
         showKind: false,
-        showSize: true,
+        showSize: false,
         showLocation: true,
         identifierLabel: 'Code',
       };
@@ -282,7 +282,7 @@ function getTableConfig(tab: ResourceKind | 'ALL'): TableConfig {
     default:
       return {
         showKind: true,
-        showSize: true,
+        showSize: false,
         showLocation: true,
         identifierLabel: 'Code / Name',
       };
