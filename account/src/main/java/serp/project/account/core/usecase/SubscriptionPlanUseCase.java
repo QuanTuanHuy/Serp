@@ -13,6 +13,8 @@ import java.util.List;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import serp.project.account.core.domain.constant.Constants;
 import serp.project.account.core.domain.dto.GeneralResponse;
@@ -271,16 +273,19 @@ public class SubscriptionPlanUseCase {
 
     @Transactional(rollbackFor = Exception.class)
     public void addModuleAccessForExistedSubscriptions(Long planId, Long moduleId) {
-        asyncTaskExecutor.execute(() -> {
+        executeAsyncAfterCommit(() -> {
             var subscriptions = subscriptionService.getSubscriptionsByPlanId(planId).stream()
                     .filter(sub -> sub.isActive())
                     .toList();
             if (CollectionUtils.isEmpty(subscriptions)) {
                 return;
             }
-            List<RoleEntity> rolesInModule = roleService.getRolesByModuleId(moduleId);
+            List<RoleEntity> rolesInModule = roleService.getRolesByModuleId(moduleId).stream()
+                    .filter(RoleEntity::isAutoAssigned)
+                    .toList();
             if (CollectionUtils.isEmpty(rolesInModule)) {
-                log.error("No roles found in module {} when adding module access for existing subscriptions", moduleId);
+                log.error("No auto-assigned roles found in module {} when adding module access for existing subscriptions",
+                        moduleId);
                 return;
             }
 
@@ -316,7 +321,7 @@ public class SubscriptionPlanUseCase {
 
     @Transactional(rollbackFor = Exception.class)
     public void removeModuleAccessFromExistedSubscriptions(Long planId, Long moduleId) {
-        asyncTaskExecutor.execute(() -> {
+        executeAsyncAfterCommit(() -> {
             var subscriptions = subscriptionService.getSubscriptionsByPlanId(planId).stream()
                     .filter(sub -> sub.isActive())
                     .toList();
@@ -350,6 +355,20 @@ public class SubscriptionPlanUseCase {
             });
 
             log.info("Completed removing module access for existing subscriptions of plan {}", planId);
+        });
+    }
+
+    private void executeAsyncAfterCommit(Runnable task) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            asyncTaskExecutor.execute(task);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncTaskExecutor.execute(task);
+            }
         });
     }
 }
