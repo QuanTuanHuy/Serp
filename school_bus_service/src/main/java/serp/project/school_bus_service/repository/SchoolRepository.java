@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import serp.project.school_bus_service.shared.base.BaseRepository;
 import serp.project.school_bus_service.entity.SchoolEntity;
+import serp.project.school_bus_service.repository.projection.NamedDropdownOptionProjection;
 import serp.project.school_bus_service.repository.projection.SchoolRegistrySummaryProjection;
 
 import java.util.Collection;
@@ -17,6 +18,16 @@ public interface SchoolRepository extends BaseRepository<SchoolEntity, Long> {
             Collection<Long> ids);
 
     long countByTenantIdAndIsDeletedFalse(Long tenantId);
+
+    @Query("""
+            SELECT s.id AS id, s.name AS name
+            FROM SchoolEntity s
+            WHERE s.tenantId = :tenantId
+              AND s.isDeleted = false
+              AND s.isActive = true
+            ORDER BY s.name ASC
+            """)
+    List<NamedDropdownOptionProjection> findActiveDropdownOptions(@Param("tenantId") Long tenantId);
 
     @Query(value = """
             SELECT

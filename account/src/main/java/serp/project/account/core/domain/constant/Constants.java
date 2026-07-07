@@ -96,6 +96,8 @@ public class Constants {
         // Subscription Plan errors
         public static final String SUBSCRIPTION_PLAN_NOT_FOUND = "Subscription plan not found";
         public static final String SUBSCRIPTION_PLAN_CODE_ALREADY_EXISTS = "Subscription plan code already exists";
+        public static final String SUBSCRIPTION_PLAN_HAS_PENDING_SUBSCRIPTIONS =
+                "Subscription plan has pending subscriptions";
         public static final String MODULE_ALREADY_IN_PLAN = "Module already in plan";
         public static final String MODULE_NOT_IN_PLAN = "Module not in plan";
 

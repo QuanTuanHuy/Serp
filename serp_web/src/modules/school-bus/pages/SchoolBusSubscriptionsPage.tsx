@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { Button } from '@/shared/components/ui';
 import { cn } from '@/shared/utils';
 import {
-  useGetSchoolDropdownOptionsQuery,
+  useGetBasicSchoolDropdownOptionsQuery,
   useGetSchoolBusSubscriptionSummaryQuery,
   useGetSchoolBusSubscriptionsQuery,
 } from '../api/schoolBusApi';
@@ -32,7 +32,6 @@ import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
 import {
   formatDate,
   getPageItems,
-  SCHOOL_BUS_OPTION_QUERY,
   SCHOOL_BUS_PAGE_QUERY_OPTIONS,
 } from '../utils';
 import { useSchoolBusAccess } from '../security/schoolBusAccess';
@@ -58,7 +57,7 @@ export function SchoolBusSubscriptionsPage() {
     undefined,
     { refetchOnMountOrArgChange: true }
   );
-  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
+  const { data: schoolsData } = useGetBasicSchoolDropdownOptionsQuery();
   const subscriptions = getPageItems(data?.data);
   const schools = schoolsData?.data || [];
 
@@ -81,7 +80,7 @@ export function SchoolBusSubscriptionsPage() {
   const filteredSubscriptions = React.useMemo(() => {
     let result = subscriptions;
     if (filterSchool) {
-      result = result.filter((s) => s.schoolName === filterSchool);
+      result = result.filter((s) => s.schoolId === Number(filterSchool));
     }
     if (filterStatus) {
       result = result.filter((s) => s.status === filterStatus);
@@ -95,9 +94,9 @@ export function SchoolBusSubscriptionsPage() {
   const schoolOptions = React.useMemo(() => {
     return [
       { label: 'Tất cả trường học', value: '' },
-      ...schools.map((s: any) => ({
-        label: s.label,
-        value: s.label,
+      ...schools.map((s) => ({
+        label: s.name,
+        value: String(s.id),
       })),
     ];
   }, [schools]);

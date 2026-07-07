@@ -65,6 +65,7 @@ import type {
   SchoolBusSchoolPickupPoint,
   SchoolBusSchoolPickupPointUpsertRequest,
   SchoolBusDropdownOption,
+  SchoolBusNamedDropdownOption,
 } from '../types';
 
 const transformApiResponse = createApiResponseTransform;
@@ -210,6 +211,15 @@ export const schoolBusApi = api.injectEndpoints({
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusDropdownOption[]>(),
     }),
+    getBasicSchoolDropdownOptions: builder.query<
+      ApiResponse<SchoolBusNamedDropdownOption[]>,
+      void
+    >({
+      query: () => ({ url: '/dropdowns/schools/basic', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<SchoolBusNamedDropdownOption[]>(),
+    }),
     getSchoolPickupPointDropdownOptions: builder.query<
       ApiResponse<SchoolBusDropdownOption[]>,
       number
@@ -257,6 +267,15 @@ export const schoolBusApi = api.injectEndpoints({
       }),
       extraOptions: { service: 'school-bus' },
       transformResponse: transformApiResponse<SchoolBusDropdownOption[]>(),
+    }),
+    getBasicDepotDropdownOptions: builder.query<
+      ApiResponse<SchoolBusNamedDropdownOption[]>,
+      void
+    >({
+      query: () => ({ url: '/dropdowns/depots/basic', method: 'GET' }),
+      extraOptions: { service: 'school-bus' },
+      transformResponse:
+        transformApiResponse<SchoolBusNamedDropdownOption[]>(),
     }),
 
     getSchools: builder.query<
@@ -2239,12 +2258,15 @@ const {
   useGetSessionEligibleStudentsQuery: useGetSessionEligibleStudentsQueryOrig,
   useAssignStudentToRouteMutation,
   useGetSchoolDropdownOptionsQuery: useGetSchoolDropdownOptionsQueryOrig,
+  useGetBasicSchoolDropdownOptionsQuery:
+    useGetBasicSchoolDropdownOptionsQueryOrig,
   useGetSchoolPickupPointDropdownOptionsQuery:
     useGetSchoolPickupPointDropdownOptionsQueryOrig,
   useGetParentDropdownOptionsQuery: useGetParentDropdownOptionsQueryOrig,
   useGetDriverDropdownOptionsQuery: useGetDriverDropdownOptionsQueryOrig,
   useGetAttendantDropdownOptionsQuery: useGetAttendantDropdownOptionsQueryOrig,
   useGetBusDropdownOptionsQuery: useGetBusDropdownOptionsQueryOrig,
+  useGetBasicDepotDropdownOptionsQuery: useGetBasicDepotDropdownOptionsQueryOrig,
 } = schoolBusApi;
 
 function wrapQueryHook<T extends (arg: any, options?: any) => any>(hook: T): T {
@@ -2255,6 +2277,9 @@ function wrapQueryHook<T extends (arg: any, options?: any) => any>(hook: T): T {
 
 export const useGetSchoolDropdownOptionsQuery = wrapQueryHook(
   useGetSchoolDropdownOptionsQueryOrig
+);
+export const useGetBasicSchoolDropdownOptionsQuery = wrapQueryHook(
+  useGetBasicSchoolDropdownOptionsQueryOrig
 );
 export const useGetSchoolPickupPointDropdownOptionsQuery = wrapQueryHook(
   useGetSchoolPickupPointDropdownOptionsQueryOrig
@@ -2270,6 +2295,9 @@ export const useGetAttendantDropdownOptionsQuery = wrapQueryHook(
 );
 export const useGetBusDropdownOptionsQuery = wrapQueryHook(
   useGetBusDropdownOptionsQueryOrig
+);
+export const useGetBasicDepotDropdownOptionsQuery = wrapQueryHook(
+  useGetBasicDepotDropdownOptionsQueryOrig
 );
 export const useGetSchoolBusReportQuery = wrapQueryHook(
   useGetSchoolBusReportQueryOrig

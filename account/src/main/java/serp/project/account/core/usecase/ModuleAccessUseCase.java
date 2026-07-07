@@ -186,6 +186,7 @@ public class ModuleAccessUseCase {
 
             var planModule = planModules.stream()
                     .filter(pm -> pm.getModuleId().equals(request.getModuleId()))
+                    .filter(SubscriptionPlanModuleEntity::isAccessible)
                     .findFirst()
                     .orElseThrow(() -> new AppException(Constants.ErrorMessage.MODULE_NOT_IN_SUBSCRIPTION_PLAN));
 

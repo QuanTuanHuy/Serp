@@ -3,6 +3,7 @@ package serp.project.school_bus_service.service.impl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.response.DropdownOptionResponse;
+import serp.project.school_bus_service.dto.response.NamedDropdownOptionResponse;
 import serp.project.school_bus_service.entity.BusAttendantProfileEntity;
 import serp.project.school_bus_service.entity.BusEntity;
 import serp.project.school_bus_service.entity.DriverProfileEntity;
@@ -15,7 +16,9 @@ import serp.project.school_bus_service.repository.DriverProfileRepository;
 import serp.project.school_bus_service.repository.ParentProfileRepository;
 import serp.project.school_bus_service.repository.SchoolPickupPointRepository;
 import serp.project.school_bus_service.repository.SchoolRepository;
+import serp.project.school_bus_service.service.IDepotService;
 import serp.project.school_bus_service.service.ISchoolBusDropdownService;
+import serp.project.school_bus_service.service.ISchoolService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +35,8 @@ public class SchoolBusDropdownServiceImpl implements ISchoolBusDropdownService {
     private final DriverProfileRepository driverProfileRepository;
     private final BusAttendantProfileRepository busAttendantProfileRepository;
     private final BusRepository busRepository;
+    private final ISchoolService schoolService;
+    private final IDepotService depotService;
 
     public SchoolBusDropdownServiceImpl(
             SchoolRepository schoolRepository,
@@ -39,13 +44,27 @@ public class SchoolBusDropdownServiceImpl implements ISchoolBusDropdownService {
             ParentProfileRepository parentProfileRepository,
             DriverProfileRepository driverProfileRepository,
             BusAttendantProfileRepository busAttendantProfileRepository,
-            BusRepository busRepository) {
+            BusRepository busRepository,
+            ISchoolService schoolService,
+            IDepotService depotService) {
         this.schoolRepository = schoolRepository;
         this.schoolPickupPointRepository = schoolPickupPointRepository;
         this.parentProfileRepository = parentProfileRepository;
         this.driverProfileRepository = driverProfileRepository;
         this.busAttendantProfileRepository = busAttendantProfileRepository;
         this.busRepository = busRepository;
+        this.schoolService = schoolService;
+        this.depotService = depotService;
+    }
+
+    @Override
+    public List<NamedDropdownOptionResponse> getBasicSchoolsDropdown(Long tenantId) {
+        return schoolService.getActiveSchoolDropdownOptions(tenantId);
+    }
+
+    @Override
+    public List<NamedDropdownOptionResponse> getBasicDepotsDropdown(Long tenantId) {
+        return depotService.getActiveDepotDropdownOptions(tenantId);
     }
 
     @Override

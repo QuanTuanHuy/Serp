@@ -35,6 +35,7 @@ import {
   useGetBusByIdQuery,
   useGetBusTypesQuery,
   useGetBusesQuery,
+  useGetBasicDepotDropdownOptionsQuery,
   useGetDepotByIdQuery,
   useGetDepotsQuery,
   useGetDriverByIdQuery,
@@ -182,6 +183,7 @@ export function SchoolBusFleetPage() {
   const { data: fleetSummaryData } = useGetFleetSummaryQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
+  const { data: depotDropdownData } = useGetBasicDepotDropdownOptionsQuery();
 
   // --- Dialog state -----------------------------------------------
   const [busDialogOpen, setBusDialogOpen] = React.useState(false);
@@ -243,6 +245,7 @@ export function SchoolBusFleetPage() {
   const accountUsers = accountUsersData?.data || [];
   const busTypes = busTypesData?.data || [];
   const depots = getPageItems(depotsData?.data);
+  const depotDropdownOptions = depotDropdownData?.data || [];
 
   // --- Stats ------------------------------------------------------
   const fleetSummary = fleetSummaryData?.data;
@@ -677,7 +680,10 @@ export function SchoolBusFleetPage() {
         onChange={setBusDepotFilter}
         placeholder='Tất cả bãi xe'
         icon={Warehouse}
-        options={depots.map((d) => ({ label: d.name, value: String(d.id) }))}
+        options={depotDropdownOptions.map((d) => ({
+          label: d.name,
+          value: String(d.id),
+        }))}
         clearable
         searchable
       />

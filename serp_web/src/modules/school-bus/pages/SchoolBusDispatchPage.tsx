@@ -475,7 +475,7 @@ export function SchoolBusDispatchPage() {
             <div className='flex flex-col gap-1 pb-2 border-b border-slate-100'>
               <h2 className='text-lg font-bold text-slate-950 flex items-center gap-2'>
                 <Map className='h-5 w-5 text-emerald-600' />
-                Bản đồ xem trước tuyến
+                Bản đồ tuyến
               </h2>
               <p className='text-xs text-slate-500'>
                 Tuyến xe đã chọn hiển thị với điểm đầu, điểm cuối, các điểm đón trả và đường đi theo thứ tự.
@@ -524,10 +524,10 @@ export function SchoolBusDispatchPage() {
                   legend={<SchoolBusMapLegend />}
                   panel={
                     <div className='space-y-4 p-4 min-w-[280px]'>
-                      {/* Tóm tắt tuyến */}
+                      {/* Thông tin tuyến */}
                       <div>
                         <h3 className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5'>
-                          Tóm tắt tuyến
+                          Thông tin tuyến
                         </h3>
                         <div className='space-y-2 text-xs'>
                           <div className='flex items-start gap-2 min-w-0'>

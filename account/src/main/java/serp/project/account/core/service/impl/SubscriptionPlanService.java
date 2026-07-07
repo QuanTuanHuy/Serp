@@ -20,7 +20,9 @@ import serp.project.account.core.domain.entity.OrganizationEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 import serp.project.account.core.domain.enums.LicenseType;
+import serp.project.account.core.domain.enums.SubscriptionStatus;
 import serp.project.account.core.exception.AppException;
+import serp.project.account.core.port.store.IOrganizationSubscriptionPort;
 import serp.project.account.core.port.store.ISubscriptionPlanPort;
 import serp.project.account.core.port.store.ISubscriptionPlanModulePort;
 import serp.project.account.core.service.ISubscriptionPlanService;
@@ -39,6 +41,7 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
 
     private final ISubscriptionPlanPort subscriptionPlanPort;
     private final ISubscriptionPlanModulePort subscriptionPlanModulePort;
+    private final IOrganizationSubscriptionPort organizationSubscriptionPort;
 
     private final SubscriptionPlanMapper subscriptionPlanMapper;
     private final SubscriptionPlanModuleMapper subscriptionPlanModuleMapper;
@@ -202,8 +205,13 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
 
     @Override
     public SubscriptionPlanEntity validatePlanDeletion(Long planId) {
-        // Implement later: Check if any active subscriptions are using this plan
-        return getPlanById(planId);
+        var plan = getPlanById(planId);
+        boolean hasPendingSubscriptions = organizationSubscriptionPort.getByPlanId(planId).stream()
+                .anyMatch(subscription -> SubscriptionStatus.PENDING.equals(subscription.getStatus()));
+        if (hasPendingSubscriptions) {
+            throw new AppException(Constants.ErrorMessage.SUBSCRIPTION_PLAN_HAS_PENDING_SUBSCRIPTIONS);
+        }
+        return plan;
     }
 
     @Override

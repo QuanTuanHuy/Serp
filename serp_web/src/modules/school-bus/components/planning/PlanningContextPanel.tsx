@@ -53,7 +53,7 @@ export function PlanningContextPanel({
         <div>
           <h3 className='text-sm font-bold text-slate-900 flex items-center gap-2'>
             <Settings className='h-4 w-4 text-[#C81E3A]' />
-            Ngữ cảnh lập tuyến
+            Thông tin lập tuyến
           </h3>
           <p className='text-[11px] text-slate-400 mt-0.5'>
             Chọn tham số để xác định phạm vi phiên lập kế hoạch.

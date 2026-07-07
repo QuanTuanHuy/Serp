@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import serp.project.school_bus_service.dto.params.SchoolParamsRequest;
 import serp.project.school_bus_service.dto.request.SchoolUpsertRequest;
 import serp.project.school_bus_service.dto.response.PageResponse;
+import serp.project.school_bus_service.dto.response.NamedDropdownOptionResponse;
 import serp.project.school_bus_service.dto.response.SchoolRegistrySummaryResponse;
 import serp.project.school_bus_service.dto.response.SchoolResponse;
 import serp.project.school_bus_service.service.ICodeGeneratorService;
@@ -86,6 +87,15 @@ public class SchoolServiceImpl extends AbstractBaseService<SchoolEntity, Long> i
                 value(summary.getTotalPickupPoints()),
                 value(summary.getLinkedPickupPoints()),
                 value(summary.getMissingCoordinates()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<NamedDropdownOptionResponse> getActiveSchoolDropdownOptions(Long tenantId) {
+        return schoolRepository.findActiveDropdownOptions(tenantId)
+                .stream()
+                .map(item -> new NamedDropdownOptionResponse(item.getId(), item.getName()))
+                .toList();
     }
 
     @Override
