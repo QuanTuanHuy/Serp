@@ -246,274 +246,343 @@ export const PlanForm: React.FC<PlanFormProps> = ({
 
   return (
     <form onSubmit={handleFormSubmit} className={cn('space-y-6', className)}>
-      {/* Basic Information */}
-      <Card>
-        <CardContent className='pt-6 space-y-4'>
-          <h3 className='text-lg font-semibold mb-4'>Basic Information</h3>
+      {step === 1 && (
+        <div className='space-y-6'>
+          {/* Basic Information */}
+          <Card>
+            <CardContent className='pt-6 space-y-4'>
+              <h3 className='text-lg font-semibold mb-4'>Basic Information</h3>
 
-          <div className='grid gap-4 md:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label htmlFor='planName'>
-                Plan Name <span className='text-destructive'>*</span>
-              </Label>
-              <Input
-                id='planName'
-                placeholder='e.g. Professional Plan'
-                {...register('planName')}
-                disabled={isLoading || isSubmitting}
-                className={cn(errors.planName && 'border-destructive')}
-              />
-              {errors.planName && (
-                <p className='text-sm text-destructive'>
-                  {errors.planName.message}
-                </p>
-              )}
-            </div>
+              <div className='grid gap-4 md:grid-cols-2'>
+                <div className='space-y-2'>
+                  <Label htmlFor='planName'>
+                    Plan Name <span className='text-destructive'>*</span>
+                  </Label>
+                  <Input
+                    id='planName'
+                    placeholder='e.g. Professional Plan'
+                    {...register('planName')}
+                    disabled={isLoading || isSubmitting}
+                    className={cn(errors.planName && 'border-destructive')}
+                  />
+                  {errors.planName && (
+                    <p className='text-sm text-destructive'>
+                      {errors.planName.message}
+                    </p>
+                  )}
+                </div>
 
-            <div className='space-y-2'>
-              <Label htmlFor='planCode'>
-                Plan Code <span className='text-destructive'>*</span>
-              </Label>
-              <Input
-                id='planCode'
-                placeholder='e.g. PROFESSIONAL_PLAN'
-                {...register('planCode')}
-                disabled={isLoading || isSubmitting || isEditing}
-                className={cn(
-                  'uppercase',
-                  errors.planCode && 'border-destructive'
-                )}
-              />
-              <p className='text-xs text-muted-foreground'>
-                Uppercase alphanumeric with underscores only
-              </p>
-              {errors.planCode && (
-                <p className='text-sm text-destructive'>
-                  {errors.planCode.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='description'>Description</Label>
-            <textarea
-              id='description'
-              placeholder='Describe the plan features and benefits...'
-              {...register('description')}
-              disabled={isLoading || isSubmitting}
-              className={cn(
-                'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                errors.description && 'border-destructive'
-              )}
-              rows={3}
-            />
-            {errors.description && (
-              <p className='text-sm text-destructive'>
-                {errors.description.message}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Pricing */}
-      <Card>
-        <CardContent className='pt-6 space-y-4'>
-          <h3 className='text-lg font-semibold mb-4'>Pricing</h3>
-
-          <div className='grid gap-4 md:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label htmlFor='monthlyPrice'>
-                Monthly Price ($) <span className='text-destructive'>*</span>
-              </Label>
-              <Input
-                id='monthlyPrice'
-                type='number'
-                step='0.01'
-                min='0'
-                placeholder='0.00'
-                {...register('monthlyPrice')}
-                disabled={isLoading || isSubmitting}
-                className={cn(errors.monthlyPrice && 'border-destructive')}
-              />
-              {errors.monthlyPrice && (
-                <p className='text-sm text-destructive'>
-                  {errors.monthlyPrice.message}
-                </p>
-              )}
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='yearlyPrice'>
-                Yearly Price ($) <span className='text-destructive'>*</span>
-              </Label>
-              <Input
-                id='yearlyPrice'
-                type='number'
-                step='0.01'
-                min='0'
-                placeholder='0.00'
-                {...register('yearlyPrice')}
-                disabled={isLoading || isSubmitting}
-                className={cn(errors.yearlyPrice && 'border-destructive')}
-              />
-              {errors.yearlyPrice && (
-                <p className='text-sm text-destructive'>
-                  {errors.yearlyPrice.message}
-                </p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Limits & Trial */}
-      <Card>
-        <CardContent className='pt-6 space-y-4'>
-          <h3 className='text-lg font-semibold mb-4'>Limits & Trial</h3>
-
-          <div className='grid gap-4 md:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label htmlFor='maxUsers'>Max Users</Label>
-              <Input
-                id='maxUsers'
-                type='number'
-                min='1'
-                placeholder='Leave empty for unlimited'
-                {...register('maxUsers')}
-                disabled={isLoading || isSubmitting}
-                className={cn(errors.maxUsers && 'border-destructive')}
-              />
-              <p className='text-xs text-muted-foreground'>
-                Leave empty for unlimited users
-              </p>
-              {errors.maxUsers && (
-                <p className='text-sm text-destructive'>
-                  {errors.maxUsers.message}
-                </p>
-              )}
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='trialDays'>
-                Trial Days <span className='text-destructive'>*</span>
-              </Label>
-              <Input
-                id='trialDays'
-                type='number'
-                min='0'
-                max='365'
-                placeholder='0'
-                {...register('trialDays')}
-                disabled={isLoading || isSubmitting}
-                className={cn(errors.trialDays && 'border-destructive')}
-              />
-              <p className='text-xs text-muted-foreground'>0-365 days</p>
-              {errors.trialDays && (
-                <p className='text-sm text-destructive'>
-                  {errors.trialDays.message}
-                </p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Settings */}
-      <Card>
-        <CardContent className='pt-6 space-y-4'>
-          <h3 className='text-lg font-semibold mb-4'>Settings</h3>
-
-          <div className='space-y-4'>
-            <div className='flex items-center justify-between rounded-lg border p-4'>
-              <div className='space-y-0.5'>
-                <Label htmlFor='isActive' className='text-base'>
-                  Active
-                </Label>
-                <p className='text-sm text-muted-foreground'>
-                  Make this plan available for subscription
-                </p>
+                <div className='space-y-2'>
+                  <Label htmlFor='planCode'>
+                    Plan Code <span className='text-destructive'>*</span>
+                  </Label>
+                  <Input
+                    id='planCode'
+                    placeholder='e.g. PROFESSIONAL_PLAN'
+                    {...register('planCode')}
+                    disabled={isLoading || isSubmitting || isEditing}
+                    className={cn(
+                      'uppercase',
+                      errors.planCode && 'border-destructive'
+                    )}
+                  />
+                  <p className='text-xs text-muted-foreground'>
+                    Uppercase alphanumeric with underscores only
+                  </p>
+                  {errors.planCode && (
+                    <p className='text-sm text-destructive'>
+                      {errors.planCode.message}
+                    </p>
+                  )}
+                </div>
               </div>
-              <input
-                type='checkbox'
-                id='isActive'
-                {...register('isActive')}
-                disabled={isLoading || isSubmitting}
-                className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary'
-              />
-            </div>
 
-            <div className='flex items-center justify-between rounded-lg border p-4'>
-              <div className='space-y-0.5'>
-                <Label htmlFor='isCustom' className='text-base'>
-                  Custom Plan
-                </Label>
-                <p className='text-sm text-muted-foreground'>
-                  This plan is for a specific organization
-                </p>
-              </div>
-              <input
-                type='checkbox'
-                id='isCustom'
-                {...register('isCustom')}
-                disabled={isLoading || isSubmitting || isEditing}
-                className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary'
-              />
-            </div>
-
-            {isCustom && (
               <div className='space-y-2'>
-                <Label htmlFor='organizationId'>
-                  Organization ID <span className='text-destructive'>*</span>
-                </Label>
-                <Input
-                  id='organizationId'
-                  type='number'
-                  min='1'
-                  placeholder='Enter organization ID'
-                  {...register('organizationId')}
-                  disabled={isLoading || isSubmitting || isEditing}
-                  className={cn(errors.organizationId && 'border-destructive')}
+                <Label htmlFor='description'>Description</Label>
+                <textarea
+                  id='description'
+                  placeholder='Describe the plan features and benefits...'
+                  {...register('description')}
+                  disabled={isLoading || isSubmitting}
+                  className={cn(
+                    'flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                    errors.description && 'border-destructive'
+                  )}
+                  rows={3}
                 />
-                <p className='text-xs text-muted-foreground'>
-                  Required for custom plans
-                </p>
-                {errors.organizationId && (
+                {errors.description && (
                   <p className='text-sm text-destructive'>
-                    {errors.organizationId.message}
+                    {errors.description.message}
                   </p>
                 )}
               </div>
-            )}
+            </CardContent>
+          </Card>
 
-            <div className='space-y-2'>
-              <Label htmlFor='displayOrder'>Display Order</Label>
-              <Input
-                id='displayOrder'
-                type='number'
-                min='0'
-                placeholder='0'
-                {...register('displayOrder')}
-                disabled={isLoading || isSubmitting}
-                className={cn(errors.displayOrder && 'border-destructive')}
-              />
-              <p className='text-xs text-muted-foreground'>
-                Order in which the plan appears (lower = first)
-              </p>
-              {errors.displayOrder && (
-                <p className='text-sm text-destructive'>
-                  {errors.displayOrder.message}
-                </p>
-              )}
+          {/* Pricing */}
+          <Card>
+            <CardContent className='pt-6 space-y-4'>
+              <h3 className='text-lg font-semibold mb-4'>Pricing</h3>
+
+              <div className='grid gap-4 md:grid-cols-2'>
+                <div className='space-y-2'>
+                  <Label htmlFor='monthlyPrice'>
+                    Monthly Price ($) <span className='text-destructive'>*</span>
+                  </Label>
+                  <Input
+                    id='monthlyPrice'
+                    type='number'
+                    step='0.01'
+                    min='0'
+                    placeholder='0.00'
+                    {...register('monthlyPrice')}
+                    disabled={isLoading || isSubmitting}
+                    className={cn(errors.monthlyPrice && 'border-destructive')}
+                  />
+                  {errors.monthlyPrice && (
+                    <p className='text-sm text-destructive'>
+                      {errors.monthlyPrice.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='yearlyPrice'>
+                    Yearly Price ($) <span className='text-destructive'>*</span>
+                  </Label>
+                  <Input
+                    id='yearlyPrice'
+                    type='number'
+                    step='0.01'
+                    min='0'
+                    placeholder='0.00'
+                    {...register('yearlyPrice')}
+                    disabled={isLoading || isSubmitting}
+                    className={cn(errors.yearlyPrice && 'border-destructive')}
+                  />
+                  {errors.yearlyPrice && (
+                    <p className='text-sm text-destructive'>
+                      {errors.yearlyPrice.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Limits & Trial */}
+          <Card>
+            <CardContent className='pt-6 space-y-4'>
+              <h3 className='text-lg font-semibold mb-4'>Limits & Trial</h3>
+
+              <div className='grid gap-4 md:grid-cols-2'>
+                <div className='space-y-2'>
+                  <Label htmlFor='maxUsers'>Max Users</Label>
+                  <Input
+                    id='maxUsers'
+                    type='number'
+                    min='1'
+                    placeholder='Leave empty for unlimited'
+                    {...register('maxUsers')}
+                    disabled={isLoading || isSubmitting}
+                    className={cn(errors.maxUsers && 'border-destructive')}
+                  />
+                  <p className='text-xs text-muted-foreground'>
+                    Leave empty for unlimited users
+                  </p>
+                  {errors.maxUsers && (
+                    <p className='text-sm text-destructive'>
+                      {errors.maxUsers.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='trialDays'>
+                    Trial Days <span className='text-destructive'>*</span>
+                  </Label>
+                  <Input
+                    id='trialDays'
+                    type='number'
+                    min='0'
+                    max='365'
+                    placeholder='0'
+                    {...register('trialDays')}
+                    disabled={isLoading || isSubmitting}
+                    className={cn(errors.trialDays && 'border-destructive')}
+                  />
+                  <p className='text-xs text-muted-foreground'>0-365 days</p>
+                  {errors.trialDays && (
+                    <p className='text-sm text-destructive'>
+                      {errors.trialDays.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Settings */}
+          <Card>
+            <CardContent className='pt-6 space-y-4'>
+              <h3 className='text-lg font-semibold mb-4'>Settings</h3>
+
+              <div className='space-y-4'>
+                <div className='flex items-center justify-between rounded-lg border p-4'>
+                  <div className='space-y-0.5'>
+                    <Label htmlFor='isActive' className='text-base'>
+                      Active
+                    </Label>
+                    <p className='text-sm text-muted-foreground'>
+                      Make this plan available for subscription
+                    </p>
+                  </div>
+                  <input
+                    type='checkbox'
+                    id='isActive'
+                    {...register('isActive')}
+                    disabled={isLoading || isSubmitting}
+                    className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary'
+                  />
+                </div>
+
+                <div className='flex items-center justify-between rounded-lg border p-4'>
+                  <div className='space-y-0.5'>
+                    <Label htmlFor='isCustom' className='text-base'>
+                      Custom Plan
+                    </Label>
+                    <p className='text-sm text-muted-foreground'>
+                      This plan is for a specific organization
+                    </p>
+                  </div>
+                  <input
+                    type='checkbox'
+                    id='isCustom'
+                    {...register('isCustom')}
+                    disabled={isLoading || isSubmitting || isEditing}
+                    className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary'
+                  />
+                </div>
+
+                {isCustom && (
+                  <div className='space-y-2'>
+                    <Label htmlFor='organizationId'>
+                      Organization ID <span className='text-destructive'>*</span>
+                    </Label>
+                    <Input
+                      id='organizationId'
+                      type='number'
+                      min='1'
+                      placeholder='Enter organization ID'
+                      {...register('organizationId')}
+                      disabled={isLoading || isSubmitting || isEditing}
+                      className={cn(errors.organizationId && 'border-destructive')}
+                    />
+                    <p className='text-xs text-muted-foreground'>
+                      Required for custom plans
+                    </p>
+                    {errors.organizationId && (
+                      <p className='text-sm text-destructive'>
+                        {errors.organizationId.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className='space-y-2'>
+                  <Label htmlFor='displayOrder'>Display Order</Label>
+                  <Input
+                    id='displayOrder'
+                    type='number'
+                    min='0'
+                    placeholder='0'
+                    {...register('displayOrder')}
+                    disabled={isLoading || isSubmitting}
+                    className={cn(errors.displayOrder && 'border-destructive')}
+                  />
+                  <p className='text-xs text-muted-foreground'>
+                    Order in which the plan appears (lower = first)
+                  </p>
+                  {errors.displayOrder && (
+                    <p className='text-sm text-destructive'>
+                      {errors.displayOrder.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {step === 2 && (
+        <Card>
+          <CardContent className='pt-6 space-y-4'>
+            <h3 className='text-lg font-semibold mb-4'>Module Configurations</h3>
+            <div className='border rounded-md overflow-hidden'>
+              <table className='w-full text-sm text-left'>
+                <thead className='bg-muted text-muted-foreground font-medium border-b'>
+                  <tr>
+                    <th className='p-3 w-[100px] text-center'>Include</th>
+                    <th className='p-3'>Module Name</th>
+                    <th className='p-3 w-[200px]'>License Type</th>
+                    <th className='p-3 w-[180px]'>Max Users</th>
+                  </tr>
+                </thead>
+                <tbody className='divide-y'>
+                  {fields.map((field, index) => {
+                    const isIncluded = watch(`modules.${index}.isIncluded`);
+                    return (
+                      <tr key={field.id} className={!isIncluded ? 'opacity-60 bg-muted/20' : ''}>
+                        <td className='p-3 text-center'>
+                          <input
+                            type='checkbox'
+                            id={`module-inc-${field.id}`}
+                            {...register(`modules.${index}.isIncluded`)}
+                            className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary'
+                          />
+                        </td>
+                        <td className='p-3'>
+                          <div className='font-medium'>{field.moduleName}</div>
+                          <div className='text-xs text-muted-foreground font-mono'>{field.moduleCode}</div>
+                        </td>
+                        <td className='p-3'>
+                          <select
+                            {...register(`modules.${index}.licenseType`)}
+                            disabled={!isIncluded}
+                            className='w-full bg-background rounded-md border border-input p-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50'
+                          >
+                            <option value='FREE'>Free</option>
+                            <option value='BASIC'>Basic</option>
+                            <option value='PROFESSIONAL'>Professional</option>
+                            <option value='ENTERPRISE'>Enterprise</option>
+                            <option value='TRIAL'>Trial</option>
+                            <option value='CUSTOM'>Custom</option>
+                          </select>
+                        </td>
+                        <td className='p-3'>
+                          <Input
+                            type='number'
+                            min='1'
+                            placeholder='Default'
+                            {...register(`modules.${index}.maxUsersPerModule`)}
+                            disabled={!isIncluded}
+                            className='w-full'
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Submit Buttons */}
-      <div className='flex justify-end gap-2'>
-        {onCancel && (
+      {/* Submit / Navigation Buttons */}
+      <div className='flex justify-end gap-2 pt-4 border-t'>
+        {step === 1 && onCancel && (
           <Button
             type='button'
             variant='outline'
@@ -523,12 +592,49 @@ export const PlanForm: React.FC<PlanFormProps> = ({
             Cancel
           </Button>
         )}
-        <Button type='submit' disabled={isLoading || isSubmitting}>
-          {(isLoading || isSubmitting) && (
-            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-          )}
-          {isEditing ? 'Update Plan' : 'Create Plan'}
-        </Button>
+        {step === 2 && (
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => setStep(1)}
+            disabled={isLoading || isSubmitting}
+          >
+            Back
+          </Button>
+        )}
+        {step === 1 && (
+          <Button
+            type='button'
+            onClick={async () => {
+              const result = await trigger([
+                'planName',
+                'planCode',
+                'description',
+                'monthlyPrice',
+                'yearlyPrice',
+                'maxUsers',
+                'trialDays',
+                'isActive',
+                'isCustom',
+                'organizationId',
+                'displayOrder',
+              ]);
+              if (result) {
+                setStep(2);
+              }
+            }}
+          >
+            Next
+          </Button>
+        )}
+        {step === 2 && (
+          <Button type='submit' disabled={isLoading || isSubmitting}>
+            {(isLoading || isSubmitting) && (
+              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+            )}
+            {plan ? 'Update Plan' : 'Create Plan'}
+          </Button>
+        )}
       </div>
     </form>
   );
