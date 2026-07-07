@@ -321,8 +321,8 @@ export function ResourceDetailSheet({
               </div>
             )}
 
-            {/* Container size (read-only for containers) */}
-            {kind === 'CONTAINER' && resource.size && (
+            {/* Container size (read-only for containers) — hidden */}
+            {/* {false && kind === 'CONTAINER' && resource.size && (
               <div className='space-y-1.5'>
                 <Label>Size</Label>
                 <Input
@@ -337,7 +337,7 @@ export function ResourceDetailSheet({
                   className='bg-muted/40 text-muted-foreground'
                 />
               </div>
-            )}
+            )} */}
           </div>
 
           {/* Footer */}

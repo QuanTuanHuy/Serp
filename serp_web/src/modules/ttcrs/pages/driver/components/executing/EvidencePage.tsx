@@ -61,6 +61,10 @@ export function EvidencePage({
     onComplete(uploadedUrl);
   };
 
+  const handleSkip = () => {
+    onComplete('/Shipping_instructions.jpg');
+  };
+
   return (
     <div className="flex flex-col items-center gap-6 px-4 py-8 max-w-md mx-auto w-full">
       {/* Stop info */}
@@ -136,24 +140,36 @@ export function EvidencePage({
         />
       </div>
 
-      <Button
-        className="w-full"
-        size="lg"
-        onClick={handleComplete}
-        disabled={!canComplete || isUploading || isCompleting}
-      >
-        {isCompleting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {isLastStop ? 'Completing route…' : 'Completing stop…'}
-          </>
-        ) : (
-          <>
-            <Upload className="mr-2 h-4 w-4" />
-            {isLastStop ? 'Complete Route' : 'Complete Stop & Continue'}
-          </>
-        )}
-      </Button>
+      <div className="flex gap-2 w-full">
+        <Button
+          className="flex-1"
+          size="lg"
+          onClick={handleComplete}
+          disabled={!canComplete || isUploading || isCompleting}
+        >
+          {isCompleting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {isLastStop ? 'Completing route…' : 'Completing stop…'}
+            </>
+          ) : (
+            <>
+              <Upload className="mr-2 h-4 w-4" />
+              {isLastStop ? 'Complete Route' : 'Complete Stop & Continue'}
+            </>
+          )}
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="lg"
+          className="text-muted-foreground hover:text-muted-foreground/80"
+          onClick={handleSkip}
+          disabled={isCompleting}
+        >
+          Skip
+        </Button>
+      </div>
     </div>
   );
 }

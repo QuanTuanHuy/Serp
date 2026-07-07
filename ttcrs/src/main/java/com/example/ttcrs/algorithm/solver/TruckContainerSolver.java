@@ -19,6 +19,7 @@ import com.example.ttcrs.algorithm.models.places.*;
 import com.example.ttcrs.algorithm.models.requests.*;
 import com.example.ttcrs.algorithm.models.routing.RouteElement;
 import com.example.ttcrs.algorithm.models.routing.TruckRoute;
+import com.example.ttcrs.algorithm.solver.init.CheapestInsertionInit;
 import com.example.ttcrs.algorithm.solver.init.FPIUSInit;
 import com.example.ttcrs.algorithm.solver.init.InitializationStrategy;
 import com.example.ttcrs.algorithm.solver.opt.ALNS;
@@ -443,8 +444,8 @@ public class TruckContainerSolver {
 					solver.stateModel();
 
 					writeStartInfo(outputALNSfileTxt);
-
-					solver.setInitializationStrategy(new FPIUSInit());
+					System.out.println("Using Cheapest Insertion Initialization Strategy");
+					solver.setInitializationStrategy(new CheapestInsertionInit());
 					solver.initializeSolution();
 					
 					solver.timeLimit = 3600000;

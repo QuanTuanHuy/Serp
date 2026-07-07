@@ -149,7 +149,11 @@ export function TransportRoutesPage() {
       if (sortBy === 'truckCode')  cmp = (a.truckCode ?? '').localeCompare(b.truckCode ?? '');
       if (sortBy === 'driverName') cmp = (a.driverName ?? '').localeCompare(b.driverName ?? '');
       if (sortBy === 'status')     cmp = a.status.localeCompare(b.status);
-      if (sortBy === 'startTime')  cmp = (a.startTime ?? '').localeCompare(b.startTime ?? '');
+      if (sortBy === 'startTime') {
+        const timeA = (a.status === 'EXECUTING' || a.status === 'COMPLETED' ? a.actualStartTime : a.startTime) ?? '';
+        const timeB = (b.status === 'EXECUTING' || b.status === 'COMPLETED' ? b.actualStartTime : b.startTime) ?? '';
+        cmp = timeA.localeCompare(timeB);
+      }
       if (sortBy === 'stopCount')  cmp = a.stopCount - b.stopCount;
       if (sortBy === 'createdStamp') cmp = (a.createdStamp ?? '').localeCompare(b.createdStamp ?? '');
       return sortDir === 'asc' ? cmp : -cmp;
@@ -438,8 +442,18 @@ export function TransportRoutesPage() {
                         {plan.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.startTime)}</TableCell>
-                    <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.endTime)}</TableCell>
+                    <TableCell className='text-sm tabular-nums'>
+                      {plan.status === 'EXECUTING' || plan.status === 'COMPLETED'
+                        ? formatDateTime(plan.actualStartTime)
+                        : formatDateTime(plan.startTime)}
+                    </TableCell>
+                    <TableCell className='text-sm tabular-nums'>
+                      {plan.status === 'COMPLETED'
+                        ? formatDateTime(plan.actualEndTime)
+                        : plan.status === 'EXECUTING'
+                          ? '—'
+                          : formatDateTime(plan.endTime)}
+                    </TableCell>
                     <TableCell className='text-sm tabular-nums'>{plan.stopCount}</TableCell>
                     <TableCell className='text-sm tabular-nums'>{formatDateTime(plan.createdStamp)}</TableCell>
                   </TableRow>

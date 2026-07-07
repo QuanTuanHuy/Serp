@@ -69,7 +69,7 @@ type FormState = {
 const INITIAL_FORM: FormState = {
   kind: 'CONTAINER',
   code: '',
-  size: '',
+  size: 'TWENTY',
   currentLocationCode: '',
 };
 
@@ -240,8 +240,8 @@ export function CreateResourceDialog({
             )}
           </div>
 
-          {/* Size — containers only */}
-          {form.kind === 'CONTAINER' && (
+          {/* Size — containers only (auto-set to 20ft, hidden until more sizes exist) */}
+          {/* {form.kind === 'CONTAINER' && (
             <div className='space-y-1.5'>
               <Label htmlFor={`${formId}-size`}>Size</Label>
               <Select
@@ -260,7 +260,7 @@ export function CreateResourceDialog({
                 </SelectContent>
               </Select>
             </div>
-          )}
+          )} */}
 
           {/* Current Location */}
           <div className='space-y-1.5'>
