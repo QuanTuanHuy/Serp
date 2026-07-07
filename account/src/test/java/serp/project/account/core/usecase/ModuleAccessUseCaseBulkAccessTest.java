@@ -23,14 +23,17 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import serp.project.account.core.domain.constant.Constants;
+import serp.project.account.core.domain.dto.request.AssignUserToModuleRequest;
 import serp.project.account.core.domain.dto.request.BulkAssignUsersRequest;
 import serp.project.account.core.domain.dto.request.BulkModuleAccessUsersRequest;
 import serp.project.account.core.domain.dto.response.BulkModuleAccessResponse;
+import serp.project.account.core.domain.entity.ModuleEntity;
 import serp.project.account.core.domain.entity.OrganizationSubscriptionEntity;
 import serp.project.account.core.domain.entity.RoleEntity;
 import serp.project.account.core.domain.entity.SubscriptionPlanModuleEntity;
 import serp.project.account.core.domain.entity.UserEntity;
 import serp.project.account.core.domain.entity.UserModuleAccessEntity;
+import serp.project.account.core.domain.enums.ModuleStatus;
 import serp.project.account.core.exception.AppException;
 import serp.project.account.core.service.ICombineRoleService;
 import serp.project.account.core.service.IKeycloakUserService;
@@ -67,6 +70,31 @@ class ModuleAccessUseCaseBulkAccessTest {
 
     @InjectMocks
     private ModuleAccessUseCase useCase;
+
+    @Test
+    void assignUserToModuleShouldFailWhenPlanModuleIsNotAccessible() {
+        var request = AssignUserToModuleRequest.builder()
+                .userId(1L)
+                .moduleId(20L)
+                .build();
+
+        when(userService.getUserById(1L)).thenReturn(user(1L, null));
+        when(moduleService.getModuleByIdFromCache(20L)).thenReturn(module(20L));
+        when(subscriptionService.getActiveOrPendingUpgrade(10L)).thenReturn(subscription());
+        when(subscriptionPlanService.getPlanModules(100L)).thenReturn(List.of(
+                SubscriptionPlanModuleEntity.builder()
+                        .subscriptionPlanId(100L)
+                        .moduleId(20L)
+                        .isIncluded(false)
+                        .build()));
+
+        AppException exception = assertThrows(AppException.class,
+                () -> useCase.assignUserToModule(10L, request, 99L));
+
+        assertEquals(Constants.ErrorMessage.MODULE_NOT_IN_SUBSCRIPTION_PLAN, exception.getMessage());
+        verify(userModuleAccessService, never()).registerUserToModuleWithExpiration(
+                any(), any(), any(), any(), any());
+    }
 
     @Test
     void bulkAssignUsersToModuleShouldGrantUntilSlotsRunOutAndSkipExistingAccess() {
@@ -261,6 +289,15 @@ class ModuleAccessUseCaseBulkAccessTest {
                 .id(id)
                 .primaryOrganizationId(10L)
                 .keycloakId(keycloakId)
+                .build();
+    }
+
+    private ModuleEntity module(Long id) {
+        return ModuleEntity.builder()
+                .id(id)
+                .moduleName("Module " + id)
+                .code("MOD" + id)
+                .status(ModuleStatus.ACTIVE)
                 .build();
     }
 
