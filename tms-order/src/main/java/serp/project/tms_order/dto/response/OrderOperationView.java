@@ -20,6 +20,8 @@ public record OrderOperationView(
         Boolean isConfirm,
         String originPostOfficeCode,
         String destinationPostOfficeCode,
+        Long currentHubId,
+        String currentHubCode,
         String senderName,
         String senderPhone,
         String senderProvinceCode,

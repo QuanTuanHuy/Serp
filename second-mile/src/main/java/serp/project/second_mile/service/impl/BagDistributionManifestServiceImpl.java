@@ -7,7 +7,10 @@ package serp.project.second_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +24,7 @@ import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.BagDistributionManifest;
 import serp.project.second_mile.domain.BagDistributionManifestBag;
 import serp.project.second_mile.domain.BagOrder;
+import serp.project.second_mile.domain.Checkin;
 import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.domain.HubPostOfficeMapping;
 import serp.project.second_mile.domain.Route;
@@ -38,6 +42,7 @@ import serp.project.second_mile.dto.response.BagDistributionPlanResponse;
 import serp.project.second_mile.enums.BagDestinationType;
 import serp.project.second_mile.enums.BagDistributionManifestStatus;
 import serp.project.second_mile.enums.BagStatus;
+import serp.project.second_mile.enums.CheckinType;
 import serp.project.second_mile.enums.HandoverManifestStatus;
 import serp.project.second_mile.enums.OrderStatus;
 import serp.project.second_mile.enums.RouteDestinationType;
@@ -52,6 +57,7 @@ import serp.project.second_mile.repository.BagDistributionManifestBagRepository;
 import serp.project.second_mile.repository.BagDistributionManifestRepository;
 import serp.project.second_mile.repository.BagOrderRepository;
 import serp.project.second_mile.repository.BagRepository;
+import serp.project.second_mile.repository.CheckinRepository;
 import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
@@ -86,6 +92,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
     private static final String STORAGE_SERVICE_NAME = "second-mile";
     private static final String CHECKIN_PHOTO_FOLDER = "bag-distribution-checkin-photo";
     private static final DateTimeFormatter MANIFEST_CODE_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
     private static final double CHECKIN_RADIUS_METERS = 100.0;
     private static final double EARTH_RADIUS_METERS = 6_371_000.0;
     private static final List<BagDistributionManifestStatus> ACTIVE_MANIFEST_STATUSES = List.of(
@@ -101,6 +108,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
     private final BagDistributionManifestBagRepository manifestBagRepository;
     private final BagRepository bagRepository;
     private final BagOrderRepository bagOrderRepository;
+    private final CheckinRepository checkinRepository;
     private final HandoverManifestRepository handoverManifestRepository;
     private final VehicleRepository vehicleRepository;
     private final RouteRepository routeRepository;
@@ -916,7 +924,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
             DriverHandoverCheckinRequest request,
             MultipartFile photo
     ) {
-        if (manifest.getDriverStartPhotoUrl() != null) {
+        if (findManifestCheckin(manifest, CheckinType.BAG_DISTRIBUTION_START) != null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver has already checked in at the origin hub.");
         }
         validateCheckinRequest(request);
@@ -938,10 +946,15 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         if (manifest.getActualDepartureAt() == null) {
             manifest.setActualDepartureAt(now);
         }
-        manifest.setDriverStartLatitude(request.getLatitude());
-        manifest.setDriverStartLongitude(request.getLongitude());
-        manifest.setDriverStartDistanceM(distanceMeters);
-        manifest.setDriverStartPhotoUrl(uploadCheckinPhoto(photo, manifest.getTenantId()));
+        saveManifestCheckin(
+                manifest,
+                CheckinType.BAG_DISTRIBUTION_START,
+                request,
+                now,
+                distanceMeters,
+                CHECKIN_RADIUS_METERS,
+                uploadCheckinPhoto(photo, manifest.getTenantId())
+        );
     }
 
     private void recordDriverEndCheckin(
@@ -952,7 +965,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         if (manifest.getActualDepartureAt() == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver departure check-in is required before arrival.");
         }
-        if (manifest.getDriverEndPhotoUrl() != null) {
+        if (findManifestCheckin(manifest, CheckinType.BAG_DISTRIBUTION_END) != null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver has already checked in at the destination.");
         }
         validateCheckinRequest(request);
@@ -978,10 +991,39 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         if (manifest.getActualArrivalAt() == null) {
             manifest.setActualArrivalAt(now);
         }
-        manifest.setDriverEndLatitude(request.getLatitude());
-        manifest.setDriverEndLongitude(request.getLongitude());
-        manifest.setDriverEndDistanceM(distanceMeters);
-        manifest.setDriverEndPhotoUrl(uploadCheckinPhoto(photo, manifest.getTenantId()));
+        saveManifestCheckin(
+                manifest,
+                CheckinType.BAG_DISTRIBUTION_END,
+                request,
+                now,
+                distanceMeters,
+                manifest.getDestinationType() == BagDestinationType.HUB ? CHECKIN_RADIUS_METERS : null,
+                uploadCheckinPhoto(photo, manifest.getTenantId())
+        );
+    }
+
+    private void saveManifestCheckin(
+            BagDistributionManifest manifest,
+            CheckinType checkinType,
+            DriverHandoverCheckinRequest request,
+            LocalDateTime checkinTime,
+            Double distanceMeters,
+            Double allowedRadiusMeters,
+            String photoUrl
+    ) {
+        Checkin checkin = Checkin.builder()
+                .checkinType(checkinType)
+                .bagDistributionManifestId(manifest.getId())
+                .driverStaffId(manifest.getAssignedDriverId())
+                .checkinTime(checkinTime)
+                .checkinLocation(toPoint(request.getLatitude(), request.getLongitude()))
+                .distanceM(distanceMeters)
+                .allowedRadiusM(allowedRadiusMeters)
+                .locationLabel(trimToNull(request.getLocationLabel()))
+                .photoUrl(photoUrl)
+                .tenantId(manifest.getTenantId())
+                .build();
+        checkinRepository.save(checkin);
     }
 
     private void validateCheckinRequest(DriverHandoverCheckinRequest request) {
@@ -1066,6 +1108,36 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         return EARTH_RADIUS_METERS * c;
     }
 
+    private Point toPoint(Double latitude, Double longitude) {
+        if (latitude == null || longitude == null) {
+            return null;
+        }
+        return GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
+    }
+
+    private Checkin findManifestCheckin(BagDistributionManifest manifest, CheckinType checkinType) {
+        if (manifest == null || manifest.getId() == null || manifest.getTenantId() == null) {
+            return null;
+        }
+        return checkinRepository
+                .findByTenantIdAndCheckinTypeAndBagDistributionManifestId(
+                        manifest.getTenantId(),
+                        checkinType,
+                        manifest.getId()
+                )
+                .orElse(null);
+    }
+
+    private Double latitudeOf(Checkin checkin) {
+        Point location = checkin == null ? null : checkin.getCheckinLocation();
+        return location == null ? null : Double.valueOf(location.getY());
+    }
+
+    private Double longitudeOf(Checkin checkin) {
+        Point location = checkin == null ? null : checkin.getCheckinLocation();
+        return location == null ? null : Double.valueOf(location.getX());
+    }
+
     private void addDestinationHubLoad(BagDistributionManifest manifest, int incomingOrders) {
         if (incomingOrders <= 0 || manifest.getDestinationHubId() == null) {
             return;
@@ -1113,6 +1185,8 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
     ) {
         Hub originHub = loadHub(manifest.getOriginHubId());
         Hub destinationHub = manifest.getDestinationHubId() == null ? null : loadHub(manifest.getDestinationHubId());
+        Checkin startCheckin = findManifestCheckin(manifest, CheckinType.BAG_DISTRIBUTION_START);
+        Checkin endCheckin = findManifestCheckin(manifest, CheckinType.BAG_DISTRIBUTION_END);
         List<BagDistributionManifestBagResponse> bagResponses = manifestBags.stream()
                 .map(item -> new BagDistributionManifestBagResponse(
                         item.getId(),
@@ -1147,14 +1221,20 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 manifest.getPlannedArrivalAt(),
                 manifest.getActualDepartureAt(),
                 manifest.getActualArrivalAt(),
-                manifest.getDriverStartLatitude(),
-                manifest.getDriverStartLongitude(),
-                manifest.getDriverStartDistanceM(),
-                manifest.getDriverStartPhotoUrl(),
-                manifest.getDriverEndLatitude(),
-                manifest.getDriverEndLongitude(),
-                manifest.getDriverEndDistanceM(),
-                manifest.getDriverEndPhotoUrl(),
+                startCheckin == null ? null : startCheckin.getId(),
+                startCheckin == null ? null : startCheckin.getCheckinTime(),
+                latitudeOf(startCheckin),
+                longitudeOf(startCheckin),
+                startCheckin == null ? null : startCheckin.getDistanceM(),
+                startCheckin == null ? null : startCheckin.getLocationLabel(),
+                startCheckin == null ? null : startCheckin.getPhotoUrl(),
+                endCheckin == null ? null : endCheckin.getId(),
+                endCheckin == null ? null : endCheckin.getCheckinTime(),
+                latitudeOf(endCheckin),
+                longitudeOf(endCheckin),
+                endCheckin == null ? null : endCheckin.getDistanceM(),
+                endCheckin == null ? null : endCheckin.getLocationLabel(),
+                endCheckin == null ? null : endCheckin.getPhotoUrl(),
                 manifest.getStatus(),
                 manifest.getNote(),
                 bagResponses,

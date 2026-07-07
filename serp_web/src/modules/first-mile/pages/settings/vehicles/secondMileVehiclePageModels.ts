@@ -34,7 +34,6 @@ export const VEHICLE_STATUS_OPTIONS: Array<{
 }> = [
   { value: 'ACTIVE', label: 'Đang hoạt động' },
   { value: 'INACTIVE', label: 'Ngừng hoạt động' },
-  { value: 'MAINTENANCE', label: 'Bảo trì' },
 ];
 
 export const VEHICLE_TYPE_OPTIONS: Array<{
@@ -62,8 +61,6 @@ export const getStatusBadgeVariant = (
   switch (status) {
     case 'ACTIVE':
       return 'default';
-    case 'MAINTENANCE':
-      return 'outline';
     case 'INACTIVE':
       return 'destructive';
     default:

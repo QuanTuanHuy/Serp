@@ -141,8 +141,8 @@ public class BagValidator {
     }
 
     public void validateOrderOriginMatchesHub(Long tenantId, TmsOrderOperationView order, Long originHubId) {
-        Long resolvedOriginHubId = resolveOriginHubIdByOrder(tenantId, order);
-        if (!Objects.equals(resolvedOriginHubId, originHubId)) {
+        Long resolvedCurrentHubId = resolveCurrentHubIdByOrder(tenantId, order);
+        if (!Objects.equals(resolvedCurrentHubId, originHubId)) {
             throw new AppException(ErrorCode.BAG_HUB_INVALID);
         }
     }
@@ -195,6 +195,17 @@ public class BagValidator {
         HubPostOfficeMapping mapping = hubPostOfficeMappingRepository.findByTenantIdAndPostOfficeCode(tenantId, originPostOfficeCode)
                 .orElseThrow(() -> new AppException(ErrorCode.BAG_HUB_INVALID));
         return mapping.getHub() == null ? null : mapping.getHub().getId();
+    }
+
+    public Long resolveCurrentHubIdByOrder(Long tenantId, TmsOrderOperationView order) {
+        if (order != null
+                && order.getCurrentHubId() != null
+                && order.getCurrentHubId() > 0
+                && order.getStatus() != null
+                && order.getStatus().isReadyForBagging()) {
+            return order.getCurrentHubId();
+        }
+        return resolveOriginHubIdByOrder(tenantId, order);
     }
 
     public void validateTmsOrderTenant(Long tenantId, TmsOrderOperationView order) {

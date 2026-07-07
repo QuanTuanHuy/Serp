@@ -29,6 +29,8 @@ public class TmsOrderOperationView {
     private Boolean isConfirm;
     private String originPostOfficeCode;
     private String destinationPostOfficeCode;
+    private Long currentHubId;
+    private String currentHubCode;
     private Double totalWeight;
     private Double totalVolume;
     private Dimension dimensions;

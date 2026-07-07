@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
+import serp.project.tms_order.caller.SecondMileRoutePlanCaller;
 import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
 import serp.project.tms_order.domain.Order;
@@ -92,6 +93,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderFilterNormalizer orderFilterNormalizer;
     private final OrderAccessPolicy orderAccessPolicy;
     private final OrderEventDispatcher orderEventDispatcher;
+    private final SecondMileRoutePlanCaller secondMileRoutePlanCaller;
 
     @Override
     public byte[] exportTemplate(Long tenantId) {
@@ -275,6 +277,7 @@ public class OrderServiceImpl implements OrderService {
                 reserveDestinationPostOfficeIfNeeded(order);
 
         if (OrderTextUtils.hasText(order.getOriginPostOfficeCode())) {
+            assignPlannedRoute(order);
             order.setIsConfirm(true);
             Order savedOrder = saveConfirmedOrder(order);
             return OrderConfirmationMapper.toResponse(savedOrder, null, reservedDestinationPostOffice, true);
@@ -287,6 +290,7 @@ public class OrderServiceImpl implements OrderService {
                 );
 
         order.setOriginPostOfficeCode(reservedPostOffice.getCode());
+        assignPlannedRoute(order);
         order.setIsConfirm(true);
 
         Order savedOrder = saveConfirmedOrder(order);
@@ -468,6 +472,15 @@ public class OrderServiceImpl implements OrderService {
         orderEventDispatcher.publishOrderAfterCommit(savedOrder);
         orderEventDispatcher.publishOrderConfirmedNotificationAfterCommit(savedOrder);
         return savedOrder;
+    }
+
+    private void assignPlannedRoute(Order order) {
+        order.setPlannedRoute(secondMileRoutePlanCaller.planOrderRoute(
+                order.getOriginPostOfficeCode(),
+                order.getDestinationPostOfficeCode()
+        ));
+        order.setCurrentHubId(null);
+        order.setCurrentHubCode(null);
     }
 
     private OrderPickupMethod resolveOrderPickupMethod(Order order) {

@@ -83,6 +83,8 @@ class OrderTransitionServiceImplTest {
         ), TENANT_ID);
 
         assertEquals(OrderStatus.INBOUND_AT_DESTINATION_HUB, order.getStatus());
+        assertEquals(11L, order.getCurrentHubId());
+        assertEquals("HUB-11", order.getCurrentHubCode());
     }
 
     private InternalOrderStatusTransitionRequest transitionRequest(
@@ -98,7 +100,10 @@ class OrderTransitionServiceImplTest {
                         .expectedStatuses(List.of(expectedStatus))
                         .targetStatus(targetStatus)
                         .description("Bag distribution transition.")
-                        .context(InternalOrderStatusTransitionRequest.Context.builder().build())
+                        .context(InternalOrderStatusTransitionRequest.Context.builder()
+                                .hubId(11L)
+                                .hubCode("HUB-11")
+                                .build())
                         .build()))
                 .build();
     }

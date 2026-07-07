@@ -12,6 +12,7 @@ import serp.project.tms_order.enums.OrderProductCategory;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.enums.OrderType;
 import serp.project.tms_order.enums.PaymentStatus;
+import serp.project.tms_order.domain.PlannedOrderRoute;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,6 +58,9 @@ public record OrderDetailResponse(
         Long totalShippingFee,
         String originPostOfficeCode,
         String destinationPostOfficeCode,
+        PlannedOrderRoute plannedRoute,
+        Long currentHubId,
+        String currentHubCode,
         String note,
         List<ProductItem> products,
         LocalDateTime createdAt,

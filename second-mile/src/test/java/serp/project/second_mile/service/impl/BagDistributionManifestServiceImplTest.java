@@ -5,27 +5,33 @@ Description: Part of Serp Project
 
 package serp.project.second_mile.service.impl;
 
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.BagDistributionManifest;
 import serp.project.second_mile.domain.BagDistributionManifestBag;
 import serp.project.second_mile.domain.BagOrder;
+import serp.project.second_mile.domain.Checkin;
 import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.domain.HubStaffAssignment;
 import serp.project.second_mile.domain.Route;
 import serp.project.second_mile.domain.Vehicle;
 import serp.project.second_mile.dto.request.AutoPlanBagDistributionRequest;
 import serp.project.second_mile.dto.request.CreateBagDistributionManifestRequest;
+import serp.project.second_mile.dto.request.DriverHandoverCheckinRequest;
 import serp.project.second_mile.dto.response.BagDistributionPlanItemResponse;
 import serp.project.second_mile.dto.response.BagDistributionPlanResponse;
 import serp.project.second_mile.enums.BagDestinationType;
 import serp.project.second_mile.enums.BagDistributionManifestStatus;
 import serp.project.second_mile.enums.BagStatus;
+import serp.project.second_mile.enums.CheckinType;
 import serp.project.second_mile.enums.HubStatus;
 import serp.project.second_mile.enums.OrderStatus;
 import serp.project.second_mile.enums.RouteDestinationType;
@@ -40,6 +46,7 @@ import serp.project.second_mile.repository.BagDistributionManifestBagRepository;
 import serp.project.second_mile.repository.BagDistributionManifestRepository;
 import serp.project.second_mile.repository.BagOrderRepository;
 import serp.project.second_mile.repository.BagRepository;
+import serp.project.second_mile.repository.CheckinRepository;
 import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
@@ -48,6 +55,7 @@ import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.service.FileStorageService;
 import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
+import serp.project.second_mile.service.dto.response.FileUploadResponse;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -56,6 +64,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -89,6 +98,9 @@ class BagDistributionManifestServiceImplTest {
 
     @Mock
     private BagOrderRepository bagOrderRepository;
+
+    @Mock
+    private CheckinRepository checkinRepository;
 
     @Mock
     private HandoverManifestRepository handoverManifestRepository;
@@ -239,6 +251,54 @@ class BagDistributionManifestServiceImplTest {
         assertNotNull(manifestBag.getScanOutTime());
         assertEquals(OrderStatus.BAG_IN_TRANSIT.name(), bagOrder.getLastKnownStatus());
         verify(tmsOrderTransitionPublisherService).publish(any(), eq(TENANT_ID));
+    }
+
+    @Test
+    void driverCheckinStartStoresCentralCheckinAndKeepsManifestCheckinColumnsEmpty() {
+        BagDistributionManifest manifest = manifest(BagDistributionManifestStatus.CREATED);
+        BagDistributionManifestBag manifestBag = manifestBag(manifest);
+        Bag bag = bag(BagStatus.SEALED);
+        BagOrder bagOrder = bagOrder(OrderStatus.BAG_SEALED);
+        stubManifestLookup(manifest);
+        stubLifecycleVehicle();
+        when(manifestBagRepository.findByManifest_IdAndTenantId(100L, TENANT_ID)).thenReturn(List.of(manifestBag));
+        when(bagRepository.findByIdInAndTenantIdForUpdate(TENANT_ID, List.of(BAG_ID))).thenReturn(List.of(bag));
+        when(bagOrderRepository.findByBag_IdAndTenantId(BAG_ID, TENANT_ID)).thenReturn(List.of(bagOrder));
+        when(fileStorageService.upload(any())).thenReturn(FileUploadResponse.builder()
+                .url("https://files.local/bag-distribution-start.jpg")
+                .build());
+        when(checkinRepository.save(any(Checkin.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(manifestRepository.save(any(BagDistributionManifest.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        DriverHandoverCheckinRequest request = new DriverHandoverCheckinRequest(
+                10.0,
+                106.0,
+                "Cổng hub xuất phát"
+        );
+        MockMultipartFile photo = new MockMultipartFile(
+                "photo",
+                "bag-distribution-start.jpg",
+                "image/jpeg",
+                new byte[]{1}
+        );
+
+        service.driverCheckinStart(100L, request, photo);
+
+        ArgumentCaptor<Checkin> checkinCaptor = ArgumentCaptor.forClass(Checkin.class);
+        verify(checkinRepository).save(checkinCaptor.capture());
+        Checkin savedCheckin = checkinCaptor.getValue();
+        assertEquals(CheckinType.BAG_DISTRIBUTION_START, savedCheckin.getCheckinType());
+        assertEquals(100L, savedCheckin.getBagDistributionManifestId());
+        assertEquals(DRIVER_ID, savedCheckin.getDriverStaffId());
+        assertEquals(TENANT_ID, savedCheckin.getTenantId());
+        assertEquals("Cổng hub xuất phát", savedCheckin.getLocationLabel());
+        assertEquals("https://files.local/bag-distribution-start.jpg", savedCheckin.getPhotoUrl());
+        assertEquals(10.0, savedCheckin.getCheckinLocation().getY(), 0.001);
+        assertEquals(106.0, savedCheckin.getCheckinLocation().getX(), 0.001);
+        assertEquals(0.0, savedCheckin.getDistanceM(), 0.001);
+        assertEquals(100.0, savedCheckin.getAllowedRadiusM(), 0.001);
+        assertNotNull(manifest.getActualDepartureAt());
+        assertEquals(BagDistributionManifestStatus.OUTBOUND_CONFIRMED, manifest.getStatus());
     }
 
     @Test
@@ -437,6 +497,7 @@ class BagDistributionManifestServiceImplTest {
         return Hub.builder()
                 .id(hubId)
                 .code("HUB-" + hubId)
+                .location(new GeometryFactory().createPoint(new Coordinate(106.0, 10.0)))
                 .dailyCapacity(100)
                 .currentLoad(0)
                 .status(HubStatus.ACTIVE)

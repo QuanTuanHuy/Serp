@@ -291,7 +291,11 @@ public class BagServiceImpl implements BagService {
                 List.of(BagMapper.toTransitionItem(
                         order,
                         OrderStatus.BAGGED,
-                        List.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.BAGGING_IN_PROGRESS),
+                        List.of(
+                                OrderStatus.INBOUND_AT_ORIGIN_HUB,
+                                OrderStatus.INBOUND_AT_DESTINATION_HUB,
+                                OrderStatus.BAGGING_IN_PROGRESS
+                        ),
                         "Đơn hàng đã được gán vào bao trung chuyển.",
                         buildBagContext(bag)
                 ))
@@ -454,7 +458,9 @@ public class BagServiceImpl implements BagService {
             return List.of();
         }
 
-        Long resolvedOriginHubId = originHubId != null ? originHubId : bagValidator.resolveOriginHubIdByOrder(tenantId, order);
+        Long resolvedOriginHubId = originHubId != null
+                ? originHubId
+                : bagValidator.resolveCurrentHubIdByOrder(tenantId, order);
         BagDestinationTarget destinationTarget = resolveDestinationTargetForOrder(tenantId, order, resolvedOriginHubId);
         List<Bag> candidates = findEditableBagsByTarget(tenantId, resolvedOriginHubId, destinationTarget);
         BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
@@ -616,7 +622,11 @@ public class BagServiceImpl implements BagService {
                 transitionItems.add(BagMapper.toTransitionItem(
                         order,
                         OrderStatus.BAGGED,
-                        List.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.BAGGING_IN_PROGRESS),
+                        List.of(
+                                OrderStatus.INBOUND_AT_ORIGIN_HUB,
+                                OrderStatus.INBOUND_AT_DESTINATION_HUB,
+                                OrderStatus.BAGGING_IN_PROGRESS
+                        ),
                         "Đơn hàng đã được tự động gán vào bao trung chuyển.",
                         context
                 ));

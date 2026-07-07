@@ -129,10 +129,7 @@ public class VehicleImportExcelServiceImpl implements VehicleImportExcelService 
 
     private static final Map<String, VehicleStatus> STATUS_MAP = Map.of(
             "active", VehicleStatus.ACTIVE,
-            "inactive", VehicleStatus.INACTIVE,
-            "maintenance", VehicleStatus.MAINTENANCE,
-            "in_use", VehicleStatus.IN_USE,
-            "full", VehicleStatus.FULL
+            "inactive", VehicleStatus.INACTIVE
     );
 
     private static final Map<String, VehicleType> VEHICLE_TYPE_MAP = Map.of(

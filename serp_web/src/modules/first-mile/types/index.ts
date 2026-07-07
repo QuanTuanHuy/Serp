@@ -248,12 +248,7 @@ export interface UpdatePostOfficeStaffAssignmentRequest {
   notes?: string;
 }
 
-export type VehicleStatus =
-  | 'ACTIVE'
-  | 'INACTIVE'
-  | 'MAINTENANCE'
-  | 'IN_USE'
-  | 'FULL';
+export type VehicleStatus = 'ACTIVE' | 'INACTIVE';
 
 export type VehicleType = 'BIKE' | 'TRUCK';
 
@@ -311,7 +306,7 @@ export interface VehicleImportItem {
   source_rows?: number[];
 }
 
-export type SecondMileVehicleStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+export type SecondMileVehicleStatus = 'ACTIVE' | 'INACTIVE';
 
 export type SecondMileVehicleType = 'TRUCK' | 'VAN';
 
@@ -707,13 +702,19 @@ export interface BagDistributionManifest {
   plannedArrivalAt?: string;
   actualDepartureAt?: string;
   actualArrivalAt?: string;
+  driverStartCheckinId?: number;
+  driverStartCheckinAt?: string;
   driverStartLatitude?: number;
   driverStartLongitude?: number;
   driverStartDistanceM?: number;
+  driverStartLocationLabel?: string;
   driverStartPhotoUrl?: string;
+  driverEndCheckinId?: number;
+  driverEndCheckinAt?: string;
   driverEndLatitude?: number;
   driverEndLongitude?: number;
   driverEndDistanceM?: number;
+  driverEndLocationLabel?: string;
   driverEndPhotoUrl?: string;
   status?: BagDistributionManifestStatus;
   note?: string;
