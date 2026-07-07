@@ -225,6 +225,14 @@ export const PlanForm: React.FC<PlanFormProps> = ({
 
   const handleFormSubmit = handleSubmit(async (data) => {
     try {
+      const requestModules = data.modules
+        ?.filter((m) => m.isIncluded)
+        .map((m) => ({
+          moduleId: m.moduleId,
+          licenseType: m.licenseType,
+          maxUsersPerModule: m.maxUsersPerModule ? Number(m.maxUsersPerModule) : null,
+        })) || [];
+
       // Transform string values to numbers
       const transformedData = {
         ...data,
@@ -236,6 +244,7 @@ export const PlanForm: React.FC<PlanFormProps> = ({
         organizationId: data.organizationId
           ? Number(data.organizationId)
           : undefined,
+        modules: requestModules,
       };
 
       await onSubmit(transformedData as any);
