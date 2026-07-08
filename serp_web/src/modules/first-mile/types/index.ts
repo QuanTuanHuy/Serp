@@ -753,8 +753,8 @@ export interface AutoPlanBagDistributionRequest {
   destination_type?: SecondMileBagDestinationType;
   destination_hub_id?: number;
   destination_post_office_code?: string;
-  planned_departure_at: string;
-  planned_arrival_at: string;
+  planned_departure_at?: string;
+  planned_arrival_at?: string;
   sealed_sla_hours?: number;
   execute?: boolean;
   note?: string;
@@ -844,6 +844,12 @@ export type SecondMileOrderStatus =
   | 'BAGGING_IN_PROGRESS'
   | 'BAGGED'
   | 'BAG_SEALED'
+  | 'INBOUND_AT_DESTINATION_POST_OFFICE'
+  | 'READY_FOR_DELIVERY'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'DELIVERY_FAILED'
+  | 'RETURNED_TO_SENDER'
   | 'CANCELLED'
   | 'LOST_OR_DAMAGED';
 
@@ -880,6 +886,12 @@ export type FirstMileOrderStatus =
   | 'BAGGING_IN_PROGRESS'
   | 'BAGGED'
   | 'BAG_SEALED'
+  | 'INBOUND_AT_DESTINATION_POST_OFFICE'
+  | 'READY_FOR_DELIVERY'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'DELIVERY_FAILED'
+  | 'RETURNED_TO_SENDER'
   | 'CANCELLED'
   | 'LOST_OR_DAMAGED';
 
@@ -909,6 +921,13 @@ export type FirstMileOrderPickupMethod =
 export type FirstMileFeePayer = 'SENDER' | 'RECEIVER';
 
 export type FirstMilePaymentStatus = 'UNPAID' | 'PAID';
+
+export type DeliveryOrderStatus =
+  | 'PENDING'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'RETURNED';
 
 export interface FirstMileOrderProductItem {
   id?: number;
@@ -1210,7 +1229,48 @@ export interface AutoAssignPickupPlanRequest {
   used_route_penalty?: number;
 }
 
+export interface AutoAssignDeliveryPlanRequest {
+  post_office_id: number;
+  shift: PickupShift;
+  trip_date?: string;
+  planning_start_time?: string;
+  planning_end_time?: string;
+  courier_ids?: number[];
+  order_codes?: string[];
+  candidate_statuses?: FirstMileOrderStatus[];
+  vehicle?: string;
+  order_limit?: number;
+  optimization_goal?: PickupOptimizationGoal;
+  average_speed_kmph?: number;
+  service_minutes_per_stop?: number;
+  allow_lateness?: boolean;
+  enforce_planning_end?: boolean;
+  enforce_capacity?: boolean;
+  distance_weight?: number;
+  lateness_weight?: number;
+  unassigned_penalty?: number;
+  used_route_penalty?: number;
+}
+
 export interface ManualAssignPickupOrdersRequest {
+  post_office_id: number;
+  courier_staff_id: number;
+  order_ids: number[];
+  shift: PickupShift;
+  trip_date?: string;
+  planning_start_time?: string;
+  planning_end_time?: string;
+  vehicle?: string;
+  optimization_goal?: PickupOptimizationGoal;
+  average_speed_kmph?: number;
+  service_minutes_per_stop?: number;
+  allow_lateness?: boolean;
+  enforce_planning_end?: boolean;
+  enforce_capacity?: boolean;
+  force_assign?: boolean;
+}
+
+export interface ManualAssignDeliveryOrdersRequest {
   post_office_id: number;
   courier_staff_id: number;
   order_ids: number[];
@@ -1307,6 +1367,39 @@ export interface PickupAssignedStop {
   latenessMinutes?: number;
 }
 
+export interface DeliveryAssignedStop extends PickupAssignedStop {
+  receiverName?: string;
+  receiverPhone?: string;
+  latitude?: number;
+  longitude?: number;
+  scanOutTime?: string;
+  orderStatus?: FirstMileOrderStatus;
+  deliveryStatus?: DeliveryOrderStatus;
+  receiverAddressDetail?: string;
+  receiverWardCode?: string;
+  receiverProvinceCode?: string;
+  codAmount?: number;
+  totalShippingFee?: number;
+  feePayer?: FirstMileFeePayer;
+  deliveryPaymentStatus?: FirstMilePaymentStatus;
+  deliveryPaymentAmount?: number;
+  deliveryPaymentAppTransId?: string;
+  deliveryPaymentConfirmedAt?: string;
+  deliveryAttemptCount?: number;
+  codCollected?: number;
+  shippingFeeCollected?: number;
+  failureReason?: string;
+  note?: string;
+  deliveredAt?: string;
+  returnedAt?: string;
+  checkinId?: number;
+  deliveryCheckinTime?: string;
+  deliveryCheckinLat?: number;
+  deliveryCheckinLng?: number;
+  deliveryCheckinDistanceM?: number;
+  proofPhotoUrl?: string;
+}
+
 export interface PickupAssignedTrip {
   tripId?: number;
   tripCode?: string;
@@ -1323,6 +1416,11 @@ export interface PickupAssignedTrip {
   plannedStartTime?: string;
   plannedEndTime?: string;
   stops?: PickupAssignedStop[];
+}
+
+export interface DeliveryAssignedTrip
+  extends Omit<PickupAssignedTrip, 'stops'> {
+  stops?: DeliveryAssignedStop[];
 }
 
 export interface PickupAssignmentUnassignedOrder {
@@ -1344,6 +1442,161 @@ export interface PickupAssignmentResponse {
   createdTrips?: number;
   trips?: PickupAssignedTrip[];
   unassignedOrderDetails?: PickupAssignmentUnassignedOrder[];
+}
+
+export interface DeliveryAssignmentResponse
+  extends Omit<PickupAssignmentResponse, 'trips'> {
+  trips?: DeliveryAssignedTrip[];
+}
+
+export interface DeliveryScanOutRequest {
+  orderCode: string;
+}
+
+export interface DeliveryScanOutResponse {
+  tripId: number;
+  tripCode?: string;
+  tripStatus?: PickupTripStatus;
+  tripOrderId?: number;
+  orderId: number;
+  orderCode?: string;
+  customerOrderCode?: string;
+  orderStatus?: FirstMileOrderStatus;
+  sequence?: number;
+  courierStaffId?: number;
+  courierCode?: string;
+  courierName?: string;
+  postOfficeId?: number;
+  postOfficeCode?: string;
+  postOfficeName?: string;
+  vehicleId?: number;
+  vehicleLicensePlate?: string;
+  scanOutTime?: string;
+}
+
+export interface ConfirmDeliveryPaymentRequest {
+  appTransId: string;
+}
+
+export interface ConfirmDeliveryRequest {
+  latitude: number;
+  longitude: number;
+  photo: File;
+  codCollected?: number;
+  shippingFeeCollected?: number;
+  note?: string;
+}
+
+export interface ConfirmDeliveryFailureRequest {
+  failureReason: string;
+  note?: string;
+  currentLat?: number;
+  currentLng?: number;
+}
+
+export interface ReturnToSenderRequest {
+  note?: string;
+}
+
+export interface DeliveryPaymentInitResponse {
+  manifestId?: number;
+  tripId?: number;
+  orderCode?: string;
+  amount?: number;
+  paymentStatus?: FirstMilePaymentStatus;
+  appTransId?: string;
+  paymentUrl?: string;
+  status?: string;
+  message?: string;
+}
+
+export interface DeliveryPaymentConfirmResponse {
+  manifestId?: number;
+  tripId?: number;
+  orderCode?: string;
+  amount?: number;
+  paymentStatus?: FirstMilePaymentStatus;
+  appTransId?: string;
+  gatewayStatus?: string;
+  message?: string;
+}
+
+export type DeliveryManifestStatus =
+  | 'CREATED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export interface DeliveryManifestOrderResponse {
+  id?: number;
+  orderId?: number;
+  orderCode?: string;
+  sequence?: number;
+  deliveryAttemptCount?: number;
+  status?: DeliveryOrderStatus;
+  receiverName?: string;
+  receiverPhone?: string;
+  receiverAddressDetail?: string;
+  receiverWardCode?: string;
+  receiverProvinceCode?: string;
+  receiverLat?: number;
+  receiverLng?: number;
+  codAmount?: number;
+  codCollected?: number;
+  shippingFee?: number;
+  shippingFeeCollected?: number;
+  feePayer?: FirstMileFeePayer;
+  deliveryPaymentStatus?: FirstMilePaymentStatus;
+  deliveryPaymentAmount?: number;
+  deliveryPaymentAppTransId?: string;
+  deliveryPaymentConfirmedAt?: string;
+  proofPhotoUrl?: string;
+  failureReason?: string;
+  deliveredAt?: string;
+  deliveryCheckinLat?: number;
+  deliveryCheckinLng?: number;
+  deliveryCheckinDistanceM?: number;
+  note?: string;
+}
+
+export interface DeliveryManifestResponse {
+  id: number;
+  manifestCode?: string;
+  postOfficeCode?: string;
+  courierId?: number;
+  courierName?: string;
+  vehicleId?: string;
+  status?: DeliveryManifestStatus;
+  plannedDate?: string;
+  plannedDepartureAt?: string;
+  actualDepartureAt?: string;
+  actualReturnAt?: string;
+  totalOrders?: number;
+  deliveredCount?: number;
+  failedCount?: number;
+  totalCodAmount?: number;
+  collectedCodAmount?: number;
+  totalShippingFee?: number;
+  collectedShippingFee?: number;
+  note?: string;
+  createdAt?: string;
+  orders?: DeliveryManifestOrderResponse[];
+}
+
+export interface DeliveryManifestListFilters {
+  postOfficeCode?: string;
+  status?: DeliveryManifestStatus;
+  date?: string;
+}
+
+export interface CreateDeliveryManifestRequest {
+  postOfficeCode: string;
+  courierId: number;
+  vehicleId?: string;
+  plannedDate?: string;
+  plannedDepartureAt?: string;
+  orderCodes: string[];
+  note?: string;
 }
 
 export type PickupTrackingActorScope =

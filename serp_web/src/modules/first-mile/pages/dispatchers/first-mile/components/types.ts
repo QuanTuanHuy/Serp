@@ -85,6 +85,7 @@ export interface DispatchSetupCardProps {
   isAutoAssigning: boolean;
   activeAction: DispatchActionType;
   isTmsAdmin: boolean;
+  hidePreviewButton?: boolean;
 }
 
 export interface NoAccessCardProps {

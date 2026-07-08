@@ -428,7 +428,11 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 transitionItems.add(toTransitionItem(
                         bagOrder,
                         OrderStatus.BAG_IN_TRANSIT,
-                        List.of(OrderStatus.BAG_SEALED, OrderStatus.BAG_IN_TRANSIT),
+                        List.of(
+                                OrderStatus.BAG_SEALED,
+                                OrderStatus.INBOUND_AT_DESTINATION_HUB,
+                                OrderStatus.BAG_IN_TRANSIT
+                        ),
                         "Đã xác nhận xuất kho phân phối bao trung chuyển.",
                         context
                 ));

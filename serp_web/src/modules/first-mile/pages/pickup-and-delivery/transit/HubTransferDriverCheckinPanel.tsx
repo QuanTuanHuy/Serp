@@ -196,7 +196,8 @@ export function HubTransferDriverCheckinPanel() {
       const coordinates = resolveTransitDevCheckinCoordinates(
         manifest,
         mode,
-        hubs
+        hubs,
+        postOffices
       );
 
       if (!coordinates) {
@@ -236,7 +237,7 @@ export function HubTransferDriverCheckinPanel() {
 
       return coordinates;
     },
-    [hubs, notification]
+    [hubs, notification, postOffices]
   );
 
   React.useEffect(() => {

@@ -76,6 +76,7 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
   isAutoAssigning,
   activeAction,
   isTmsAdmin,
+  hidePreviewButton = false,
 }) => {
   const postOfficeComboboxOptions = postOfficeOptions.map((postOffice) => ({
     value: String(postOffice.id),
@@ -249,17 +250,19 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
         </div>
 
         <div className='flex flex-wrap gap-2'>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={onPreviewPlan}
-            disabled={isOptimizing || !selectedPostOfficeId}
-          >
-            {activeAction === 'preview' ? (
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            ) : null}
-            Xem trước kế hoạch
-          </Button>
+          {!hidePreviewButton ? (
+            <Button
+              type='button'
+              variant='outline'
+              onClick={onPreviewPlan}
+              disabled={isOptimizing || !selectedPostOfficeId}
+            >
+              {activeAction === 'preview' ? (
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              ) : null}
+              Xem trước kế hoạch
+            </Button>
+          ) : null}
           <Button
             type='button'
             onClick={onAutoAssign}
@@ -276,8 +279,8 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
 
         {!isTmsAdmin ? (
           <p className='text-xs text-muted-foreground'>
-            Hệ thống sẽ áp dụng phạm vi quản lý. Bạn chỉ có thể điều phối cho các
-            bưu cục được gán cho mình.
+            Hệ thống sẽ áp dụng phạm vi quản lý. Bạn chỉ có thể điều phối cho
+            các bưu cục được gán cho mình.
           </p>
         ) : null}
       </CardContent>

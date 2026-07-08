@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { getErrorMessage, useAppSelector } from '@/lib/store';
+import { getErrorMessage, useAppDispatch, useAppSelector } from '@/lib/store';
 import {
   Badge,
   Button,
@@ -28,6 +28,7 @@ import {
 import { TmsCombobox } from '@/modules/first-mile/components';
 import { useNotification } from '@/shared/hooks';
 import {
+  firstMileApi,
   useCompletePickupTripMutation,
   useConfirmPickupTripPostOfficeInboundMutation,
   useGetActiveCouriersByPostOfficeQuery,
@@ -40,6 +41,7 @@ import {
 } from '../../../api';
 import type {
   FirstMileOrderStatus,
+  PickupTripLifecycleResponse,
   PickupTrackingOrder,
   PickupTrackingOverviewResponse,
   PickupTrackingTrip,
@@ -141,6 +143,9 @@ const formatNumber = (value?: number): string => {
   return String(value);
 };
 
+const normalizeOrderCode = (value?: string): string =>
+  value?.trim().toUpperCase() ?? '';
+
 const canCheckinOrder = (
   order: PickupTrackingOrder,
   isCourier: boolean
@@ -206,6 +211,107 @@ const canConfirmPostOfficeInbound = (
   );
 };
 
+const applyReturnTripToPostOfficeResult = (
+  overview: PickupTrackingOverviewResponse,
+  trip: PickupTrackingTrip,
+  result: PickupTripLifecycleResponse
+) => {
+  const tripId = result.tripId ?? trip.tripId;
+  const trackingTrip = overview.trips?.find((item) => item.tripId === tripId);
+  const returnedOrders =
+    overview.orders?.filter(
+      (order) =>
+        order.tripId === tripId &&
+        order.orderStatus !== undefined &&
+        RETURNABLE_TO_POST_OFFICE_ORDER_STATUSES.includes(order.orderStatus)
+    ) ?? [];
+  const returnedOrderCount =
+    result.pendingPostOfficeInboundOrders ??
+    result.returnedToPostOfficeOrders ??
+    returnedOrders.length;
+  const pickingUpReturnedOrderCount = returnedOrders.filter(
+    (order) => order.orderStatus === 'PICKING_UP'
+  ).length;
+  const pickedUpReturnedOrderCount = returnedOrders.filter(
+    (order) => order.orderStatus === 'PICKED_UP'
+  ).length;
+
+  if (trackingTrip) {
+    trackingTrip.tripStatus = result.tripStatus ?? trackingTrip.tripStatus;
+    trackingTrip.totalOrders = result.totalOrders ?? trackingTrip.totalOrders;
+    trackingTrip.checkedInOrders =
+      result.checkedInOrders ?? trackingTrip.checkedInOrders;
+    trackingTrip.pendingCheckinOrders =
+      result.pendingCheckinOrders ?? trackingTrip.pendingCheckinOrders;
+    trackingTrip.returnableToPostOfficeOrders = 0;
+    trackingTrip.pendingPostOfficeInboundOrders = returnedOrderCount;
+  }
+
+  returnedOrders.forEach((order) => {
+    order.orderStatus = 'PENDING_ORIGIN_POST_OFFICE_INBOUND';
+  });
+
+  if (overview.pendingPostOfficeInboundOrders !== undefined) {
+    overview.pendingPostOfficeInboundOrders += returnedOrders.length;
+  }
+  if (overview.pickedUpOrders !== undefined) {
+    overview.pickedUpOrders = Math.max(
+      0,
+      overview.pickedUpOrders - pickedUpReturnedOrderCount
+    );
+  }
+  if (overview.pickingUpOrders !== undefined) {
+    overview.pickingUpOrders = Math.max(
+      0,
+      overview.pickingUpOrders - pickingUpReturnedOrderCount
+    );
+  }
+};
+
+const applyConfirmPostOfficeInboundResult = (
+  overview: PickupTrackingOverviewResponse,
+  trip: PickupTrackingTrip,
+  orderCodes: string[],
+  result: PickupTripLifecycleResponse
+) => {
+  const tripId = result.tripId ?? trip.tripId;
+  const confirmedOrderCodeSet = new Set(orderCodes.map(normalizeOrderCode));
+  const confirmedOrders =
+    overview.orders?.filter(
+      (order) =>
+        order.tripId === tripId &&
+        order.orderStatus === 'PENDING_ORIGIN_POST_OFFICE_INBOUND' &&
+        confirmedOrderCodeSet.has(normalizeOrderCode(order.orderCode))
+    ) ?? [];
+  const confirmedOrderCount = confirmedOrders.length;
+  const trackingTrip = overview.trips?.find((item) => item.tripId === tripId);
+
+  if (trackingTrip) {
+    trackingTrip.tripStatus = result.tripStatus ?? trackingTrip.tripStatus;
+    trackingTrip.totalOrders = result.totalOrders ?? trackingTrip.totalOrders;
+    trackingTrip.checkedInOrders =
+      result.checkedInOrders ?? trackingTrip.checkedInOrders;
+    trackingTrip.pendingCheckinOrders =
+      result.pendingCheckinOrders ?? trackingTrip.pendingCheckinOrders;
+    trackingTrip.returnableToPostOfficeOrders = 0;
+    trackingTrip.pendingPostOfficeInboundOrders = Math.max(
+      0,
+      (trackingTrip.pendingPostOfficeInboundOrders ?? 0) - confirmedOrderCount
+    );
+  }
+
+  confirmedOrders.forEach((order) => {
+    order.orderStatus = 'AT_ORIGIN_POST_OFFICE';
+  });
+
+  if (overview.pendingPostOfficeInboundOrders !== undefined) {
+    overview.pendingPostOfficeInboundOrders = Math.max(
+      0,
+      overview.pendingPostOfficeInboundOrders - confirmedOrderCount
+    );
+  }
+};
+
 const resolveOrders = (
   overview?: PickupTrackingOverviewResponse
 ): PickupTrackingOrder[] => {
@@ -219,6 +325,7 @@ const resolveTrips = (
 };
 
 export const PickupPage: React.FC = () => {
+  const dispatch = useAppDispatch();
   const notification = useNotification();
   const profile = useAppSelector((state) => state.account.user.profile);
   const roles = profile?.roles ?? [];
@@ -723,7 +830,16 @@ export const PickupPage: React.FC = () => {
     }
 
     try {
-      await returnPickupTripToPostOffice(trip.tripId).unwrap();
+      const result = await returnPickupTripToPostOffice(trip.tripId).unwrap();
+      dispatch(
+        firstMileApi.util.updateQueryData(
+          'getPickupTrackingOverview',
+          overviewQueryArgs,
+          (draft) => {
+            applyReturnTripToPostOfficeResult(draft, trip, result);
+          }
+        )
+      );
       notification.success(
         `Đã chuyển chuyến ${trip.tripCode || `#${trip.tripId}`} về bưu cục. Đơn đang chờ quét nhập bưu cục.`
       );
@@ -752,10 +868,24 @@ export const PickupPage: React.FC = () => {
     }
 
     try {
-      await confirmPostOfficeInbound({
+      const result = await confirmPostOfficeInbound({
         tripId: inboundTrip.tripId,
         body: { orderCodes },
       }).unwrap();
+      dispatch(
+        firstMileApi.util.updateQueryData(
+          'getPickupTrackingOverview',
+          overviewQueryArgs,
+          (draft) => {
+            applyConfirmPostOfficeInboundResult(
+              draft,
+              inboundTrip,
+              orderCodes,
+              result
+            );
+          }
+        )
+      );
       notification.success('Đã xác nhận nhập bưu cục thành công.');
       setInboundTrip(null);
       void refetchOverview();

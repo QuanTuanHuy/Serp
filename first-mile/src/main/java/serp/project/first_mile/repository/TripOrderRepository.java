@@ -29,6 +29,14 @@ public interface TripOrderRepository extends JpaRepository<TripOrder, Long> {
 
     Optional<TripOrder> findByTenantIdAndTrip_IdAndOrderId(Long tenantId, Long tripId, Long orderId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<TripOrder> findByTenantIdAndTrip_IdAndOrderIdAndTrip_TripType(
+            Long tenantId,
+            Long tripId,
+            Long orderId,
+            TripType tripType
+    );
+
     long countByTenantIdAndTrip_Id(Long tenantId, Long tripId);
 
     @Query("""

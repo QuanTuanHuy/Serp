@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import serp.project.second_mile.caller.TmsOrderClient;
 import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
+import serp.project.second_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.BagDistributionManifest;
 import serp.project.second_mile.domain.BagDistributionManifestBag;
@@ -263,6 +264,31 @@ class BagDistributionManifestServiceImplTest {
         assertNotNull(manifestBag.getScanOutTime());
         assertEquals(OrderStatus.BAG_IN_TRANSIT.name(), bagOrder.getLastKnownStatus());
         verify(tmsOrderTransitionPublisherService).publish(any(), eq(TENANT_ID));
+    }
+
+    @Test
+    void confirmOutboundAllowsOrdersAlreadyInboundAtDestinationHub() {
+        BagDistributionManifest manifest = manifest(BagDistributionManifestStatus.CREATED);
+        BagDistributionManifestBag manifestBag = manifestBag(manifest);
+        Bag bag = bag(BagStatus.ARRIVED);
+        BagOrder bagOrder = bagOrder(OrderStatus.INBOUND_AT_DESTINATION_HUB);
+        stubManifestLookup(manifest);
+        stubLifecycleVehicle();
+        when(manifestBagRepository.findByManifest_IdAndTenantId(100L, TENANT_ID)).thenReturn(List.of(manifestBag));
+        when(bagRepository.findByIdInAndTenantIdForUpdate(TENANT_ID, List.of(BAG_ID))).thenReturn(List.of(bag));
+        when(bagOrderRepository.findByBag_IdAndTenantId(BAG_ID, TENANT_ID)).thenReturn(List.of(bagOrder));
+        when(manifestRepository.save(any(BagDistributionManifest.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.confirmOutbound(100L);
+
+        ArgumentCaptor<TmsOrderStatusTransitionRequest> requestCaptor =
+                ArgumentCaptor.forClass(TmsOrderStatusTransitionRequest.class);
+        verify(tmsOrderTransitionPublisherService).publish(requestCaptor.capture(), eq(TENANT_ID));
+        TmsOrderStatusTransitionRequest.Item item = requestCaptor.getValue().getItems().getFirst();
+        assertEquals(OrderStatus.BAG_IN_TRANSIT, item.getTargetStatus());
+        assertTrue(item.getExpectedStatuses().contains(OrderStatus.INBOUND_AT_DESTINATION_HUB));
+        assertEquals(OrderStatus.BAG_IN_TRANSIT.name(), bagOrder.getLastKnownStatus());
     }
 
     @Test

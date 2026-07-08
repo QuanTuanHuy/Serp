@@ -6,6 +6,9 @@ Description: Part of Serp Project
 package serp.project.first_mile.dto.response;
 
 import serp.project.first_mile.enums.PickupShift;
+import serp.project.first_mile.enums.DeliveryOrderStatus;
+import serp.project.first_mile.enums.OrderStatus;
+import serp.project.first_mile.enums.PaymentStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -59,7 +62,32 @@ public record DeliveryAssignmentResponse(
             Double distanceFromPreviousKm,
             Long travelMinutes,
             Long latenessMinutes,
-            LocalDateTime scanOutTime
+            LocalDateTime scanOutTime,
+            OrderStatus orderStatus,
+            DeliveryOrderStatus deliveryStatus,
+            String receiverAddressDetail,
+            String receiverWardCode,
+            String receiverProvinceCode,
+            Long codAmount,
+            Long totalShippingFee,
+            String feePayer,
+            PaymentStatus deliveryPaymentStatus,
+            Long deliveryPaymentAmount,
+            String deliveryPaymentAppTransId,
+            LocalDateTime deliveryPaymentConfirmedAt,
+            Integer deliveryAttemptCount,
+            Long codCollected,
+            Long shippingFeeCollected,
+            String failureReason,
+            String note,
+            LocalDateTime deliveredAt,
+            LocalDateTime returnedAt,
+            Long checkinId,
+            LocalDateTime deliveryCheckinTime,
+            Double deliveryCheckinLat,
+            Double deliveryCheckinLng,
+            Double deliveryCheckinDistanceM,
+            String proofPhotoUrl
     ) {
     }
 

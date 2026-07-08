@@ -30,6 +30,18 @@ const formatOrderStatusLabel = (status: FirstMileOrderStatus): string => {
       return 'Chờ nhập bưu cục gốc';
     case 'AT_ORIGIN_POST_OFFICE':
       return 'Tại bưu cục gốc';
+    case 'INBOUND_AT_DESTINATION_POST_OFFICE':
+      return 'Đã nhập bưu cục đích';
+    case 'READY_FOR_DELIVERY':
+      return 'Sẵn sàng giao';
+    case 'OUT_FOR_DELIVERY':
+      return 'Đang giao';
+    case 'DELIVERED':
+      return 'Đã giao';
+    case 'DELIVERY_FAILED':
+      return 'Giao thất bại';
+    case 'RETURNED_TO_SENDER':
+      return 'Hoàn về người gửi';
     case 'CANCELLED':
       return 'Đã hủy';
     case 'LOST_OR_DAMAGED':

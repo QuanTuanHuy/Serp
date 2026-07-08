@@ -3,11 +3,10 @@
  * Description: Part of Serp Project - Dev helpers for transit check-in
  */
 
-import type { BagDistributionManifest, Hub } from '../../../types';
+import type { BagDistributionManifest, Hub, PostOffice } from '../../../types';
 import type { CheckinMode } from './transitModels';
 
-const TRANSIT_DEV_CHECKIN_STORAGE_KEY =
-  'serp.first-mile.transit-dev-checkin';
+const TRANSIT_DEV_CHECKIN_STORAGE_KEY = 'serp.first-mile.transit-dev-checkin';
 
 export const isTransitCheckinDevFeatureAvailable = (): boolean =>
   process.env.NODE_ENV === 'development';
@@ -37,16 +36,19 @@ export interface TransitDevCheckinCoordinates {
   locationLabel: string;
 }
 
-type HubWithCoordinate = Hub & {
-  latitude: number;
-  longitude: number;
-};
+const hasValidCoordinate = (value?: number): value is number =>
+  value !== undefined && Number.isFinite(value);
 
-const hasValidCoordinate = (hub?: Hub): hub is HubWithCoordinate =>
-  hub?.latitude !== undefined &&
-  hub.longitude !== undefined &&
-  Number.isFinite(hub.latitude) &&
-  Number.isFinite(hub.longitude);
+const getCoordinatePair = (
+  latitude?: number,
+  longitude?: number
+): { latitude: number; longitude: number } | null => {
+  if (hasValidCoordinate(latitude) && hasValidCoordinate(longitude)) {
+    return { latitude, longitude };
+  }
+
+  return null;
+};
 
 const findHub = (
   hubs: Hub[],
@@ -59,27 +61,92 @@ const findHub = (
       (hubCode !== undefined && hub.code === hubCode)
   );
 
+const findPostOffice = (
+  postOffices: PostOffice[],
+  code?: string
+): PostOffice | undefined =>
+  postOffices.find((postOffice) => postOffice.code === code);
+
 export const resolveTransitDevCheckinCoordinates = (
   manifest: BagDistributionManifest,
   mode: CheckinMode,
-  hubs: Hub[]
+  hubs: Hub[],
+  postOffices: PostOffice[] = []
 ): TransitDevCheckinCoordinates | null => {
-  const hub =
+  const manifestCoordinates =
     mode === 'start'
-      ? findHub(hubs, manifest.originHubId, manifest.originHubCode)
-      : manifest.destinationType === 'HUB'
-        ? findHub(hubs, manifest.destinationHubId, manifest.destinationHubCode)
-        : undefined;
+      ? {
+          latitude: manifest.driverStartLatitude,
+          longitude: manifest.driverStartLongitude,
+          locationLabel: 'Check-in xuất phát',
+        }
+      : {
+          latitude: manifest.driverEndLatitude,
+          longitude: manifest.driverEndLongitude,
+          locationLabel: 'Check-in đến nơi',
+        };
 
-  if (!hasValidCoordinate(hub)) {
+  const manifestCoordinatePair = getCoordinatePair(
+    manifestCoordinates.latitude,
+    manifestCoordinates.longitude
+  );
+
+  if (manifestCoordinatePair) {
+    return {
+      latitude: manifestCoordinatePair.latitude,
+      longitude: manifestCoordinatePair.longitude,
+      locationLabel: manifestCoordinates.locationLabel,
+    };
+  }
+
+  if (mode === 'start') {
+    const hub = findHub(hubs, manifest.originHubId, manifest.originHubCode);
+    const coordinatePair = getCoordinatePair(hub?.latitude, hub?.longitude);
+
+    if (coordinatePair) {
+      return {
+        latitude: coordinatePair.latitude,
+        longitude: coordinatePair.longitude,
+        locationLabel: `Hub xuất phát ${hub?.code ?? ''} - ${hub?.name ?? ''}`,
+      };
+    }
+
     return null;
   }
 
-  return {
-    latitude: hub.latitude,
-    longitude: hub.longitude,
-    locationLabel: `${mode === 'start' ? 'Hub xuất phát' : 'Hub nhận'} ${
-      hub.code
-    } - ${hub.name}`,
-  };
+  if (manifest.destinationType === 'POST_OFFICE') {
+    const postOffice = findPostOffice(
+      postOffices,
+      manifest.destinationPostOfficeCode
+    );
+    const coordinatePair = getCoordinatePair(
+      postOffice?.latitude,
+      postOffice?.longitude
+    );
+
+    if (coordinatePair) {
+      return {
+        latitude: coordinatePair.latitude,
+        longitude: coordinatePair.longitude,
+        locationLabel: `Bưu cục đích ${postOffice?.code ?? ''} - ${postOffice?.name ?? ''}`,
+      };
+    }
+  }
+
+  const hub = findHub(
+    hubs,
+    manifest.destinationHubId,
+    manifest.destinationHubCode
+  );
+  const coordinatePair = getCoordinatePair(hub?.latitude, hub?.longitude);
+
+  if (coordinatePair) {
+    return {
+      latitude: coordinatePair.latitude,
+      longitude: coordinatePair.longitude,
+      locationLabel: `Hub nhận ${hub?.code ?? ''} - ${hub?.name ?? ''}`,
+    };
+  }
+
+  return null;
 };

@@ -93,7 +93,7 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.BAG_IN_TRANSIT,
-                EnumSet.of(OrderStatus.BAG_SEALED)
+                EnumSet.of(OrderStatus.BAG_SEALED, OrderStatus.INBOUND_AT_DESTINATION_HUB)
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.INBOUND_AT_DESTINATION_HUB,
