@@ -88,7 +88,11 @@ class BagDistributionPlanningServiceTest {
                 .tenantId(TENANT_ID)
                 .build();
 
-        when(bagRepository.findByTenantIdAndOriginHubIdAndStatus(TENANT_ID, ORIGIN_HUB_ID, BagStatus.SEALED))
+        when(bagRepository.findByTenantIdAndOriginHubIdAndStatusIn(
+                TENANT_ID,
+                ORIGIN_HUB_ID,
+                List.of(BagStatus.SEALED, BagStatus.ARRIVED)
+        ))
                 .thenReturn(List.of(sealedBag));
         when(manifestBagRepository.findActiveBagIds(
                 eq(TENANT_ID),
@@ -119,5 +123,57 @@ class BagDistributionPlanningServiceTest {
         assertEquals(1, items.size());
         assertTrue(items.get(0).hints().contains("NO_ROUTE"));
         assertTrue(service.hasBlockingHint(items.get(0).hints()));
+    }
+
+    @Test
+    void planIncludesArrivedBagsAtCurrentHub() {
+        Bag arrivedBag = Bag.builder()
+                .id(BAG_ID)
+                .bagCode("BAG-ARRIVED-001")
+                .originHubId(ORIGIN_HUB_ID)
+                .destinationType(BagDestinationType.HUB)
+                .destinationHubId(DESTINATION_HUB_ID)
+                .currentWeight(10.0)
+                .currentVolume(0.5)
+                .currentOrders(1)
+                .status(BagStatus.ARRIVED)
+                .sealedAt(DEPARTURE_AT.minusHours(30))
+                .tenantId(TENANT_ID)
+                .build();
+
+        when(bagRepository.findByTenantIdAndOriginHubIdAndStatusIn(
+                TENANT_ID,
+                ORIGIN_HUB_ID,
+                List.of(BagStatus.SEALED, BagStatus.ARRIVED)
+        ))
+                .thenReturn(List.of(arrivedBag));
+        when(manifestBagRepository.findActiveBagIds(
+                eq(TENANT_ID),
+                eq(List.of(BAG_ID)),
+                anyCollection()
+        )).thenReturn(List.of());
+        when(routeRepository.findByTenantIdAndStatusAndOriginTypeAndOriginHubIdAndDestinationTypeAndDestinationHubId(
+                TENANT_ID,
+                RouteStatus.ACTIVE,
+                RouteEndpointType.HUB,
+                ORIGIN_HUB_ID,
+                RouteDestinationType.HUB,
+                DESTINATION_HUB_ID
+        )).thenReturn(List.of());
+
+        List<BagDistributionPlanItemResponse> items = service.plan(TENANT_ID, new AutoPlanBagDistributionRequest(
+                ORIGIN_HUB_ID,
+                BagDestinationType.HUB,
+                DESTINATION_HUB_ID,
+                null,
+                DEPARTURE_AT,
+                ARRIVAL_AT,
+                24,
+                false,
+                null
+        ));
+
+        assertEquals(1, items.size());
+        assertTrue(items.get(0).bagIds().contains(BAG_ID));
     }
 }

@@ -18,7 +18,6 @@ import serp.project.second_mile.caller.dto.tms_order.TmsOrderStatusTransitionReq
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.BagOrder;
 import serp.project.second_mile.domain.Hub;
-import serp.project.second_mile.domain.HubPostOfficeMapping;
 import serp.project.second_mile.domain.Route;
 import serp.project.second_mile.domain.Vehicle;
 import serp.project.second_mile.dto.PageResponse;
@@ -461,7 +460,11 @@ public class BagServiceImpl implements BagService {
         Long resolvedOriginHubId = originHubId != null
                 ? originHubId
                 : bagValidator.resolveCurrentHubIdByOrder(tenantId, order);
-        BagDestinationTarget destinationTarget = resolveDestinationTargetForOrder(tenantId, order, resolvedOriginHubId);
+        BagDestinationTarget destinationTarget = bagValidator.resolveDestinationTargetForOrder(
+                tenantId,
+                order,
+                resolvedOriginHubId
+        );
         List<Bag> candidates = findEditableBagsByTarget(tenantId, resolvedOriginHubId, destinationTarget);
         BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
 
@@ -708,26 +711,6 @@ public class BagServiceImpl implements BagService {
                 secondMileAccessUtils.getCurrentTenantIdOrThrow()
         );
         return BagMapper.toResponse(bag, bagOrders);
-    }
-
-    private BagDestinationTarget resolveDestinationTargetForOrder(
-            Long tenantId,
-            TmsOrderOperationView order,
-            Long originHubId
-    ) {
-        String destinationPostOfficeCode = normalizeText(order.getDestinationPostOfficeCode());
-        if (destinationPostOfficeCode == null) {
-            throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
-        }
-        return hubPostOfficeMappingRepository.findByTenantIdAndPostOfficeCode(tenantId, destinationPostOfficeCode)
-                .map(mapping -> {
-                    Long destinationHubId = mapping.getHub() == null ? null : mapping.getHub().getId();
-                    if (destinationHubId == null || Objects.equals(originHubId, destinationHubId)) {
-                        return new BagDestinationTarget(BagDestinationType.POST_OFFICE, null, destinationPostOfficeCode);
-                    }
-                    return new BagDestinationTarget(BagDestinationType.HUB, destinationHubId, destinationPostOfficeCode);
-                })
-                .orElse(new BagDestinationTarget(BagDestinationType.POST_OFFICE, null, destinationPostOfficeCode));
     }
 
     private List<Bag> findEditableBagsByTarget(Long tenantId, Long originHubId, BagDestinationTarget target) {

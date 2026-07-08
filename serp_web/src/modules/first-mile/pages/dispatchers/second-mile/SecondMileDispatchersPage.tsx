@@ -32,6 +32,7 @@ import type {
   BagDistributionPlan,
   CreateBagDistributionManifestRequest,
   SecondMileBag,
+  SecondMileBagStatus,
 } from '../../../types';
 import { KpiCard, PlanningTab, ReadyBagsTab } from './components';
 import {
@@ -136,7 +137,7 @@ export function SecondMileDispatchersPage() {
         destinationFilter === 'POST_OFFICE'
           ? planning.destinationPostOfficeCode
           : undefined,
-      status: 'SEALED' as const,
+      statuses: ['SEALED', 'ARRIVED'] as SecondMileBagStatus[],
     }),
     [
       destinationFilter,
@@ -388,7 +389,7 @@ export function SecondMileDispatchersPage() {
       return;
     }
     if (selectedBagIds.length === 0) {
-      notification.error('Chọn ít nhất một túi hàng đã niêm phong.');
+      notification.error('Chọn ít nhất một túi hàng sẵn sàng điều phối.');
       return;
     }
     if (selectedDestinationSummary?.sameDestination === false) {
@@ -454,8 +455,8 @@ export function SecondMileDispatchersPage() {
               Điều phối hàng hóa chặng trung chuyển
             </h1>
             <p className='max-w-3xl text-sm text-muted-foreground'>
-              Lập kế hoạch gom túi hàng theo tuyến, tạo biên bản điều phối và
-              hỗ trợ tài xế check-in trong chặng trung chuyển.
+              Lập kế hoạch gom túi hàng theo tuyến, tạo biên bản điều phối và hỗ
+              trợ tài xế check-in trong chặng trung chuyển.
             </p>
           </div>
         </div>
@@ -477,7 +478,7 @@ export function SecondMileDispatchersPage() {
           icon={Boxes}
           label='Túi sẵn sàng'
           value={formatNumber(totalReady, 0)}
-          hint='Túi đã niêm phong chờ điều phối'
+          hint='Túi đã niêm phong hoặc đã đến hub'
         />
         <KpiCard
           icon={PackageCheck}
@@ -540,7 +541,6 @@ export function SecondMileDispatchersPage() {
             onCreateManual={handleCreateManual}
           />
         </TabsContent>
-
       </Tabs>
     </div>
   );

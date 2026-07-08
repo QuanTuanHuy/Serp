@@ -50,6 +50,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BagDistributionPlanningService {
     private static final int DEFAULT_SEALED_SLA_HOURS = 24;
+    private static final List<BagStatus> DISPATCH_READY_BAG_STATUSES = List.of(
+            BagStatus.SEALED,
+            BagStatus.ARRIVED
+    );
     private static final List<BagDistributionManifestStatus> ACTIVE_MANIFEST_STATUSES = List.of(
             BagDistributionManifestStatus.CREATED,
             BagDistributionManifestStatus.OUTBOUND_CONFIRMED
@@ -196,20 +200,20 @@ public class BagDistributionPlanningService {
             Long destinationHubId,
             String destinationPostOfficeCode
     ) {
-        List<Bag> sealedBags = bagRepository.findByTenantIdAndOriginHubIdAndStatus(
+        List<Bag> readyBags = bagRepository.findByTenantIdAndOriginHubIdAndStatusIn(
                 tenantId,
                 originHubId,
-                BagStatus.SEALED
+                DISPATCH_READY_BAG_STATUSES
         );
-        List<Long> sealedBagIds = sealedBags.stream().map(Bag::getId).toList();
-        Set<Long> activeBagIds = sealedBagIds.isEmpty()
+        List<Long> readyBagIds = readyBags.stream().map(Bag::getId).toList();
+        Set<Long> activeBagIds = readyBagIds.isEmpty()
                 ? Set.of()
                 : new LinkedHashSet<>(manifestBagRepository.findActiveBagIds(
                 tenantId,
-                sealedBagIds,
+                readyBagIds,
                 ACTIVE_MANIFEST_STATUSES
         ));
-        return sealedBags.stream()
+        return readyBags.stream()
                 .filter(bag -> !activeBagIds.contains(bag.getId()))
                 .filter(bag -> destinationType == null || bag.getDestinationType() == destinationType)
                 .filter(bag -> destinationHubId == null || Objects.equals(bag.getDestinationHubId(), destinationHubId))

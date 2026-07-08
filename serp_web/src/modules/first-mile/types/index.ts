@@ -447,6 +447,7 @@ export interface SecondMileBagListFilters {
   destinationPostOfficeCode?: string;
   vehicleId?: number;
   status?: SecondMileBagStatus;
+  statuses?: SecondMileBagStatus[];
   minOrders?: number;
   maxOrders?: number;
   minWeight?: number;
@@ -920,6 +921,30 @@ export interface FirstMileOrderProductItem {
   productTypeName?: string;
 }
 
+export interface FirstMilePlannedOrderRouteLeg {
+  sequence?: number;
+  routeId?: number;
+  routeCode?: string;
+  routeName?: string;
+  originType?: string;
+  originHubId?: number;
+  originPostOfficeCode?: string;
+  destinationType?: string;
+  destinationHubId?: number;
+  destinationPostOfficeCode?: string;
+  vehicleId?: number;
+  estimatedDistanceKm?: number;
+  estimatedDurationMinutes?: number;
+}
+
+export interface FirstMilePlannedOrderRoute {
+  originPostOfficeCode?: string;
+  destinationPostOfficeCode?: string;
+  totalEstimatedDistanceKm?: number;
+  totalEstimatedDurationMinutes?: number;
+  legs?: FirstMilePlannedOrderRouteLeg[];
+}
+
 export interface FirstMileOrderDetail {
   id: number;
   orderCode: string;
@@ -961,6 +986,7 @@ export interface FirstMileOrderDetail {
   totalShippingFee?: number;
   originPostOfficeCode?: string;
   destinationPostOfficeCode?: string;
+  plannedRoute?: FirstMilePlannedOrderRoute;
   note?: string;
   products?: FirstMileOrderProductItem[];
   createdAt?: string;

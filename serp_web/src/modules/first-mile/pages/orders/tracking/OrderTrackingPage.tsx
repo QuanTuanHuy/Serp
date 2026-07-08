@@ -8,12 +8,16 @@
 import React from 'react';
 import {
   AlertCircle,
+  ArrowRight,
   Building2,
   CheckCircle2,
   CircleDot,
+  Clock3,
   Loader2,
   MapPin,
+  Milestone,
   PackageCheck,
+  Route as RouteIcon,
   Search,
   Truck,
   UserRound,
@@ -21,6 +25,7 @@ import {
 } from 'lucide-react';
 import { getErrorMessage } from '@/lib/store';
 import {
+  useGetHubsQuery,
   useGetOrdersQuery,
   useLazyGetOrderByIdQuery,
   useLazyGetOrderTimelineQuery,
@@ -29,6 +34,9 @@ import type {
   FirstMileOrderDetail,
   FirstMileOrderStatus,
   FirstMileOrderTimelineItem,
+  FirstMilePlannedOrderRoute,
+  FirstMilePlannedOrderRouteLeg,
+  Hub,
 } from '@/modules/first-mile/types';
 import {
   Badge,
@@ -314,6 +322,71 @@ const getValidCoordinate = (
   return isValid ? [latitude, longitude] : null;
 };
 
+const formatEstimatedDistance = (distanceKm?: number): string => {
+  if (typeof distanceKm !== 'number' || !Number.isFinite(distanceKm)) {
+    return '--';
+  }
+
+  return `${distanceKm.toLocaleString('vi-VN', {
+    maximumFractionDigits: 1,
+  })} km`;
+};
+
+const formatEstimatedDuration = (durationMinutes?: number): string => {
+  if (
+    typeof durationMinutes !== 'number' ||
+    !Number.isFinite(durationMinutes) ||
+    durationMinutes < 0
+  ) {
+    return '--';
+  }
+
+  const hours = Math.floor(durationMinutes / 60);
+  const minutes = Math.round(durationMinutes % 60);
+
+  if (hours <= 0) {
+    return `${minutes} phút`;
+  }
+
+  return minutes > 0 ? `${hours} giờ ${minutes} phút` : `${hours} giờ`;
+};
+
+const formatRouteEndpoint = (
+  type?: string,
+  hubId?: number,
+  postOfficeCode?: string,
+  hubById?: Map<number, Hub>
+): string => {
+  const normalizedType = type?.toUpperCase();
+
+  if (normalizedType === 'HUB') {
+    const hub = hubId ? hubById?.get(hubId) : undefined;
+
+    if (hub) {
+      return [hub.code, hub.name].filter(Boolean).join(' - ');
+    }
+
+    return hubId ? `Hub #${hubId}` : 'Hub';
+  }
+
+  if (normalizedType === 'POST_OFFICE') {
+    return postOfficeCode ? `Bưu cục ${postOfficeCode}` : 'Bưu cục';
+  }
+
+  return postOfficeCode || (hubId ? `Hub #${hubId}` : 'Điểm xử lý');
+};
+
+const getPlannedRouteLegs = (
+  plannedRoute?: FirstMilePlannedOrderRoute
+): FirstMilePlannedOrderRouteLeg[] => {
+  return [...(plannedRoute?.legs ?? [])].sort((first, second) => {
+    const firstSequence = first.sequence ?? Number.MAX_SAFE_INTEGER;
+    const secondSequence = second.sequence ?? Number.MAX_SAFE_INTEGER;
+
+    return firstSequence - secondSequence;
+  });
+};
+
 const buildTrackingMapPoints = (
   order: FirstMileOrderDetail | null,
   timeline: FirstMileOrderTimelineItem[]
@@ -390,6 +463,115 @@ const buildTrackingMapPoints = (
   return points;
 };
 
+interface PlannedRoutePanelProps {
+  plannedRoute?: FirstMilePlannedOrderRoute;
+  hubById: Map<number, Hub>;
+}
+
+const PlannedRoutePanel: React.FC<PlannedRoutePanelProps> = ({
+  plannedRoute,
+  hubById,
+}) => {
+  const legs = React.useMemo(
+    () => getPlannedRouteLegs(plannedRoute),
+    [plannedRoute]
+  );
+
+  return (
+    <div className='rounded-md border p-4'>
+      <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+        <div className='space-y-1'>
+          <div className='flex items-center gap-2'>
+            <RouteIcon className='h-4 w-4 text-primary' />
+            <h2 className='text-base font-semibold'>Lộ trình dự kiến</h2>
+          </div>
+          <p className='text-sm text-muted-foreground'>
+            Theo dõi các chặng đã được hoạch định từ đơn hàng.
+          </p>
+        </div>
+        <div className='grid grid-cols-2 gap-2 text-sm md:min-w-[260px]'>
+          <div className='rounded-md bg-muted px-3 py-2'>
+            <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+              <Milestone className='h-3.5 w-3.5' />
+              Quãng đường
+            </p>
+            <p className='font-medium'>
+              {formatEstimatedDistance(plannedRoute?.totalEstimatedDistanceKm)}
+            </p>
+          </div>
+          <div className='rounded-md bg-muted px-3 py-2'>
+            <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+              <Clock3 className='h-3.5 w-3.5' />
+              Thời gian
+            </p>
+            <p className='font-medium'>
+              {formatEstimatedDuration(
+                plannedRoute?.totalEstimatedDurationMinutes
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {legs.length === 0 ? (
+        <div className='mt-4 rounded-md border border-dashed p-4 text-sm text-muted-foreground'>
+          Chưa có lộ trình dự kiến cho đơn hàng này.
+        </div>
+      ) : (
+        <div className='mt-4 space-y-3'>
+          {legs.map((leg, index) => {
+            const originLabel = formatRouteEndpoint(
+              leg.originType,
+              leg.originHubId,
+              leg.originPostOfficeCode,
+              hubById
+            );
+            const destinationLabel = formatRouteEndpoint(
+              leg.destinationType,
+              leg.destinationHubId,
+              leg.destinationPostOfficeCode,
+              hubById
+            );
+
+            return (
+              <div
+                key={`${leg.sequence ?? index}-${originLabel}-${destinationLabel}`}
+                className='grid gap-3 rounded-md border p-3 lg:grid-cols-[1fr_auto]'
+              >
+                <div className='min-w-0'>
+                  <div className='flex flex-wrap items-center gap-2 text-sm font-medium'>
+                    <span>{originLabel}</span>
+                    <ArrowRight className='h-4 w-4 text-muted-foreground' />
+                    <span>{destinationLabel}</span>
+                  </div>
+                  <p className='mt-1 text-xs text-muted-foreground'>
+                    {leg.routeCode || leg.routeName
+                      ? [leg.routeCode, leg.routeName]
+                          .filter(Boolean)
+                          .join(' - ')
+                      : 'Chưa gán tuyến vận chuyển'}
+                  </p>
+                </div>
+                <div className='flex flex-wrap gap-2 text-xs text-muted-foreground lg:justify-end'>
+                  <Badge variant='outline'>
+                    Chặng {leg.sequence ?? index + 1}
+                  </Badge>
+                  <Badge variant='outline'>
+                    {formatEstimatedDistance(leg.estimatedDistanceKm)}
+                  </Badge>
+                  <Badge variant='outline'>
+                    {formatEstimatedDuration(leg.estimatedDurationMinutes)}
+                  </Badge>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const getStageIcon = (stage: JourneyStage) => {
   if (stage.status === 'exception') {
     return XCircle;
@@ -460,10 +642,24 @@ export const OrderTrackingPage: React.FC = () => {
     size: TRACKING_PAGE_SIZE,
     keyword: appliedSearch || undefined,
   });
+  const hubsQuery = useGetHubsQuery({
+    page: 0,
+    size: 500,
+    status: 'ACTIVE',
+  });
   const [loadOrderById] = useLazyGetOrderByIdQuery();
   const [loadOrderTimeline] = useLazyGetOrderTimelineQuery();
 
   const orders = orderListQuery.data?.items ?? [];
+  const hubById = React.useMemo(() => {
+    const nextHubById = new Map<number, Hub>();
+
+    (hubsQuery.data?.items ?? []).forEach((hub) => {
+      nextHubById.set(hub.id, hub);
+    });
+
+    return nextHubById;
+  }, [hubsQuery.data?.items]);
 
   const loadTrackingData = React.useCallback(
     async (orderId: number) => {
@@ -710,6 +906,11 @@ export const OrderTrackingPage: React.FC = () => {
                   </div>
 
                   <TrackingMap points={mapPoints} />
+
+                  <PlannedRoutePanel
+                    plannedRoute={selectedOrder.plannedRoute}
+                    hubById={hubById}
+                  />
 
                   <div className='grid gap-4 lg:grid-cols-[1fr_300px]'>
                     <div className='space-y-4'>

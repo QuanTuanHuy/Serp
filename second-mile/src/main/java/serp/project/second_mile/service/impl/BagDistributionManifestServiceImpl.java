@@ -19,6 +19,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import serp.project.second_mile.caller.TmsOrderClient;
+import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.second_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.BagDistributionManifest;
@@ -68,8 +70,10 @@ import serp.project.second_mile.repository.specification.BagDistributionManifest
 import serp.project.second_mile.service.BagDistributionManifestService;
 import serp.project.second_mile.service.FileStorageService;
 import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
+import serp.project.second_mile.service.dto.BagDestinationTarget;
 import serp.project.second_mile.service.dto.request.FileUploadRequest;
 import serp.project.second_mile.service.dto.response.FileUploadResponse;
+import serp.project.second_mile.service.validator.BagValidator;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -119,6 +123,8 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
     private final FileStorageService fileStorageService;
     private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
     private final BagDistributionPlanningService planningService;
+    private final TmsOrderClient tmsOrderClient;
+    private final BagValidator bagValidator;
 
     @Override
     public PageResponse<BagDistributionManifestResponse> listManifests(
@@ -406,7 +412,9 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
             if (bag == null || !Objects.equals(bag.getTenantId(), manifest.getTenantId())) {
                 throw new AppException(ErrorCode.BAG_NOT_FOUND);
             }
-            if (bag.getStatus() != BagStatus.SEALED && bag.getStatus() != BagStatus.IN_TRANSIT) {
+            if (bag.getStatus() != BagStatus.SEALED
+                    && bag.getStatus() != BagStatus.ARRIVED
+                    && bag.getStatus() != BagStatus.IN_TRANSIT) {
                 throw new AppException(ErrorCode.BAG_STATUS_INVALID);
             }
             if (manifestBag.getScanOutTime() == null) {
@@ -494,10 +502,10 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 target.setScanOutTime(now);
             }
             target.setScanInTime(now);
+            List<BagOrder> bagOrders = bagOrderRepository.findByBag_IdAndTenantId(bag.getId(), tenantId);
             bag.setStatus(BagStatus.ARRIVED);
             bag.setVehicleId(vehicle.getId());
-
-            List<BagOrder> bagOrders = bagOrderRepository.findByBag_IdAndTenantId(bag.getId(), tenantId);
+            prepareArrivedBagForNextLeg(tenantId, manifest, bag, bagOrders);
             if (newlyArrivedBag) {
                 newlyArrivedOrderCount += bagOrders.size();
             }
@@ -673,7 +681,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         }
 
         for (Bag bag : bags) {
-            if (bag.getStatus() != BagStatus.SEALED) {
+            if (!isDispatchReadyBagStatus(bag.getStatus())) {
                 throw new AppException(ErrorCode.BAG_STATUS_INVALID);
             }
             if (!Objects.equals(bag.getOriginHubId(), originHubId)) {
@@ -694,6 +702,98 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 );
             }
         }
+    }
+
+    private boolean isDispatchReadyBagStatus(BagStatus status) {
+        return status == BagStatus.SEALED || status == BagStatus.ARRIVED;
+    }
+
+    private void prepareArrivedBagForNextLeg(
+            Long tenantId,
+            BagDistributionManifest manifest,
+            Bag bag,
+            List<BagOrder> bagOrders
+    ) {
+        if (manifest.getDestinationType() != BagDestinationType.HUB
+                || manifest.getDestinationHubId() == null
+                || !Objects.equals(bag.getDestinationHubId(), manifest.getDestinationHubId())) {
+            return;
+        }
+        BagDestinationTarget nextTarget = resolveNextTargetForArrivedBag(
+                tenantId,
+                manifest.getDestinationHubId(),
+                bagOrders
+        );
+        if (nextTarget == null) {
+            return;
+        }
+
+        bag.setOriginHubId(manifest.getDestinationHubId());
+        bag.setDestinationType(nextTarget.destinationType());
+        bag.setDestinationHubId(nextTarget.destinationType() == BagDestinationType.HUB
+                ? nextTarget.destinationHubId()
+                : null);
+        bag.setDestinationPostOfficeCode(nextTarget.destinationType() == BagDestinationType.POST_OFFICE
+                ? normalizeText(nextTarget.destinationPostOfficeCode())
+                : null);
+    }
+
+    private BagDestinationTarget resolveNextTargetForArrivedBag(
+            Long tenantId,
+            Long currentHubId,
+            List<BagOrder> bagOrders
+    ) {
+        if (bagOrders == null || bagOrders.isEmpty()) {
+            return null;
+        }
+
+        Map<Long, TmsOrderOperationView> orderById = tmsOrderClient.lookupByIds(
+                        tenantId,
+                        bagOrders.stream()
+                                .map(BagOrder::getTmsOrderId)
+                                .filter(Objects::nonNull)
+                                .toList()
+                )
+                .stream()
+                .filter(order -> order.getId() != null)
+                .collect(Collectors.toMap(TmsOrderOperationView::getId, order -> order));
+        BagDestinationTarget sharedTarget = null;
+        for (BagOrder bagOrder : bagOrders) {
+            TmsOrderOperationView order = orderById.get(bagOrder.getTmsOrderId());
+            if (order == null) {
+                throw new AppException(ErrorCode.BAG_ORDER_NOT_FOUND);
+            }
+            bagValidator.validateTmsOrderTenant(tenantId, order);
+            BagDestinationTarget nextTarget = bagValidator.resolveDestinationTargetForOrder(
+                    tenantId,
+                    order,
+                    currentHubId
+            );
+            if (sharedTarget == null) {
+                sharedTarget = nextTarget;
+                continue;
+            }
+            if (!sameDestinationTarget(sharedTarget, nextTarget)) {
+                throw new AppException(
+                        ErrorCode.BAG_DESTINATION_INVALID,
+                        "Orders in the same bag must share the same next planned route leg."
+                );
+            }
+        }
+        return sharedTarget;
+    }
+
+    private boolean sameDestinationTarget(BagDestinationTarget first, BagDestinationTarget second) {
+        if (first == null || second == null || first.destinationType() != second.destinationType()) {
+            return false;
+        }
+        if (first.destinationType() == BagDestinationType.HUB) {
+            return Objects.equals(first.destinationHubId(), second.destinationHubId());
+        }
+        return Objects.equals(
+                normalizeText(first.destinationPostOfficeCode()),
+                normalizeText(second.destinationPostOfficeCode())
+        );
     }
 
     private String validateDestination(

@@ -84,8 +84,8 @@ export function CheckinDialog({
                   Chế độ phát triển
                 </Label>
                 <p className='text-xs text-muted-foreground'>
-                  Điền tọa độ theo hub xuất phát hoặc hub nhận của chặng
-                  Hub-Hub thay vì nhập tay.
+                  Điền tọa độ theo hub xuất phát hoặc hub nhận của chặng Hub-Hub
+                  thay vì nhập tay.
                 </p>
               </div>
               <Switch
@@ -105,9 +105,7 @@ export function CheckinDialog({
                 onChange={(event) =>
                   onStateChange({ ...state, latitude: event.target.value })
                 }
-                placeholder={
-                  devCheckinMode ? 'Tự điền từ hub' : '10.762622'
-                }
+                placeholder={devCheckinMode ? 'Tự điền từ hub' : '10.762622'}
               />
             </div>
             <div className='space-y-2'>
@@ -119,9 +117,7 @@ export function CheckinDialog({
                 onChange={(event) =>
                   onStateChange({ ...state, longitude: event.target.value })
                 }
-                placeholder={
-                  devCheckinMode ? 'Tự điền từ hub' : '106.660172'
-                }
+                placeholder={devCheckinMode ? 'Tự điền từ hub' : '106.660172'}
               />
             </div>
           </div>

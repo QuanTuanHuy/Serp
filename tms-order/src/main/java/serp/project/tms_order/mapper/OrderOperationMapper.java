@@ -22,6 +22,7 @@ public final class OrderOperationMapper {
                 order.getIsConfirm(),
                 order.getOriginPostOfficeCode(),
                 order.getDestinationPostOfficeCode(),
+                order.getPlannedRoute(),
                 order.getCurrentHubId(),
                 order.getCurrentHubCode(),
                 order.getSenderName(),

@@ -8,6 +8,13 @@
 import * as React from 'react';
 
 import { getErrorMessage, useAppSelector } from '@/lib/store';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/shared/components/ui/card';
 import { useNotification } from '@/shared/hooks';
 
 import {
@@ -15,9 +22,20 @@ import {
   useDriverCheckinBagDistributionStartMutation,
   useGetBagDistributionManifestsQuery,
   useGetHubsQuery,
+  useGetPostOfficesQuery,
 } from '../../../api/firstMileApi';
-import type { BagDistributionManifest } from '../../../types';
-import { CheckinDialog, DriverTab } from './components';
+import type {
+  BagDistributionManifest,
+  BagDistributionManifestStatus,
+} from '../../../types';
+import {
+  CheckinDialog,
+  CheckinHistoryCard,
+  DriverTab,
+  TransitCheckinMap,
+  filterCheckinHistory,
+  type CheckinHistoryFilters,
+} from './components';
 import {
   isTransitCheckinDevFeatureAvailable,
   readTransitDevCheckinPreference,
@@ -36,35 +54,86 @@ const makeEmptyCheckinState = (): CheckinState => ({
   locationLabel: '',
 });
 
+const makeDefaultHistoryFilters = (): CheckinHistoryFilters => ({
+  stage: 'ALL',
+  status: 'ALL',
+  driverId: '',
+});
+
+const parsePositiveInteger = (value: string): number | undefined => {
+  const parsed = Number(value.trim());
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+};
+
 export function HubTransferDriverCheckinPanel() {
   const notification = useNotification();
   const roles = useAppSelector(
     (state) => state.account.user.profile?.roles ?? []
   );
   const canCheckin = canDriverCheckin(roles);
+  const isAdmin = roles.includes('TMS_ADMIN');
   const isDevCheckinFeatureAvailable = isTransitCheckinDevFeatureAvailable();
   const [devCheckinMode, setDevCheckinMode] = React.useState(false);
+  const [selectedManifestId, setSelectedManifestId] = React.useState<
+    number | undefined
+  >();
+  const [historyFilters, setHistoryFilters] =
+    React.useState<CheckinHistoryFilters>(makeDefaultHistoryFilters);
 
   const [checkinTarget, setCheckinTarget] = React.useState<{
     manifest: BagDistributionManifest;
     mode: CheckinMode;
   } | null>(null);
-  const [checkinState, setCheckinState] =
-    React.useState<CheckinState>(makeEmptyCheckinState);
+  const [checkinState, setCheckinState] = React.useState<CheckinState>(
+    makeEmptyCheckinState
+  );
 
   const {
     data: manifestsData,
     isFetching,
     refetch,
-  } = useGetBagDistributionManifestsQuery({
-    page: 0,
-    size: 50,
-  });
-  const { data: hubsData } = useGetHubsQuery({
-    page: 0,
-    size: 500,
-    status: 'ACTIVE',
-  });
+  } = useGetBagDistributionManifestsQuery(
+    {
+      page: 0,
+      size: 50,
+    },
+    { skip: !canCheckin }
+  );
+  const historyStatus =
+    historyFilters.status === 'ALL'
+      ? undefined
+      : (historyFilters.status as BagDistributionManifestStatus);
+  const historyDriverId = isAdmin
+    ? parsePositiveInteger(historyFilters.driverId)
+    : undefined;
+  const { data: historyData, isFetching: isFetchingHistory } =
+    useGetBagDistributionManifestsQuery(
+      {
+        page: 0,
+        size: 200,
+        ...(historyStatus ? { status: historyStatus } : {}),
+        ...(historyDriverId ? { assignedDriverId: historyDriverId } : {}),
+      },
+      { skip: !canCheckin }
+    );
+  const { data: hubsData } = useGetHubsQuery(
+    {
+      page: 0,
+      size: 500,
+      status: 'ACTIVE',
+    },
+    { skip: !canCheckin }
+  );
+  const { data: postOfficesData, isFetching: isFetchingPostOffices } =
+    useGetPostOfficesQuery(
+      {
+        page: 0,
+        size: 500,
+        status: 'ACTIVE',
+        hasLocation: true,
+      },
+      { skip: !canCheckin }
+    );
 
   const [driverCheckinStart, { isLoading: isCheckingInStart }] =
     useDriverCheckinBagDistributionStartMutation();
@@ -76,12 +145,47 @@ export function HubTransferDriverCheckinPanel() {
       manifest.status === 'CREATED' || manifest.status === 'OUTBOUND_CONFIRMED'
   );
   const hubs = React.useMemo(() => hubsData?.items ?? [], [hubsData?.items]);
+  const postOffices = React.useMemo(
+    () => postOfficesData?.items ?? [],
+    [postOfficesData?.items]
+  );
+  const historyManifests = React.useMemo(
+    () =>
+      filterCheckinHistory(historyData?.items ?? [], historyFilters).sort(
+        (left, right) => {
+          const leftTime =
+            left.driverEndCheckinAt ??
+            left.driverStartCheckinAt ??
+            left.updatedAt ??
+            left.createdAt ??
+            '';
+          const rightTime =
+            right.driverEndCheckinAt ??
+            right.driverStartCheckinAt ??
+            right.updatedAt ??
+            right.createdAt ??
+            '';
+
+          return rightTime.localeCompare(leftTime);
+        }
+      ),
+    [historyData?.items, historyFilters]
+  );
 
   React.useEffect(() => {
     if (isDevCheckinFeatureAvailable) {
       setDevCheckinMode(readTransitDevCheckinPreference());
     }
   }, [isDevCheckinFeatureAvailable]);
+
+  React.useEffect(() => {
+    if (
+      selectedManifestId &&
+      !historyManifests.some((manifest) => manifest.id === selectedManifestId)
+    ) {
+      setSelectedManifestId(undefined);
+    }
+  }, [historyManifests, selectedManifestId]);
 
   const applyDevCheckinCoordinates = React.useCallback(
     (
@@ -110,12 +214,25 @@ export function HubTransferDriverCheckinPanel() {
         return null;
       }
 
-      setCheckinState((current) => ({
-        ...current,
-        latitude: coordinates.latitude.toFixed(6),
-        longitude: coordinates.longitude.toFixed(6),
-        locationLabel: coordinates.locationLabel,
-      }));
+      const nextLatitude = coordinates.latitude.toFixed(6);
+      const nextLongitude = coordinates.longitude.toFixed(6);
+
+      setCheckinState((current) => {
+        if (
+          current.latitude === nextLatitude &&
+          current.longitude === nextLongitude &&
+          current.locationLabel === coordinates.locationLabel
+        ) {
+          return current;
+        }
+
+        return {
+          ...current,
+          latitude: nextLatitude,
+          longitude: nextLongitude,
+          locationLabel: coordinates.locationLabel,
+        };
+      });
 
       return coordinates;
     },
@@ -142,6 +259,7 @@ export function HubTransferDriverCheckinPanel() {
       notification.error('Bạn cần quyền tài xế hoặc vận hành hub để check-in.');
       return;
     }
+    setSelectedManifestId(manifest.id);
     setCheckinTarget({ manifest, mode });
     setCheckinState(makeEmptyCheckinState());
 
@@ -162,10 +280,7 @@ export function HubTransferDriverCheckinPanel() {
   const handleSubmitCheckin = async () => {
     if (!checkinTarget) return;
     const devCoordinates = devCheckinMode
-      ? applyDevCheckinCoordinates(
-          checkinTarget.manifest,
-          checkinTarget.mode
-        )
+      ? applyDevCheckinCoordinates(checkinTarget.manifest, checkinTarget.mode)
       : null;
 
     if (devCheckinMode && !devCoordinates) {
@@ -219,12 +334,42 @@ export function HubTransferDriverCheckinPanel() {
   };
 
   return (
-    <>
+    <div className='space-y-6'>
+      <Card>
+        <CardHeader>
+          <CardTitle>Bản đồ check-in trung chuyển</CardTitle>
+          <CardDescription>
+            Theo dõi điểm xuất phát, điểm nhận và các vị trí tài xế đã check-in
+            trên từng chuyến.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TransitCheckinMap
+            manifests={historyManifests}
+            hubs={hubs}
+            postOffices={postOffices}
+            selectedManifestId={selectedManifestId}
+            loading={isFetchingHistory || isFetchingPostOffices}
+            onSelectManifest={setSelectedManifestId}
+          />
+        </CardContent>
+      </Card>
+
       <DriverTab
         manifests={manifests}
         isFetching={isFetching}
         canCheckin={canCheckin}
         onOpenCheckin={openCheckin}
+      />
+
+      <CheckinHistoryCard
+        manifests={historyManifests}
+        filters={historyFilters}
+        isAdmin={isAdmin}
+        isFetching={isFetchingHistory}
+        selectedManifestId={selectedManifestId}
+        onFiltersChange={setHistoryFilters}
+        onSelectManifest={setSelectedManifestId}
       />
 
       <CheckinDialog
@@ -240,6 +385,6 @@ export function HubTransferDriverCheckinPanel() {
         }}
         onSubmit={handleSubmitCheckin}
       />
-    </>
+    </div>
   );
 }

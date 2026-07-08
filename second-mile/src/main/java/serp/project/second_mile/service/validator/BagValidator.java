@@ -7,6 +7,7 @@ package serp.project.second_mile.service.validator;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import serp.project.second_mile.caller.dto.tms_order.PlannedOrderRoute;
 import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.Hub;
@@ -29,8 +30,10 @@ import serp.project.second_mile.repository.HubRepository;
 import serp.project.second_mile.repository.HubStaffAssignmentRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
+import serp.project.second_mile.service.dto.BagDestinationTarget;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.Objects;
 
 import static serp.project.second_mile.kernel.utils.CommonValueUtils.normalizeText;
@@ -155,36 +158,53 @@ public class BagValidator {
             String destinationPostOfficeCode,
             TmsOrderOperationView order
     ) {
-        if (destinationType == BagDestinationType.POST_OFFICE) {
-            String orderDestinationPo = normalizeText(order.getDestinationPostOfficeCode());
-            if (orderDestinationPo == null
-                    || !orderDestinationPo.equalsIgnoreCase(normalizeText(destinationPostOfficeCode))) {
-                throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
-            }
-            return;
+        BagDestinationTarget expectedTarget = resolveDestinationTargetForOrder(tenantId, order, originHubId);
+        if (destinationType != expectedTarget.destinationType()) {
+            throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
+        }
+        if (destinationType == BagDestinationType.HUB
+                && Objects.equals(originHubId, destinationHubId)) {
+            throw new AppException(
+                    ErrorCode.BAG_DESTINATION_INVALID,
+                    "Same-hub destination orders must be bagged to a destination post office."
+            );
+        }
+        if (destinationType == BagDestinationType.HUB
+                && !Objects.equals(expectedTarget.destinationHubId(), destinationHubId)) {
+            throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
+        }
+        if (destinationType == BagDestinationType.POST_OFFICE
+                && !Objects.equals(
+                normalizeText(expectedTarget.destinationPostOfficeCode()),
+                normalizeText(destinationPostOfficeCode)
+        )) {
+            throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
+        }
+    }
+
+    public BagDestinationTarget resolveDestinationTargetForOrder(
+            Long tenantId,
+            TmsOrderOperationView order,
+            Long originHubId
+    ) {
+        BagDestinationTarget plannedTarget = resolvePlannedRouteTarget(order, originHubId);
+        if (plannedTarget != null) {
+            return plannedTarget;
         }
 
-        if (destinationType == BagDestinationType.HUB) {
-            String orderDestinationPo = normalizeText(order.getDestinationPostOfficeCode());
-            if (orderDestinationPo == null) {
-                throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
-            }
-            HubPostOfficeMapping destinationMapping = hubPostOfficeMappingRepository
-                    .findByTenantIdAndPostOfficeCode(tenantId, orderDestinationPo)
-                    .orElseThrow(() -> new AppException(ErrorCode.BAG_POST_OFFICE_INVALID));
-            Long resolvedDestinationHubId = destinationMapping.getHub() == null ? null : destinationMapping.getHub().getId();
-            if (Objects.equals(originHubId, resolvedDestinationHubId)) {
-                throw new AppException(
-                        ErrorCode.BAG_DESTINATION_INVALID,
-                        "Same-hub destination orders must be bagged to a destination post office."
-                );
-            }
-            if (!Objects.equals(resolvedDestinationHubId, destinationHubId)) {
-                throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
-            }
-            return;
+        String destinationPostOfficeCode = normalizeText(order.getDestinationPostOfficeCode());
+        if (destinationPostOfficeCode == null) {
+            throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
         }
-        throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
+        return hubPostOfficeMappingRepository.findByTenantIdAndPostOfficeCode(tenantId, destinationPostOfficeCode)
+                .map(mapping -> {
+                    Long destinationHubId = mapping.getHub() == null ? null : mapping.getHub().getId();
+                    if (destinationHubId == null || Objects.equals(originHubId, destinationHubId)) {
+                        return new BagDestinationTarget(BagDestinationType.POST_OFFICE, null, destinationPostOfficeCode);
+                    }
+                    return new BagDestinationTarget(BagDestinationType.HUB, destinationHubId, destinationPostOfficeCode);
+                })
+                .orElse(new BagDestinationTarget(BagDestinationType.POST_OFFICE, null, destinationPostOfficeCode));
     }
 
     public Long resolveOriginHubIdByOrder(Long tenantId, TmsOrderOperationView order) {
@@ -232,6 +252,58 @@ public class BagValidator {
                     "Same-hub orders must use a destination post office bag."
             );
         }
+    }
+
+    private BagDestinationTarget resolvePlannedRouteTarget(TmsOrderOperationView order, Long originHubId) {
+        if (order == null
+                || originHubId == null
+                || order.getPlannedRoute() == null
+                || order.getPlannedRoute().getLegs() == null
+                || order.getPlannedRoute().getLegs().isEmpty()) {
+            return null;
+        }
+
+        String finalPostOfficeCode = normalizeText(firstPresent(
+                order.getPlannedRoute().getDestinationPostOfficeCode(),
+                order.getDestinationPostOfficeCode()
+        ));
+        return order.getPlannedRoute().getLegs().stream()
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(
+                        PlannedOrderRoute.Leg::getSequence,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ))
+                .filter(leg -> Objects.equals(leg.getOriginHubId(), originHubId))
+                .filter(leg -> "HUB".equalsIgnoreCase(normalizeText(leg.getOriginType())))
+                .findFirst()
+                .map(leg -> toDestinationTarget(leg, finalPostOfficeCode))
+                .orElse(null);
+    }
+
+    private BagDestinationTarget toDestinationTarget(PlannedOrderRoute.Leg leg, String finalPostOfficeCode) {
+        String destinationType = normalizeText(leg.getDestinationType());
+        if ("HUB".equals(destinationType)) {
+            if (leg.getDestinationHubId() == null) {
+                throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
+            }
+            return new BagDestinationTarget(BagDestinationType.HUB, leg.getDestinationHubId(), finalPostOfficeCode);
+        }
+        if ("POST_OFFICE".equals(destinationType)) {
+            String destinationPostOfficeCode = normalizeText(firstPresent(
+                    leg.getDestinationPostOfficeCode(),
+                    finalPostOfficeCode
+            ));
+            if (destinationPostOfficeCode == null) {
+                throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
+            }
+            return new BagDestinationTarget(BagDestinationType.POST_OFFICE, null, destinationPostOfficeCode);
+        }
+        throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
+    }
+
+    private String firstPresent(String first, String second) {
+        String normalizedFirst = normalizeText(first);
+        return normalizedFirst != null ? normalizedFirst : normalizeText(second);
     }
 
     private void validateDestinationPostOffice(Long tenantId, String destinationPostOfficeCode) {

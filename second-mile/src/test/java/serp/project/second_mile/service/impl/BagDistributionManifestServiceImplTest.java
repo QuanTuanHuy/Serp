@@ -14,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import serp.project.second_mile.caller.TmsOrderClient;
+import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.BagDistributionManifest;
 import serp.project.second_mile.domain.BagDistributionManifestBag;
@@ -55,7 +57,9 @@ import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.service.FileStorageService;
 import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
+import serp.project.second_mile.service.dto.BagDestinationTarget;
 import serp.project.second_mile.service.dto.response.FileUploadResponse;
+import serp.project.second_mile.service.validator.BagValidator;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -79,11 +83,13 @@ class BagDistributionManifestServiceImplTest {
     private static final Long TENANT_ID = 1L;
     private static final Long ORIGIN_HUB_ID = 10L;
     private static final Long DESTINATION_HUB_ID = 11L;
+    private static final Long NEXT_HUB_ID = 12L;
     private static final Long VEHICLE_ID = 20L;
     private static final Long DRIVER_ID = 30L;
     private static final Long ROUTE_ID = 40L;
     private static final Long BAG_ID = 50L;
     private static final Long ORDER_ID = 60L;
+    private static final String DESTINATION_POST_OFFICE_CODE = "PO-DST";
     private static final LocalDateTime DEPARTURE_AT = LocalDateTime.of(2026, 6, 6, 9, 0);
     private static final LocalDateTime ARRIVAL_AT = LocalDateTime.of(2026, 6, 6, 12, 0);
 
@@ -131,6 +137,12 @@ class BagDistributionManifestServiceImplTest {
 
     @Mock
     private BagDistributionPlanningService planningService;
+
+    @Mock
+    private TmsOrderClient tmsOrderClient;
+
+    @Mock
+    private BagValidator bagValidator;
 
     @InjectMocks
     private BagDistributionManifestServiceImpl service;
@@ -318,6 +330,18 @@ class BagDistributionManifestServiceImplTest {
                 .thenReturn(List.of(manifestBag), List.of(manifestBag));
         when(bagRepository.findByIdInAndTenantIdForUpdate(TENANT_ID, List.of(BAG_ID))).thenReturn(List.of(bag));
         when(bagOrderRepository.findByBag_IdAndTenantId(BAG_ID, TENANT_ID)).thenReturn(List.of(bagOrder));
+        TmsOrderOperationView order = TmsOrderOperationView.builder()
+                .id(ORDER_ID)
+                .orderCode("ORD-001")
+                .tenantId(TENANT_ID)
+                .build();
+        when(tmsOrderClient.lookupByIds(TENANT_ID, List.of(ORDER_ID))).thenReturn(List.of(order));
+        when(bagValidator.resolveDestinationTargetForOrder(TENANT_ID, order, DESTINATION_HUB_ID))
+                .thenReturn(new BagDestinationTarget(
+                        BagDestinationType.POST_OFFICE,
+                        null,
+                        DESTINATION_POST_OFFICE_CODE
+                ));
         when(hubRepository.findByIdAndTenantIdForUpdate(DESTINATION_HUB_ID, TENANT_ID))
                 .thenReturn(Optional.of(destinationHub));
         when(manifestRepository.save(any(BagDistributionManifest.class)))
@@ -327,9 +351,49 @@ class BagDistributionManifestServiceImplTest {
 
         assertEquals(BagDistributionManifestStatus.INBOUND_CONFIRMED, manifest.getStatus());
         assertEquals(BagStatus.ARRIVED, bag.getStatus());
+        assertEquals(DESTINATION_HUB_ID, bag.getOriginHubId());
+        assertEquals(BagDestinationType.POST_OFFICE, bag.getDestinationType());
+        assertNull(bag.getDestinationHubId());
+        assertEquals(DESTINATION_POST_OFFICE_CODE, bag.getDestinationPostOfficeCode());
         assertNotNull(manifestBag.getScanInTime());
         assertEquals(OrderStatus.INBOUND_AT_DESTINATION_HUB.name(), bagOrder.getLastKnownStatus());
         verify(tmsOrderTransitionPublisherService).publish(any(), eq(TENANT_ID));
+    }
+
+    @Test
+    void confirmInboundPreparesArrivedBagForNextPlannedHub() {
+        BagDistributionManifest manifest = manifest(BagDistributionManifestStatus.OUTBOUND_CONFIRMED);
+        manifest.setActualDepartureAt(DEPARTURE_AT);
+        BagDistributionManifestBag manifestBag = manifestBag(manifest);
+        manifestBag.setScanOutTime(DEPARTURE_AT);
+        Bag bag = bag(BagStatus.IN_TRANSIT);
+        BagOrder bagOrder = bagOrder(OrderStatus.BAG_IN_TRANSIT);
+        Hub destinationHub = hub(DESTINATION_HUB_ID);
+        TmsOrderOperationView order = TmsOrderOperationView.builder()
+                .id(ORDER_ID)
+                .orderCode("ORD-001")
+                .tenantId(TENANT_ID)
+                .build();
+        stubManifestLookup(manifest);
+        when(vehicleRepository.findById(VEHICLE_ID)).thenReturn(Optional.of(vehicle()));
+        when(manifestBagRepository.findByManifest_IdAndTenantId(100L, TENANT_ID))
+                .thenReturn(List.of(manifestBag), List.of(manifestBag));
+        when(bagRepository.findByIdInAndTenantIdForUpdate(TENANT_ID, List.of(BAG_ID))).thenReturn(List.of(bag));
+        when(bagOrderRepository.findByBag_IdAndTenantId(BAG_ID, TENANT_ID)).thenReturn(List.of(bagOrder));
+        when(tmsOrderClient.lookupByIds(TENANT_ID, List.of(ORDER_ID))).thenReturn(List.of(order));
+        when(bagValidator.resolveDestinationTargetForOrder(TENANT_ID, order, DESTINATION_HUB_ID))
+                .thenReturn(new BagDestinationTarget(BagDestinationType.HUB, NEXT_HUB_ID, DESTINATION_POST_OFFICE_CODE));
+        when(hubRepository.findByIdAndTenantIdForUpdate(DESTINATION_HUB_ID, TENANT_ID))
+                .thenReturn(Optional.of(destinationHub));
+        when(manifestRepository.save(any(BagDistributionManifest.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.confirmInbound(100L, null);
+
+        assertEquals(DESTINATION_HUB_ID, bag.getOriginHubId());
+        assertEquals(BagDestinationType.HUB, bag.getDestinationType());
+        assertEquals(NEXT_HUB_ID, bag.getDestinationHubId());
+        assertNull(bag.getDestinationPostOfficeCode());
     }
 
     @Test
@@ -459,6 +523,7 @@ class BagDistributionManifestServiceImplTest {
                 .originHubId(ORIGIN_HUB_ID)
                 .destinationType(BagDestinationType.HUB)
                 .destinationHubId(DESTINATION_HUB_ID)
+                .destinationPostOfficeCode(DESTINATION_POST_OFFICE_CODE)
                 .totalWeightSnapshot(10.0)
                 .totalVolumeSnapshot(0.5)
                 .totalOrdersSnapshot(1)
@@ -473,6 +538,7 @@ class BagDistributionManifestServiceImplTest {
                 .originHubId(ORIGIN_HUB_ID)
                 .destinationType(BagDestinationType.HUB)
                 .destinationHubId(DESTINATION_HUB_ID)
+                .destinationPostOfficeCode(DESTINATION_POST_OFFICE_CODE)
                 .currentWeight(10.0)
                 .currentVolume(0.5)
                 .currentOrders(1)
