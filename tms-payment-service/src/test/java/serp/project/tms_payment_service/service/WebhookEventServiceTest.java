@@ -6,6 +6,7 @@ package serp.project.tms_payment_service.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import serp.project.tms_payment_service.repository.WebhookEventRepository;
 
 import java.util.List;
@@ -21,13 +22,16 @@ class WebhookEventServiceTest {
     void processRetryableEventsDispatchesThroughTransactionalProxy() {
         WebhookEventRepository webhookEventRepository = mock(WebhookEventRepository.class);
         WebhookEventService self = mock(WebhookEventService.class);
+        @SuppressWarnings("unchecked")
+        ObjectProvider<WebhookEventService> selfProvider = mock(ObjectProvider.class);
         WebhookEventService service = new WebhookEventService(
                 webhookEventRepository,
                 new ObjectMapper(),
-                self
+                selfProvider
         );
 
         when(webhookEventRepository.findRetryableEventIds(any())).thenReturn(List.of(14L));
+        when(selfProvider.getObject()).thenReturn(self);
 
         service.processRetryableEvents(100);
 
