@@ -21,6 +21,7 @@ import {
   useGetInboundOrdersQuery,
   useCreateDeliveryManifestMutation,
 } from '../../../../api/lastMileApi';
+import type { CreateDeliveryManifestRequest } from '../../../../types';
 
 const NONE_VALUE = '__NONE__';
 
@@ -114,16 +115,28 @@ export const DeliveryManifestFormDialog: React.FC<Props> = ({
 
   const handleCreate = async () => {
     if (selectedOrders.size === 0) return;
+    const selectedCourierId = courierId ? Number(courierId) : undefined;
+    const request: CreateDeliveryManifestRequest = {
+      postOfficeCode,
+      plannedDate,
+      orderCodes: Array.from(selectedOrders),
+    };
+
+    if (selectedCourierId !== undefined) {
+      request.courierId = selectedCourierId;
+    }
+    if (vehicleId) {
+      request.vehicleId = vehicleId;
+    }
+    if (plannedDepartureAt) {
+      request.plannedDepartureAt = plannedDepartureAt;
+    }
+    if (note) {
+      request.note = note;
+    }
+
     try {
-      await createManifest({
-        postOfficeCode,
-        courierId: courierId ? Number(courierId) : undefined,
-        vehicleId: vehicleId || undefined,
-        plannedDate,
-        plannedDepartureAt: plannedDepartureAt || undefined,
-        orderCodes: Array.from(selectedOrders),
-        note: note || undefined,
-      }).unwrap();
+      await createManifest(request).unwrap();
       onCreated();
     } catch {
       // Error handled by RTK Query
