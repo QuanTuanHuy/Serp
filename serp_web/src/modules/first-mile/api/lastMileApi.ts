@@ -20,6 +20,7 @@ import type {
   FirstMileApiResponse,
   InboundOrderResponse,
   ManualAssignDeliveryOrdersRequest,
+  PickupOptimizationResponse,
   PickupShift,
   ReturnToSenderRequest,
   SortInboundOrdersRequest,
@@ -68,6 +69,19 @@ export const lastMileApi = api.injectEndpoints({
     }),
 
     // ─── Delivery Manifests ────────────────────────────────────────────
+    optimizeDeliveryPlan: builder.mutation<
+      PickupOptimizationResponse,
+      AutoAssignDeliveryPlanRequest
+    >({
+      query: (body) => ({
+        url: '/delivery-dispatch/plan',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupOptimizationResponse>,
+    }),
+
     autoAssignDeliveryPlan: builder.mutation<
       DeliveryAssignmentResponse,
       AutoAssignDeliveryPlanRequest
@@ -439,6 +453,7 @@ export const lastMileApi = api.injectEndpoints({
 export const {
   useGetInboundOrdersQuery,
   useConfirmInboundOrdersMutation,
+  useOptimizeDeliveryPlanMutation,
   useAutoAssignDeliveryPlanMutation,
   useManualAssignDeliveryOrdersMutation,
   useGetDeliveryDispatchTripsQuery,

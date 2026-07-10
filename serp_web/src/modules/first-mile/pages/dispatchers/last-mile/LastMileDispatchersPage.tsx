@@ -21,6 +21,7 @@ import {
   DispatchNoAccessCard,
   DispatchSetupCard,
   ManualDispatchCard,
+  PlanPreviewCard,
   type BusinessDispatchSettings,
   type DispatchCourierOption,
   type DispatchOptimizationGoalOption,
@@ -38,6 +39,7 @@ import {
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
   useManualAssignDeliveryOrdersMutation,
+  useOptimizeDeliveryPlanMutation,
 } from '../../../api';
 import type {
   AutoAssignDeliveryPlanRequest,
@@ -45,6 +47,7 @@ import type {
   FirstMileOrderDetail,
   FirstMileOrderStatus,
   ManualAssignDeliveryOrdersRequest,
+  PickupOptimizationResponse,
   PickupShift,
   PostOffice,
   PostOfficeStaff,
@@ -56,6 +59,7 @@ import {
   getManualShiftLabel,
   type ManualAssignRisk,
 } from '../first-mile/manualAssignRisks';
+import { formatOrderStatusLabel } from '../../../utils/orderStatusLabels';
 
 const POST_OFFICE_PAGE_SIZE = 200;
 const MANUAL_ORDER_PAGE_SIZE = 200;
@@ -66,6 +70,7 @@ const CANDIDATE_ORDER_STATUSES: FirstMileOrderStatus[] = [
   'READY_FOR_DELIVERY',
   'DELIVERY_FAILED',
 ];
+const DEFAULT_ROUTING_VEHICLE: RoutingVehicleOption = 'BIKE';
 
 const resolveDispatcherAccessScope = (
   roles: string[]
@@ -259,7 +264,9 @@ const evaluateLastMileManualAssignRisks = ({
 
     const label = getOrderLabel(order);
     if (!CANDIDATE_ORDER_STATUSES.includes(order.status)) {
-      invalidStatusOrders.push(`${label} (${order.status})`);
+      invalidStatusOrders.push(
+        `${label} (${formatOrderStatusLabel(order.status)})`
+      );
     }
 
     const destinationPostOfficeCode = order.destinationPostOfficeCode
@@ -381,10 +388,10 @@ export const LastMileDispatcherControlPage: React.FC = () => {
     React.useState('');
   const [selectedOrderIds, setSelectedOrderIds] = React.useState<number[]>([]);
   const [orderLimitInput, setOrderLimitInput] = React.useState('');
-  const [vehicleOption, setVehicleOption] =
-    React.useState<RoutingVehicleOption>('DEFAULT');
   const [optimizationGoal, setOptimizationGoal] =
     React.useState<DispatchOptimizationGoalOption>('BALANCED');
+  const [optimizationResult, setOptimizationResult] =
+    React.useState<PickupOptimizationResponse | null>(null);
   const [assignmentResult, setAssignmentResult] =
     React.useState<DeliveryAssignmentResponse | null>(null);
   const [assignmentResultSource, setAssignmentResultSource] =
@@ -689,16 +696,13 @@ export const LastMileDispatcherControlPage: React.FC = () => {
 
   const buildBusinessDispatchSettings = React.useCallback(() => {
     const settings: BusinessDispatchSettings = {
+      vehicle: DEFAULT_ROUTING_VEHICLE,
       optimization_goal: optimizationGoal,
       allow_lateness: true,
     };
 
-    if (vehicleOption !== 'DEFAULT') {
-      settings.vehicle = vehicleOption;
-    }
-
     return settings;
-  }, [optimizationGoal, vehicleOption]);
+  }, [optimizationGoal]);
 
   const buildSetupDispatchContext = React.useCallback(() => {
     if (!canDispatch) {
@@ -990,12 +994,10 @@ export const LastMileDispatcherControlPage: React.FC = () => {
   );
 
   const businessValues: DispatchSetupBusinessValues = {
-    vehicleOption,
     optimizationGoal,
   };
 
   const businessHandlers: DispatchSetupBusinessHandlers = {
-    onVehicleOptionChange: setVehicleOption,
     onOptimizationGoalChange: setOptimizationGoal,
   };
 

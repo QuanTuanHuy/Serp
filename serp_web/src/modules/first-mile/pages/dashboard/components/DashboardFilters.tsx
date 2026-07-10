@@ -76,7 +76,7 @@ export function DashboardFilters({
 }: DashboardFiltersProps) {
   return (
     <div className='grid gap-3 lg:grid-cols-[repeat(6,minmax(0,1fr))_auto]'>
-      <Field label='Date range'>
+      <Field label='Khoảng thời gian'>
         <Select
           value={datePreset}
           onValueChange={(value) =>
@@ -96,7 +96,7 @@ export function DashboardFilters({
         </Select>
       </Field>
 
-      <Field label='From'>
+      <Field label='Từ ngày'>
         <Input
           type='date'
           value={fromDate}
@@ -104,7 +104,7 @@ export function DashboardFilters({
         />
       </Field>
 
-      <Field label='To'>
+      <Field label='Đến ngày'>
         <Input
           type='date'
           value={toDate}
@@ -112,7 +112,7 @@ export function DashboardFilters({
         />
       </Field>
 
-      <Field label='Granularity'>
+      <Field label='Mức thời gian'>
         <Select
           value={granularity}
           onValueChange={(value) =>
@@ -150,7 +150,7 @@ export function DashboardFilters({
       )}
 
       {canUsePostOfficeFilter && (
-        <Field label='Post office'>
+        <Field label='Bưu cục'>
           <Select
             value={selectedPostOfficeCode}
             onValueChange={onPostOfficeChange}
@@ -169,7 +169,7 @@ export function DashboardFilters({
         </Field>
       )}
 
-      <Field label='Service'>
+      <Field label='Dịch vụ'>
         <Select value={selectedServiceType} onValueChange={onServiceTypeChange}>
           <SelectTrigger>
             <SelectValue />
@@ -191,7 +191,7 @@ export function DashboardFilters({
           className='h-10 w-10'
           onClick={onRefresh}
           disabled={isRefreshing}
-          title='Refresh dashboard'
+          title='Làm mới tổng quan'
         >
           <RefreshCw
             className={isRefreshing ? 'h-4 w-4 animate-spin' : 'h-4 w-4'}

@@ -61,41 +61,41 @@ export interface DashboardOption {
 export const DASHBOARD_TIMEZONE = 'Asia/Saigon';
 
 export const DATE_PRESET_OPTIONS: DashboardOption[] = [
-  { value: 'TODAY', label: 'Today' },
-  { value: 'LAST_7_DAYS', label: 'Last 7 days' },
-  { value: 'LAST_30_DAYS', label: 'Last 30 days' },
-  { value: 'CURRENT_MONTH', label: 'Current month' },
-  { value: 'CUSTOM', label: 'Custom range' },
+  { value: 'TODAY', label: 'Hôm nay' },
+  { value: 'LAST_7_DAYS', label: '7 ngày gần đây' },
+  { value: 'LAST_30_DAYS', label: '30 ngày gần đây' },
+  { value: 'CURRENT_MONTH', label: 'Tháng hiện tại' },
+  { value: 'CUSTOM', label: 'Tùy chỉnh' },
 ];
 
 export const GRANULARITY_OPTIONS: DashboardOption[] = [
-  { value: 'DAY', label: 'Daily' },
-  { value: 'WEEK', label: 'Weekly' },
-  { value: 'MONTH', label: 'Monthly' },
+  { value: 'DAY', label: 'Theo ngày' },
+  { value: 'WEEK', label: 'Theo tuần' },
+  { value: 'MONTH', label: 'Theo tháng' },
 ];
 
 export const SERVICE_TYPE_OPTIONS: DashboardOption[] = [
-  { value: 'ALL', label: 'All services' },
-  { value: 'STANDARD_ORDER', label: 'Standard' },
+  { value: 'ALL', label: 'Tất cả dịch vụ' },
+  { value: 'STANDARD_ORDER', label: 'Đơn tiêu chuẩn' },
 ];
 
 export const LEG_SUMMARIES: DashboardLegSummary[] = [
   {
     key: 'FIRST_MILE',
-    title: 'First Mile',
-    description: 'Pickup, intake, bagging, and handover readiness.',
+    title: 'Chặng lấy hàng',
+    description: 'Lấy hàng, nhập bưu cục, lập túi và sẵn sàng bàn giao.',
     icon: Truck,
   },
   {
     key: 'MIDDLE_MILE',
-    title: 'Middle Mile',
-    description: 'Hub processing, bag movement, and route execution.',
+    title: 'Chặng trung chuyển',
+    description: 'Xử lý tại hub, luân chuyển túi và thực thi tuyến.',
     icon: Route,
   },
   {
     key: 'LAST_MILE',
-    title: 'Last Mile',
-    description: 'Destination intake, courier delivery, and outcomes.',
+    title: 'Chặng giao hàng',
+    description: 'Nhập điểm đến, giao phát và kết quả giao hàng.',
     icon: PackageCheck,
   },
 ];
@@ -196,7 +196,7 @@ export const buildDashboardFilter = ({
 };
 
 export const buildHubOptions = (hubs: Hub[]): DashboardOption[] => [
-  { value: 'ALL', label: 'All hubs' },
+  { value: 'ALL', label: 'Tất cả hub' },
   ...hubs.map((hub) => ({
     value: String(hub.id),
     label: `${hub.code} - ${hub.name}`,
@@ -206,7 +206,7 @@ export const buildHubOptions = (hubs: Hub[]): DashboardOption[] => [
 export const buildPostOfficeOptions = (
   postOffices: PostOffice[]
 ): DashboardOption[] => [
-  { value: 'ALL', label: 'All post offices' },
+  { value: 'ALL', label: 'Tất cả bưu cục' },
   ...postOffices.map((postOffice) => ({
     value: postOffice.code,
     label: `${postOffice.code} - ${postOffice.name}`,
@@ -214,12 +214,12 @@ export const buildPostOfficeOptions = (
 ];
 
 export const formatNumber = (value?: number | null): string =>
-  new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(
+  new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(
     value ?? 0
   );
 
 export const formatPercent = (value?: number | null): string =>
-  `${new Intl.NumberFormat('en-US', {
+  `${new Intl.NumberFormat('vi-VN', {
     maximumFractionDigits: 1,
   }).format(value ?? 0)}%`;
 
@@ -227,7 +227,7 @@ export const formatCurrency = (
   value?: number | null,
   currency = 'VND'
 ): string =>
-  new Intl.NumberFormat('en-US', {
+  new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency,
     maximumFractionDigits: currency === 'VND' ? 0 : 2,
@@ -235,17 +235,19 @@ export const formatCurrency = (
 
 export const formatMinutes = (value?: number | null): string => {
   if (value === null || value === undefined) {
-    return 'Not available';
+    return 'Chưa có dữ liệu';
   }
   if (value < 60) {
-    return `${formatNumber(value)} min`;
+    return `${formatNumber(value)} phút`;
   }
-  return `${formatNumber(Math.floor(value / 60))}h ${formatNumber(value % 60)}m`;
+  return `${formatNumber(Math.floor(value / 60))} giờ ${formatNumber(
+    value % 60
+  )} phút`;
 };
 
 export const formatDateTime = (value?: string | null): string => {
   if (!value) {
-    return 'Not available';
+    return 'Chưa có dữ liệu';
   }
 
   const date = new Date(value);
@@ -253,9 +255,9 @@ export const formatDateTime = (value?: string | null): string => {
     return value;
   }
 
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);

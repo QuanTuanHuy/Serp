@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import serp.project.tms_order.domain.Order;
 import serp.project.tms_order.dto.request.InternalOrderStatusTransitionRequest;
 import serp.project.tms_order.enums.OrderStatus;
+import serp.project.tms_order.kafka.OrderNotificationEventPublisher;
 import serp.project.tms_order.kafka.OrderSyncEventPublisher;
 import serp.project.tms_order.repository.OrderRepository;
 import serp.project.tms_order.repository.OrderTransitionLogRepository;
@@ -25,6 +26,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,6 +46,9 @@ class OrderTransitionServiceImplTest {
     @Mock
     private OrderSyncEventPublisher orderSyncEventPublisher;
 
+    @Mock
+    private OrderNotificationEventPublisher orderNotificationEventPublisher;
+
     private OrderTransitionServiceImpl service;
 
     @BeforeEach
@@ -52,7 +58,8 @@ class OrderTransitionServiceImplTest {
                 orderRepository,
                 transitionLogRepository,
                 orderTimelineService,
-                orderSyncEventPublisher
+                orderSyncEventPublisher,
+                orderNotificationEventPublisher
         );
     }
 
@@ -146,6 +153,75 @@ class OrderTransitionServiceImplTest {
         assertEquals(OrderStatus.INBOUND_AT_DESTINATION_POST_OFFICE, order.getStatus());
         assertNull(order.getCurrentHubId());
         assertNull(order.getCurrentHubCode());
+    }
+
+    @Test
+    void allowsDeliveryCheckinToDeliverReadyForDeliveryOrder() {
+        Order order = Order.builder()
+                .id(10L)
+                .orderCode("ORD-001")
+                .status(OrderStatus.READY_FOR_DELIVERY)
+                .tenantId(TENANT_ID)
+                .build();
+        when(transitionLogRepository.findByTenantIdAndIdempotencyKey(TENANT_ID, "last-mile:delivered"))
+                .thenReturn(Optional.empty());
+        when(orderRepository.findByIdAndTenantIdForUpdate(10L, TENANT_ID)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.applyTransitions(transitionRequest(
+                "last-mile:delivered",
+                List.of(OrderStatus.READY_FOR_DELIVERY, OrderStatus.OUT_FOR_DELIVERY),
+                OrderStatus.DELIVERED,
+                null,
+                null
+        ), TENANT_ID);
+
+        assertEquals(OrderStatus.DELIVERED, order.getStatus());
+        verify(orderNotificationEventPublisher).publishOrderStatusTransition(
+                eq(order),
+                eq(OrderStatus.DELIVERED),
+                any()
+        );
+    }
+
+    @Test
+    void recordsTimelineWhenTargetStatusAlreadyAppliedAndRequested() {
+        Order order = Order.builder()
+                .id(10L)
+                .orderCode("ORD-001")
+                .status(OrderStatus.OUT_FOR_DELIVERY)
+                .tenantId(TENANT_ID)
+                .build();
+        InternalOrderStatusTransitionRequest.Context context =
+                InternalOrderStatusTransitionRequest.Context.builder()
+                        .tripCode("DLV-001")
+                        .staffName("Courier A")
+                        .build();
+
+        when(transitionLogRepository.findByTenantIdAndIdempotencyKey(TENANT_ID, "last-mile:assigned"))
+                .thenReturn(Optional.empty());
+        when(orderRepository.findByIdAndTenantIdForUpdate(10L, TENANT_ID)).thenReturn(Optional.of(order));
+
+        service.applyTransitions(InternalOrderStatusTransitionRequest.builder()
+                .source("LAST_MILE_DELIVERY_DISPATCH")
+                .idempotencyKey("last-mile:assigned")
+                .items(List.of(InternalOrderStatusTransitionRequest.Item.builder()
+                        .orderId(10L)
+                        .expectedStatuses(List.of(OrderStatus.OUT_FOR_DELIVERY))
+                        .targetStatus(OrderStatus.OUT_FOR_DELIVERY)
+                        .description("Đơn hàng đã được điều phối cho bưu tá giao hàng.")
+                        .recordTimelineWhenUnchanged(true)
+                        .context(context)
+                        .build()))
+                .build(), TENANT_ID);
+
+        assertEquals(OrderStatus.OUT_FOR_DELIVERY, order.getStatus());
+        verify(orderTimelineService).recordStatusEvent(
+                eq(order),
+                eq(OrderStatus.OUT_FOR_DELIVERY),
+                eq("Đơn hàng đã được điều phối cho bưu tá giao hàng."),
+                eq(context)
+        );
     }
 
     private InternalOrderStatusTransitionRequest transitionRequest(

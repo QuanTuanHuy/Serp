@@ -17,6 +17,7 @@ import type {
   Province,
   Ward,
 } from '../../../types';
+import { formatOrderStatusLabel } from '../../../utils/orderStatusLabels';
 
 export const PAGE_SIZE = 20;
 export const IMPORT_PREVIEW_LIMIT = 5;
@@ -43,6 +44,19 @@ export const ORDER_STATUS_OPTIONS: FirstMileOrderStatus[] = [
   'PICKED_UP',
   'PENDING_ORIGIN_POST_OFFICE_INBOUND',
   'AT_ORIGIN_POST_OFFICE',
+  'OUTBOUND_READY_FROM_PO',
+  'INBOUND_AT_ORIGIN_HUB',
+  'BAGGING_IN_PROGRESS',
+  'BAGGED',
+  'BAG_SEALED',
+  'BAG_IN_TRANSIT',
+  'INBOUND_AT_DESTINATION_HUB',
+  'INBOUND_AT_DESTINATION_POST_OFFICE',
+  'READY_FOR_DELIVERY',
+  'OUT_FOR_DELIVERY',
+  'DELIVERED',
+  'DELIVERY_FAILED',
+  'RETURNED_TO_SENDER',
   'CANCELLED',
   'LOST_OR_DAMAGED',
 ];
@@ -249,30 +263,7 @@ export const getScopeDescription = (scope: OrderAccessScope): string => {
   }
 };
 
-export const formatStatusLabel = (status: FirstMileOrderStatus): string => {
-  switch (status) {
-    case 'CREATED':
-      return 'Mới tạo';
-    case 'ASSIGNED_TO_PICKUP':
-      return 'Đã phân công lấy hàng';
-    case 'PICKING_UP':
-      return 'Đang lấy hàng';
-    case 'PICKUP_FAILED':
-      return 'Lấy hàng thất bại';
-    case 'PICKED_UP':
-      return 'Đã lấy hàng';
-    case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
-      return 'Chờ nhập bưu cục gốc';
-    case 'AT_ORIGIN_POST_OFFICE':
-      return 'Tại bưu cục gốc';
-    case 'CANCELLED':
-      return 'Đã hủy';
-    case 'LOST_OR_DAMAGED':
-      return 'Thất lạc / hư hỏng';
-    default:
-      return status.replaceAll('_', ' ');
-  }
-};
+export const formatStatusLabel = formatOrderStatusLabel;
 
 export const formatPickupMethodLabel = (
   pickupMethod?: FirstMileOrderPickupMethod
@@ -353,8 +344,21 @@ export const getStatusBadgeVariant = (
     case 'PICKED_UP':
     case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
     case 'AT_ORIGIN_POST_OFFICE':
+    case 'OUTBOUND_READY_FROM_PO':
+    case 'INBOUND_AT_ORIGIN_HUB':
+    case 'BAGGING_IN_PROGRESS':
+    case 'BAGGED':
+    case 'BAG_SEALED':
+    case 'BAG_IN_TRANSIT':
+    case 'INBOUND_AT_DESTINATION_HUB':
+    case 'INBOUND_AT_DESTINATION_POST_OFFICE':
+    case 'READY_FOR_DELIVERY':
+    case 'OUT_FOR_DELIVERY':
+    case 'DELIVERED':
       return 'default';
     case 'PICKUP_FAILED':
+    case 'DELIVERY_FAILED':
+    case 'RETURNED_TO_SENDER':
       return 'outline';
     case 'CANCELLED':
     case 'LOST_OR_DAMAGED':

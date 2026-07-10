@@ -59,6 +59,7 @@ import {
   resolveValidCheckinCoordinates,
   writeDevCheckinModePreference,
 } from './pickupCheckinDev';
+import { formatOrderStatusLabel } from '../../../utils/orderStatusLabels';
 
 type PickupPageAccessScope =
   | 'ADMIN_ALL'
@@ -80,7 +81,9 @@ const PICKUP_STATUS_LABELS: Record<string, string> = {
 };
 
 const formatPickupStatus = (status?: string): string =>
-  status ? (PICKUP_STATUS_LABELS[status] ?? status) : '--';
+  status
+    ? (PICKUP_STATUS_LABELS[status] ?? formatOrderStatusLabel(status))
+    : '--';
 
 const resolvePickupPageAccessScope = (
   roles: string[]

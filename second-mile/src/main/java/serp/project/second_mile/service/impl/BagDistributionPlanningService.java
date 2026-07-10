@@ -80,7 +80,8 @@ public class BagDistributionPlanningService {
                 request.getOriginHubId(),
                 request.getDestinationType(),
                 request.getDestinationHubId(),
-                destinationPostOfficeCode
+                destinationPostOfficeCode,
+                normalizeIds(request.getBagIds())
         );
         if (candidateBags.isEmpty()) {
             return List.of();
@@ -198,8 +199,12 @@ public class BagDistributionPlanningService {
             Long originHubId,
             BagDestinationType destinationType,
             Long destinationHubId,
-            String destinationPostOfficeCode
+            String destinationPostOfficeCode,
+            List<Long> requestedBagIds
     ) {
+        Set<Long> requestedBagIdSet = requestedBagIds.isEmpty()
+                ? Set.of()
+                : new LinkedHashSet<>(requestedBagIds);
         List<Bag> readyBags = bagRepository.findByTenantIdAndOriginHubIdAndStatusIn(
                 tenantId,
                 originHubId,
@@ -214,6 +219,7 @@ public class BagDistributionPlanningService {
                 ACTIVE_MANIFEST_STATUSES
         ));
         return readyBags.stream()
+                .filter(bag -> requestedBagIdSet.isEmpty() || requestedBagIdSet.contains(bag.getId()))
                 .filter(bag -> !activeBagIds.contains(bag.getId()))
                 .filter(bag -> destinationType == null || bag.getDestinationType() == destinationType)
                 .filter(bag -> destinationHubId == null || Objects.equals(bag.getDestinationHubId(), destinationHubId))
@@ -225,6 +231,19 @@ public class BagDistributionPlanningService {
                         .thenComparing(Comparator.comparingDouble(this::safeCurrentWeight).reversed())
                         .thenComparing(Bag::getId))
                 .toList();
+    }
+
+    private List<Long> normalizeIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<Long> normalizedIds = new LinkedHashSet<>();
+        for (Long id : ids) {
+            if (id != null && id > 0) {
+                normalizedIds.add(id);
+            }
+        }
+        return new ArrayList<>(normalizedIds);
     }
 
     private List<Route> findMatchingRoutes(Long tenantId, DestinationKey key) {

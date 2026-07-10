@@ -756,6 +756,7 @@ export interface AutoPlanBagDistributionRequest {
   planned_departure_at?: string;
   planned_arrival_at?: string;
   sealed_sla_hours?: number;
+  bag_ids?: number[];
   execute?: boolean;
   note?: string;
 }
@@ -844,6 +845,8 @@ export type SecondMileOrderStatus =
   | 'BAGGING_IN_PROGRESS'
   | 'BAGGED'
   | 'BAG_SEALED'
+  | 'BAG_IN_TRANSIT'
+  | 'INBOUND_AT_DESTINATION_HUB'
   | 'INBOUND_AT_DESTINATION_POST_OFFICE'
   | 'READY_FOR_DELIVERY'
   | 'OUT_FOR_DELIVERY'
@@ -886,6 +889,8 @@ export type FirstMileOrderStatus =
   | 'BAGGING_IN_PROGRESS'
   | 'BAGGED'
   | 'BAG_SEALED'
+  | 'BAG_IN_TRANSIT'
+  | 'INBOUND_AT_DESTINATION_HUB'
   | 'INBOUND_AT_DESTINATION_POST_OFFICE'
   | 'READY_FOR_DELIVERY'
   | 'OUT_FOR_DELIVERY'

@@ -17,12 +17,15 @@ import serp.project.first_mile.dto.response.DeliveryManifestResponse;
 import serp.project.first_mile.dto.response.DeliveryPaymentConfirmResponse;
 import serp.project.first_mile.dto.response.DeliveryPaymentInitResponse;
 import serp.project.first_mile.dto.response.DeliveryScanOutResponse;
+import serp.project.first_mile.dto.response.PickupOptimizationResponse;
 import serp.project.first_mile.enums.PickupShift;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 
 public interface DeliveryDispatchService {
+    PickupOptimizationResponse optimizeDeliveryPlan(AutoAssignDeliveryPlanRequest request);
+
     DeliveryAssignmentResponse autoAssignDeliveryPlan(AutoAssignDeliveryPlanRequest request);
 
     DeliveryAssignmentResponse manualAssignDeliveryOrders(ManualAssignDeliveryOrdersRequest request);

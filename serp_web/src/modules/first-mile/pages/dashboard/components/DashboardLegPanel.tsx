@@ -36,40 +36,40 @@ export function DashboardLegPanel(props: LegPanelProps) {
       <div className='space-y-4'>
         <div className='grid gap-3 md:grid-cols-4'>
           <MiniMetric
-            title='First-mile orders'
+            title='Đơn chặng lấy hàng'
             value={formatNumber(props.data.totalOrders)}
             icon={PackageCheck}
           />
           <MiniMetric
-            title='Pickup success'
+            title='Lấy hàng thành công'
             value={formatPercent(props.data.pickupSuccessRatePercent)}
             icon={Percent}
           />
           <MiniMetric
-            title='Avg pickup time'
+            title='Thời gian lấy TB'
             value={formatMinutes(props.data.avgPickupMinutes)}
             icon={Clock3}
           />
           <MiniMetric
-            title='Pickup SLA breaches'
+            title='Quá SLA lấy hàng'
             value={formatNumber(props.data.slaBreachedOrders)}
             icon={AlertTriangle}
           />
         </div>
         <div className='grid gap-4 xl:grid-cols-[1fr_1fr]'>
           <TrendChart
-            title='First-mile volume'
+            title='Sản lượng chặng lấy hàng'
             points={props.data.trend}
-            emptyText='No first-mile trend data'
+            emptyText='Chưa có dữ liệu xu hướng chặng lấy hàng'
           />
           <BreakdownChart
-            title='First-mile status'
+            title='Trạng thái chặng lấy hàng'
             items={props.data.statusBreakdown}
-            emptyText='No first-mile status data'
+            emptyText='Chưa có dữ liệu trạng thái chặng lấy hàng'
           />
         </div>
         <TopEntityList
-          title='Top post offices'
+          title='Bưu cục nổi bật'
           items={props.data.topPostOffices}
         />
       </div>
@@ -81,33 +81,33 @@ export function DashboardLegPanel(props: LegPanelProps) {
       <div className='space-y-4'>
         <div className='grid gap-3 md:grid-cols-4'>
           <MiniMetric
-            title='Middle-mile orders'
+            title='Đơn chặng trung chuyển'
             value={formatNumber(props.data.totalOrders)}
             icon={PackageCheck}
           />
           <MiniMetric
-            title='Bags'
+            title='Túi hàng'
             value={formatNumber(props.data.totalBags)}
             icon={PackageCheck}
           />
           <MiniMetric
-            title='Routes'
+            title='Tuyến'
             value={formatNumber(props.data.totalRoutes)}
             icon={Clock3}
           />
           <MiniMetric
-            title='On-time routes'
+            title='Tuyến đúng giờ'
             value={formatPercent(props.data.onTimeRouteRatePercent)}
             icon={Percent}
           />
         </div>
         <div className='grid gap-4 xl:grid-cols-[1fr_1fr]'>
           <BreakdownChart
-            title='Bag and route stage'
+            title='Trạng thái túi và tuyến'
             items={props.data.statusBreakdown}
-            emptyText='No middle-mile status data'
+            emptyText='Chưa có dữ liệu trạng thái chặng trung chuyển'
           />
-          <TopEntityList title='Top hubs' items={props.data.topHubs} />
+          <TopEntityList title='Hub nổi bật' items={props.data.topHubs} />
         </div>
       </div>
     );
@@ -117,42 +117,42 @@ export function DashboardLegPanel(props: LegPanelProps) {
     <div className='space-y-4'>
       <div className='grid gap-3 md:grid-cols-4'>
         <MiniMetric
-          title='Last-mile orders'
+          title='Đơn chặng giao hàng'
           value={formatNumber(props.data.totalOrders)}
           icon={PackageCheck}
         />
         <MiniMetric
-          title='Delivery success'
+          title='Giao thành công'
           value={formatPercent(props.data.deliverySuccessRatePercent)}
           icon={Percent}
         />
         <MiniMetric
-          title='Avg delivery time'
+          title='Thời gian giao TB'
           value={formatMinutes(props.data.avgDeliveryMinutes)}
           icon={Clock3}
         />
         <MiniMetric
-          title='Delivery SLA breaches'
+          title='Quá SLA giao hàng'
           value={formatNumber(props.data.slaBreachedOrders)}
           icon={AlertTriangle}
         />
       </div>
       <div className='grid gap-4 xl:grid-cols-[1fr_1fr]'>
         <TrendChart
-          title='Last-mile volume'
+          title='Sản lượng chặng giao hàng'
           points={props.data.trend}
-          emptyText='No last-mile trend data'
+          emptyText='Chưa có dữ liệu xu hướng chặng giao hàng'
         />
         <BreakdownChart
-          title='Last-mile status'
+          title='Trạng thái chặng giao hàng'
           items={props.data.statusBreakdown}
-          emptyText='No last-mile status data'
+          emptyText='Chưa có dữ liệu trạng thái chặng giao hàng'
         />
       </div>
       <BreakdownChart
-        title='Failed delivery reasons'
+        title='Lý do giao không thành công'
         items={props.data.failedReasons}
-        emptyText='No failed delivery data'
+        emptyText='Chưa có dữ liệu giao không thành công'
       />
     </div>
   );
@@ -197,7 +197,7 @@ function TopEntityList({
       <CardContent className='space-y-3'>
         {items.length === 0 ? (
           <div className='flex h-24 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground'>
-            No ranked data
+            Chưa có dữ liệu xếp hạng
           </div>
         ) : (
           items.map((item) => (

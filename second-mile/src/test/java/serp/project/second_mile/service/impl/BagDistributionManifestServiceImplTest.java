@@ -44,6 +44,7 @@ import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.enums.VehicleType;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
+import serp.project.second_mile.kafka.DriverNotificationEventPublisher;
 import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
 import serp.project.second_mile.repository.BagDistributionManifestBagRepository;
 import serp.project.second_mile.repository.BagDistributionManifestRepository;
@@ -54,6 +55,7 @@ import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
 import serp.project.second_mile.repository.HubStaffAssignmentRepository;
+import serp.project.second_mile.repository.HubStaffRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.service.FileStorageService;
@@ -128,6 +130,9 @@ class BagDistributionManifestServiceImplTest {
     private HubStaffAssignmentRepository hubStaffAssignmentRepository;
 
     @Mock
+    private HubStaffRepository hubStaffRepository;
+
+    @Mock
     private SecondMileAccessUtils secondMileAccessUtils;
 
     @Mock
@@ -144,6 +149,9 @@ class BagDistributionManifestServiceImplTest {
 
     @Mock
     private BagValidator bagValidator;
+
+    @Mock
+    private DriverNotificationEventPublisher driverNotificationEventPublisher;
 
     @InjectMocks
     private BagDistributionManifestServiceImpl service;
@@ -446,6 +454,7 @@ class BagDistributionManifestServiceImplTest {
                 DEPARTURE_AT,
                 ARRIVAL_AT,
                 24,
+                List.of(BAG_ID),
                 false,
                 null
         );

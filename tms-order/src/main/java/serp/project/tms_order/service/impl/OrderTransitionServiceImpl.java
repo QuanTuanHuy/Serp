@@ -19,6 +19,7 @@ import serp.project.tms_order.dto.response.OrderStatusTransitionResponse;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
+import serp.project.tms_order.kafka.OrderNotificationEventPublisher;
 import serp.project.tms_order.kafka.OrderSyncEventPublisher;
 import serp.project.tms_order.repository.OrderRepository;
 import serp.project.tms_order.repository.OrderTransitionLogRepository;
@@ -113,7 +114,7 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.DELIVERED,
-                EnumSet.of(OrderStatus.OUT_FOR_DELIVERY)
+                EnumSet.of(OrderStatus.READY_FOR_DELIVERY, OrderStatus.OUT_FOR_DELIVERY)
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.DELIVERY_FAILED,
@@ -130,6 +131,7 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
     private final OrderTransitionLogRepository transitionLogRepository;
     private final OrderTimelineService orderTimelineService;
     private final OrderSyncEventPublisher orderSyncEventPublisher;
+    private final OrderNotificationEventPublisher orderNotificationEventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -180,8 +182,18 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
                         item.getDescription(),
                         item.getContext()
                 );
+                publishStatusNotification(savedOrder, targetStatus, item.getContext());
                 results.add(toResult(savedOrder, previousStatus, targetStatus, true));
             } else {
+                if (Boolean.TRUE.equals(item.getRecordTimelineWhenUnchanged())) {
+                    orderTimelineService.recordStatusEvent(
+                            order,
+                            targetStatus,
+                            item.getDescription(),
+                            item.getContext()
+                    );
+                    publishStatusNotification(order, targetStatus, item.getContext());
+                }
                 results.add(toResult(order, previousStatus, targetStatus, false));
             }
         }
@@ -336,6 +348,14 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
             order.setCurrentHubId(null);
             order.setCurrentHubCode(null);
         }
+    }
+
+    private void publishStatusNotification(
+            Order order,
+            OrderStatus targetStatus,
+            InternalOrderStatusTransitionRequest.Context context
+    ) {
+        orderNotificationEventPublisher.publishOrderStatusTransition(order, targetStatus, context);
     }
 
     private OrderStatusTransitionResponse deserializeResponse(OrderTransitionLog transitionLog) {

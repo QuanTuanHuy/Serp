@@ -53,6 +53,7 @@ import serp.project.second_mile.enums.RouteStatus;
 import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
+import serp.project.second_mile.kafka.DriverNotificationEventPublisher;
 import serp.project.second_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
 import serp.project.second_mile.repository.BagDistributionManifestBagRepository;
@@ -64,6 +65,7 @@ import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
 import serp.project.second_mile.repository.HubStaffAssignmentRepository;
+import serp.project.second_mile.repository.HubStaffRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.BagDistributionManifestSpecification;
@@ -119,12 +121,14 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
     private final HubRepository hubRepository;
     private final HubPostOfficeMappingRepository hubPostOfficeMappingRepository;
     private final HubStaffAssignmentRepository hubStaffAssignmentRepository;
+    private final HubStaffRepository hubStaffRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final FileStorageService fileStorageService;
     private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
     private final BagDistributionPlanningService planningService;
     private final TmsOrderClient tmsOrderClient;
     private final BagValidator bagValidator;
+    private final DriverNotificationEventPublisher driverNotificationEventPublisher;
 
     @Override
     public PageResponse<BagDistributionManifestResponse> listManifests(
@@ -364,6 +368,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 .map(bag -> toManifestBag(savedManifest, bag, tenantId))
                 .toList();
         List<BagDistributionManifestBag> savedManifestBags = manifestBagRepository.saveAll(manifestBags);
+        publishDriverAssignmentNotification(savedManifest, tenantId);
         return new CreatedManifest(savedManifest, savedManifestBags, vehicle, route);
     }
 
@@ -605,6 +610,9 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
         validatePlannedWindow(request.getPlannedDepartureAt(), request.getPlannedArrivalAt());
+        if (normalizeIds(request.getBagIds()).isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Select at least one bag for auto planning.");
+        }
         if (request.getDestinationType() != null) {
             validateDestination(
                     request.getOriginHubId(),
@@ -1405,6 +1413,18 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 .idempotencyKey(idempotencyKey)
                 .items(items)
                 .build(), tenantId);
+    }
+
+    private void publishDriverAssignmentNotification(BagDistributionManifest manifest, Long tenantId) {
+        if (manifest == null || manifest.getAssignedDriverId() == null) {
+            return;
+        }
+        hubStaffRepository.findByIdAndTenantId(manifest.getAssignedDriverId(), tenantId)
+                .ifPresent(driver -> driverNotificationEventPublisher.publishBagDistributionAssigned(
+                        driver,
+                        manifest,
+                        tenantId
+                ));
     }
 
     private OrderStatus resolveInboundOrderStatus(BagDestinationType destinationType) {

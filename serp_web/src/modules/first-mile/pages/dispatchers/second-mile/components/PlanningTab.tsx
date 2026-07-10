@@ -74,6 +74,7 @@ interface PlanningTabProps {
   isFetchingRoutes: boolean;
   isFetchingVehicles: boolean;
   selectedBags: SecondMileBag[];
+  selectedBagCount: number;
   selectedDestinationSummary: SelectedBagSummary | null;
   planResult: BagDistributionPlan | null;
   isPlanning: boolean;
@@ -102,6 +103,7 @@ export function PlanningTab({
   isFetchingRoutes,
   isFetchingVehicles,
   selectedBags,
+  selectedBagCount,
   selectedDestinationSummary,
   planResult,
   isPlanning,
@@ -122,8 +124,8 @@ export function PlanningTab({
   const [planningMode, setPlanningMode] = useState<PlanningMode>('auto');
 
   return (
-    <div className='grid gap-4 xl:grid-cols-[minmax(0,430px)_1fr]'>
-      <Card>
+    <div className='grid gap-4 xl:grid-cols-[430px_minmax(0,1fr)]'>
+      <Card className='min-w-0'>
         <CardHeader>
           <CardTitle>Thiết lập kế hoạch</CardTitle>
           <CardDescription>
@@ -257,8 +259,8 @@ export function PlanningTab({
 
             <TabsContent value='auto' className='mt-4'>
               <div className='rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground'>
-                Chế độ tự động dùng thời gian dự kiến để chọn tuyến, xe phù hợp
-                và tránh trùng lịch tài xế.
+                Chế độ tự động dùng các túi đã chọn, thời gian dự kiến để chọn
+                tuyến, xe phù hợp và tránh trùng lịch tài xế.
               </div>
             </TabsContent>
 
@@ -315,7 +317,7 @@ export function PlanningTab({
             {planningMode === 'auto' ? (
               <>
                 <Button
-                  disabled={!canManage || isPlanning}
+                  disabled={!canManage || isPlanning || selectedBagCount === 0}
                   onClick={() => onAutoPlan(false)}
                 >
                   {isPlanning ? (
@@ -327,7 +329,7 @@ export function PlanningTab({
                 </Button>
                 <Button
                   variant='secondary'
-                  disabled={!canManage || isPlanning}
+                  disabled={!canManage || isPlanning || selectedBagCount === 0}
                   onClick={() => onAutoPlan(true)}
                 >
                   <Play className='h-4 w-4' />
@@ -352,8 +354,8 @@ export function PlanningTab({
         </CardContent>
       </Card>
 
-      <div className='space-y-4'>
-        <Card>
+      <div className='min-w-0 space-y-4'>
+        <Card className='min-w-0'>
           <CardHeader>
             <CardTitle>Tóm tắt kế hoạch</CardTitle>
             <CardDescription>

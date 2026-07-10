@@ -319,7 +319,27 @@ export function SecondMileDispatchersPage() {
   const validateAutoPlan = (): string | null => {
     const destinationError = validateDestinationPlan();
     if (destinationError) return destinationError;
-    return validatePlannedWindow();
+    const plannedWindowError = validatePlannedWindow();
+    if (plannedWindowError) return plannedWindowError;
+    if (selectedBagIds.length === 0) {
+      return 'Chọn ít nhất một túi hàng để xem trước hoặc chạy kế hoạch tự động.';
+    }
+    if (selectedDestinationSummary?.sameDestination === false) {
+      return 'Các túi hàng được chọn phải cùng hub xuất phát và điểm đến.';
+    }
+    if (
+      selectedDestinationSummary &&
+      (selectedDestinationSummary.originHubId !== planning.originHubId ||
+        selectedDestinationSummary.destinationType !==
+          planning.destinationType ||
+        selectedDestinationSummary.destinationHubId !==
+          planning.destinationHubId ||
+        selectedDestinationSummary.destinationPostOfficeCode !==
+          planning.destinationPostOfficeCode)
+    ) {
+      return 'Túi hàng được chọn phải khớp chặng đang lập kế hoạch. Hãy dùng điểm đến đã chọn hoặc điều chỉnh kế hoạch.';
+    }
+    return null;
   };
 
   const validateManualPlan = (): string | null => {
@@ -351,6 +371,7 @@ export function SecondMileDispatchersPage() {
         : undefined,
     planned_departure_at: toApiDateTime(planning.plannedDepartureAt),
     planned_arrival_at: toApiDateTime(planning.plannedArrivalAt),
+    bag_ids: selectedBagIds,
     execute,
     note: planning.note || undefined,
   });
@@ -550,6 +571,7 @@ export function SecondMileDispatchersPage() {
             isFetchingRoutes={isFetchingRoutes}
             isFetchingVehicles={isFetchingVehicles}
             selectedBags={selectedBags}
+            selectedBagCount={selectedBagIds.length}
             selectedDestinationSummary={selectedDestinationSummary}
             planResult={planResult}
             isPlanning={isPlanning}

@@ -31,6 +31,7 @@ import serp.project.first_mile.dto.response.DeliveryManifestResponse;
 import serp.project.first_mile.dto.response.DeliveryPaymentConfirmResponse;
 import serp.project.first_mile.dto.response.DeliveryPaymentInitResponse;
 import serp.project.first_mile.dto.response.DeliveryScanOutResponse;
+import serp.project.first_mile.dto.response.PickupOptimizationResponse;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
 import serp.project.first_mile.kernel.utils.AuthUtils;
@@ -48,6 +49,17 @@ public class DeliveryDispatchController {
     private final DeliveryDispatchService deliveryDispatchService;
     private final MessageService messageService;
     private final AuthUtils authUtils;
+
+    @PostMapping("/plan")
+    @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")
+    public ApiResponse<PickupOptimizationResponse> optimizeDeliveryPlan(
+            @Valid @RequestBody AutoAssignDeliveryPlanRequest request
+    ) {
+        return ApiResponse.<PickupOptimizationResponse>builder()
+                .message(messageService.getMessage("success.delivery_dispatch.plan"))
+                .result(deliveryDispatchService.optimizeDeliveryPlan(request))
+                .build();
+    }
 
     @PostMapping("/auto-assign")
     @PreAuthorize("hasAnyRole('TMS_ADMIN', 'TMS_POSTOFFICER_MANAGER')")

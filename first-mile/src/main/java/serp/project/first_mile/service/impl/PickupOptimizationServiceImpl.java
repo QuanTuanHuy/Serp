@@ -35,6 +35,7 @@ import serp.project.first_mile.enums.TripType;
 import serp.project.first_mile.enums.VehicleStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.kafka.StaffNotificationEventPublisher;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
@@ -127,6 +128,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
     private final PickupOptimizationEngine pickupOptimizationEngine;
     private final FirstMileAccessUtils firstMileAccessUtils;
     private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
+    private final StaffNotificationEventPublisher staffNotificationEventPublisher;
 
     @Value("${distance-matrix.batch-size:20}")
     private Integer distanceMatrixBatchSize;
@@ -624,6 +626,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
             ));
         }
         enqueueTransitions(transitionItems, tenantId);
+        staffNotificationEventPublisher.publishPickupTripAssigned(courier, savedTrip, tenantId);
 
         Map<Long, TmsOrderOperationView> finalOrderById = loadOrdersByIdMapOrThrow(finalTripOrderIds, tenantId);
         List<PickupAssignmentResponse.AssignedStopResponse> stopResponses = new ArrayList<>();
@@ -766,6 +769,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 );
             }
 
+            publishPickupAssignmentNotification(route.courierStaffId(), savedTrip, tenantId);
             tripResponses.add(toAssignedTripResponse(savedTrip, route, routeEvaluation));
         }
 
@@ -997,6 +1001,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 .expectedStatuses(expectedStatuses)
                 .targetStatus(targetStatus)
                 .description(description)
+                .recordTimelineWhenUnchanged(targetStatus == OrderStatus.ASSIGNED_TO_PICKUP)
                 .context(transitionContext)
                 .build();
     }
@@ -1014,6 +1019,14 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
                 .idempotencyKey(TRANSITION_SOURCE + "-" + UUID.randomUUID())
                 .items(items)
                 .build(), tenantId);
+    }
+
+    private void publishPickupAssignmentNotification(Long courierStaffId, Trip trip, Long tenantId) {
+        if (courierStaffId == null || trip == null) {
+            return;
+        }
+        postOfficeStaffRepository.findByIdAndTenantId(courierStaffId, tenantId)
+                .ifPresent(courier -> staffNotificationEventPublisher.publishPickupTripAssigned(courier, trip, tenantId));
     }
 
     private Map<Long, Trip> loadReplannableTripsByCourier(

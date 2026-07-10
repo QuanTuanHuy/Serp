@@ -40,6 +40,7 @@ import type {
   DeliveryAssignedStop,
   DeliveryAssignedTrip,
   DeliveryAssignmentResponse,
+  DeliveryOrderStatus,
   FirstMileFeePayer,
   FirstMileOrderDetail,
   FirstMileOrderStatus,
@@ -55,6 +56,7 @@ import {
   resolveValidDeliveryCheckinCoordinates,
   writeDeliveryDevCheckinModePreference,
 } from './deliveryCheckinDev';
+import { formatOrderStatusLabel } from '../../../utils/orderStatusLabels';
 
 type DeliveryPageAccessScope =
   | 'ADMIN_ALL'
@@ -86,12 +88,12 @@ const SHIFT_LABELS: Record<PickupShift, string> = {
   EVENING: 'Ca tối',
 };
 
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  READY_FOR_DELIVERY: 'Sẵn sàng giao',
+const DELIVERY_STATUS_LABELS: Record<DeliveryOrderStatus, string> = {
+  PENDING: 'Chưa giao',
   OUT_FOR_DELIVERY: 'Đang giao',
   DELIVERED: 'Đã giao',
-  DELIVERY_FAILED: 'Giao thất bại',
-  RETURNED_TO_SENDER: 'Đã hoàn',
+  FAILED: 'Giao thất bại',
+  RETURNED: 'Đã hoàn',
 };
 
 const resolveDeliveryPageAccessScope = (
@@ -162,7 +164,18 @@ const normalizeOrderCode = (value?: string): string =>
   value?.trim().toUpperCase() ?? '';
 
 const formatOrderStatus = (status?: string): string =>
-  status ? (ORDER_STATUS_LABELS[status] ?? status) : '--';
+  formatOrderStatusLabel(status);
+
+const formatDeliveryStatus = (status?: DeliveryOrderStatus): string =>
+  status ? DELIVERY_STATUS_LABELS[status] : '--';
+
+const formatTrackingStatus = (order: DeliveryTrackingOrder): string => {
+  if (order.deliveryStatus && order.deliveryStatus !== 'PENDING') {
+    return formatDeliveryStatus(order.deliveryStatus);
+  }
+
+  return formatOrderStatus(order.orderStatus);
+};
 
 const getScopeLabel = (scope: DeliveryPageAccessScope): string => {
   if (scope === 'ADMIN_ALL') {
@@ -288,8 +301,7 @@ export const LastMileDispatchersPage: React.FC = () => {
   const [checkinLongitude, setCheckinLongitude] = React.useState('');
   const [checkinNote, setCheckinNote] = React.useState('');
   const [isResolvingLocation, setIsResolvingLocation] = React.useState(false);
-  const isDevCheckinFeatureAvailable =
-    isDeliveryCheckinDevFeatureAvailable();
+  const isDevCheckinFeatureAvailable = isDeliveryCheckinDevFeatureAvailable();
   const [devCheckinMode, setDevCheckinMode] = React.useState(false);
 
   React.useEffect(() => {
@@ -1031,7 +1043,7 @@ export const LastMileDispatchersPage: React.FC = () => {
                                 {order.orderCode || `#${order.orderId}`}
                               </div>
                               <div className='text-xs text-muted-foreground'>
-                                {formatOrderStatus(order.orderStatus)}
+                                {formatTrackingStatus(order)}
                               </div>
                             </td>
                             <td className='px-3 py-2'>
@@ -1171,6 +1183,76 @@ export const LastMileDispatchersPage: React.FC = () => {
                     Rời đi: {formatDateTime(selectedOrder.plannedDepartureTime)}
                   </div>
                 </div>
+
+                <div className='space-y-2 sm:col-span-3'>
+                  <div className='text-xs text-muted-foreground'>
+                    Kết quả check-in
+                  </div>
+                  {selectedOrder.deliveryCheckinTime ? (
+                    <div className='grid gap-3 rounded-md border bg-muted/30 p-3 text-sm sm:grid-cols-3'>
+                      <div>
+                        <div className='text-xs text-muted-foreground'>
+                          Trạng thái giao
+                        </div>
+                        <Badge variant='default'>
+                          {formatDeliveryStatus(selectedOrder.deliveryStatus)}
+                        </Badge>
+                      </div>
+                      <div>
+                        <div className='text-xs text-muted-foreground'>
+                          Thời gian check-in
+                        </div>
+                        <div>
+                          {formatDateTime(selectedOrder.deliveryCheckinTime)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className='text-xs text-muted-foreground'>
+                          Tọa độ check-in
+                        </div>
+                        <div>
+                          {selectedOrder.deliveryCheckinLat !== undefined &&
+                          selectedOrder.deliveryCheckinLng !== undefined
+                            ? `${selectedOrder.deliveryCheckinLat.toFixed(6)}, ${selectedOrder.deliveryCheckinLng.toFixed(6)}`
+                            : '--'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className='text-xs text-muted-foreground'>
+                          Khoảng cách
+                        </div>
+                        <div>
+                          {selectedOrder.deliveryCheckinDistanceM !==
+                            undefined &&
+                          selectedOrder.deliveryCheckinDistanceM !== null
+                            ? `${selectedOrder.deliveryCheckinDistanceM.toLocaleString('vi-VN')} m`
+                            : '--'}
+                        </div>
+                      </div>
+                      <div className='sm:col-span-2'>
+                        <div className='text-xs text-muted-foreground'>
+                          Ảnh bằng chứng
+                        </div>
+                        {selectedOrder.proofPhotoUrl ? (
+                          <a
+                            href={selectedOrder.proofPhotoUrl}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            className='text-primary underline-offset-4 hover:underline'
+                          >
+                            Xem ảnh check-in
+                          </a>
+                        ) : (
+                          <div>--</div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='rounded-md border border-dashed p-3 text-sm text-muted-foreground'>
+                      Đơn này chưa có dữ liệu check-in giao hàng.
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ) : null}
@@ -1219,8 +1301,8 @@ export const LastMileDispatchersPage: React.FC = () => {
                     Chế độ phát triển
                   </Label>
                   <p className='text-xs text-muted-foreground'>
-                    Điền tọa độ check-in theo vị trí người nhận thay vì GPS
-                    hiện tại.
+                    Điền tọa độ check-in theo vị trí người nhận thay vì GPS hiện
+                    tại.
                   </p>
                 </div>
                 <Switch

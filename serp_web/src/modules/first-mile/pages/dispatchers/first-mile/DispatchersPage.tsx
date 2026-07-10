@@ -72,6 +72,7 @@ const CANDIDATE_ORDER_STATUSES: FirstMileOrderStatus[] = [
   'CREATED',
   'PICKUP_FAILED',
 ];
+const DEFAULT_ROUTING_VEHICLE: RoutingVehicleOption = 'BIKE';
 
 const resolveDispatcherAccessScope = (
   roles: string[]
@@ -233,8 +234,6 @@ export const DispatchersPage: React.FC = () => {
   const [selectedManualCourierId, setSelectedManualCourierId] =
     React.useState('');
   const [orderLimitInput, setOrderLimitInput] = React.useState('');
-  const [vehicleOption, setVehicleOption] =
-    React.useState<RoutingVehicleOption>('DEFAULT');
   const [optimizationGoal, setOptimizationGoal] =
     React.useState<DispatchOptimizationGoalOption>('BALANCED');
 
@@ -714,16 +713,13 @@ export const DispatchersPage: React.FC = () => {
 
   const buildBusinessDispatchSettings = React.useCallback(() => {
     const settings: BusinessDispatchSettings = {
+      vehicle: DEFAULT_ROUTING_VEHICLE,
       optimization_goal: optimizationGoal,
       allow_lateness: true,
     };
 
-    if (vehicleOption !== 'DEFAULT') {
-      settings.vehicle = vehicleOption;
-    }
-
     return settings;
-  }, [optimizationGoal, vehicleOption]);
+  }, [optimizationGoal]);
 
   const handleClearSelectedOrders = () => {
     setSelectedOrderIds([]);
@@ -1010,12 +1006,10 @@ export const DispatchersPage: React.FC = () => {
   }, [manualCourierOptions, pendingManualPayload]);
 
   const businessValues: DispatchSetupBusinessValues = {
-    vehicleOption,
     optimizationGoal,
   };
 
   const businessHandlers: DispatchSetupBusinessHandlers = {
-    onVehicleOptionChange: setVehicleOption,
     onOptimizationGoalChange: setOptimizationGoal,
   };
 

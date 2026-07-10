@@ -42,6 +42,7 @@ class BagDistributionPlanningServiceTest {
     private static final Long ORIGIN_HUB_ID = 10L;
     private static final Long DESTINATION_HUB_ID = 11L;
     private static final Long BAG_ID = 50L;
+    private static final Long OTHER_BAG_ID = 51L;
     private static final LocalDateTime DEPARTURE_AT = LocalDateTime.of(2026, 6, 6, 9, 0);
     private static final LocalDateTime ARRIVAL_AT = LocalDateTime.of(2026, 6, 6, 12, 0);
 
@@ -116,6 +117,7 @@ class BagDistributionPlanningServiceTest {
                 DEPARTURE_AT,
                 ARRIVAL_AT,
                 24,
+                List.of(BAG_ID),
                 false,
                 null
         ));
@@ -169,11 +171,79 @@ class BagDistributionPlanningServiceTest {
                 DEPARTURE_AT,
                 ARRIVAL_AT,
                 24,
+                List.of(BAG_ID),
                 false,
                 null
         ));
 
         assertEquals(1, items.size());
         assertTrue(items.get(0).bagIds().contains(BAG_ID));
+    }
+
+    @Test
+    void planOnlyUsesRequestedBagIdsWhenProvided() {
+        Bag selectedBag = Bag.builder()
+                .id(BAG_ID)
+                .bagCode("BAG-001")
+                .originHubId(ORIGIN_HUB_ID)
+                .destinationType(BagDestinationType.HUB)
+                .destinationHubId(DESTINATION_HUB_ID)
+                .currentWeight(10.0)
+                .currentVolume(0.5)
+                .currentOrders(1)
+                .status(BagStatus.SEALED)
+                .sealedAt(DEPARTURE_AT.minusHours(30))
+                .tenantId(TENANT_ID)
+                .build();
+        Bag unselectedBag = Bag.builder()
+                .id(OTHER_BAG_ID)
+                .bagCode("BAG-002")
+                .originHubId(ORIGIN_HUB_ID)
+                .destinationType(BagDestinationType.HUB)
+                .destinationHubId(DESTINATION_HUB_ID)
+                .currentWeight(12.0)
+                .currentVolume(0.6)
+                .currentOrders(2)
+                .status(BagStatus.SEALED)
+                .sealedAt(DEPARTURE_AT.minusHours(29))
+                .tenantId(TENANT_ID)
+                .build();
+
+        when(bagRepository.findByTenantIdAndOriginHubIdAndStatusIn(
+                TENANT_ID,
+                ORIGIN_HUB_ID,
+                List.of(BagStatus.SEALED, BagStatus.ARRIVED)
+        ))
+                .thenReturn(List.of(selectedBag, unselectedBag));
+        when(manifestBagRepository.findActiveBagIds(
+                eq(TENANT_ID),
+                eq(List.of(BAG_ID, OTHER_BAG_ID)),
+                anyCollection()
+        )).thenReturn(List.of());
+        when(routeRepository.findByTenantIdAndStatusAndOriginTypeAndOriginHubIdAndDestinationTypeAndDestinationHubId(
+                TENANT_ID,
+                RouteStatus.ACTIVE,
+                RouteEndpointType.HUB,
+                ORIGIN_HUB_ID,
+                RouteDestinationType.HUB,
+                DESTINATION_HUB_ID
+        )).thenReturn(List.of());
+
+        List<BagDistributionPlanItemResponse> items = service.plan(TENANT_ID, new AutoPlanBagDistributionRequest(
+                ORIGIN_HUB_ID,
+                BagDestinationType.HUB,
+                DESTINATION_HUB_ID,
+                null,
+                DEPARTURE_AT,
+                ARRIVAL_AT,
+                24,
+                List.of(BAG_ID),
+                false,
+                null
+        ));
+
+        assertEquals(1, items.size());
+        assertEquals(List.of(BAG_ID), items.get(0).bagIds());
+        assertEquals(List.of("BAG-001"), items.get(0).bagCodes());
     }
 }
