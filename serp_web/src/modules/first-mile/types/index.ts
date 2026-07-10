@@ -932,6 +932,7 @@ export type DeliveryOrderStatus =
   | 'OUT_FOR_DELIVERY'
   | 'DELIVERED'
   | 'FAILED'
+  | 'RESCHEDULED'
   | 'RETURNED';
 
 export interface FirstMileOrderProductItem {
@@ -1523,6 +1524,7 @@ export interface DeliveryPaymentConfirmResponse {
   paymentStatus?: FirstMilePaymentStatus;
   appTransId?: string;
   gatewayStatus?: string;
+  status?: string;
   message?: string;
 }
 
@@ -1596,9 +1598,9 @@ export interface DeliveryManifestListFilters {
 
 export interface CreateDeliveryManifestRequest {
   postOfficeCode: string;
-  courierId: number;
+  courierId?: number;
   vehicleId?: string;
-  plannedDate?: string;
+  plannedDate: string;
   plannedDepartureAt?: string;
   orderCodes: string[];
   note?: string;

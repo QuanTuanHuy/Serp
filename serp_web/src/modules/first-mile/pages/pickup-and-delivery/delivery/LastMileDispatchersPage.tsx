@@ -93,6 +93,7 @@ const DELIVERY_STATUS_LABELS: Record<DeliveryOrderStatus, string> = {
   OUT_FOR_DELIVERY: 'Đang giao',
   DELIVERED: 'Đã giao',
   FAILED: 'Giao thất bại',
+  RESCHEDULED: 'Hẹn giao lại',
   RETURNED: 'Đã hoàn',
 };
 

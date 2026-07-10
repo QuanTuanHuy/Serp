@@ -71,6 +71,11 @@ const ORDER_STATUS_CONFIG: Record<
   RETURNED: { label: 'Đã hoàn', color: 'bg-purple-100 text-purple-700' },
 };
 
+const UNKNOWN_ORDER_STATUS_CONFIG = {
+  label: 'Chưa xác định',
+  color: 'bg-slate-100 text-slate-700',
+};
+
 const DELIVERY_DEV_CHECKIN_STORAGE_KEY = 'serp.first-mile.delivery-dev-checkin';
 const PAYMENT_RESULT_MESSAGE_TYPE = 'SERP_PAYMENT_RESULT';
 const RECEIVER_FEE_PAYER = 'RECEIVER';
@@ -92,6 +97,13 @@ const formatCurrency = (value?: number | null): string => {
 
 const formatPaymentStatus = (status?: string | null): string =>
   status ? (PAYMENT_STATUS_LABELS[status] ?? status) : '--';
+
+const getOrderCode = (
+  order: DeliveryManifestOrderResponse | null
+): string | null => {
+  const orderCode = order?.orderCode?.trim();
+  return orderCode || null;
+};
 
 const getRequiredCodAmount = (
   order: DeliveryManifestOrderResponse | null
@@ -215,6 +227,12 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
   const handleConfirmDelivered = async () => {
     if (!activeOrder) return;
 
+    const orderCode = getOrderCode(activeOrder);
+    if (!orderCode) {
+      notification.error('Đơn hàng thiếu mã vận đơn.');
+      return;
+    }
+
     if (!proofPhoto) {
       notification.error('Vui lòng chọn ảnh bằng chứng trước khi check-in.');
       return;
@@ -237,7 +255,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
     try {
       await confirmDelivered({
         manifestId: current.id,
-        orderCode: activeOrder.orderCode,
+        orderCode,
         body: {
           codCollected: getRequiredCodAmount(activeOrder),
           shippingFeeCollected: getRequiredReceiverShippingFee(activeOrder),
@@ -284,12 +302,18 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
         paymentInitResult?.appTransId?.trim() ||
         activeOrder.deliveryPaymentAppTransId?.trim();
 
+      const orderCode = getOrderCode(activeOrder);
+      if (!orderCode) {
+        notification.error('Đơn hàng thiếu mã vận đơn.');
+        return;
+      }
+
       if (!resolvedAppTransId) {
         notification.error('Thiếu giao dịch thanh toán.');
         return;
       }
 
-      const messageKey = `${current.id}:${activeOrder.orderCode}:${resolvedAppTransId}`;
+      const messageKey = `${current.id}:${orderCode}:${resolvedAppTransId}`;
       if (
         lastHandledPaymentMessageKeyRef.current === messageKey ||
         paymentResultHandlingInProgressRef.current
@@ -304,14 +328,14 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       try {
         const paymentResult = await confirmDeliveryPayment({
           manifestId: current.id,
-          orderCode: activeOrder.orderCode,
+          orderCode,
           body: { appTransId: resolvedAppTransId },
         }).unwrap();
 
         paymentCompletionHandledRef.current = true;
         markActiveOrderPaymentConfirmed(
-          paymentResult.appTransId,
-          paymentResult.amount
+          paymentResult.appTransId ?? resolvedAppTransId,
+          paymentResult.amount ?? getRequiredCustomerPayment(activeOrder)
         );
         setPaymentInitResult((prev) =>
           prev
@@ -323,10 +347,11 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
               }
             : {
                 manifestId: paymentResult.manifestId,
-                orderCode: paymentResult.orderCode,
-                amount: paymentResult.amount,
+                orderCode: paymentResult.orderCode ?? orderCode,
+                amount:
+                  paymentResult.amount ?? getRequiredCustomerPayment(activeOrder),
                 paymentStatus: paymentResult.paymentStatus,
-                appTransId: paymentResult.appTransId,
+                appTransId: paymentResult.appTransId ?? resolvedAppTransId,
                 status: paymentResult.status,
                 message: paymentResult.message,
               }
@@ -366,10 +391,16 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       return;
     }
 
+    const orderCode = getOrderCode(activeOrder);
+    if (!orderCode) {
+      notification.error('Đơn hàng thiếu mã vận đơn.');
+      return;
+    }
+
     try {
       const paymentResult = await initiateDeliveryPayment({
         manifestId: current.id,
-        orderCode: activeOrder.orderCode,
+        orderCode,
       }).unwrap();
 
       setPaymentInitResult(paymentResult);
@@ -449,7 +480,8 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
       }
       if (
         messageOrderCode &&
-        messageOrderCode.toUpperCase() !== activeOrder.orderCode.toUpperCase()
+        messageOrderCode.toUpperCase() !==
+          (getOrderCode(activeOrder) ?? '').toUpperCase()
       ) {
         return;
       }
@@ -529,10 +561,15 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
 
   const handleConfirmFailed = async () => {
     if (!activeOrder) return;
+    const orderCode = getOrderCode(activeOrder);
+    if (!orderCode) {
+      notification.error('Đơn hàng thiếu mã vận đơn.');
+      return;
+    }
     try {
       await confirmFailed({
         manifestId: current.id,
-        orderCode: activeOrder.orderCode,
+        orderCode,
         body: {
           failureReason: failureReason || 'UNKNOWN',
           note: deliveryNote || undefined,
@@ -549,10 +586,15 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
 
   const handleReturnToSender = async () => {
     if (!activeOrder) return;
+    const orderCode = getOrderCode(activeOrder);
+    if (!orderCode) {
+      notification.error('Đơn hàng thiếu mã vận đơn.');
+      return;
+    }
     try {
       await confirmReturn({
         manifestId: current.id,
-        orderCode: activeOrder.orderCode,
+        orderCode,
         body: { note: deliveryNote || undefined },
       }).unwrap();
       resetForm();
@@ -636,7 +678,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
   };
 
   const sortedOrders = [...(current.orders ?? [])].sort(
-    (a, b) => a.sequence - b.sequence
+    (a, b) => (a.sequence ?? 0) - (b.sequence ?? 0)
   );
 
   return (
@@ -649,7 +691,9 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
               <Truck className='h-5 w-5 text-primary' />
               <h2 className='text-lg font-semibold'>{current.manifestCode}</h2>
               <Badge className='text-xs'>
-                {MANIFEST_STATUS_LABELS[current.status] ?? current.status}
+                {current.status
+                  ? (MANIFEST_STATUS_LABELS[current.status] ?? current.status)
+                  : '--'}
               </Badge>
             </div>
             <div className='flex gap-4 mt-1 text-sm text-muted-foreground'>
@@ -672,24 +716,24 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
         <div className='grid grid-cols-4 gap-3 mb-4'>
           <KpiCard
             label='Tổng đơn'
-            value={current.totalOrders}
+            value={current.totalOrders ?? 0}
             icon={Package}
           />
           <KpiCard
             label='Đã giao'
-            value={current.deliveredCount}
+            value={current.deliveredCount ?? 0}
             icon={CheckCircle2}
             color='text-green-600'
           />
           <KpiCard
             label='Thất bại'
-            value={current.failedCount}
+            value={current.failedCount ?? 0}
             icon={XCircle}
             color='text-red-600'
           />
           <KpiCard
             label='COD đã thu'
-            value={`${current.collectedCodAmount.toLocaleString()} VND`}
+            value={`${(current.collectedCodAmount ?? 0).toLocaleString()} VND`}
             icon={Banknote}
             color='text-amber-600'
           />
@@ -743,7 +787,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                   order.deliveryPaymentAppTransId
                     ? {
                         manifestId: current.id,
-                        orderCode: order.orderCode,
+                        orderCode: order.orderCode ?? '',
                         amount:
                           order.deliveryPaymentAmount ??
                           getRequiredCustomerPayment(order),
@@ -781,7 +825,7 @@ export const DeliveryManifestDetailDialog: React.FC<Props> = ({
                 {actionMode === 'fail' && 'Báo giao thất bại'}
                 {actionMode === 'return' && 'Hoàn về người gửi'}
                 <span className='text-muted-foreground ml-2'>
-                  - {activeOrder.orderCode}
+                  - {getOrderCode(activeOrder) ?? '--'}
                 </span>
               </h4>
               <Button variant='ghost' size='sm' onClick={resetForm}>
@@ -1143,7 +1187,12 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
   onFail,
   onReturn,
 }) => {
-  const statusConfig = ORDER_STATUS_CONFIG[order.status];
+  const statusConfig = order.status
+    ? ORDER_STATUS_CONFIG[order.status]
+    : UNKNOWN_ORDER_STATUS_CONFIG;
+  const deliveryAttemptCount = order.deliveryAttemptCount ?? 0;
+  const codAmount = order.codAmount ?? 0;
+  const shippingFee = order.shippingFee ?? 0;
 
   return (
     <div
@@ -1155,20 +1204,20 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
         <div className='flex items-start gap-3'>
           {/* Sequence number */}
           <div className='h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0'>
-            {order.sequence}
+            {order.sequence ?? '-'}
           </div>
 
           <div className='min-w-0'>
             <div className='flex items-center gap-2'>
               <span className='font-mono text-sm font-medium'>
-                {order.orderCode}
+                {order.orderCode ?? '--'}
               </span>
               <Badge className={`${statusConfig.color} text-xs`}>
                 {statusConfig.label}
               </Badge>
-              {order.deliveryAttemptCount > 1 && (
+              {deliveryAttemptCount > 1 && (
                 <Badge variant='outline' className='text-xs'>
-                  Lần thử #{order.deliveryAttemptCount}
+                  Lần thử #{deliveryAttemptCount}
                 </Badge>
               )}
             </div>
@@ -1186,14 +1235,14 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
         </div>
 
         <div className='flex flex-col items-end gap-1'>
-          {order.codAmount > 0 && (
+          {codAmount > 0 && (
             <span className='text-xs font-medium text-amber-600'>
-              COD: {order.codAmount.toLocaleString()} VND
+              COD: {codAmount.toLocaleString()} VND
             </span>
           )}
-          {order.shippingFee > 0 && (
+          {shippingFee > 0 && (
             <span className='text-xs text-muted-foreground'>
-              Phí: {order.shippingFee.toLocaleString()} VND
+              Phí: {shippingFee.toLocaleString()} VND
             </span>
           )}
         </div>
