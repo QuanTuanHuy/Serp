@@ -258,6 +258,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
                 AND a.driver.id = :driverId
                 AND a.tenantId = :tenantId
                 AND a.isDeleted = false
+                AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                 serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
           )
         GROUP BY ts.status
     """)
@@ -278,6 +280,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
                 AND a.attendant.id = :attendantId
                 AND a.tenantId = :tenantId
                 AND a.isDeleted = false
+                AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                 serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
           )
         GROUP BY ts.status
     """)
@@ -307,6 +311,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
                     AND a.driver.id = :driverProfileId
                     AND a.tenantId = :tenantId
                     AND a.isDeleted = false
+                    AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                     serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
               ))
               OR (:attendantProfileId IS NOT NULL AND EXISTS (
                   SELECT a FROM RouteAssignmentEntity a
@@ -314,6 +320,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
                     AND a.attendant.id = :attendantProfileId
                     AND a.tenantId = :tenantId
                     AND a.isDeleted = false
+                    AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                     serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
               ))
               OR (:parentProfileId IS NOT NULL AND ts.subscription.student.parentProfile.id = :parentProfileId)
           )
@@ -349,6 +357,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
                     AND a.driver.id = :driverProfileId
                     AND a.tenantId = :tenantId
                     AND a.isDeleted = false
+                    AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                     serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
               ))
               OR (:attendantProfileId IS NOT NULL AND EXISTS (
                   SELECT a FROM RouteAssignmentEntity a
@@ -356,6 +366,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
                     AND a.attendant.id = :attendantProfileId
                     AND a.tenantId = :tenantId
                     AND a.isDeleted = false
+                    AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                     serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
               ))
               OR (:parentProfileId IS NOT NULL AND ts.subscription.student.parentProfile.id = :parentProfileId)
           )
@@ -390,6 +402,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
                     AND a.driver.id = :driverProfileId
                     AND a.tenantId = :tenantId
                     AND a.isDeleted = false
+                    AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                     serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
               ))
               OR (:attendantProfileId IS NOT NULL AND EXISTS (
                   SELECT a FROM RouteAssignmentEntity a
@@ -397,6 +411,8 @@ public interface TripStudentRepository extends BaseRepository<TripStudentEntity,
                     AND a.attendant.id = :attendantProfileId
                     AND a.tenantId = :tenantId
                     AND a.isDeleted = false
+                    AND a.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                     serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
               ))
               OR (:parentProfileId IS NOT NULL AND ts.subscription.student.parentProfile.id = :parentProfileId)
           )

@@ -39,6 +39,7 @@ import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { SCHOOL_BUS_ACCOUNT_MODULE_ID } from '../constants';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import type {
   SchoolBusAccountUser,
   SchoolBusParent,
@@ -113,6 +114,7 @@ function ContactCompletenessBadge({
 }
 
 export function SchoolBusParentsPage() {
+  const access = useSchoolBusAccess();
   const currentUser = useAppSelector(selectUserProfile);
   const organizationId = currentUser?.organizationId;
   const pagination = useSchoolBusPagination({
@@ -141,6 +143,7 @@ export function SchoolBusParentsPage() {
   );
   const { data: summaryData } = useGetParentSummaryQuery(undefined, {
     refetchOnMountOrArgChange: true,
+    skip: !access.isOperator,
   });
   const { data: editingParentData } = useGetParentByIdQuery(
     editingParentId || 0,

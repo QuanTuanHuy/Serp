@@ -74,6 +74,7 @@ import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { LinkPickupPointDialog } from '../components/forms/LinkPickupPointDialog';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import type {
   SchoolBusDepot,
   SchoolBusPickupPoint,
@@ -452,6 +453,7 @@ export function SchoolBusSchoolsPage() {
 }
 
 function SchoolBusSchoolsPageContent() {
+  const access = useSchoolBusAccess();
   const params = useParams();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -548,6 +550,7 @@ function SchoolBusSchoolsPageContent() {
     useGetAllActiveSchoolPickupLinksQuery();
   const { data: summaryData } = useGetSchoolRegistrySummaryQuery(undefined, {
     refetchOnMountOrArgChange: true,
+    skip: !access.isOperator,
   });
 
   const [createSchool, { isLoading: creatingSchool }] =

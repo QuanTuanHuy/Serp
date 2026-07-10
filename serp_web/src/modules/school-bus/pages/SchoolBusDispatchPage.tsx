@@ -33,6 +33,7 @@ import { RouteMap } from '../components/map/RouteMap';
 import { SchoolBusMapLegend } from '../components/map/SchoolBusMapLegend';
 import { SchoolBusMapWorkspace } from '../components/map/SchoolBusMapWorkspace';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import { schoolBusUi } from '../theme';
 import {
   SCHOOL_BUS_PAGE_QUERY_OPTIONS,
@@ -92,6 +93,7 @@ function RouteStatusBadge({ status }: { status: string }) {
 }
 
 export function SchoolBusDispatchPage() {
+  const access = useSchoolBusAccess();
   const pagination = useSchoolBusPagination({
     page: 0,
     size: 10,
@@ -104,6 +106,7 @@ export function SchoolBusDispatchPage() {
   );
   const { data: summaryData } = useGetRouteDispatchSummaryQuery(undefined, {
     refetchOnMountOrArgChange: true,
+    skip: !access.isOperator,
   });
   const [selectedRouteId, setSelectedRouteId] = React.useState<number | null>(
     null

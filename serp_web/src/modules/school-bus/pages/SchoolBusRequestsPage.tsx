@@ -473,7 +473,7 @@ export function SchoolBusRequestsPage() {
   return (
     <>
       <SchoolBusPageShell
-        title='Yêu cầu xe bus'
+        title='Yêu cầu xe buýt'
         description={
           access.isParentOnly
             ? 'Theo dõi trạng thái yêu cầu xe bus và tạo yêu cầu dịch vụ mới.'
@@ -483,7 +483,7 @@ export function SchoolBusRequestsPage() {
           <SchoolBusBreadcrumb
             items={[
               { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
-              { label: 'Yêu cầu xe bus', current: true },
+              { label: 'Yêu cầu xe buýt', current: true },
             ]}
           />
         }

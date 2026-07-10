@@ -43,6 +43,7 @@ import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import { SchoolBusDatePicker } from '../components/ui/SchoolBusDatePicker';
 import { SchoolBusSelect } from '../components/ui/SchoolBusSelect';
 import { useSchoolBusPagination } from '../hooks/useSchoolBusPagination';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import { formatDate, formatDateTime, getPageItems } from '../utils';
 import {
   attendanceStatusLabel,
@@ -52,6 +53,7 @@ import {
 } from '../schoolBusLabels';
 
 export function SchoolBusReportsPage() {
+  const access = useSchoolBusAccess();
   // --- Filter States ---------------------------------------------------------
   const [filters, setFilters] = useState({
     fromDate: '',
@@ -180,16 +182,23 @@ export function SchoolBusReportsPage() {
   const { data: overviewData, isLoading: loadingOverview } =
     useGetSchoolBusReportOverviewQuery(summaryParams, {
       refetchOnMountOrArgChange: true,
+      skip: !access.isOperator,
     });
   const { data: tripsData, isLoading: loadingTrips } =
-    useGetSchoolBusReportTripsQuery(tripsParams);
+    useGetSchoolBusReportTripsQuery(tripsParams, { skip: !access.isOperator });
   const { data: attendanceData, isLoading: loadingAttendance } =
-    useGetSchoolBusReportAttendanceQuery(attendanceParams);
+    useGetSchoolBusReportAttendanceQuery(attendanceParams, {
+      skip: !access.isOperator,
+    });
   const { data: capacityData, isLoading: loadingCapacity } =
-    useGetSchoolBusReportCapacityQuery(capacityParams);
+    useGetSchoolBusReportCapacityQuery(capacityParams, {
+      skip: !access.isOperator,
+    });
 
   // School list query for filters dropdown
-  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery();
+  const { data: schoolsData } = useGetSchoolDropdownOptionsQuery(undefined, {
+    skip: !access.isOperator,
+  });
 
   const overview = overviewData?.data;
   const trips = getPageItems(tripsData?.data);

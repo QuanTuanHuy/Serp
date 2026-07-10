@@ -425,7 +425,7 @@ export function SchoolBusRequestDetailPage({
           <SchoolBusBreadcrumb
             items={[
               { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
-              { label: 'Yêu cầu xe bus', href: '/school-bus/requests' },
+              { label: 'Yêu cầu xe buýt', href: '/school-bus/requests' },
               { label: `#${request.requestCode || request.id}`, current: true },
             ]}
           />

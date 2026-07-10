@@ -12,7 +12,7 @@ DECLARE
     v_seed_by CONSTANT varchar(100) := 'SEED_DATA';
 BEGIN
     IF (SELECT count(*) FROM public.school_bus_school
-        WHERE tenant_id = v_tenant_id AND created_by = v_seed_by AND is_deleted = false) <> 3
+        WHERE tenant_id = v_tenant_id AND created_by = v_seed_by AND is_deleted = false) < 3
        OR (SELECT count(*) FROM public.school_bus_depot
            WHERE tenant_id = v_tenant_id AND created_by = v_seed_by AND is_deleted = false) < 2
        OR (SELECT count(*) FROM public.school_bus_bus

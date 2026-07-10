@@ -65,6 +65,7 @@ import { SchoolBusStatusBadge } from '../components/SchoolBusStatusBadge';
 import { SchoolBusDataTable } from '../components/ui/SchoolBusDataTable';
 import type { SchoolBusTableColumn } from '../components/ui/SchoolBusDataTable';
 import { SCHOOL_BUS_ACCOUNT_MODULE_ID } from '../constants';
+import { useSchoolBusAccess } from '../security/schoolBusAccess';
 import {
   busStatusLabel,
   profileStatusLabel,
@@ -130,6 +131,7 @@ type FleetViewTarget =
 // -- Main Page -----------------------------------------------------------------
 
 export function SchoolBusFleetPage() {
+  const access = useSchoolBusAccess();
   const currentUser = useAppSelector(selectUserProfile);
   const organizationId = currentUser?.organizationId;
 
@@ -182,6 +184,7 @@ export function SchoolBusFleetPage() {
   );
   const { data: fleetSummaryData } = useGetFleetSummaryQuery(undefined, {
     refetchOnMountOrArgChange: true,
+    skip: !access.isOperator,
   });
   const { data: depotDropdownData } = useGetBasicDepotDropdownOptionsQuery();
 

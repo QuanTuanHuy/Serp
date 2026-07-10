@@ -223,6 +223,8 @@ public interface RoutePlanRepository extends BaseRepository<RoutePlanEntity, Lon
                               AND a2.driver.id = :driverProfileId
                               AND a2.tenantId = :tenantId
                               AND a2.isDeleted = false
+                              AND a2.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                                serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
                         )
                         AND t.tenantId = :tenantId
                         AND t.isDeleted = false
@@ -247,6 +249,8 @@ public interface RoutePlanRepository extends BaseRepository<RoutePlanEntity, Lon
                               AND a3.attendant.id = :attendantProfileId
                               AND a3.tenantId = :tenantId
                               AND a3.isDeleted = false
+                              AND a3.status IN (serp.project.school_bus_service.enums.RouteAssignmentStatus.ASSIGNED,
+                                                serp.project.school_bus_service.enums.RouteAssignmentStatus.CONFIRMED)
                         )
                         AND t.tenantId = :tenantId
                         AND t.isDeleted = false

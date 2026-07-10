@@ -14,7 +14,7 @@ const STATIC_PATH_LABELS: Record<string, string> = {
   '/school-bus/students': 'Học sinh',
   '/school-bus/parents': 'Phụ huynh',
   '/school-bus/fleet': 'Đội xe',
-  '/school-bus/requests': 'Yêu cầu xe bus',
+  '/school-bus/requests': 'Yêu cầu xe buýt',
   '/school-bus/subscriptions': 'Đăng ký dịch vụ',
   '/school-bus/dispatch': 'Điều phối',
   '/school-bus/dispatch/planning': 'Lập kế hoạch tuyến',

@@ -85,7 +85,7 @@ export function SchoolBusRequestFormPage({
       items={[
         { label: 'Điều phối xe buýt', href: '/school-bus/dispatch' },
         {
-          label: 'Yêu cầu xe bus',
+          label: 'Yêu cầu xe buýt',
           href: '/school-bus/requests',
         },
         {
