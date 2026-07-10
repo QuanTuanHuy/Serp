@@ -417,7 +417,7 @@ public class OrderImportExcelServiceImpl implements OrderImportExcelService {
                     orderTimelineService.recordStatusEvent(
                             savedOrder,
                             OrderStatus.CREATED,
-                            "Order imported.",
+                            "Đơn hàng đã được import.",
                             null
                     );
                     successRecords++;

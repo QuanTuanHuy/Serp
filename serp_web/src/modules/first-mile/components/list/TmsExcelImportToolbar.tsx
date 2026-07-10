@@ -25,7 +25,10 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { ValidateImportFileResponse } from '../../types';
-import { TmsImportValidationResultPanel } from './TmsImportValidationResultDialog';
+import {
+  TmsImportValidationResultPanel,
+  type TmsImportPreviewColumn,
+} from './TmsImportValidationResultDialog';
 
 type ImportStep = 'upload' | 'validate';
 
@@ -44,6 +47,7 @@ interface TmsExcelImportToolbarProps<T extends object> {
   onSelectFile: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onValidate: () => void;
   onConfirmImport?: () => void;
+  previewColumns?: Array<TmsImportPreviewColumn<T>>;
   details?: React.ReactNode;
   className?: string;
 }
@@ -63,6 +67,7 @@ export const TmsExcelImportToolbar = <T extends object>({
   onSelectFile,
   onValidate,
   onConfirmImport,
+  previewColumns,
   details,
   className,
 }: TmsExcelImportToolbarProps<T>) => {
@@ -74,6 +79,13 @@ export const TmsExcelImportToolbar = <T extends object>({
       setCurrentStep('validate');
     }
   }, [isOpen, validateImportResult]);
+
+  React.useEffect(() => {
+    if (!validateImportResult && isOpen && currentStep === 'validate') {
+      setCurrentStep('upload');
+      setIsOpen(false);
+    }
+  }, [currentStep, isOpen, validateImportResult]);
 
   if (!canImport && !permissionHint) {
     return null;
@@ -241,6 +253,7 @@ export const TmsExcelImportToolbar = <T extends object>({
               onBack={() => setCurrentStep('upload')}
               onClose={closeDialog}
               onConfirmImport={onConfirmImport}
+              previewColumns={previewColumns}
             />
           ) : null}
 

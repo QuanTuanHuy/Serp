@@ -44,6 +44,7 @@ spring:
         - classpath:db/migration/trip.sql
         - classpath:db/migration/trip-type.sql
         - classpath:db/migration/checkin.sql
+        - classpath:db/migration/delivery-trip-operations.sql
         - classpath:db/migration/post-office-handover-manifests.sql
         - classpath:db/migration/post-office-handover-manifest-assignment.sql
         - classpath:db/migration/order-storage-compatibility.sql
@@ -74,6 +75,7 @@ app:
       sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
       sync-handover-manifest: ${SYNC_HANDOVER_MANIFEST_TOPIC:HANDOVER_MANIFEST_SYNC}
       order-status-transition: ${ORDER_STATUS_TRANSITION_TOPIC:ORDER_STATUS_TRANSITIONS}
+      user-notification: ${USER_NOTIFICATION_TOPIC:serp.notification.user.events}
     hub-post-office-sync:
       consumer-group-id: ${KAFKA_FIRST_MILE_HUB_PO_GROUP:first-mile-sync-hub-post-office}
     handover-manifest-sync:

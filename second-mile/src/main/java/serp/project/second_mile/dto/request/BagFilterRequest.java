@@ -13,6 +13,7 @@ import serp.project.second_mile.enums.BagDestinationType;
 import serp.project.second_mile.enums.BagStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -27,6 +28,7 @@ public class BagFilterRequest {
     private String destinationPostOfficeCode;
     private Long vehicleId;
     private BagStatus status;
+    private List<BagStatus> statuses;
     private Integer minOrders;
     private Integer maxOrders;
     private Double minWeight;

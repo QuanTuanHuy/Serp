@@ -253,8 +253,18 @@ export function HumanResourcesPage() {
     () => (hubData?.items ?? []).map(buildHubOption),
     [hubData?.items]
   );
+
+  const hasPostOfficeManager =
+    postOfficeRole === 'MANAGER' &&
+    postOfficeAssignments.some(
+      (assignment) => assignment.staffRole === 'MANAGER'
+    );
+  const hasHubManager =
+    hubRole === 'MANAGER' &&
+    hubAssignments.some((assignment) => assignment.staffRole === 'MANAGER');
+
   const handleAssignPostOfficeStaff = async (staffId: number) => {
-    if (!canEdit || !selectedPostOfficeId) return;
+    if (!canEdit || !selectedPostOfficeId || hasPostOfficeManager) return;
 
     try {
       const payload = {
@@ -290,7 +300,7 @@ export function HumanResourcesPage() {
   };
 
   const handleAssignHubStaff = async (staffId: number) => {
-    if (!canEdit || !selectedHubId) return;
+    if (!canEdit || !selectedHubId || hasHubManager) return;
 
     try {
       await assignSecondMileStaffToHub({
@@ -426,6 +436,8 @@ export function HumanResourcesPage() {
                     roleLabel={getPostOfficeRoleLabel(postOfficeRole)}
                     isFetching={isFetchingPostOfficeStaff}
                     canAssign={Boolean(selectedPostOfficeId)}
+                    assignBlocked={hasPostOfficeManager}
+                    blockedText='Bưu cục đã có trưởng. Gỡ phân công trưởng hiện tại trước khi phân công người khác.'
                     isAssigning={isAssigningCourier || isAssigningManager}
                     onAssign={handleAssignPostOfficeStaff}
                     emptyText='Không có nhân sự chưa phân công trong quyền này.'
@@ -511,6 +523,8 @@ export function HumanResourcesPage() {
                     roleLabel={getHubRoleLabel(hubRole)}
                     isFetching={isFetchingHubStaff}
                     canAssign={Boolean(selectedHubId)}
+                    assignBlocked={hasHubManager}
+                    blockedText='Hub đã có trưởng. Gỡ phân công trưởng hiện tại trước khi phân công người khác.'
                     isAssigning={isAssigningHubStaff}
                     onAssign={handleAssignHubStaff}
                     emptyText='Không có nhân sự chưa phân công trong quyền này.'
@@ -559,9 +573,11 @@ interface AssignableStaffTableProps<TStaff> {
   roleLabel: string;
   isFetching: boolean;
   canAssign: boolean;
+  assignBlocked?: boolean;
   isAssigning: boolean;
   emptyText: string;
   disabledText: string;
+  blockedText?: string;
   onAssign: (staffId: number) => void;
 }
 
@@ -572,11 +588,15 @@ function AssignableStaffTable<
   roleLabel,
   isFetching,
   canAssign,
+  assignBlocked = false,
   isAssigning,
   emptyText,
   disabledText,
+  blockedText,
   onAssign,
 }: AssignableStaffTableProps<TStaff>) {
+  const isAssignDisabled = !canAssign || assignBlocked || isAssigning;
+
   return (
     <div className='overflow-hidden rounded-md border'>
       <Table>
@@ -621,7 +641,8 @@ function AssignableStaffTable<
                     variant='outline'
                     size='sm'
                     onClick={() => onAssign(staff.id)}
-                    disabled={!canAssign || isAssigning}
+                    disabled={isAssignDisabled}
+                    title={assignBlocked ? blockedText : undefined}
                   >
                     {canAssign ? 'Phân công' : disabledText}
                   </Button>

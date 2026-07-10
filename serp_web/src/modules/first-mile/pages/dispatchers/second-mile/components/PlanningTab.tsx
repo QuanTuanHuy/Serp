@@ -3,6 +3,7 @@
  * Description: Part of Serp Project - Bag distribution planning tab
  */
 
+import { useState } from 'react';
 import { ClipboardList, Loader2, Play, Sparkles } from 'lucide-react';
 
 import {
@@ -26,6 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui/tabs';
 import { Textarea } from '@/shared/components/ui/textarea';
 
 import type {
@@ -49,6 +56,8 @@ import {
 import { PlanResultCard } from './PlanResultCard';
 import { SummaryItem } from './SummaryItem';
 
+type PlanningMode = 'auto' | 'manual';
+
 interface PlanningTabProps {
   planning: PlanningState;
   canManage: boolean;
@@ -65,6 +74,7 @@ interface PlanningTabProps {
   isFetchingRoutes: boolean;
   isFetchingVehicles: boolean;
   selectedBags: SecondMileBag[];
+  selectedBagCount: number;
   selectedDestinationSummary: SelectedBagSummary | null;
   planResult: BagDistributionPlan | null;
   isPlanning: boolean;
@@ -93,6 +103,7 @@ export function PlanningTab({
   isFetchingRoutes,
   isFetchingVehicles,
   selectedBags,
+  selectedBagCount,
   selectedDestinationSummary,
   planResult,
   isPlanning,
@@ -110,15 +121,16 @@ export function PlanningTab({
   );
   const route = routes.find((item) => item.id === planning.routeId);
   const vehicle = vehicles.find((item) => item.id === planning.vehicleId);
+  const [planningMode, setPlanningMode] = useState<PlanningMode>('auto');
 
   return (
-    <div className='grid gap-4 xl:grid-cols-[minmax(0,430px)_1fr]'>
-      <Card>
+    <div className='grid gap-4 xl:grid-cols-[430px_minmax(0,1fr)]'>
+      <Card className='min-w-0'>
         <CardHeader>
           <CardTitle>Thiết lập kế hoạch</CardTitle>
           <CardDescription>
-            Chọn hub xuất phát, điểm đến và khung thời gian. Kế hoạch tự động
-            sẽ gợi ý lượt tuyến; tạo thủ công sẽ dùng các túi đã chọn.
+            Chọn chặng điều phối, sau đó dùng tự động để hệ thống gợi ý hoặc thủ
+            công để tạo biên bản từ các túi đã chọn.
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
@@ -200,9 +212,7 @@ export function PlanningTab({
                 }
                 options={postOfficeOptions}
                 placeholder={
-                  isFetchingPostOffices
-                    ? 'Đang tải bưu cục...'
-                    : 'Chọn bưu cục'
+                  isFetchingPostOffices ? 'Đang tải bưu cục...' : 'Chọn bưu cục'
                 }
                 emptyText='Không tìm thấy bưu cục đang hoạt động'
                 loading={isFetchingPostOffices}
@@ -213,7 +223,9 @@ export function PlanningTab({
 
           <div className='grid gap-3 md:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='distribution-departure'>Thời gian xuất phát *</Label>
+              <Label htmlFor='distribution-departure'>
+                Thời gian xuất phát *
+              </Label>
               <Input
                 id='distribution-departure'
                 type='datetime-local'
@@ -236,53 +248,59 @@ export function PlanningTab({
             </div>
           </div>
 
-          <div className='grid gap-3 md:grid-cols-2'>
-            <div className='space-y-2'>
-              <Label>Tuyến</Label>
-              <TmsCombobox
-                value={planning.routeId ? String(planning.routeId) : ''}
-                onValueChange={(value) =>
-                  onUpdatePlanning('routeId', parseNumber(value))
-                }
-                options={routeOptions}
-                placeholder={
-                  isFetchingRoutes ? 'Đang tải tuyến...' : 'Chọn tuyến'
-                }
-                emptyText='Không có tuyến đang hoạt động cho chặng này'
-                loading={isFetchingRoutes}
-                clearable
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Xe</Label>
-              <TmsCombobox
-                value={planning.vehicleId ? String(planning.vehicleId) : ''}
-                onValueChange={(value) =>
-                  onUpdatePlanning('vehicleId', parseNumber(value))
-                }
-                options={vehicleOptions}
-                placeholder={
-                  isFetchingVehicles ? 'Đang tải xe...' : 'Chọn xe'
-                }
-                emptyText='Không có xe đang hoạt động tại hub xuất phát'
-                loading={isFetchingVehicles}
-                clearable
-              />
-            </div>
-          </div>
+          <Tabs
+            value={planningMode}
+            onValueChange={(value) => setPlanningMode(value as PlanningMode)}
+          >
+            <TabsList className='grid w-full grid-cols-2'>
+              <TabsTrigger value='auto'>Điều phối tự động</TabsTrigger>
+              <TabsTrigger value='manual'>Điều phối thủ công</TabsTrigger>
+            </TabsList>
 
-          <div className='space-y-2'>
-            <Label htmlFor='sealed-sla-hours'>SLA túi đã niêm phong (giờ)</Label>
-            <Input
-              id='sealed-sla-hours'
-              type='number'
-              min={1}
-              value={planning.sealedSlaHours}
-              onChange={(event) =>
-                onUpdatePlanning('sealedSlaHours', event.target.value)
-              }
-            />
-          </div>
+            <TabsContent value='auto' className='mt-4'>
+              <div className='rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground'>
+                Chế độ tự động dùng các túi đã chọn, thời gian dự kiến để chọn
+                tuyến, xe phù hợp và tránh trùng lịch tài xế.
+              </div>
+            </TabsContent>
+
+            <TabsContent value='manual' className='mt-4 space-y-4'>
+              <div className='grid gap-3 md:grid-cols-2'>
+                <div className='space-y-2'>
+                  <Label>Tuyến *</Label>
+                  <TmsCombobox
+                    value={planning.routeId ? String(planning.routeId) : ''}
+                    onValueChange={(value) =>
+                      onUpdatePlanning('routeId', parseNumber(value))
+                    }
+                    options={routeOptions}
+                    placeholder={
+                      isFetchingRoutes ? 'Đang tải tuyến...' : 'Chọn tuyến'
+                    }
+                    emptyText='Không có tuyến đang hoạt động cho chặng này'
+                    loading={isFetchingRoutes}
+                    clearable
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label>Xe *</Label>
+                  <TmsCombobox
+                    value={planning.vehicleId ? String(planning.vehicleId) : ''}
+                    onValueChange={(value) =>
+                      onUpdatePlanning('vehicleId', parseNumber(value))
+                    }
+                    options={vehicleOptions}
+                    placeholder={
+                      isFetchingVehicles ? 'Đang tải xe...' : 'Chọn xe'
+                    }
+                    emptyText='Không có xe đang hoạt động tại hub xuất phát'
+                    loading={isFetchingVehicles}
+                    clearable
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <div className='space-y-2'>
             <Label htmlFor='distribution-note'>Ghi chú</Label>
@@ -296,43 +314,48 @@ export function PlanningTab({
           </div>
 
           <div className='flex flex-col gap-2 sm:flex-row'>
-            <Button
-              disabled={!canManage || isPlanning}
-              onClick={() => onAutoPlan(false)}
-            >
-              {isPlanning ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
-              ) : (
-                <Sparkles className='h-4 w-4' />
-              )}
-              Xem trước kế hoạch
-            </Button>
-            <Button
-              variant='secondary'
-              disabled={!canManage || isPlanning}
-              onClick={() => onAutoPlan(true)}
-            >
-              <Play className='h-4 w-4' />
-              Chạy kế hoạch tự động
-            </Button>
-            <Button
-              variant='outline'
-              disabled={!canManage || isCreatingManifest}
-              onClick={onCreateManual}
-            >
-              {isCreatingManifest ? (
-                <Loader2 className='h-4 w-4 animate-spin' />
-              ) : (
-                <ClipboardList className='h-4 w-4' />
-              )}
-              Tạo biên bản thủ công
-            </Button>
+            {planningMode === 'auto' ? (
+              <>
+                <Button
+                  disabled={!canManage || isPlanning || selectedBagCount === 0}
+                  onClick={() => onAutoPlan(false)}
+                >
+                  {isPlanning ? (
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  ) : (
+                    <Sparkles className='h-4 w-4' />
+                  )}
+                  Xem trước kế hoạch
+                </Button>
+                <Button
+                  variant='secondary'
+                  disabled={!canManage || isPlanning || selectedBagCount === 0}
+                  onClick={() => onAutoPlan(true)}
+                >
+                  <Play className='h-4 w-4' />
+                  Chạy kế hoạch tự động
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant='outline'
+                disabled={!canManage || isCreatingManifest}
+                onClick={onCreateManual}
+              >
+                {isCreatingManifest ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
+                  <ClipboardList className='h-4 w-4' />
+                )}
+                Tạo biên bản thủ công
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      <div className='space-y-4'>
-        <Card>
+      <div className='min-w-0 space-y-4'>
+        <Card className='min-w-0'>
           <CardHeader>
             <CardTitle>Tóm tắt kế hoạch</CardTitle>
             <CardDescription>
@@ -341,7 +364,10 @@ export function PlanningTab({
             </CardDescription>
           </CardHeader>
           <CardContent className='grid gap-3 md:grid-cols-2'>
-            <SummaryItem label='Điểm xuất phát' value={originHub?.code ?? '-'} />
+            <SummaryItem
+              label='Điểm xuất phát'
+              value={originHub?.code ?? '-'}
+            />
             <SummaryItem
               label='Điểm đến'
               value={

@@ -5,19 +5,24 @@
 
 import React from 'react';
 import {
-  Badge,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/shared/components/ui';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type {
   FirstMileOrderDetail,
   FirstMileOrderStatus,
 } from '../../../../types';
-import { getOrderProductCategoryLabel } from '../orderPageModels';
+import {
+  formatDeliveryRequestTimeLabel,
+  formatFeePayerLabel,
+  formatOrderTypeLabel,
+  formatPaymentStatusLabel,
+  getOrderProductCategoryLabel,
+} from '../orderPageModels';
 import { OrderRoutePreviewMap } from './OrderRoutePreviewMap';
 
 interface OrderDetailDialogProps {
@@ -66,12 +71,15 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
     );
   }, [detailOrder]);
 
-  const formatCoordinate = (value?: number): string => {
+  const formatValueWithUnit = (
+    value: number | undefined,
+    unit: string
+  ): string => {
     if (value === undefined || value === null || !Number.isFinite(value)) {
       return '--';
     }
 
-    return value.toFixed(6);
+    return `${value} ${unit}`;
   };
 
   return (
@@ -118,6 +126,45 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
                 <p className='text-muted-foreground'>Phương thức lấy hàng</p>
                 <p className='font-medium'>
                   {formatPickupMethodLabel(detailOrder.pickupMethod)}
+                </p>
+              </div>
+            </div>
+
+            <div className='grid gap-3 md:grid-cols-2'>
+              <div>
+                <p className='text-muted-foreground'>
+                  Thời gian yêu cầu giao hàng
+                </p>
+                <p className='font-medium'>
+                  {formatDeliveryRequestTimeLabel(
+                    detailOrder.deliveryRequestTime
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Loại đơn hàng</p>
+                <p className='font-medium'>
+                  {formatOrderTypeLabel(detailOrder.orderType)}
+                </p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Phân loại hàng hóa</p>
+                <p className='font-medium'>
+                  {getOrderProductCategoryLabel(
+                    detailOrder.orderProductCategory
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Bên trả phí</p>
+                <p className='font-medium'>
+                  {formatFeePayerLabel(detailOrder.feePayer)}
+                </p>
+              </div>
+              <div>
+                <p className='text-muted-foreground'>Trạng thái thanh toán</p>
+                <p className='font-medium'>
+                  {formatPaymentStatusLabel(detailOrder.paymentStatus)}
                 </p>
               </div>
             </div>
@@ -211,50 +258,28 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
                 </p>
               </div>
               <div>
-                <p className='text-muted-foreground'>
-                  Thời gian yêu cầu giao hàng
-                </p>
-                <p className='font-medium'>
-                  {detailOrder.deliveryRequestTime || '--'}
-                </p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Loại đơn hàng</p>
-                <p className='font-medium'>{detailOrder.orderType || '--'}</p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Phân loại hàng hóa</p>
-                <p className='font-medium'>
-                  {getOrderProductCategoryLabel(
-                    detailOrder.orderProductCategory
-                  )}
-                </p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Bên trả phí</p>
-                <p className='font-medium'>{detailOrder.feePayer || '--'}</p>
-              </div>
-              <div>
-                <p className='text-muted-foreground'>Trạng thái thanh toán</p>
-                <p className='font-medium'>
-                  {detailOrder.paymentStatus || '--'}
-                </p>
-              </div>
-              <div>
                 <p className='text-muted-foreground'>Tổng khối lượng</p>
-                <p className='font-medium'>{detailOrder.totalWeight ?? '--'}</p>
+                <p className='font-medium'>
+                  {formatValueWithUnit(detailOrder.totalWeight, 'gram')}
+                </p>
               </div>
               <div>
                 <p className='text-muted-foreground'>Tổng giá trị</p>
-                <p className='font-medium'>{detailOrder.totalValue ?? '--'}</p>
+                <p className='font-medium'>
+                  {formatValueWithUnit(detailOrder.totalValue, 'VNĐ')}
+                </p>
               </div>
               <div>
                 <p className='text-muted-foreground'>Tổng thể tích</p>
-                <p className='font-medium'>{detailOrder.totalVolume ?? '--'}</p>
+                <p className='font-medium'>
+                  {formatValueWithUnit(detailOrder.totalVolume, 'm3')}
+                </p>
               </div>
               <div>
                 <p className='text-muted-foreground'>Số tiền COD</p>
-                <p className='font-medium'>{detailOrder.codAmount ?? '--'}</p>
+                <p className='font-medium'>
+                  {formatValueWithUnit(detailOrder.codAmount, 'VNĐ')}
+                </p>
               </div>
             </div>
 
@@ -292,8 +317,7 @@ export const OrderDetailDialog: React.FC<OrderDetailDialogProps> = ({
 
             <div className='text-xs text-muted-foreground'>
               Tạo lúc: {formatDateTime(detailOrder.createdAt)} | Cập nhật:{' '}
-              {formatDateTime(detailOrder.updatedAt)} | Cập nhật bởi:{' '}
-              {detailOrder.updatedBy || '--'}
+              {formatDateTime(detailOrder.updatedAt)}
             </div>
           </div>
         )}

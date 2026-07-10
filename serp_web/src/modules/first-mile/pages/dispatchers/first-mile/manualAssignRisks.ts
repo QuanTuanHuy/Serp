@@ -10,6 +10,7 @@ import type {
   PostOffice,
 } from '../../../types';
 import type { DispatchCourierOption } from './components/types';
+import { formatOrderStatusLabel } from '../../../utils/orderStatusLabels';
 
 const CANDIDATE_STATUSES: FirstMileOrderStatus[] = ['CREATED', 'PICKUP_FAILED'];
 
@@ -188,7 +189,9 @@ export const evaluateManualAssignRisks = ({
       if (order.status === 'ASSIGNED_TO_PICKUP') {
         alreadyAssignedOrders.push(label);
       } else {
-        invalidStatusOrders.push(`${label} (${order.status})`);
+        invalidStatusOrders.push(
+          `${label} (${formatOrderStatusLabel(order.status)})`
+        );
       }
     }
 

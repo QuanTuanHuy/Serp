@@ -333,7 +333,7 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
 
         // Transition order to DELIVERED via tms-order
         enqueueTransition(manifestOrder.getOrderCode(), OrderStatus.DELIVERED,
-                "Delivered successfully", tenantId);
+                "Giao hàng thành công.", tenantId);
 
         markReceiverShippingFeePaidIfNeeded(manifestOrder, tenantId);
 
@@ -517,13 +517,13 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
 
         // Transition to DELIVERY_FAILED
         enqueueTransition(manifestOrder.getOrderCode(), OrderStatus.DELIVERY_FAILED,
-                "Delivery failed: " + request.getFailureReason(), tenantId);
+                "Giao hàng thất bại: " + request.getFailureReason(), tenantId);
 
         // Auto return if max attempts exceeded
         if (manifestOrder.getDeliveryAttemptCount() >= maxDeliveryAttempts) {
             manifestOrder.setStatus(DeliveryOrderStatus.RETURNED);
             enqueueTransition(manifestOrder.getOrderCode(), OrderStatus.RETURNED_TO_SENDER,
-                    "Max delivery attempts (" + maxDeliveryAttempts + ") exceeded", tenantId);
+                    "Đã vượt quá số lần giao tối đa (" + maxDeliveryAttempts + ")", tenantId);
         }
 
         // Check if all orders processed → complete manifest
@@ -557,7 +557,7 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
         manifestOrder.setNote(request.getNote());
 
         enqueueTransition(manifestOrder.getOrderCode(), OrderStatus.RETURNED_TO_SENDER,
-                "Returned to sender: " + (request.getNote() != null ? request.getNote() : ""), tenantId);
+                "Đã hoàn trả cho người gửi: " + (request.getNote() != null ? request.getNote() : ""), tenantId);
 
         if (manifest.isAllProcessed()) {
             manifest.setStatus(DeliveryManifestStatus.COMPLETED);
@@ -864,7 +864,7 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
         return PaymentCreateOrderRequest.builder()
                 .appUser(orderCode)
                 .amount(requiredAmount)
-                .description("Customer payment for delivery order " + orderCode)
+                .description("Thanh toán của khách hàng cho đơn giao hàng " + orderCode)
                 .embedData(PaymentCreateOrderRequest.EmbedData.builder()
                         .redirectUrl(paymentRedirectUrl
                                 + "?source=first-mile&manifestId=" + manifestId
@@ -877,7 +877,7 @@ public class DeliveryManifestServiceImpl implements DeliveryManifestService {
                 .userId(actorId)
                 .items(List.of(PaymentCreateOrderRequest.Item.builder()
                         .itemId("delivery-payment-" + orderCode)
-                        .itemName("Customer payment for delivery order " + orderCode)
+                        .itemName("Thanh toán của khách hàng cho đơn giao hàng " + orderCode)
                         .itemPrice(requiredAmount)
                         .itemQuantity(1)
                         .build()))

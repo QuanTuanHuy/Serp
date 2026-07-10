@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -35,8 +35,7 @@ public class WebhookEventService {
 
     private final WebhookEventRepository webhookEventRepository;
     private final ObjectMapper objectMapper;
-    @Lazy
-    private final WebhookEventService self;
+    private final ObjectProvider<WebhookEventService> selfProvider;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${app.webhook.tms-order.payment-confirmed-url:${app.webhook.first-mile.payment-confirmed-url:http://localhost:8105/api/v1/internal/payment-webhooks/orders/payment-confirmed}}")
@@ -85,7 +84,7 @@ public class WebhookEventService {
         webhookEventRepository.save(event);
 
         // Try once immediately for fast propagation.
-        dispatchEvent(event.getId());
+        selfProvider.getObject().dispatchEvent(event.getId());
     }
 
     @Transactional(readOnly = true)
@@ -103,7 +102,7 @@ public class WebhookEventService {
 
         for (Long eventId : eventIds) {
             try {
-                self.dispatchEvent(eventId);
+                selfProvider.getObject().dispatchEvent(eventId);
             } catch (Exception ex) {
                 log.error("Unexpected error while dispatching webhook eventId={}", eventId, ex);
             }

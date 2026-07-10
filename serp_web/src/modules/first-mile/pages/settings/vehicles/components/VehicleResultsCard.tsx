@@ -84,13 +84,7 @@ interface VehicleResultsCardProps {
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const ALL_FILTER_VALUE = 'ALL';
 const VEHICLE_TYPE_OPTIONS: VehicleType[] = ['BIKE', 'TRUCK'];
-const VEHICLE_STATUS_OPTIONS: VehicleStatus[] = [
-  'ACTIVE',
-  'INACTIVE',
-  'MAINTENANCE',
-  'IN_USE',
-  'FULL',
-];
+const VEHICLE_STATUS_OPTIONS: VehicleStatus[] = ['ACTIVE', 'INACTIVE'];
 
 export const VehicleResultsCard: React.FC<VehicleResultsCardProps> = ({
   canViewVehicles,
@@ -302,7 +296,9 @@ export const VehicleResultsCard: React.FC<VehicleResultsCardProps> = ({
                             <PopoverTrigger asChild>
                               <Button
                                 type='button'
-                                variant={vehicleTypeFilter ? 'outline' : 'ghost'}
+                                variant={
+                                  vehicleTypeFilter ? 'outline' : 'ghost'
+                                }
                                 size='icon'
                                 className='size-7'
                                 disabled={!canViewVehicles}
@@ -537,9 +533,7 @@ export const VehicleResultsCard: React.FC<VehicleResultsCardProps> = ({
                           </PopoverContent>
                         </Popover>
                       </TableHead>
-                      <TableHead className='min-w-[200px]'>
-                        Sức chứa
-                      </TableHead>
+                      <TableHead className='min-w-[200px]'>Sức chứa</TableHead>
                       <TableHead className='sticky right-0 z-20 border-l bg-card text-right'>
                         Thao tác
                       </TableHead>

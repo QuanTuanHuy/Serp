@@ -21,25 +21,12 @@ import type { PickupShift } from '../../../../types';
 import type {
   DispatchOptimizationGoalOption,
   DispatchSetupCardProps,
-  RoutingVehicleOption,
 } from './types';
 
 const SHIFT_OPTIONS: Array<{ value: PickupShift; label: string }> = [
   { value: 'MORNING', label: 'Ca sáng (07:30 - 12:00)' },
   { value: 'AFTERNOON', label: 'Ca chiều (13:30 - 18:00)' },
   { value: 'EVENING', label: 'Ca tối (18:30 - 22:00)' },
-];
-
-const ROUTING_VEHICLE_OPTIONS: Array<{
-  value: RoutingVehicleOption;
-  label: string;
-}> = [
-  { value: 'DEFAULT', label: 'Dùng thiết lập mặc định' },
-  { value: 'CAR', label: 'Ô tô' },
-  { value: 'BIKE', label: 'Xe máy' },
-  { value: 'TAXI', label: 'Taxi' },
-  { value: 'TRUCK', label: 'Xe tải' },
-  { value: 'HD', label: 'Xe tải nặng' },
 ];
 
 const OPTIMIZATION_GOAL_OPTIONS: Array<{
@@ -76,6 +63,7 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
   isAutoAssigning,
   activeAction,
   isTmsAdmin,
+  hidePreviewButton = false,
 }) => {
   const postOfficeComboboxOptions = postOfficeOptions.map((postOffice) => ({
     value: String(postOffice.id),
@@ -203,27 +191,6 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
 
             <div className='grid gap-3 md:grid-cols-2'>
               <div className='space-y-2'>
-                <Label htmlFor='dispatch-vehicle-profile'>
-                  Hồ sơ phương tiện
-                </Label>
-                <TmsCombobox
-                  id='dispatch-vehicle-profile'
-                  value={businessValues.vehicleOption}
-                  onValueChange={(value) =>
-                    businessHandlers.onVehicleOptionChange(
-                      value as RoutingVehicleOption
-                    )
-                  }
-                  options={ROUTING_VEHICLE_OPTIONS}
-                  placeholder='Chọn hồ sơ phương tiện'
-                  emptyText='Không tìm thấy hồ sơ phương tiện'
-                />
-                <p className='text-xs text-muted-foreground'>
-                  Tùy chọn. Hầu hết trường hợp nên giữ theo thiết lập mặc định.
-                </p>
-              </div>
-
-              <div className='space-y-2'>
                 <Label htmlFor='dispatch-optimization-goal'>
                   Mục tiêu lập kế hoạch
                 </Label>
@@ -249,17 +216,19 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
         </div>
 
         <div className='flex flex-wrap gap-2'>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={onPreviewPlan}
-            disabled={isOptimizing || !selectedPostOfficeId}
-          >
-            {activeAction === 'preview' ? (
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            ) : null}
-            Xem trước kế hoạch
-          </Button>
+          {!hidePreviewButton ? (
+            <Button
+              type='button'
+              variant='outline'
+              onClick={onPreviewPlan}
+              disabled={isOptimizing || !selectedPostOfficeId}
+            >
+              {activeAction === 'preview' ? (
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              ) : null}
+              Xem trước kế hoạch
+            </Button>
+          ) : null}
           <Button
             type='button'
             onClick={onAutoAssign}
@@ -276,8 +245,8 @@ export const DispatchSetupCard: React.FC<DispatchSetupCardProps> = ({
 
         {!isTmsAdmin ? (
           <p className='text-xs text-muted-foreground'>
-            Hệ thống sẽ áp dụng phạm vi quản lý. Bạn chỉ có thể điều phối cho các
-            bưu cục được gán cho mình.
+            Hệ thống sẽ áp dụng phạm vi quản lý. Bạn chỉ có thể điều phối cho
+            các bưu cục được gán cho mình.
           </p>
         ) : null}
       </CardContent>

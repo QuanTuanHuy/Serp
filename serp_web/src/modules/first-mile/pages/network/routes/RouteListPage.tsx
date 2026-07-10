@@ -77,7 +77,6 @@ import {
 type RouteFormMode = 'create' | 'edit';
 
 interface RouteFormState {
-  routeCode: string;
   routeName: string;
   originType: SecondMileRouteEndpointType;
   originHubId: string;
@@ -93,9 +92,28 @@ interface RouteFormState {
   note: string;
 }
 
+interface RouteCoordinates {
+  latitude: number;
+  longitude: number;
+}
+
+interface RouteTravelMetrics {
+  distanceKm: number;
+  durationMinutes: number;
+}
+
+interface OsrmRouteResponse {
+  code?: string;
+  routes?: Array<{
+    distance?: number;
+    duration?: number;
+  }>;
+}
+
 const PAGE_SIZE = 20;
 const ALL_FILTER_VALUE = 'ALL';
 const NO_VEHICLE_VALUE = '__none__';
+const FALLBACK_SPEED_KMH = 40;
 
 type RouteDestinationFilter =
   | typeof ALL_FILTER_VALUE
@@ -113,7 +131,6 @@ type RouteTableFilterKey =
   | 'status';
 
 const DEFAULT_FORM: RouteFormState = {
-  routeCode: '',
   routeName: '',
   originType: 'HUB',
   originHubId: '',
@@ -227,6 +244,95 @@ function validateOptionalNonNegativeInteger(
   return null;
 }
 
+function toRouteCoordinates(
+  value?: Pick<Hub | PostOffice, 'latitude' | 'longitude'>
+): RouteCoordinates | null {
+  if (
+    value?.latitude === undefined ||
+    value.longitude === undefined ||
+    !Number.isFinite(value.latitude) ||
+    !Number.isFinite(value.longitude)
+  ) {
+    return null;
+  }
+  return {
+    latitude: value.latitude,
+    longitude: value.longitude,
+  };
+}
+
+function formatDistanceFieldValue(value: number): string {
+  return String(Number(value.toFixed(1)));
+}
+
+function calculateHaversineDistanceKm(
+  origin: RouteCoordinates,
+  destination: RouteCoordinates
+): number {
+  const earthRadiusKm = 6371;
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const deltaLatitude = toRadians(destination.latitude - origin.latitude);
+  const deltaLongitude = toRadians(destination.longitude - origin.longitude);
+  const originLatitude = toRadians(origin.latitude);
+  const destinationLatitude = toRadians(destination.latitude);
+  const haversine =
+    Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(originLatitude) *
+      Math.cos(destinationLatitude) *
+      Math.sin(deltaLongitude / 2) ** 2;
+
+  return (
+    earthRadiusKm *
+    2 *
+    Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))
+  );
+}
+
+function estimateFallbackTravelMetrics(
+  origin: RouteCoordinates,
+  destination: RouteCoordinates
+): RouteTravelMetrics {
+  const distanceKm = calculateHaversineDistanceKm(origin, destination);
+  return {
+    distanceKm,
+    durationMinutes:
+      distanceKm > 0 ? Math.ceil((distanceKm / FALLBACK_SPEED_KMH) * 60) : 0,
+  };
+}
+
+async function fetchRouteTravelMetrics(
+  origin: RouteCoordinates,
+  destination: RouteCoordinates,
+  signal: AbortSignal
+): Promise<RouteTravelMetrics> {
+  const coordinates = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
+  const response = await fetch(
+    `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=false`,
+    { signal }
+  );
+  if (!response.ok) {
+    throw new Error('Route metric request failed.');
+  }
+
+  const data = (await response.json()) as OsrmRouteResponse;
+  const route = data.routes?.[0];
+  if (
+    data.code !== 'Ok' ||
+    !route ||
+    route.distance === undefined ||
+    route.duration === undefined ||
+    !Number.isFinite(route.distance) ||
+    !Number.isFinite(route.duration)
+  ) {
+    throw new Error('Route metric response is invalid.');
+  }
+
+  return {
+    distanceKm: route.distance / 1000,
+    durationMinutes: Math.ceil(route.duration / 60),
+  };
+}
+
 function formatStatusLabel(status: SecondMileRouteStatus): string {
   return status === 'ACTIVE' ? 'Đang hoạt động' : 'Ngừng hoạt động';
 }
@@ -246,7 +352,6 @@ function formatRouteMetric(value?: number, suffix?: string): string {
 
 function toFormState(route: SecondMileRoute): RouteFormState {
   return {
-    routeCode: route.routeCode ?? '',
     routeName: route.routeName ?? '',
     originType: route.originType ?? 'HUB',
     originHubId: route.originHubId ? String(route.originHubId) : '',
@@ -314,6 +419,8 @@ export function RouteListPage() {
   );
   const [formValues, setFormValues] =
     React.useState<RouteFormState>(DEFAULT_FORM);
+  const [isEstimatingTravelMetrics, setIsEstimatingTravelMetrics] =
+    React.useState(false);
   const [deleteTarget, setDeleteTarget] =
     React.useState<SecondMileRoute | null>(null);
 
@@ -321,6 +428,7 @@ export function RouteListPage() {
   const routeNameFilterRef = React.useRef<HTMLInputElement>(null);
   const departureFilterRef = React.useRef<HTMLInputElement>(null);
   const metricFilterRef = React.useRef<HTMLInputElement>(null);
+  const lastTravelMetricKeyRef = React.useRef<string | null>(null);
 
   const selectedOriginHubNumericId =
     parseOptionalPositiveInteger(selectedOriginHubId);
@@ -458,10 +566,6 @@ export function RouteListPage() {
     { value: ALL_FILTER_VALUE, label: 'Tất cả điểm xuất phát' },
     ...ROUTE_ENDPOINT_OPTIONS,
   ];
-  const formDestinationTypeOptions =
-    formValues.originType === 'POST_OFFICE'
-      ? ROUTE_DESTINATION_OPTIONS.filter((option) => option.value === 'HUB')
-      : ROUTE_DESTINATION_OPTIONS;
   const hubComboboxOptions = hubs.map((hub) => ({
     value: String(hub.id),
     label: `${hub.code} - ${hub.name}`,
@@ -500,6 +604,45 @@ export function RouteListPage() {
       {}
     );
   }, [vehicles]);
+  const formOriginCoordinates = React.useMemo<RouteCoordinates | null>(() => {
+    if (formValues.originType === 'HUB') {
+      const hubId = parseOptionalPositiveInteger(formValues.originHubId);
+      return hubId !== undefined ? toRouteCoordinates(hubById[hubId]) : null;
+    }
+
+    const postOfficeCode = formValues.originPostOfficeCode.trim();
+    return postOfficeCode
+      ? toRouteCoordinates(postOfficeByCode[postOfficeCode])
+      : null;
+  }, [
+    formValues.originHubId,
+    formValues.originPostOfficeCode,
+    formValues.originType,
+    hubById,
+    postOfficeByCode,
+  ]);
+  const formDestinationCoordinates =
+    React.useMemo<RouteCoordinates | null>(() => {
+      if (formValues.destinationType === 'HUB') {
+        const hubId = parseOptionalPositiveInteger(formValues.destinationHubId);
+        return hubId !== undefined ? toRouteCoordinates(hubById[hubId]) : null;
+      }
+
+      const postOfficeCode = formValues.destinationPostOfficeCode.trim();
+      return postOfficeCode
+        ? toRouteCoordinates(postOfficeByCode[postOfficeCode])
+        : null;
+    }, [
+      formValues.destinationHubId,
+      formValues.destinationPostOfficeCode,
+      formValues.destinationType,
+      hubById,
+      postOfficeByCode,
+    ]);
+  const formTravelMetricKey =
+    formOriginCoordinates && formDestinationCoordinates
+      ? `${formOriginCoordinates.latitude},${formOriginCoordinates.longitude}:${formDestinationCoordinates.latitude},${formDestinationCoordinates.longitude}`
+      : null;
   const driverAssignmentByStaffId = React.useMemo<
     Record<number, SecondMileHubStaffAssignment>
   >(() => {
@@ -564,23 +707,29 @@ export function RouteListPage() {
       })),
   ];
 
-  const getHubLabel = (hubId?: number) => {
-    if (hubId === undefined || hubId === null) {
-      return '-';
-    }
-    const hub = hubById[hubId];
-    return hub ? `${hub.code} - ${hub.name}` : `Hub #${hubId}`;
-  };
+  const getHubLabel = React.useCallback(
+    (hubId?: number) => {
+      if (hubId === undefined || hubId === null) {
+        return '-';
+      }
+      const hub = hubById[hubId];
+      return hub ? `${hub.code} - ${hub.name}` : `Hub #${hubId}`;
+    },
+    [hubById]
+  );
 
-  const getPostOfficeLabel = (postOfficeCode?: string) => {
-    if (!postOfficeCode) {
-      return '-';
-    }
-    const postOffice = postOfficeByCode[postOfficeCode];
-    return postOffice
-      ? `${postOffice.code} - ${postOffice.name}`
-      : postOfficeCode;
-  };
+  const getPostOfficeLabel = React.useCallback(
+    (postOfficeCode?: string) => {
+      if (!postOfficeCode) {
+        return '-';
+      }
+      const postOffice = postOfficeByCode[postOfficeCode];
+      return postOffice
+        ? `${postOffice.code} - ${postOffice.name}`
+        : postOfficeCode;
+    },
+    [postOfficeByCode]
+  );
 
   const getOriginLabel = (route: SecondMileRoute) => {
     if (route.originType === 'POST_OFFICE') {
@@ -603,6 +752,57 @@ export function RouteListPage() {
     }
     return getPostOfficeLabel(route.destinationPostOfficeCode);
   };
+
+  const formMapLines = React.useMemo<RouteMapLine[]>(() => {
+    if (!formOriginCoordinates || !formDestinationCoordinates) {
+      return [];
+    }
+
+    const originName =
+      formValues.originType === 'HUB'
+        ? getHubLabel(formOriginHubNumericId)
+        : getPostOfficeLabel(formValues.originPostOfficeCode);
+    const destinationName =
+      formValues.destinationType === 'HUB'
+        ? getHubLabel(formDestinationHubNumericId)
+        : getPostOfficeLabel(formValues.destinationPostOfficeCode);
+
+    if (originName === '-' || destinationName === '-') {
+      return [];
+    }
+
+    return [
+      {
+        id: editingRouteId ?? -1,
+        routeCode: 'Mã tự sinh',
+        routeName: formValues.routeName.trim() || 'Tuyến mới',
+        origin: {
+          name: originName,
+          latitude: formOriginCoordinates.latitude,
+          longitude: formOriginCoordinates.longitude,
+        },
+        destination: {
+          name: destinationName,
+          latitude: formDestinationCoordinates.latitude,
+          longitude: formDestinationCoordinates.longitude,
+          type: formValues.destinationType,
+        },
+      },
+    ];
+  }, [
+    editingRouteId,
+    formDestinationCoordinates,
+    formDestinationHubNumericId,
+    formOriginCoordinates,
+    formOriginHubNumericId,
+    formValues.destinationPostOfficeCode,
+    formValues.destinationType,
+    formValues.originPostOfficeCode,
+    formValues.originType,
+    formValues.routeName,
+    getHubLabel,
+    getPostOfficeLabel,
+  ]);
 
   const getRouteMetricLabel = React.useCallback(
     (route: SecondMileRoute) =>
@@ -721,54 +921,160 @@ export function RouteListPage() {
     return lines;
   }, [displayRoutes, hubById, postOfficeByCode]);
 
+  React.useEffect(() => {
+    if (
+      !isFormOpen ||
+      !formTravelMetricKey ||
+      !formOriginCoordinates ||
+      !formDestinationCoordinates
+    ) {
+      setIsEstimatingTravelMetrics(false);
+      return;
+    }
+    if (lastTravelMetricKeyRef.current === formTravelMetricKey) {
+      return;
+    }
+    lastTravelMetricKeyRef.current = formTravelMetricKey;
+    if (
+      formValues.estimatedDistanceKm.trim() &&
+      formValues.estimatedDurationMinutes.trim()
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const applyTravelMetrics = (metrics: RouteTravelMetrics) => {
+      setFormValues((prev) => ({
+        ...prev,
+        estimatedDistanceKm: prev.estimatedDistanceKm.trim()
+          ? prev.estimatedDistanceKm
+          : formatDistanceFieldValue(metrics.distanceKm),
+        estimatedDurationMinutes: prev.estimatedDurationMinutes.trim()
+          ? prev.estimatedDurationMinutes
+          : String(metrics.durationMinutes),
+      }));
+    };
+
+    const loadTravelMetrics = async () => {
+      setIsEstimatingTravelMetrics(true);
+      try {
+        const metrics = await fetchRouteTravelMetrics(
+          formOriginCoordinates,
+          formDestinationCoordinates,
+          controller.signal
+        );
+        if (!cancelled) {
+          applyTravelMetrics(metrics);
+        }
+      } catch {
+        if (!cancelled && !controller.signal.aborted) {
+          applyTravelMetrics(
+            estimateFallbackTravelMetrics(
+              formOriginCoordinates,
+              formDestinationCoordinates
+            )
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsEstimatingTravelMetrics(false);
+        }
+      }
+    };
+
+    void loadTravelMetrics();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [
+    formDestinationCoordinates,
+    formOriginCoordinates,
+    formTravelMetricKey,
+    formValues.estimatedDistanceKm,
+    formValues.estimatedDurationMinutes,
+    isFormOpen,
+  ]);
+
   const updateField = <K extends keyof RouteFormState>(
     key: K,
     value: RouteFormState[K]
   ) => setFormValues((prev) => ({ ...prev, [key]: value }));
 
   const updateOriginType = (value: SecondMileRouteEndpointType) => {
+    lastTravelMetricKeyRef.current = null;
     setFormValues((prev) => ({
       ...prev,
       originType: value,
       originHubId: value === 'HUB' ? prev.originHubId : '',
       originPostOfficeCode:
         value === 'POST_OFFICE' ? prev.originPostOfficeCode : '',
-      destinationType:
-        value === 'POST_OFFICE' && prev.destinationType === 'POST_OFFICE'
-          ? 'HUB'
-          : prev.destinationType,
       destinationHubId: '',
       destinationPostOfficeCode: '',
       vehicleId: '',
+      estimatedDistanceKm: '',
+      estimatedDurationMinutes: '',
+    }));
+  };
+
+  const updateDestinationType = (value: SecondMileRouteDestinationType) => {
+    lastTravelMetricKeyRef.current = null;
+    setFormValues((prev) => ({
+      ...prev,
+      destinationType: value,
+      destinationHubId: '',
+      destinationPostOfficeCode: '',
+      vehicleId: '',
+      estimatedDistanceKm: '',
+      estimatedDurationMinutes: '',
     }));
   };
 
   const updateOriginHub = (value: string) => {
+    lastTravelMetricKeyRef.current = null;
     setFormValues((prev) => ({
       ...prev,
       originHubId: value,
       destinationHubId: '',
       destinationPostOfficeCode: '',
       vehicleId: '',
+      estimatedDistanceKm: '',
+      estimatedDurationMinutes: '',
     }));
   };
 
   const updateOriginPostOffice = (value: string) => {
+    lastTravelMetricKeyRef.current = null;
     setFormValues((prev) => ({
       ...prev,
       originPostOfficeCode: value,
       vehicleId: '',
+      estimatedDistanceKm: '',
+      estimatedDurationMinutes: '',
     }));
   };
 
-  const updateDestinationType = (value: SecondMileRouteDestinationType) => {
+  const updateDestinationHub = (value: string) => {
+    lastTravelMetricKeyRef.current = null;
     setFormValues((prev) => ({
       ...prev,
-      destinationType: value,
-      destinationHubId: value === 'HUB' ? prev.destinationHubId : '',
-      destinationPostOfficeCode:
-        value === 'POST_OFFICE' ? prev.destinationPostOfficeCode : '',
-      vehicleId: '',
+      destinationHubId: value,
+      vehicleId: prev.originType === 'POST_OFFICE' ? '' : prev.vehicleId,
+      estimatedDistanceKm: '',
+      estimatedDurationMinutes: '',
+    }));
+  };
+
+  const updateDestinationPostOffice = (value: string) => {
+    lastTravelMetricKeyRef.current = null;
+    setFormValues((prev) => ({
+      ...prev,
+      destinationPostOfficeCode: value,
+      estimatedDistanceKm: '',
+      estimatedDurationMinutes: '',
     }));
   };
 
@@ -917,6 +1223,7 @@ export function RouteListPage() {
   );
 
   const openCreateDialog = () => {
+    lastTravelMetricKeyRef.current = null;
     setFormMode('create');
     setEditingRouteId(null);
     setFormValues(DEFAULT_FORM);
@@ -924,6 +1231,7 @@ export function RouteListPage() {
   };
 
   const openEditDialog = (route: SecondMileRoute) => {
+    lastTravelMetricKeyRef.current = null;
     setFormMode('edit');
     setEditingRouteId(route.id);
     setFormValues(toFormState(route));
@@ -931,7 +1239,6 @@ export function RouteListPage() {
   };
 
   const validateForm = (values: RouteFormState): string | null => {
-    if (!values.routeCode.trim()) return 'Vui lòng nhập mã tuyến.';
     if (!values.routeName.trim()) return 'Vui lòng nhập tên tuyến.';
     if (values.originType === 'HUB' && !values.originHubId) {
       return 'Vui lòng chọn hub xuất phát.';
@@ -951,9 +1258,9 @@ export function RouteListPage() {
       values.originType === 'POST_OFFICE' ? destinationHubId : originHubId;
     if (
       values.originType === 'POST_OFFICE' &&
-      values.destinationType !== 'HUB'
+      values.destinationType === 'POST_OFFICE'
     ) {
-      return 'Tuyến xuất phát từ bưu cục phải có điểm đến là hub.';
+      return 'Điểm xuất phát và điểm đích không thể cùng là bưu cục.';
     }
     if (values.destinationType === 'HUB' && !values.destinationHubId) {
       return 'Vui lòng chọn hub đích.';
@@ -1046,7 +1353,6 @@ export function RouteListPage() {
   ): SecondMileCreateRouteRequest | SecondMileUpdateRouteRequest => {
     const vehicleId = parseOptionalPositiveInteger(values.vehicleId);
     const body: SecondMileCreateRouteRequest = {
-      route_code: values.routeCode.trim(),
       route_name: values.routeName.trim(),
       origin_type: values.originType,
       destination_type: values.destinationType,
@@ -1762,7 +2068,7 @@ export function RouteListPage() {
           }
         }}
       >
-        <DialogContent className='max-h-[85vh] max-w-5xl overflow-y-auto'>
+        <DialogContent className='max-h-[88vh] w-[98vw] max-w-none overflow-y-auto sm:max-w-[1536px]'>
           <DialogHeader>
             <DialogTitle>
               {formMode === 'create' ? 'Tạo tuyến' : 'Cập nhật tuyến'}
@@ -1773,7 +2079,7 @@ export function RouteListPage() {
           </DialogHeader>
 
           <form
-            className='space-y-4'
+            className='space-y-5'
             onSubmit={async (event) => {
               event.preventDefault();
               const error = validateForm(formValues);
@@ -1807,231 +2113,256 @@ export function RouteListPage() {
               }
             }}
           >
-            <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
-              <div className='space-y-2'>
-                <Label htmlFor='route-code'>Mã tuyến</Label>
-                <Input
-                  id='route-code'
-                  value={formValues.routeCode}
-                  onChange={(event) =>
-                    updateField('routeCode', event.target.value)
-                  }
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='route-name'>Tên tuyến</Label>
-                <Input
-                  id='route-name'
-                  value={formValues.routeName}
-                  onChange={(event) =>
-                    updateField('routeName', event.target.value)
-                  }
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='route-origin-type'>Loại điểm xuất phát</Label>
-                <TmsCombobox
-                  id='route-origin-type'
-                  value={formValues.originType}
-                  onValueChange={(value) =>
-                    updateOriginType(value as SecondMileRouteEndpointType)
-                  }
-                  options={ROUTE_ENDPOINT_OPTIONS}
-                  placeholder='Chọn loại điểm xuất phát'
-                  emptyText='Không tìm thấy loại điểm xuất phát'
-                />
-              </div>
-              {formValues.originType === 'HUB' ? (
-                <div className='space-y-2'>
-                  <Label htmlFor='route-origin-hub'>Hub xuất phát</Label>
-                  <TmsCombobox
-                    id='route-origin-hub'
-                    value={formValues.originHubId}
-                    onValueChange={updateOriginHub}
-                    options={hubComboboxOptions}
-                    placeholder='Chọn hub xuất phát'
-                    emptyText='Không tìm thấy hub'
-                  />
+            <div className='grid gap-6 xl:grid-cols-[minmax(0,720px)_minmax(480px,1fr)] 2xl:grid-cols-[minmax(0,760px)_minmax(560px,1fr)]'>
+              <div className='space-y-4'>
+                <div className='grid gap-4 md:grid-cols-2'>
+                  <div className='space-y-2 md:col-span-2'>
+                    <Label htmlFor='route-name'>Tên tuyến</Label>
+                    <Input
+                      id='route-name'
+                      value={formValues.routeName}
+                      onChange={(event) =>
+                        updateField('routeName', event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor='route-origin-type'>
+                      Loại điểm xuất phát
+                    </Label>
+                    <TmsCombobox
+                      id='route-origin-type'
+                      value={formValues.originType}
+                      onValueChange={(value) =>
+                        updateOriginType(value as SecondMileRouteEndpointType)
+                      }
+                      options={ROUTE_ENDPOINT_OPTIONS}
+                      placeholder='Chọn loại điểm xuất phát'
+                      emptyText='Không tìm thấy loại điểm xuất phát'
+                    />
+                  </div>
+                  {formValues.originType === 'HUB' ? (
+                    <div className='space-y-2'>
+                      <Label htmlFor='route-origin-hub'>Hub xuất phát</Label>
+                      <TmsCombobox
+                        id='route-origin-hub'
+                        value={formValues.originHubId}
+                        onValueChange={updateOriginHub}
+                        options={hubComboboxOptions}
+                        placeholder='Chọn hub xuất phát'
+                        emptyText='Không tìm thấy hub'
+                      />
+                    </div>
+                  ) : (
+                    <div className='space-y-2'>
+                      <Label htmlFor='route-origin-post-office'>
+                        Bưu cục xuất phát
+                      </Label>
+                      <TmsCombobox
+                        id='route-origin-post-office'
+                        value={formValues.originPostOfficeCode}
+                        onValueChange={updateOriginPostOffice}
+                        options={postOfficeFilterOptions}
+                        placeholder='Chọn bưu cục xuất phát'
+                        emptyText='Không tìm thấy bưu cục'
+                      />
+                    </div>
+                  )}
+                  <div className='space-y-2'>
+                    <Label htmlFor='route-destination-type'>
+                      Loại điểm đích
+                    </Label>
+                    <TmsCombobox
+                      id='route-destination-type'
+                      value={formValues.destinationType}
+                      onValueChange={(value) =>
+                        updateDestinationType(
+                          value as SecondMileRouteDestinationType
+                        )
+                      }
+                      options={ROUTE_DESTINATION_OPTIONS}
+                      placeholder='Chọn loại điểm đích'
+                      emptyText='Không tìm thấy loại điểm đích'
+                    />
+                  </div>
+                  {formValues.destinationType === 'HUB' ? (
+                    <div className='space-y-2'>
+                      <Label htmlFor='route-destination-hub'>Hub đích</Label>
+                      <TmsCombobox
+                        id='route-destination-hub'
+                        value={formValues.destinationHubId}
+                        onValueChange={updateDestinationHub}
+                        options={destinationHubComboboxOptions}
+                        placeholder='Chọn hub đích'
+                        emptyText={
+                          formValues.originType === 'POST_OFFICE' ||
+                          formValues.originHubId
+                            ? 'Không tìm thấy hub đích'
+                            : 'Chọn hub xuất phát trước'
+                        }
+                        disabled={
+                          formValues.originType === 'HUB' &&
+                          !formValues.originHubId
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <div className='space-y-2'>
+                      <Label htmlFor='route-destination-post-office'>
+                        Bưu cục đích
+                      </Label>
+                      <TmsCombobox
+                        id='route-destination-post-office'
+                        value={formValues.destinationPostOfficeCode}
+                        onValueChange={updateDestinationPostOffice}
+                        options={mappedPostOfficeComboboxOptions}
+                        placeholder={
+                          formValues.originHubId
+                            ? 'Chọn bưu cục đã liên kết'
+                            : 'Chọn hub xuất phát trước'
+                        }
+                        emptyText={
+                          formValues.originHubId
+                            ? 'Không tìm thấy bưu cục đã liên kết'
+                            : 'Chọn hub xuất phát trước'
+                        }
+                        disabled={!formValues.originHubId}
+                        loading={isFetchingMappedPostOffices}
+                      />
+                    </div>
+                  )}
+                  <div className='space-y-2'>
+                    <Label htmlFor='route-vehicle'>
+                      {formValues.originType === 'POST_OFFICE' ||
+                      formValues.destinationType === 'POST_OFFICE'
+                        ? 'Xe *'
+                        : 'Xe'}
+                    </Label>
+                    <TmsCombobox
+                      id='route-vehicle'
+                      value={
+                        formValues.vehicleId ||
+                        (formValues.originType === 'HUB' &&
+                        formValues.destinationType === 'HUB'
+                          ? NO_VEHICLE_VALUE
+                          : '')
+                      }
+                      onValueChange={(value) =>
+                        updateField(
+                          'vehicleId',
+                          value === NO_VEHICLE_VALUE ? '' : value
+                        )
+                      }
+                      options={formVehicleComboboxOptions}
+                      placeholder={
+                        formValues.originType === 'POST_OFFICE' ||
+                        formValues.destinationType === 'POST_OFFICE'
+                          ? 'Chọn xe'
+                          : 'Xe tùy chọn'
+                      }
+                      emptyText={
+                        formOperatingHubNumericId
+                          ? 'Không tìm thấy xe hoạt động đã gán tài xế'
+                          : formValues.originType === 'POST_OFFICE'
+                            ? 'Chọn hub đích trước'
+                            : 'Chọn hub xuất phát trước'
+                      }
+                      disabled={!formOperatingHubNumericId}
+                      loading={
+                        isFetchingFormVehicles ||
+                        isFetchingFormDriverAssignments
+                      }
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor='route-status'>Trạng thái</Label>
+                    <TmsCombobox
+                      id='route-status'
+                      value={formValues.status}
+                      onValueChange={(value) =>
+                        updateField('status', value as SecondMileRouteStatus)
+                      }
+                      options={ROUTE_STATUS_OPTIONS}
+                      placeholder='Chọn trạng thái'
+                      emptyText='Không tìm thấy trạng thái'
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor='distance'>
+                      Khoảng cách di chuyển thực tế (km)
+                    </Label>
+                    <Input
+                      id='distance'
+                      type='number'
+                      min='0'
+                      step='0.1'
+                      value={formValues.estimatedDistanceKm}
+                      onChange={(event) =>
+                        updateField('estimatedDistanceKm', event.target.value)
+                      }
+                      placeholder={
+                        isEstimatingTravelMetrics ? 'Đang tính...' : 'Tùy chọn'
+                      }
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label htmlFor='duration'>Thời lượng (phút)</Label>
+                    <Input
+                      id='duration'
+                      type='number'
+                      min='0'
+                      step='1'
+                      value={formValues.estimatedDurationMinutes}
+                      onChange={(event) =>
+                        updateField(
+                          'estimatedDurationMinutes',
+                          event.target.value
+                        )
+                      }
+                      placeholder={
+                        isEstimatingTravelMetrics ? 'Đang tính...' : 'Tùy chọn'
+                      }
+                    />
+                  </div>
+                  <div className='space-y-2 md:col-span-2'>
+                    <Label htmlFor='departure-time'>
+                      Giờ xuất phát cố định
+                    </Label>
+                    <Input
+                      id='departure-time'
+                      type='time'
+                      value={formValues.fixedDepartureTime}
+                      onChange={(event) =>
+                        updateField('fixedDepartureTime', event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className='space-y-2 md:col-span-2'>
+                    <Label htmlFor='note'>Ghi chú</Label>
+                    <Textarea
+                      id='note'
+                      value={formValues.note}
+                      onChange={(event) =>
+                        updateField('note', event.target.value)
+                      }
+                      className='min-h-24'
+                    />
+                  </div>
                 </div>
-              ) : (
-                <div className='space-y-2'>
-                  <Label htmlFor='route-origin-post-office'>
-                    Bưu cục xuất phát
-                  </Label>
-                  <TmsCombobox
-                    id='route-origin-post-office'
-                    value={formValues.originPostOfficeCode}
-                    onValueChange={updateOriginPostOffice}
-                    options={postOfficeFilterOptions}
-                    placeholder='Chọn bưu cục xuất phát'
-                    emptyText='Không tìm thấy bưu cục'
-                  />
-                </div>
-              )}
-              <div className='space-y-2'>
-                <Label htmlFor='route-destination-type'>Loại điểm đến</Label>
-                <TmsCombobox
-                  id='route-destination-type'
-                  value={formValues.destinationType}
-                  onValueChange={(value) =>
-                    updateDestinationType(
-                      value as SecondMileRouteDestinationType
-                    )
-                  }
-                  options={formDestinationTypeOptions}
-                  placeholder='Chọn loại điểm đến'
-                  emptyText='Không tìm thấy loại điểm đến'
-                />
               </div>
-              {formValues.destinationType === 'HUB' ? (
-                <div className='space-y-2 md:col-span-2'>
-                  <Label htmlFor='route-destination-hub'>Hub đích</Label>
-                  <TmsCombobox
-                    id='route-destination-hub'
-                    value={formValues.destinationHubId}
-                    onValueChange={(value) =>
-                      updateField('destinationHubId', value)
-                    }
-                    options={destinationHubComboboxOptions}
-                    placeholder='Chọn hub đích'
-                    emptyText={
-                      formValues.originType === 'POST_OFFICE' ||
-                      formValues.originHubId
-                        ? 'Không tìm thấy hub đích'
-                        : 'Chọn hub xuất phát trước'
-                    }
-                    disabled={
-                      formValues.originType === 'HUB' && !formValues.originHubId
-                    }
-                  />
-                </div>
-              ) : (
-                <div className='space-y-2 md:col-span-2'>
-                  <Label htmlFor='route-destination-post-office'>
-                    Bưu cục đích
-                  </Label>
-                  <TmsCombobox
-                    id='route-destination-post-office'
-                    value={formValues.destinationPostOfficeCode}
-                    onValueChange={(value) =>
-                      updateField('destinationPostOfficeCode', value)
-                    }
-                    options={mappedPostOfficeComboboxOptions}
-                    placeholder={
-                      formValues.originHubId
-                        ? 'Chọn bưu cục đã liên kết'
-                        : 'Chọn hub xuất phát trước'
-                    }
-                    emptyText={
-                      formValues.originHubId
-                        ? 'Không tìm thấy bưu cục đã liên kết'
-                        : 'Chọn hub xuất phát trước'
-                    }
-                    disabled={!formValues.originHubId}
-                    loading={isFetchingMappedPostOffices}
-                  />
-                </div>
-              )}
-              <div className='space-y-2'>
-                <Label htmlFor='route-vehicle'>
-                  {formValues.originType === 'POST_OFFICE' ||
-                  formValues.destinationType === 'POST_OFFICE'
-                    ? 'Xe *'
-                    : 'Xe'}
-                </Label>
-                <TmsCombobox
-                  id='route-vehicle'
-                  value={
-                    formValues.vehicleId ||
-                    (formValues.originType === 'HUB' &&
-                    formValues.destinationType === 'HUB'
-                      ? NO_VEHICLE_VALUE
-                      : '')
+
+              <div className='min-w-0 xl:sticky xl:top-0 xl:self-start'>
+                <SecondMileRoutesMap
+                  lines={formMapLines}
+                  selectedRouteId={editingRouteId ?? -1}
+                  title='Bản đồ tuyến đang tạo'
+                  description={
+                    formMapLines.length > 0
+                      ? 'Xem trước đường nối giữa điểm xuất phát và hub đích.'
+                      : 'Chọn điểm xuất phát và hub đích có tọa độ để xem trước tuyến.'
                   }
-                  onValueChange={(value) =>
-                    updateField(
-                      'vehicleId',
-                      value === NO_VEHICLE_VALUE ? '' : value
-                    )
-                  }
-                  options={formVehicleComboboxOptions}
-                  placeholder={
-                    formValues.originType === 'POST_OFFICE' ||
-                    formValues.destinationType === 'POST_OFFICE'
-                      ? 'Chọn xe'
-                      : 'Xe tùy chọn'
-                  }
-                  emptyText={
-                    formOperatingHubNumericId
-                      ? 'Không tìm thấy xe hoạt động đã gán tài xế'
-                      : formValues.originType === 'POST_OFFICE'
-                        ? 'Chọn hub đích trước'
-                        : 'Chọn hub xuất phát trước'
-                  }
-                  disabled={!formOperatingHubNumericId}
-                  loading={
-                    isFetchingFormVehicles || isFetchingFormDriverAssignments
-                  }
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='route-status'>Trạng thái</Label>
-                <TmsCombobox
-                  id='route-status'
-                  value={formValues.status}
-                  onValueChange={(value) =>
-                    updateField('status', value as SecondMileRouteStatus)
-                  }
-                  options={ROUTE_STATUS_OPTIONS}
-                  placeholder='Chọn trạng thái'
-                  emptyText='Không tìm thấy trạng thái'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='distance'>Khoảng cách (km)</Label>
-                <Input
-                  id='distance'
-                  type='number'
-                  min='0'
-                  step='0.1'
-                  value={formValues.estimatedDistanceKm}
-                  onChange={(event) =>
-                    updateField('estimatedDistanceKm', event.target.value)
-                  }
-                  placeholder='Tùy chọn'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='duration'>Thời lượng (phút)</Label>
-                <Input
-                  id='duration'
-                  type='number'
-                  min='0'
-                  step='1'
-                  value={formValues.estimatedDurationMinutes}
-                  onChange={(event) =>
-                    updateField('estimatedDurationMinutes', event.target.value)
-                  }
-                  placeholder='Tùy chọn'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label htmlFor='departure-time'>Giờ xuất phát cố định</Label>
-                <Input
-                  id='departure-time'
-                  type='time'
-                  value={formValues.fixedDepartureTime}
-                  onChange={(event) =>
-                    updateField('fixedDepartureTime', event.target.value)
-                  }
-                />
-              </div>
-              <div className='space-y-2 md:col-span-2 xl:col-span-3'>
-                <Label htmlFor='note'>Ghi chú</Label>
-                <Textarea
-                  id='note'
-                  value={formValues.note}
-                  onChange={(event) => updateField('note', event.target.value)}
+                  emptyText='Chưa đủ tọa độ điểm xuất phát và hub đích để hiển thị tuyến.'
+                  mapClassName='h-[520px] min-h-[420px] overflow-hidden rounded-lg border'
                 />
               </div>
             </div>

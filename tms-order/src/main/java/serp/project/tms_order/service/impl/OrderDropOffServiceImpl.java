@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
 import serp.project.tms_order.caller.FirstMilePostOfficeSuggestionCaller;
+import serp.project.tms_order.caller.SecondMileRoutePlanCaller;
 import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
 import serp.project.tms_order.domain.Order;
@@ -52,6 +53,7 @@ public class OrderDropOffServiceImpl implements OrderDropOffService {
     private final OrderTimelineService orderTimelineService;
     private final OrderAccessPolicy orderAccessPolicy;
     private final OrderEventDispatcher orderEventDispatcher;
+    private final SecondMileRoutePlanCaller secondMileRoutePlanCaller;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -90,6 +92,7 @@ public class OrderDropOffServiceImpl implements OrderDropOffService {
                 );
 
         order.setOriginPostOfficeCode(reservedPostOffice.getCode());
+        assignPlannedRoute(order);
         order.setIsConfirm(true);
         order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
 
@@ -167,9 +170,19 @@ public class OrderDropOffServiceImpl implements OrderDropOffService {
                 reserveDestinationPostOfficeIfNeeded(order);
 
         order.setIsConfirm(true);
+        assignPlannedRoute(order);
         order.setStatus(OrderStatus.AT_ORIGIN_POST_OFFICE);
         Order savedOrder = saveDropOffConfirmation(order);
         return OrderConfirmationMapper.toResponse(savedOrder, managedPostOffice, reservedDestinationPostOffice, true);
+    }
+
+    private void assignPlannedRoute(Order order) {
+        order.setPlannedRoute(secondMileRoutePlanCaller.planOrderRoute(
+                order.getOriginPostOfficeCode(),
+                order.getDestinationPostOfficeCode()
+        ));
+        order.setCurrentHubId(null);
+        order.setCurrentHubCode(null);
     }
 
     private Order saveDropOffConfirmation(Order order) {
@@ -184,7 +197,7 @@ public class OrderDropOffServiceImpl implements OrderDropOffService {
         orderTimelineService.recordStatusEvent(
                 order,
                 OrderStatus.AT_ORIGIN_POST_OFFICE,
-                "Drop-off order confirmed at origin post office.",
+                "Đơn hàng gửi tại bưu cục đã được xác nhận ở bưu cục gốc.",
                 null
         );
     }

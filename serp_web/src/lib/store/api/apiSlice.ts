@@ -310,6 +310,7 @@ export const api = createApi({
     'HandoverManifest',
     'BagDistributionManifest',
     'SecondMileBag',
+    'HubPostOfficeMapping',
     // TMS billing tags
     'billing/Tariff',
     'billing/SurchargeRule',

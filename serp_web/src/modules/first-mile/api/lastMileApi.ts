@@ -5,16 +5,23 @@
 
 import { api } from '@/lib/store/api';
 import type {
+  AutoAssignDeliveryPlanRequest,
   ConfirmDeliveryFailureRequest,
   ConfirmDeliveryPaymentRequest,
   ConfirmDeliveryRequest,
   CreateDeliveryManifestRequest,
+  DeliveryAssignmentResponse,
   DeliveryPaymentConfirmResponse,
   DeliveryPaymentInitResponse,
   DeliveryManifestListFilters,
   DeliveryManifestResponse,
+  DeliveryScanOutRequest,
+  DeliveryScanOutResponse,
   FirstMileApiResponse,
   InboundOrderResponse,
+  ManualAssignDeliveryOrdersRequest,
+  PickupOptimizationResponse,
+  PickupShift,
   ReturnToSenderRequest,
   SortInboundOrdersRequest,
 } from '../types';
@@ -62,6 +69,198 @@ export const lastMileApi = api.injectEndpoints({
     }),
 
     // ─── Delivery Manifests ────────────────────────────────────────────
+    optimizeDeliveryPlan: builder.mutation<
+      PickupOptimizationResponse,
+      AutoAssignDeliveryPlanRequest
+    >({
+      query: (body) => ({
+        url: '/delivery-dispatch/plan',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<PickupOptimizationResponse>,
+    }),
+
+    autoAssignDeliveryPlan: builder.mutation<
+      DeliveryAssignmentResponse,
+      AutoAssignDeliveryPlanRequest
+    >({
+      query: (body) => ({
+        url: '/delivery-dispatch/auto-assign',
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<DeliveryAssignmentResponse>,
+    }),
+
+    manualAssignDeliveryOrders: builder.mutation<
+      DeliveryAssignmentResponse,
+      ManualAssignDeliveryOrdersRequest
+    >({
+      query: (body) => ({
+        url: '/delivery-dispatch/manual-assign',
+        method: 'POST',
+        params: body.force_assign ? { force_assign: true } : undefined,
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<DeliveryAssignmentResponse>,
+    }),
+
+    getDeliveryDispatchTrips: builder.query<
+      DeliveryAssignmentResponse,
+      { postOfficeId?: number; shift?: PickupShift; tripDate?: string }
+    >({
+      query: ({ postOfficeId, shift, tripDate }) => ({
+        url: '/delivery-dispatch/trips',
+        method: 'GET',
+        params: {
+          ...(postOfficeId ? { post_office_id: postOfficeId } : {}),
+          ...(shift ? { shift } : {}),
+          ...(tripDate ? { trip_date: tripDate } : {}),
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<DeliveryAssignmentResponse>,
+    }),
+
+    scanOutDeliveryOrder: builder.mutation<
+      DeliveryScanOutResponse,
+      { tripId: number; body: DeliveryScanOutRequest }
+    >({
+      query: ({ tripId, body }) => ({
+        url: `/delivery-dispatch/trips/${tripId}/scan-out`,
+        method: 'POST',
+        body: {
+          order_code: body.orderCode,
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: unwrapFirstMileResultOrRaw<DeliveryScanOutResponse>,
+    }),
+
+    initiateTripDeliveryPayment: builder.mutation<
+      DeliveryPaymentInitResponse,
+      { tripId: number; orderCode: string }
+    >({
+      query: ({ tripId, orderCode }) => ({
+        url: `/delivery-dispatch/trips/${tripId}/orders/${orderCode}/payment/initiate`,
+        method: 'POST',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<DeliveryPaymentInitResponse>
+      ) => unwrapFirstMileResultOrRaw(response),
+    }),
+
+    confirmTripDeliveryPayment: builder.mutation<
+      DeliveryPaymentConfirmResponse,
+      {
+        tripId: number;
+        orderCode: string;
+        body: ConfirmDeliveryPaymentRequest;
+      }
+    >({
+      query: ({ tripId, orderCode, body }) => ({
+        url: `/delivery-dispatch/trips/${tripId}/orders/${orderCode}/payment/confirm`,
+        method: 'POST',
+        body,
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<DeliveryPaymentConfirmResponse>
+      ) => unwrapFirstMileResultOrRaw(response),
+    }),
+
+    confirmTripDelivered: builder.mutation<
+      DeliveryAssignmentResponse,
+      { tripId: number; orderCode: string; body: ConfirmDeliveryRequest }
+    >({
+      query: ({ tripId, orderCode, body }) => {
+        const formData = new FormData();
+        formData.append('latitude', String(body.latitude));
+        formData.append('longitude', String(body.longitude));
+        formData.append('photo', body.photo);
+        if (body.codCollected !== undefined) {
+          formData.append('cod_collected', String(body.codCollected));
+        }
+        if (body.shippingFeeCollected !== undefined) {
+          formData.append(
+            'shipping_fee_collected',
+            String(body.shippingFeeCollected)
+          );
+        }
+        if (body.note) {
+          formData.append('note', body.note);
+        }
+
+        return {
+          url: `/delivery-dispatch/trips/${tripId}/orders/${orderCode}/delivered`,
+          method: 'POST',
+          body: formData,
+        };
+      },
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<DeliveryAssignmentResponse>
+      ) => unwrapFirstMileResultOrRaw(response),
+    }),
+
+    confirmTripDeliveryFailed: builder.mutation<
+      DeliveryAssignmentResponse,
+      {
+        tripId: number;
+        orderCode: string;
+        body: ConfirmDeliveryFailureRequest;
+      }
+    >({
+      query: ({ tripId, orderCode, body }) => ({
+        url: `/delivery-dispatch/trips/${tripId}/orders/${orderCode}/failed`,
+        method: 'POST',
+        body: {
+          failure_reason: body.failureReason,
+          note: body.note,
+          current_lat: body.currentLat,
+          current_lng: body.currentLng,
+        },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<DeliveryAssignmentResponse>
+      ) => unwrapFirstMileResultOrRaw(response),
+    }),
+
+    confirmTripReturn: builder.mutation<
+      DeliveryAssignmentResponse,
+      { tripId: number; orderCode: string; body: ReturnToSenderRequest }
+    >({
+      query: ({ tripId, orderCode, body }) => ({
+        url: `/delivery-dispatch/trips/${tripId}/orders/${orderCode}/return`,
+        method: 'POST',
+        body: { note: body.note },
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<DeliveryAssignmentResponse>
+      ) => unwrapFirstMileResultOrRaw(response),
+    }),
+
+    completeDeliveryTrip: builder.mutation<
+      DeliveryManifestResponse,
+      { tripId: number }
+    >({
+      query: ({ tripId }) => ({
+        url: `/delivery-dispatch/trips/${tripId}/complete`,
+        method: 'POST',
+      }),
+      extraOptions: FIRST_MILE_SERVICE,
+      transformResponse: (
+        response: FirstMileApiResponse<DeliveryManifestResponse>
+      ) => unwrapFirstMileResultOrRaw(response),
+    }),
+
     getDeliveryManifests: builder.query<
       DeliveryManifestResponse[],
       DeliveryManifestListFilters
@@ -254,6 +453,17 @@ export const lastMileApi = api.injectEndpoints({
 export const {
   useGetInboundOrdersQuery,
   useConfirmInboundOrdersMutation,
+  useOptimizeDeliveryPlanMutation,
+  useAutoAssignDeliveryPlanMutation,
+  useManualAssignDeliveryOrdersMutation,
+  useGetDeliveryDispatchTripsQuery,
+  useScanOutDeliveryOrderMutation,
+  useInitiateTripDeliveryPaymentMutation,
+  useConfirmTripDeliveryPaymentMutation,
+  useConfirmTripDeliveredMutation,
+  useConfirmTripDeliveryFailedMutation,
+  useConfirmTripReturnMutation,
+  useCompleteDeliveryTripMutation,
   useGetDeliveryManifestsQuery,
   useGetDeliveryManifestDetailQuery,
   useCreateDeliveryManifestMutation,

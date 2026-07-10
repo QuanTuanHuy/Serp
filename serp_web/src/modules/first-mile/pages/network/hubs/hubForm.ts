@@ -39,7 +39,6 @@ export const HUB_FORM_STATUS_OPTIONS: Array<{
 }> = [
   { value: 'ACTIVE', label: 'Đang hoạt động' },
   { value: 'INACTIVE', label: 'Ngừng hoạt động' },
-  { value: 'MAINTENANCE', label: 'Bảo trì' },
 ];
 
 /** Status filter options (same values as form). */
@@ -51,8 +50,6 @@ export function getHubStatusLabel(status: string): string {
       return 'Đang hoạt động';
     case 'INACTIVE':
       return 'Ngừng hoạt động';
-    case 'MAINTENANCE':
-      return 'Bảo trì';
     default:
       return status;
   }

@@ -53,6 +53,12 @@ public interface BagRepository extends JpaRepository<Bag, Long>, JpaSpecificatio
             BagStatus status
     );
 
+    List<Bag> findByTenantIdAndOriginHubIdAndStatusIn(
+            Long tenantId,
+            Long originHubId,
+            List<BagStatus> statuses
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select bag

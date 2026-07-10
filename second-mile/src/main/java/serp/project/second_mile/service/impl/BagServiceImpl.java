@@ -18,7 +18,6 @@ import serp.project.second_mile.caller.dto.tms_order.TmsOrderStatusTransitionReq
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.BagOrder;
 import serp.project.second_mile.domain.Hub;
-import serp.project.second_mile.domain.HubPostOfficeMapping;
 import serp.project.second_mile.domain.Route;
 import serp.project.second_mile.domain.Vehicle;
 import serp.project.second_mile.dto.PageResponse;
@@ -291,8 +290,12 @@ public class BagServiceImpl implements BagService {
                 List.of(BagMapper.toTransitionItem(
                         order,
                         OrderStatus.BAGGED,
-                        List.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.BAGGING_IN_PROGRESS),
-                        "Order assigned to second-mile bag.",
+                        List.of(
+                                OrderStatus.INBOUND_AT_ORIGIN_HUB,
+                                OrderStatus.INBOUND_AT_DESTINATION_HUB,
+                                OrderStatus.BAGGING_IN_PROGRESS
+                        ),
+                        "Đơn hàng đã được gán vào bao trung chuyển.",
                         buildBagContext(bag)
                 ))
         );
@@ -334,7 +337,7 @@ public class BagServiceImpl implements BagService {
                         bagOrder,
                         OrderStatus.INBOUND_AT_ORIGIN_HUB,
                         List.of(OrderStatus.BAGGED, OrderStatus.INBOUND_AT_ORIGIN_HUB),
-                        "Order removed from second-mile bag.",
+                        "Đơn hàng đã được gỡ khỏi bao trung chuyển.",
                         buildBagContext(bag)
                 ))
         );
@@ -378,7 +381,7 @@ public class BagServiceImpl implements BagService {
                                 item,
                                 OrderStatus.BAG_SEALED,
                                 List.of(OrderStatus.BAGGED),
-                                "Second-mile bag sealed.",
+                                "Bao trung chuyển đã được niêm phong.",
                                 buildBagContext(savedBag)
                         ))
                         .toList()
@@ -425,7 +428,7 @@ public class BagServiceImpl implements BagService {
                                 item,
                                 OrderStatus.BAGGED,
                                 List.of(OrderStatus.BAG_SEALED),
-                                "Second-mile bag reopened. Reason: " + reason,
+                                "Bao trung chuyển đã được mở lại. Lý do: " + reason,
                                 buildBagContext(savedBag)
                         ))
                         .toList()
@@ -454,8 +457,14 @@ public class BagServiceImpl implements BagService {
             return List.of();
         }
 
-        Long resolvedOriginHubId = originHubId != null ? originHubId : bagValidator.resolveOriginHubIdByOrder(tenantId, order);
-        BagDestinationTarget destinationTarget = resolveDestinationTargetForOrder(tenantId, order, resolvedOriginHubId);
+        Long resolvedOriginHubId = originHubId != null
+                ? originHubId
+                : bagValidator.resolveCurrentHubIdByOrder(tenantId, order);
+        BagDestinationTarget destinationTarget = bagValidator.resolveDestinationTargetForOrder(
+                tenantId,
+                order,
+                resolvedOriginHubId
+        );
         List<Bag> candidates = findEditableBagsByTarget(tenantId, resolvedOriginHubId, destinationTarget);
         BagCapacitySettingsResponse capacitySettings = bagCapacitySettingsService.getSettingsForTenant(tenantId);
 
@@ -616,8 +625,12 @@ public class BagServiceImpl implements BagService {
                 transitionItems.add(BagMapper.toTransitionItem(
                         order,
                         OrderStatus.BAGGED,
-                        List.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.BAGGING_IN_PROGRESS),
-                        "Order auto-assigned to second-mile bag.",
+                        List.of(
+                                OrderStatus.INBOUND_AT_ORIGIN_HUB,
+                                OrderStatus.INBOUND_AT_DESTINATION_HUB,
+                                OrderStatus.BAGGING_IN_PROGRESS
+                        ),
+                        "Đơn hàng đã được tự động gán vào bao trung chuyển.",
                         context
                 ));
                 bagOrder.setLastKnownStatus(OrderStatus.BAGGED.name());
@@ -698,26 +711,6 @@ public class BagServiceImpl implements BagService {
                 secondMileAccessUtils.getCurrentTenantIdOrThrow()
         );
         return BagMapper.toResponse(bag, bagOrders);
-    }
-
-    private BagDestinationTarget resolveDestinationTargetForOrder(
-            Long tenantId,
-            TmsOrderOperationView order,
-            Long originHubId
-    ) {
-        String destinationPostOfficeCode = normalizeText(order.getDestinationPostOfficeCode());
-        if (destinationPostOfficeCode == null) {
-            throw new AppException(ErrorCode.BAG_DESTINATION_INVALID);
-        }
-        return hubPostOfficeMappingRepository.findByTenantIdAndPostOfficeCode(tenantId, destinationPostOfficeCode)
-                .map(mapping -> {
-                    Long destinationHubId = mapping.getHub() == null ? null : mapping.getHub().getId();
-                    if (destinationHubId == null || Objects.equals(originHubId, destinationHubId)) {
-                        return new BagDestinationTarget(BagDestinationType.POST_OFFICE, null, destinationPostOfficeCode);
-                    }
-                    return new BagDestinationTarget(BagDestinationType.HUB, destinationHubId, destinationPostOfficeCode);
-                })
-                .orElse(new BagDestinationTarget(BagDestinationType.POST_OFFICE, null, destinationPostOfficeCode));
     }
 
     private List<Bag> findEditableBagsByTarget(Long tenantId, Long originHubId, BagDestinationTarget target) {

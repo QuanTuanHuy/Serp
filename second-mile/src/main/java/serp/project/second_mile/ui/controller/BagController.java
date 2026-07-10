@@ -60,6 +60,7 @@ public class BagController {
             @RequestParam(name = "destination_post_office_code", required = false) String destinationPostOfficeCode,
             @RequestParam(name = "vehicle_id", required = false) Long vehicleId,
             @RequestParam(required = false) BagStatus status,
+            @RequestParam(required = false) List<BagStatus> statuses,
             @RequestParam(name = "min_orders", required = false) Integer minOrders,
             @RequestParam(name = "max_orders", required = false) Integer maxOrders,
             @RequestParam(name = "min_weight", required = false) Double minWeight,
@@ -82,6 +83,7 @@ public class BagController {
                 .destinationPostOfficeCode(destinationPostOfficeCode)
                 .vehicleId(vehicleId)
                 .status(status)
+                .statuses(statuses)
                 .minOrders(minOrders)
                 .maxOrders(maxOrders)
                 .minWeight(minWeight)

@@ -65,6 +65,10 @@ public final class BagSpecification {
                 predicates.add(criteriaBuilder.equal(root.get("status"), filterRequest.getStatus()));
             }
 
+            if (filterRequest.getStatuses() != null && !filterRequest.getStatuses().isEmpty()) {
+                predicates.add(root.get("status").in(filterRequest.getStatuses()));
+            }
+
             if (filterRequest.getMinOrders() != null) {
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(
                         root.<Integer>get("currentOrders"),

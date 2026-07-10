@@ -87,7 +87,7 @@ public class OrderSortingServiceImpl implements OrderSortingService {
                         .orderCode(o.getOrderCode())
                         .expectedStatuses(List.of(OrderStatus.INBOUND_AT_DESTINATION_POST_OFFICE))
                         .targetStatus(OrderStatus.READY_FOR_DELIVERY)
-                        .description("Confirmed inbound at destination post office, ready for delivery")
+                        .description("Đã xác nhận nhập kho tại bưu cục đích, sẵn sàng giao hàng.")
                         .build())
                 .toList();
 

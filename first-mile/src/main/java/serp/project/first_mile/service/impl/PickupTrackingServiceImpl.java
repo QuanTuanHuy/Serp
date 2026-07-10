@@ -537,7 +537,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                     order,
                     AUTO_PICKUP_FAILED_CANDIDATE_STATUSES,
                     OrderStatus.PICKUP_FAILED,
-                    "Pickup failed because trip was completed before this order was checked in.",
+                    "Gom hàng thất bại vì chuyến gom đã hoàn tất trước khi đơn hàng được check-in.",
                     new OrderTimelineContext(
                             null,
                             trip.getId(),
@@ -552,7 +552,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                             null,
                             null,
                             null,
-                            "Trip completion without check-in"
+                            "Hoàn tất chuyến gom khi chưa check-in"
                     )
             ));
         }
@@ -607,7 +607,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                     order,
                     RETURNABLE_ORDER_STATUSES,
                     OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND,
-                    "Courier returned shipment to origin post office. Awaiting post office inbound scan.",
+                    "Nhân viên gom hàng đã trả đơn về bưu cục gốc. Chờ bưu cục quét nhập kho.",
                     new OrderTimelineContext(
                             null,
                             trip.getId(),
@@ -622,7 +622,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                             null,
                             null,
                             null,
-                            "Origin post office"
+                            "Bưu cục gốc"
                     )
             ));
         }
@@ -702,7 +702,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                     matchedOrder,
                     List.of(OrderStatus.PENDING_ORIGIN_POST_OFFICE_INBOUND),
                     OrderStatus.AT_ORIGIN_POST_OFFICE,
-                    "Post office confirmed inbound receiving.",
+                    "Bưu cục đã xác nhận nhập kho.",
                     new OrderTimelineContext(
                             null,
                             trip.getId(),
@@ -717,7 +717,7 @@ public class PickupTrackingServiceImpl implements PickupTrackingService {
                             null,
                             null,
                             null,
-                            "Origin post office inbound"
+                            "Nhập kho tại bưu cục gốc"
                     )
             ));
         }

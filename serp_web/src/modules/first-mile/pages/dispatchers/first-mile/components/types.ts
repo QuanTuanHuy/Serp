@@ -52,12 +52,10 @@ export interface DispatchCourierOption {
 }
 
 export interface DispatchSetupBusinessValues {
-  vehicleOption: RoutingVehicleOption;
   optimizationGoal: DispatchOptimizationGoalOption;
 }
 
 export interface DispatchSetupBusinessHandlers {
-  onVehicleOptionChange: (value: RoutingVehicleOption) => void;
   onOptimizationGoalChange: (value: DispatchOptimizationGoalOption) => void;
 }
 
@@ -85,6 +83,7 @@ export interface DispatchSetupCardProps {
   isAutoAssigning: boolean;
   activeAction: DispatchActionType;
   isTmsAdmin: boolean;
+  hidePreviewButton?: boolean;
 }
 
 export interface NoAccessCardProps {
@@ -146,6 +145,10 @@ export interface PlanPreviewCardProps {
   optimizationResult: PickupOptimizationResponse;
   formatDateTime: (value?: string) => string;
   formatNumber: (value?: number) => string;
+  title?: string;
+  stopContactLabel?: string;
+  stopTimeLabel?: string;
+  successText?: string;
 }
 
 export interface AssignmentResultCardProps {

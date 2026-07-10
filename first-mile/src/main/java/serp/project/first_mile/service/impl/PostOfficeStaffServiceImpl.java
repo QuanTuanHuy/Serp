@@ -199,23 +199,11 @@ public class PostOfficeStaffServiceImpl implements PostOfficeStaffService {
             }
         }
 
-        List<PostOfficeStaffAssignment> assignmentsToUpdate = new ArrayList<>();
-        List<PostOfficeStaffAssignment> assignmentsToDelete = new ArrayList<>();
-        for (PostOfficeStaffAssignment activeAssignment : activeManagerAssignments) {
-            if (activeAssignment.getAssignedFrom() != null && activeAssignment.getAssignedFrom().isEqual(today)) {
-                assignmentsToDelete.add(activeAssignment);
-                continue;
-            }
-
-            activeAssignment.setAssignedTo(today.minusDays(1));
-            assignmentsToUpdate.add(activeAssignment);
-        }
-
-        if (!assignmentsToUpdate.isEmpty()) {
-            postOfficeStaffAssignmentRepository.saveAll(assignmentsToUpdate);
-        }
-        if (!assignmentsToDelete.isEmpty()) {
-            postOfficeStaffAssignmentRepository.deleteAll(assignmentsToDelete);
+        if (!activeManagerAssignments.isEmpty()) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Bưu cục đã có trưởng. Vui lòng gỡ phân công trưởng hiện tại trước khi phân công trưởng mới."
+            );
         }
 
         closeOtherActiveAssignmentsForStaff(manager.getId(), postOffice.getId(), tenantId, today);

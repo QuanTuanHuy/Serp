@@ -75,30 +75,6 @@ public class BagDistributionManifest extends AbstractAudit {
     @Column(name = "actual_arrival_at")
     private LocalDateTime actualArrivalAt;
 
-    @Column(name = "driver_start_latitude")
-    private Double driverStartLatitude;
-
-    @Column(name = "driver_start_longitude")
-    private Double driverStartLongitude;
-
-    @Column(name = "driver_start_distance_m")
-    private Double driverStartDistanceM;
-
-    @Column(name = "driver_start_photo_url")
-    private String driverStartPhotoUrl;
-
-    @Column(name = "driver_end_latitude")
-    private Double driverEndLatitude;
-
-    @Column(name = "driver_end_longitude")
-    private Double driverEndLongitude;
-
-    @Column(name = "driver_end_distance_m")
-    private Double driverEndDistanceM;
-
-    @Column(name = "driver_end_photo_url")
-    private String driverEndPhotoUrl;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 40)
     private BagDistributionManifestStatus status;

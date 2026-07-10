@@ -60,9 +60,10 @@ const readField = <T>(
 const readOptionalNumber = (
   raw: Record<string, unknown>,
   snakeKey: string,
-  camelKey: string
+  camelKey: string,
+  ...alternateKeys: string[]
 ): number | undefined => {
-  const value = readField<unknown>(raw, snakeKey, camelKey);
+  const value = readField<unknown>(raw, snakeKey, camelKey, ...alternateKeys);
   if (value === undefined || value === null || value === '') {
     return undefined;
   }
@@ -240,21 +241,33 @@ export const normalizeSecondMileVehicle = (raw: unknown): SecondMileVehicle => {
     assignedStaffId: readOptionalNumber(
       record,
       'assigned_staff_id',
-      'assignedStaffId'
+      'assignedStaffId',
+      'driver_id',
+      'driverId',
+      'staff_id',
+      'staffId'
     ),
     assignedStaffCode: readField<string>(
       record,
       'assigned_staff_code',
       'assignedStaffCode',
       'driver_code',
-      'driverCode'
+      'driverCode',
+      'staff_code',
+      'staffCode'
     ),
     assignedStaffFullName: readField<string>(
       record,
       'assigned_staff_full_name',
       'assignedStaffFullName',
+      'assigned_staff_name',
+      'assignedStaffName',
       'driver_name',
-      'driverName'
+      'driverName',
+      'staff_full_name',
+      'staffFullName',
+      'staff_name',
+      'staffName'
     ),
     status:
       readField<SecondMileVehicleStatus>(record, 'status', 'status') ??
@@ -677,6 +690,16 @@ export const normalizeBagDistributionManifest = (
       'actual_arrival_at',
       'actualArrivalAt'
     ),
+    driverStartCheckinId: readOptionalNumber(
+      record,
+      'driver_start_checkin_id',
+      'driverStartCheckinId'
+    ),
+    driverStartCheckinAt: readField<string>(
+      record,
+      'driver_start_checkin_at',
+      'driverStartCheckinAt'
+    ),
     driverStartLatitude: readOptionalNumber(
       record,
       'driver_start_latitude',
@@ -692,10 +715,25 @@ export const normalizeBagDistributionManifest = (
       'driver_start_distance_m',
       'driverStartDistanceM'
     ),
+    driverStartLocationLabel: readField<string>(
+      record,
+      'driver_start_location_label',
+      'driverStartLocationLabel'
+    ),
     driverStartPhotoUrl: readField<string>(
       record,
       'driver_start_photo_url',
       'driverStartPhotoUrl'
+    ),
+    driverEndCheckinId: readOptionalNumber(
+      record,
+      'driver_end_checkin_id',
+      'driverEndCheckinId'
+    ),
+    driverEndCheckinAt: readField<string>(
+      record,
+      'driver_end_checkin_at',
+      'driverEndCheckinAt'
     ),
     driverEndLatitude: readOptionalNumber(
       record,
@@ -711,6 +749,11 @@ export const normalizeBagDistributionManifest = (
       record,
       'driver_end_distance_m',
       'driverEndDistanceM'
+    ),
+    driverEndLocationLabel: readField<string>(
+      record,
+      'driver_end_location_label',
+      'driverEndLocationLabel'
     ),
     driverEndPhotoUrl: readField<string>(
       record,

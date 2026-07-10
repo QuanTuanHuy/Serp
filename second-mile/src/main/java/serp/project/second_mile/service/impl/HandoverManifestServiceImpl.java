@@ -190,7 +190,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                                 order,
                                 OrderStatus.OUTBOUND_READY_FROM_PO,
                                 List.of(OrderStatus.AT_ORIGIN_POST_OFFICE, OrderStatus.OUTBOUND_READY_FROM_PO),
-                                "Second-mile handover manifest created.",
+                                "Biên bản bàn giao trung chuyển đã được tạo.",
                                 buildManifestContext(savedManifest, vehicle, route)
                         ))
                         .toList()
@@ -399,7 +399,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                         order,
                         OrderStatus.OUTBOUND_READY_FROM_PO,
                         List.of(OrderStatus.AT_ORIGIN_POST_OFFICE, OrderStatus.OUTBOUND_READY_FROM_PO),
-                        "First-mile outbound handover confirmed.",
+                        "Đã xác nhận bàn giao xuất kho từ chặng đầu.",
                         context
                 ));
             }
@@ -516,7 +516,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                                 item,
                                 OrderStatus.AT_ORIGIN_POST_OFFICE,
                                 List.of(OrderStatus.OUTBOUND_READY_FROM_PO),
-                                "First-mile handover manifest cancelled.",
+                                "Biên bản bàn giao chặng đầu đã bị hủy.",
                                 buildManifestContext(existingManifest, loadVehicle(existingManifest.getVehicleId()), loadRoute(existingManifest.getRouteId()))
                         ))
                         .toList()
@@ -1051,7 +1051,7 @@ public class HandoverManifestServiceImpl implements HandoverManifestService {
                                 item,
                                 OrderStatus.INBOUND_AT_ORIGIN_HUB,
                                 List.of(OrderStatus.OUTBOUND_READY_FROM_PO, OrderStatus.INBOUND_AT_ORIGIN_HUB),
-                                "Second-mile hub inbound confirmed.",
+                                "Hub trung chuyển đã xác nhận nhập kho.",
                                 context
                         ))
                         .toList()

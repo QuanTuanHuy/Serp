@@ -33,6 +33,8 @@ public class TmsOrderOperationView {
     private Boolean isConfirm;
     private String originPostOfficeCode;
     private String destinationPostOfficeCode;
+    private Long currentHubId;
+    private String currentHubCode;
     private String senderName;
     private String senderPhone;
     private String senderProvinceCode;

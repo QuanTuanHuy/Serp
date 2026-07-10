@@ -14,9 +14,11 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
 import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
+import serp.project.tms_order.caller.SecondMileRoutePlanCaller;
 import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
 import serp.project.tms_order.domain.Order;
+import serp.project.tms_order.domain.PlannedOrderRoute;
 import serp.project.tms_order.domain.ProductType;
 import serp.project.tms_order.dto.request.CancelOrderRequest;
 import serp.project.tms_order.dto.request.CreateOrderRequest;
@@ -77,6 +79,9 @@ class OrderServiceImplTest {
     private FirstMilePostOfficeCaller firstMilePostOfficeCaller;
 
     @Mock
+    private SecondMileRoutePlanCaller secondMileRoutePlanCaller;
+
+    @Mock
     private OrderSyncEventPublisher orderSyncEventPublisher;
 
     @Mock
@@ -109,7 +114,8 @@ class OrderServiceImplTest {
                 new OrderTemplateExporter(orderExcelService),
                 new OrderFilterNormalizer(),
                 orderAccessPolicy,
-                orderEventDispatcher
+                orderEventDispatcher,
+                secondMileRoutePlanCaller
         );
     }
 
@@ -209,6 +215,8 @@ class OrderServiceImplTest {
                 .thenReturn(destinationPostOffice);
         when(firstMilePostOfficeCaller.reserveBestOriginPostOffice(21.0278D, 105.8342D))
                 .thenReturn(postOffice);
+        when(secondMileRoutePlanCaller.planOrderRoute("PO-HN-01", "PO-HCM-01"))
+                .thenReturn(plannedRoute());
         when(orderRepository.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -220,6 +228,7 @@ class OrderServiceImplTest {
         assertEquals(true, order.getIsConfirm());
         assertEquals("PO-HN-01", order.getOriginPostOfficeCode());
         assertEquals("PO-HCM-01", order.getDestinationPostOfficeCode());
+        assertNotNull(order.getPlannedRoute());
         verify(orderSyncEventPublisher).publish(order);
         verify(orderNotificationEventPublisher).publishOrderConfirmed(order);
     }
@@ -293,6 +302,20 @@ class OrderServiceImplTest {
                 .receiverLocation(GEOMETRY_FACTORY.createPoint(new Coordinate(106.7009D, 10.7769D)))
                 .tenantId(TENANT_ID)
                 .createdBy(String.valueOf(CUSTOMER_USER_ID))
+                .build();
+    }
+
+    private PlannedOrderRoute plannedRoute() {
+        return PlannedOrderRoute.builder()
+                .originPostOfficeCode("PO-HN-01")
+                .destinationPostOfficeCode("PO-HCM-01")
+                .totalEstimatedDistanceKm(100.0)
+                .totalEstimatedDurationMinutes(180)
+                .legs(List.of(PlannedOrderRoute.Leg.builder()
+                        .sequence(1)
+                        .routeId(10L)
+                        .routeCode("R-001")
+                        .build()))
                 .build();
     }
 

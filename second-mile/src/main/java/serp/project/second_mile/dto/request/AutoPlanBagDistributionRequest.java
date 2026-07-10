@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import serp.project.second_mile.enums.BagDestinationType;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -41,6 +42,9 @@ public class AutoPlanBagDistributionRequest {
 
     @JsonProperty("sealed_sla_hours")
     private Integer sealedSlaHours;
+
+    @JsonProperty("bag_ids")
+    private List<Long> bagIds;
 
     @JsonProperty("execute")
     private Boolean execute;

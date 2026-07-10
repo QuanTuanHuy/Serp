@@ -32,6 +32,7 @@ import type {
   BagDistributionPlan,
   CreateBagDistributionManifestRequest,
   SecondMileBag,
+  SecondMileBagStatus,
 } from '../../../types';
 import { KpiCard, PlanningTab, ReadyBagsTab } from './components';
 import {
@@ -42,7 +43,6 @@ import {
   canManageDistribution,
   formatNumber,
   makeDefaultPlanningState,
-  parseNumber,
   toApiDateTime,
   type DestinationFilter,
   type PlanningState,
@@ -136,7 +136,7 @@ export function SecondMileDispatchersPage() {
         destinationFilter === 'POST_OFFICE'
           ? planning.destinationPostOfficeCode
           : undefined,
-      status: 'SEALED' as const,
+      statuses: ['SEALED', 'ARRIVED'] as SecondMileBagStatus[],
     }),
     [
       destinationFilter,
@@ -289,7 +289,7 @@ export function SecondMileDispatchersPage() {
     setActiveTab('planning');
   };
 
-  const validatePlan = (): string | null => {
+  const validateDestinationPlan = (): string | null => {
     if (!planning.originHubId) return 'Chọn hub xuất phát.';
     if (planning.destinationType === 'HUB' && !planning.destinationHubId) {
       return 'Chọn hub đích.';
@@ -300,6 +300,10 @@ export function SecondMileDispatchersPage() {
     ) {
       return 'Chọn bưu cục đích.';
     }
+    return null;
+  };
+
+  const validatePlannedWindow = (): string | null => {
     if (!planning.plannedDepartureAt || !planning.plannedArrivalAt) {
       return 'Nhập thời gian xuất phát và thời gian đến dự kiến.';
     }
@@ -308,6 +312,46 @@ export function SecondMileDispatchersPage() {
       new Date(planning.plannedDepartureAt).getTime()
     ) {
       return 'Thời gian đến dự kiến phải sau thời gian xuất phát.';
+    }
+    return null;
+  };
+
+  const validateAutoPlan = (): string | null => {
+    const destinationError = validateDestinationPlan();
+    if (destinationError) return destinationError;
+    const plannedWindowError = validatePlannedWindow();
+    if (plannedWindowError) return plannedWindowError;
+    if (selectedBagIds.length === 0) {
+      return 'Chọn ít nhất một túi hàng để xem trước hoặc chạy kế hoạch tự động.';
+    }
+    if (selectedDestinationSummary?.sameDestination === false) {
+      return 'Các túi hàng được chọn phải cùng hub xuất phát và điểm đến.';
+    }
+    if (
+      selectedDestinationSummary &&
+      (selectedDestinationSummary.originHubId !== planning.originHubId ||
+        selectedDestinationSummary.destinationType !==
+          planning.destinationType ||
+        selectedDestinationSummary.destinationHubId !==
+          planning.destinationHubId ||
+        selectedDestinationSummary.destinationPostOfficeCode !==
+          planning.destinationPostOfficeCode)
+    ) {
+      return 'Túi hàng được chọn phải khớp chặng đang lập kế hoạch. Hãy dùng điểm đến đã chọn hoặc điều chỉnh kế hoạch.';
+    }
+    return null;
+  };
+
+  const validateManualPlan = (): string | null => {
+    const destinationError = validateDestinationPlan();
+    if (destinationError) return destinationError;
+    const plannedWindowError = validatePlannedWindow();
+    if (plannedWindowError) return plannedWindowError;
+    if (!planning.routeId) {
+      return 'Chọn tuyến cho biên bản thủ công.';
+    }
+    if (!planning.vehicleId) {
+      return 'Chọn xe cho biên bản thủ công.';
     }
     return null;
   };
@@ -327,7 +371,7 @@ export function SecondMileDispatchersPage() {
         : undefined,
     planned_departure_at: toApiDateTime(planning.plannedDepartureAt),
     planned_arrival_at: toApiDateTime(planning.plannedArrivalAt),
-    sealed_sla_hours: parseNumber(planning.sealedSlaHours),
+    bag_ids: selectedBagIds,
     execute,
     note: planning.note || undefined,
   });
@@ -337,7 +381,7 @@ export function SecondMileDispatchersPage() {
       notification.error('Bạn cần quyền quản lý hub để lập kế hoạch.');
       return;
     }
-    const error = validatePlan();
+    const error = validateAutoPlan();
     if (error) {
       notification.error(error);
       return;
@@ -374,21 +418,13 @@ export function SecondMileDispatchersPage() {
       notification.error('Bạn cần quyền quản lý hub để tạo biên bản thủ công.');
       return;
     }
-    const error = validatePlan();
+    const error = validateManualPlan();
     if (error) {
       notification.error(error);
       return;
     }
-    if (!planning.routeId) {
-      notification.error('Chọn tuyến cho biên bản thủ công.');
-      return;
-    }
-    if (!planning.vehicleId) {
-      notification.error('Chọn xe cho biên bản thủ công.');
-      return;
-    }
     if (selectedBagIds.length === 0) {
-      notification.error('Chọn ít nhất một túi hàng đã niêm phong.');
+      notification.error('Chọn ít nhất một túi hàng sẵn sàng điều phối.');
       return;
     }
     if (selectedDestinationSummary?.sameDestination === false) {
@@ -413,6 +449,10 @@ export function SecondMileDispatchersPage() {
       return;
     }
 
+    const routeId = planning.routeId;
+    const vehicleId = planning.vehicleId;
+    if (!routeId || !vehicleId) return;
+
     const request: CreateBagDistributionManifestRequest = {
       origin_hub_id: planning.originHubId ?? 0,
       destination_type: planning.destinationType,
@@ -424,8 +464,8 @@ export function SecondMileDispatchersPage() {
         planning.destinationType === 'POST_OFFICE'
           ? planning.destinationPostOfficeCode
           : undefined,
-      route_id: planning.routeId,
-      vehicle_id: planning.vehicleId,
+      route_id: routeId,
+      vehicle_id: vehicleId,
       planned_departure_at: toApiDateTime(planning.plannedDepartureAt),
       planned_arrival_at: toApiDateTime(planning.plannedArrivalAt),
       bag_ids: selectedBagIds,
@@ -454,8 +494,8 @@ export function SecondMileDispatchersPage() {
               Điều phối hàng hóa chặng trung chuyển
             </h1>
             <p className='max-w-3xl text-sm text-muted-foreground'>
-              Lập kế hoạch gom túi hàng theo tuyến, tạo biên bản điều phối và
-              hỗ trợ tài xế check-in trong chặng trung chuyển.
+              Lập kế hoạch gom túi hàng theo tuyến, tạo biên bản điều phối và hỗ
+              trợ tài xế check-in trong chặng trung chuyển.
             </p>
           </div>
         </div>
@@ -477,7 +517,7 @@ export function SecondMileDispatchersPage() {
           icon={Boxes}
           label='Túi sẵn sàng'
           value={formatNumber(totalReady, 0)}
-          hint='Túi đã niêm phong chờ điều phối'
+          hint='Túi đã niêm phong hoặc đã đến hub'
         />
         <KpiCard
           icon={PackageCheck}
@@ -531,6 +571,7 @@ export function SecondMileDispatchersPage() {
             isFetchingRoutes={isFetchingRoutes}
             isFetchingVehicles={isFetchingVehicles}
             selectedBags={selectedBags}
+            selectedBagCount={selectedBagIds.length}
             selectedDestinationSummary={selectedDestinationSummary}
             planResult={planResult}
             isPlanning={isPlanning}
@@ -540,7 +581,6 @@ export function SecondMileDispatchersPage() {
             onCreateManual={handleCreateManual}
           />
         </TabsContent>
-
       </Tabs>
     </div>
   );

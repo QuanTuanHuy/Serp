@@ -110,6 +110,10 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
   optimizationResult,
   formatDateTime,
   formatNumber,
+  title = 'Xem trước kế hoạch lấy hàng',
+  stopContactLabel = 'Người gửi',
+  stopTimeLabel = 'Khung giờ lấy hàng',
+  successText = 'Tất cả đơn ứng viên đã được phân công trong bản xem trước này.',
 }) => {
   const assignedOrders = toSafeNumber(optimizationResult.assignedOrders);
   const totalOrders = toSafeNumber(optimizationResult.totalOrders);
@@ -173,7 +177,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
       <CardHeader className='space-y-4'>
         <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
           <div className='space-y-1'>
-            <CardTitle>Xem trước kế hoạch lấy hàng</CardTitle>
+            <CardTitle>{title}</CardTitle>
             <CardDescription>
               Bưu cục {optimizationResult.postOfficeCode || '--'} -{' '}
               {optimizationResult.postOfficeName || '--'}
@@ -396,13 +400,13 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
                                   )}
                                 </div>
                                 <p className='text-xs text-muted-foreground'>
-                                  Người gửi {stop.senderName || '--'}
+                                  {stopContactLabel} {stop.senderName || '--'}
                                   {stop.senderPhone
                                     ? ` | ${stop.senderPhone}`
                                     : ''}
                                 </p>
                                 <p className='text-xs text-muted-foreground'>
-                                  Khung giờ lấy hàng{' '}
+                                  {stopTimeLabel}{' '}
                                   {formatStopTime(stop.pickupTimeStart)} -{' '}
                                   {formatStopTime(stop.pickupTimeEnd)}
                                   {backlogDuration
@@ -484,7 +488,7 @@ export const PlanPreviewCard: React.FC<PlanPreviewCardProps> = ({
         ) : (
           <div className='flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm'>
             <CheckCircle2 className='h-4 w-4 text-primary' />
-            Tất cả đơn ứng viên đã được phân công trong bản xem trước này.
+            {successText}
           </div>
         )}
       </CardContent>
