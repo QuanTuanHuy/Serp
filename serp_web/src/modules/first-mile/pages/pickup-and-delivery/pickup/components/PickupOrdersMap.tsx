@@ -8,6 +8,7 @@
 import React from 'react';
 import { cn } from '@/shared/utils';
 import type { PickupTrackingOrder } from '../../../../types';
+import { formatOrderStatusLabel } from '../../../../utils/orderStatusLabels';
 
 type LeafletModule = typeof import('leaflet');
 type LeafletMap = import('leaflet').Map;
@@ -27,15 +28,7 @@ const DEFAULT_CENTER = {
 
 const DEFAULT_ZOOM = 6;
 
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  ASSIGNED_TO_PICKUP: 'Đã phân công lấy',
-  PICKING_UP: 'Đang lấy hàng',
-  PICKED_UP: 'Đã lấy hàng',
-  PENDING_ORIGIN_POST_OFFICE_INBOUND: 'Chờ nhập bưu cục gốc',
-};
-
-const formatOrderStatus = (status?: string): string =>
-  status ? (ORDER_STATUS_LABELS[status] ?? status) : '--';
+const formatOrderStatus = formatOrderStatusLabel;
 
 const buildPopupHtml = (order: PickupTrackingOrder): string => {
   const orderCode = order.orderCode || `#${order.orderId}`;

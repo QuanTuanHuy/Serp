@@ -22,6 +22,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Input,
   Label,
 } from '@/shared/components/ui';
 import { ConfirmDialog } from '@/shared/components/ui/confirm-dialog';
@@ -66,7 +67,7 @@ const POST_OFFICE_LOOKUP_SIZE = 500;
 const LINK_PAGE_SIZE = 500;
 const ALL_LINK_PAGE_SIZE = 2000;
 const ASSIGN_LOCATION_SIZE = 200;
-const ASSIGN_POST_OFFICE_SIZE = 200;
+const ASSIGN_POST_OFFICE_SIZE = 500;
 
 interface HubPostOfficeLinkRow {
   mapping: HubPostOfficeMapping;
@@ -87,6 +88,10 @@ function buildHubLabel(hub: Hub): string {
 
 function buildPostOfficeLabel(postOffice: PostOffice): string {
   return `${postOffice.code} - ${postOffice.name}`;
+}
+
+function normalizeSearchText(value: string): string {
+  return value.trim().toLocaleLowerCase('vi-VN');
 }
 
 function formatStatusLabel(status?: string): string {
@@ -151,6 +156,8 @@ export function HubPostOfficeLinkPage() {
   const [assignDialogOpen, setAssignDialogOpen] = React.useState(false);
   const [assignProvinceCode, setAssignProvinceCode] = React.useState('');
   const [assignWardCode, setAssignWardCode] = React.useState('');
+  const [assignPostOfficeKeyword, setAssignPostOfficeKeyword] =
+    React.useState('');
   const [postOfficeCodesToAssign, setPostOfficeCodesToAssign] = React.useState<
     string[]
   >([]);
@@ -223,7 +230,7 @@ export function HubPostOfficeLinkPage() {
       page: 0,
       size: ALL_LINK_PAGE_SIZE,
     },
-    { skip: !assignDialogOpen }
+    { skip: !assignDialogOpen, refetchOnMountOrArgChange: true }
   );
 
   const { data: assignPostOfficesData, isFetching: isFetchingAssignOptions } =
@@ -322,6 +329,26 @@ export function HubPostOfficeLinkPage() {
     [assignPostOfficesData?.items]
   );
 
+  const filteredAssignPostOffices = React.useMemo(() => {
+    const keyword = normalizeSearchText(assignPostOfficeKeyword);
+
+    if (!keyword) {
+      return assignPostOffices;
+    }
+
+    return assignPostOffices.filter((postOffice) => {
+      const code = normalizeSearchText(postOffice.code);
+      const name = normalizeSearchText(postOffice.name);
+      const label = normalizeSearchText(buildPostOfficeLabel(postOffice));
+
+      return (
+        code.includes(keyword) ||
+        name.includes(keyword) ||
+        label.includes(keyword)
+      );
+    });
+  }, [assignPostOfficeKeyword, assignPostOffices]);
+
   const assignProvinceOptions = React.useMemo(
     () =>
       (assignProvincesData?.items ?? []).flatMap((province: Province) =>
@@ -406,6 +433,7 @@ export function HubPostOfficeLinkPage() {
 
     setAssignProvinceCode('');
     setAssignWardCode('');
+    setAssignPostOfficeKeyword('');
     setPostOfficeCodesToAssign([]);
     setAssignDialogOpen(true);
   };
@@ -436,6 +464,7 @@ export function HubPostOfficeLinkPage() {
       setAssignDialogOpen(false);
       setAssignProvinceCode('');
       setAssignWardCode('');
+      setAssignPostOfficeKeyword('');
       setPostOfficeCodesToAssign([]);
       setSelectedPostOfficeCode(codesToAssign[0] ?? '');
       void refetchLinks();
@@ -809,6 +838,7 @@ export function HubPostOfficeLinkPage() {
           if (!open) {
             setAssignProvinceCode('');
             setAssignWardCode('');
+            setAssignPostOfficeKeyword('');
             setPostOfficeCodesToAssign([]);
           }
         }}
@@ -830,6 +860,7 @@ export function HubPostOfficeLinkPage() {
                   onValueChange={(value) => {
                     setAssignProvinceCode(value);
                     setAssignWardCode('');
+                    setAssignPostOfficeKeyword('');
                     setPostOfficeCodesToAssign([]);
                   }}
                   options={assignProvinceOptions}
@@ -850,6 +881,7 @@ export function HubPostOfficeLinkPage() {
                   value={assignWardCode}
                   onValueChange={(value) => {
                     setAssignWardCode(value);
+                    setAssignPostOfficeKeyword('');
                     setPostOfficeCodesToAssign([]);
                   }}
                   options={assignWardOptions}
@@ -870,7 +902,16 @@ export function HubPostOfficeLinkPage() {
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='hub-po-assign-post-office'>Bưu cục</Label>
+              <Label htmlFor='hub-po-assign-post-office-search'>Bưu cục</Label>
+              <Input
+                id='hub-po-assign-post-office-search'
+                value={assignPostOfficeKeyword}
+                onChange={(event) =>
+                  setAssignPostOfficeKeyword(event.target.value)
+                }
+                placeholder='Tìm theo mã, tên hoặc mã - tên bưu cục'
+                disabled={!assignProvinceCode}
+              />
               <div
                 id='hub-po-assign-post-office'
                 className='max-h-72 space-y-2 overflow-y-auto rounded-md border p-2'
@@ -888,8 +929,12 @@ export function HubPostOfficeLinkPage() {
                   <div className='p-4 text-center text-sm text-muted-foreground'>
                     Không tìm thấy bưu cục trong khu vực đã chọn.
                   </div>
+                ) : filteredAssignPostOffices.length === 0 ? (
+                  <div className='p-4 text-center text-sm text-muted-foreground'>
+                    Không tìm thấy bưu cục khớp với từ khóa.
+                  </div>
                 ) : (
-                  assignPostOffices.map((postOffice) => {
+                  filteredAssignPostOffices.map((postOffice) => {
                     const isLinked = assignedCodes.has(postOffice.code);
                     const isChecked = postOfficeCodesToAssign.includes(
                       postOffice.code

@@ -138,6 +138,7 @@ export const OrderListPage: React.FC = () => {
   const notification = useNotification();
 
   const [page, setPage] = React.useState(0);
+  const [pageSize, setPageSize] = React.useState(PAGE_SIZE);
   const [filterFormValues, setFilterFormValues] =
     React.useState<OrderFilterFormState>(DEFAULT_ORDER_FILTER_FORM);
   const [appliedFilters, setAppliedFilters] =
@@ -248,7 +249,7 @@ export const OrderListPage: React.FC = () => {
   const { data, isLoading, isFetching, refetch } = useGetOrdersQuery(
     {
       page,
-      size: PAGE_SIZE,
+      size: pageSize,
       ...appliedFilters,
     },
     {
@@ -1778,6 +1779,11 @@ export const OrderListPage: React.FC = () => {
         onOpenManagerDropOffConfirm={handleOpenManagerDropOffConfirm}
         onPreviousPage={() => setPage((prev) => Math.max(prev - 1, 0))}
         onNextPage={() => setPage((prev) => prev + 1)}
+        pageSize={pageSize}
+        onPageSizeChange={(nextPageSize) => {
+          setPageSize(nextPageSize);
+          setPage(0);
+        }}
         formatStatusLabel={formatStatusLabel}
         formatPickupMethodLabel={formatPickupMethodLabel}
         getStatusBadgeVariant={getStatusBadgeVariant}

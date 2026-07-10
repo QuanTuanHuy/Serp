@@ -7,6 +7,5 @@ package serp.project.second_mile.enums;
 
 public enum VehicleStatus {
     ACTIVE,
-    INACTIVE,
-    MAINTENANCE
+    INACTIVE
 }

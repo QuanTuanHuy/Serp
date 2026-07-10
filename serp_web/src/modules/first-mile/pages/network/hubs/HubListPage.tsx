@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { getErrorMessage, useAppSelector } from '@/lib/store';
+import { getErrorMessage, useAppDispatch, useAppSelector } from '@/lib/store';
 import {
   Badge,
   Button,
@@ -55,6 +55,7 @@ import {
   type TmsMapBounds,
 } from '../../../components';
 import {
+  firstMileApi,
   useGetHubsQuery,
   useGetProvincesQuery,
   useGetWardsByProvinceCodeQuery,
@@ -89,6 +90,7 @@ import {
   getHubStatusLabel,
   HUB_STATUS_OPTIONS,
   mapHubToFormState,
+  normalizeLocationCode,
   validateHubForm,
   type HubFormMode,
   type HubFormState,
@@ -117,8 +119,6 @@ function getHubStatusBadgeVariant(
       return 'default';
     case 'INACTIVE':
       return 'secondary';
-    case 'MAINTENANCE':
-      return 'outline';
     default:
       return 'secondary';
   }
@@ -130,6 +130,7 @@ const HUB_ACTION_HEADER_CLASS = `${HUB_ACTION_COLUMN_CLASS} z-20`;
 
 export function HubListPage() {
   const notification = useNotification();
+  const dispatch = useAppDispatch();
   const roles = useAppSelector(
     (state) => state.account.user.profile?.roles ?? []
   );
@@ -195,33 +196,6 @@ export function HubListPage() {
       ...(mapBounds ?? {}),
     },
     { skip: !mapBounds }
-  );
-
-  const mapHubPoints = React.useMemo(
-    () =>
-      (mapHubsData?.items ?? []).flatMap((hub) => {
-        if (
-          hub.latitude === undefined ||
-          hub.latitude === null ||
-          hub.longitude === undefined ||
-          hub.longitude === null
-        ) {
-          return [];
-        }
-
-        return [
-          {
-            id: hub.id,
-            code: hub.code,
-            name: hub.name,
-            latitude: hub.latitude,
-            longitude: hub.longitude,
-            address: hub.addressDetail,
-            status: hub.status,
-          },
-        ];
-      }),
-    [mapHubsData]
   );
 
   const handleMapBoundsChange = React.useCallback((bounds: TmsMapBounds) => {
@@ -290,6 +264,9 @@ export function HubListPage() {
 
   const [detailHub, setDetailHub] = React.useState<Hub | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<Hub | null>(null);
+  const [wardNamesByProvinceCode, setWardNamesByProvinceCode] = React.useState<
+    Record<string, Record<string, string>>
+  >({});
 
   const [selectedImportFile, setSelectedImportFile] =
     React.useState<File | null>(null);
@@ -345,15 +322,162 @@ export function HubListPage() {
 
   const getProvinceLabel = React.useCallback(
     (provinceCode?: string) => {
-      if (!provinceCode) {
+      const normalizedProvinceCode = normalizeLocationCode(provinceCode);
+
+      if (!normalizedProvinceCode) {
         return '-';
       }
       const found = provinceSelectOptions.find(
-        (p) => p.provinceCode === provinceCode
+        (p) =>
+          normalizeLocationCode(p.provinceCode) === normalizedProvinceCode
       );
-      return found?.name ?? provinceCode;
+      return found?.name ?? normalizedProvinceCode;
     },
     [provinceSelectOptions]
+  );
+
+  React.useEffect(() => {
+    const provinceCodes = Array.from(
+      new Set(
+        [
+          ...(hubsData?.items ?? []),
+          ...(mapHubsData?.items ?? []),
+          ...(detailHub ? [detailHub] : []),
+        ]
+          .map((hub) => normalizeLocationCode(hub.provinceCode))
+          .filter(Boolean)
+      )
+    );
+    const missingProvinceCodes = provinceCodes.filter(
+      (provinceCode) => !(provinceCode in wardNamesByProvinceCode)
+    );
+
+    if (missingProvinceCodes.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchWards = async () => {
+      await Promise.all(
+        missingProvinceCodes.map(async (provinceCode) => {
+          try {
+            const wardPage = await dispatch(
+              firstMileApi.endpoints.getWardsByProvinceCode.initiate(
+                {
+                  provinceCode,
+                  page: 0,
+                  size: 1000,
+                },
+                {
+                  subscribe: false,
+                }
+              )
+            ).unwrap();
+
+            if (isCancelled) {
+              return;
+            }
+
+            const wardNameByCode = wardPage.items.reduce<
+              Record<string, string>
+            >((accumulator, ward) => {
+              const wardCode = normalizeLocationCode(ward.wardCode);
+
+              if (wardCode) {
+                accumulator[wardCode] = ward.name;
+              }
+
+              return accumulator;
+            }, {});
+
+            setWardNamesByProvinceCode((prev) => ({
+              ...prev,
+              [provinceCode]: wardNameByCode,
+            }));
+          } catch {
+            if (isCancelled) {
+              return;
+            }
+
+            setWardNamesByProvinceCode((prev) => ({
+              ...prev,
+              [provinceCode]: {},
+            }));
+          }
+        })
+      );
+    };
+
+    void fetchWards();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    detailHub,
+    dispatch,
+    hubsData?.items,
+    mapHubsData?.items,
+    wardNamesByProvinceCode,
+  ]);
+
+  const getWardLabel = React.useCallback(
+    (provinceCode?: string, wardCode?: string) => {
+      const normalizedWardCode = normalizeLocationCode(wardCode);
+
+      if (!normalizedWardCode) {
+        return '-';
+      }
+
+      const normalizedProvinceCode = normalizeLocationCode(provinceCode);
+
+      if (!normalizedProvinceCode) {
+        return normalizedWardCode;
+      }
+
+      const wardNameByCode = wardNamesByProvinceCode[normalizedProvinceCode];
+
+      return wardNameByCode?.[normalizedWardCode] || normalizedWardCode;
+    },
+    [wardNamesByProvinceCode]
+  );
+
+  const mapHubPoints = React.useMemo(
+    () =>
+      (mapHubsData?.items ?? []).flatMap((hub) => {
+        if (
+          hub.latitude === undefined ||
+          hub.latitude === null ||
+          hub.longitude === undefined ||
+          hub.longitude === null
+        ) {
+          return [];
+        }
+
+        const provinceLabel = getProvinceLabel(hub.provinceCode);
+        const wardLabel = getWardLabel(hub.provinceCode, hub.wardCode);
+        const address = [
+          hub.addressDetail,
+          wardLabel === '-' ? undefined : wardLabel,
+          provinceLabel === '-' ? undefined : provinceLabel,
+        ]
+          .filter(Boolean)
+          .join(', ');
+
+        return [
+          {
+            id: hub.id,
+            code: hub.code,
+            name: hub.name,
+            latitude: hub.latitude,
+            longitude: hub.longitude,
+            address: address || hub.addressDetail,
+            status: hub.status,
+          },
+        ];
+      }),
+    [getProvinceLabel, getWardLabel, mapHubsData?.items]
   );
 
   const [createHub, { isLoading: isCreating }] = useCreateHubMutation();
@@ -1332,7 +1456,7 @@ export function HubListPage() {
                             <div className='space-y-1'>
                               <p>{getProvinceLabel(hub.provinceCode)}</p>
                               <p className='text-xs text-muted-foreground'>
-                                {hub.wardCode || '--'}
+                                {getWardLabel(hub.provinceCode, hub.wardCode)}
                               </p>
                             </div>
                           </TableCell>
@@ -1512,7 +1636,7 @@ export function HubListPage() {
                 <p>
                   <span className='font-medium'>Tỉnh/Phường xã:</span>{' '}
                   {getProvinceLabel(detailHub.provinceCode)} /{' '}
-                  {detailHub.wardCode}
+                  {getWardLabel(detailHub.provinceCode, detailHub.wardCode)}
                 </p>
                 <p>
                   <span className='font-medium'>Địa chỉ:</span>{' '}

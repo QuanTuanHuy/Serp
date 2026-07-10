@@ -80,7 +80,7 @@ export function AutoBaggingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-4xl'>
+      <DialogContent className='max-w-[calc(100vw-2rem)] overflow-hidden sm:max-w-4xl'>
         <DialogHeader>
           <DialogTitle>Tự động lập túi</DialogTitle>
           <DialogDescription>
@@ -189,14 +189,14 @@ export function AutoBaggingDialog({
           </div>
 
           {plan && (
-            <div className='rounded-md border'>
-              <Table>
+            <div className='overflow-hidden rounded-md border'>
+              <Table className='table-fixed'>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Mã túi</TableHead>
+                    <TableHead className='w-[150px]'>Mã túi</TableHead>
                     <TableHead>Đơn hàng</TableHead>
-                    <TableHead>Khối lượng</TableHead>
-                    <TableHead>Thể tích</TableHead>
+                    <TableHead className='w-[130px]'>Khối lượng</TableHead>
+                    <TableHead className='w-[120px]'>Thể tích</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -212,14 +212,16 @@ export function AutoBaggingDialog({
                   ) : (
                     plan.items.map((item) => (
                       <TableRow key={item.bagCode}>
-                        <TableCell className='font-medium'>
+                        <TableCell className='whitespace-normal break-words font-medium'>
                           {item.bagCode}
                         </TableCell>
-                        <TableCell>{item.orderCodes.join(', ')}</TableCell>
-                        <TableCell>
+                        <TableCell className='whitespace-normal break-words [overflow-wrap:anywhere]'>
+                          {item.orderCodes.join(', ')}
+                        </TableCell>
+                        <TableCell className='whitespace-nowrap'>
                           {formatNumber(item.totalWeight)} kg
                         </TableCell>
-                        <TableCell>
+                        <TableCell className='whitespace-nowrap'>
                           {formatNumber(item.totalVolume)} m3
                         </TableCell>
                       </TableRow>

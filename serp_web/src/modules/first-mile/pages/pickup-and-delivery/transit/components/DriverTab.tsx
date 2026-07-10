@@ -19,6 +19,7 @@ import type { BagDistributionManifest } from '../../../../types';
 import type { CheckinMode } from '../transitModels';
 import {
   destinationLabel,
+  formatDateTime,
   formatNumber,
   getManifestBagStats,
   STATUS_LABELS,
@@ -64,6 +65,16 @@ export function DriverTab({
           ) : (
             manifests.map((manifest) => {
               const stats = getManifestBagStats(manifest);
+              const hasStartCheckin = Boolean(
+                manifest.driverStartCheckinId ||
+                  manifest.driverStartCheckinAt ||
+                  manifest.driverStartPhotoUrl
+              );
+              const hasEndCheckin = Boolean(
+                manifest.driverEndCheckinId ||
+                  manifest.driverEndCheckinAt ||
+                  manifest.driverEndPhotoUrl
+              );
               return (
                 <div
                   key={manifest.id}
@@ -99,12 +110,30 @@ export function DriverTab({
                       label='Túi hàng'
                       value={`${formatNumber(stats.totalBags, 0)} túi`}
                     />
+                    <SummaryItem
+                      label='Check-in xuất phát'
+                      value={
+                        manifest.driverStartCheckinAt
+                          ? formatDateTime(manifest.driverStartCheckinAt)
+                          : hasStartCheckin
+                            ? 'Đã ghi nhận'
+                            : 'Chưa có'
+                      }
+                    />
+                    <SummaryItem
+                      label='Check-in đến nơi'
+                      value={
+                        manifest.driverEndCheckinAt
+                          ? formatDateTime(manifest.driverEndCheckinAt)
+                          : hasEndCheckin
+                            ? 'Đã ghi nhận'
+                            : 'Chưa có'
+                      }
+                    />
                   </div>
                   <div className='flex flex-wrap gap-2'>
                     <Button
-                      disabled={
-                        !canCheckin || Boolean(manifest.driverStartPhotoUrl)
-                      }
+                      disabled={!canCheckin || hasStartCheckin}
                       onClick={() => onOpenCheckin(manifest, 'start')}
                     >
                       <ArrowUpFromLine className='h-4 w-4' />
@@ -112,9 +141,7 @@ export function DriverTab({
                     </Button>
                     <Button
                       variant='secondary'
-                      disabled={
-                        !canCheckin || Boolean(manifest.driverEndPhotoUrl)
-                      }
+                      disabled={!canCheckin || hasEndCheckin}
                       onClick={() => onOpenCheckin(manifest, 'end')}
                     >
                       <ArrowDownToLine className='h-4 w-4' />

@@ -96,7 +96,7 @@ public class OrderTimelineServiceImpl implements OrderTimelineService {
                 order.getOrderCode(),
                 order.getCustomerOrderCode(),
                 order.getStatus() == null ? OrderStatus.CREATED : order.getStatus(),
-                "Order created.",
+                "Đơn hàng đã được tạo.",
                 order.getCreatedAt(),
                 order.getCreatedBy(),
                 null,

@@ -77,6 +77,16 @@ public class Order extends AbstractAudit{
     @Column(name = "destination_post_office_code")
     private String destinationPostOfficeCode; // Bưu cục sẽ đi giao ở Last-mile
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "planned_route", columnDefinition = "jsonb")
+    private PlannedOrderRoute plannedRoute;
+
+    @Column(name = "current_hub_id")
+    private Long currentHubId;
+
+    @Column(name = "current_hub_code")
+    private String currentHubCode;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private OrderStatus status;

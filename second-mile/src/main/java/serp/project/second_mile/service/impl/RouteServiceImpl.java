@@ -36,9 +36,13 @@ import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.RouteSpecification;
 import serp.project.second_mile.service.RouteService;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class RouteServiceImpl implements RouteService {
+    private static final int ROUTE_CODE_PART_MAX_LENGTH = 30;
+
     private final RouteRepository routeRepository;
     private final HubRepository hubRepository;
     private final HubPostOfficeMappingRepository hubPostOfficeMappingRepository;
@@ -81,15 +85,6 @@ public class RouteServiceImpl implements RouteService {
     @Transactional(rollbackFor = Exception.class)
     public RouteResponse createRoute(CreateRouteRequest request) {
         Long tenantId = secondMileAccessUtils.getCurrentTenantIdOrThrow();
-        String normalizedRouteCode = normalizeText(request.getRouteCode());
-        if (normalizedRouteCode == null) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        if (routeRepository.existsByTenantIdAndRouteCodeIgnoreCase(tenantId, normalizedRouteCode)) {
-            throw new AppException(ErrorCode.ROUTE_CODE_EXISTED);
-        }
-
         validateRouteDefinition(
                 tenantId,
                 request.getOriginType(),
@@ -102,10 +97,14 @@ public class RouteServiceImpl implements RouteService {
         );
 
         Route route = RouteMapper.toEntity(request);
-        route.setRouteCode(normalizedRouteCode);
         route.setRouteName(normalizeText(request.getRouteName()));
         route.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
         applyNormalizedEndpoints(route);
+        String generatedRouteCode = generateRouteCode(tenantId, route);
+        if (routeRepository.existsByTenantIdAndRouteCodeIgnoreCase(tenantId, generatedRouteCode)) {
+            throw new AppException(ErrorCode.ROUTE_CODE_EXISTED);
+        }
+        route.setRouteCode(generatedRouteCode);
         route.setStatus(request.getStatus() == null ? RouteStatus.ACTIVE : request.getStatus());
         route.setTenantId(tenantId);
 
@@ -120,15 +119,9 @@ public class RouteServiceImpl implements RouteService {
         Route route = getRouteOrThrow(id);
         validateTenantAccess(route);
 
-        String normalizedRouteCode = normalizeText(request.getRouteCode());
         String normalizedRouteName = normalizeText(request.getRouteName());
-        if (normalizedRouteCode == null || normalizedRouteName == null) {
+        if (normalizedRouteName == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        if (!route.getRouteCode().equalsIgnoreCase(normalizedRouteCode)
-                && routeRepository.existsByTenantIdAndRouteCodeIgnoreCase(tenantId, normalizedRouteCode)) {
-            throw new AppException(ErrorCode.ROUTE_CODE_EXISTED);
         }
 
         validateRouteDefinition(
@@ -143,10 +136,15 @@ public class RouteServiceImpl implements RouteService {
         );
 
         RouteMapper.mapForUpdate(request, route);
-        route.setRouteCode(normalizedRouteCode);
         route.setRouteName(normalizedRouteName);
         route.setDestinationPostOfficeCode(normalizeText(request.getDestinationPostOfficeCode()));
         applyNormalizedEndpoints(route);
+        String generatedRouteCode = generateRouteCode(tenantId, route);
+        if (!generatedRouteCode.equalsIgnoreCase(route.getRouteCode())
+                && routeRepository.existsByTenantIdAndRouteCodeIgnoreCase(tenantId, generatedRouteCode)) {
+            throw new AppException(ErrorCode.ROUTE_CODE_EXISTED);
+        }
+        route.setRouteCode(generatedRouteCode);
         route.setTenantId(tenantId);
 
         Route updatedRoute = routeRepository.save(route);
@@ -310,6 +308,63 @@ public class RouteServiceImpl implements RouteService {
             route.setDestinationHubId(null);
             route.setDestinationPostOfficeCode(normalizeText(route.getDestinationPostOfficeCode()));
         }
+    }
+
+    private String generateRouteCode(Long tenantId, Route route) {
+        String originCode = route.getOriginType() == RouteEndpointType.POST_OFFICE
+                ? route.getOriginPostOfficeCode()
+                : resolveHubCode(tenantId, route.getOriginHubId());
+        String destinationCode = route.getDestinationType() == RouteDestinationType.POST_OFFICE
+                ? route.getDestinationPostOfficeCode()
+                : resolveHubCode(tenantId, route.getDestinationHubId());
+        String vehicleCode = route.getVehicleId() == null
+                ? "NO-VEHICLE"
+                : resolveVehicleLicensePlate(tenantId, route.getVehicleId());
+
+        return String.format(
+                "RT-%s-%s-%s",
+                sanitizeRouteCodePart(originCode),
+                sanitizeRouteCodePart(destinationCode),
+                sanitizeRouteCodePart(vehicleCode)
+        );
+    }
+
+    private String resolveHubCode(Long tenantId, Long hubId) {
+        if (hubId == null) {
+            throw new AppException(ErrorCode.ROUTE_HUB_INVALID);
+        }
+        Hub hub = hubRepository.findById(hubId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROUTE_HUB_INVALID));
+        if (!tenantId.equals(hub.getTenantId())) {
+            throw new AppException(ErrorCode.ROUTE_HUB_INVALID);
+        }
+        return hub.getCode();
+    }
+
+    private String resolveVehicleLicensePlate(Long tenantId, Long vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new AppException(ErrorCode.ROUTE_VEHICLE_INVALID));
+        if (!tenantId.equals(vehicle.getTenantId())) {
+            throw new AppException(ErrorCode.ROUTE_VEHICLE_INVALID);
+        }
+        return vehicle.getLicensePlate();
+    }
+
+    private String sanitizeRouteCodePart(String value) {
+        String normalizedValue = normalizeText(value);
+        if (normalizedValue == null) {
+            return "UNKNOWN";
+        }
+        String sanitizedValue = normalizedValue
+                .toUpperCase(Locale.ROOT)
+                .replaceAll("[^A-Z0-9]+", "-")
+                .replaceAll("(^-+|-+$)", "");
+        if (sanitizedValue.isBlank()) {
+            return "UNKNOWN";
+        }
+        return sanitizedValue.length() <= ROUTE_CODE_PART_MAX_LENGTH
+                ? sanitizedValue
+                : sanitizedValue.substring(0, ROUTE_CODE_PART_MAX_LENGTH);
     }
 
     private void validateVehicle(Long tenantId, Long vehicleId, Long originHubId) {

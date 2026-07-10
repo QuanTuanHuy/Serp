@@ -18,6 +18,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import { useLazyGetPickupCheckinDetailQuery } from '../../../../api';
 import type { PickupCheckinDetailResponse } from '../../../../types';
+import { formatOrderStatusLabel } from '../../../../utils/orderStatusLabels';
 import { PickupCheckinLocationMap } from './PickupCheckinLocationMap';
 
 interface PickupCheckinDetailDialogProps {
@@ -56,15 +57,7 @@ const formatDistance = (value?: number): string => {
   return `${value.toFixed(2)} m`;
 };
 
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  ASSIGNED_TO_PICKUP: 'Đã phân công lấy',
-  PICKING_UP: 'Đang lấy hàng',
-  PICKED_UP: 'Đã lấy hàng',
-  PENDING_ORIGIN_POST_OFFICE_INBOUND: 'Chờ nhập bưu cục gốc',
-};
-
-const formatOrderStatus = (status?: string): string =>
-  status ? (ORDER_STATUS_LABELS[status] ?? status) : '--';
+const formatOrderStatus = formatOrderStatusLabel;
 
 const DetailField: React.FC<{
   label: string;

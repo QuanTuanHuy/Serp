@@ -26,6 +26,7 @@ import type {
   FirstMileOrderStatus,
   FirstMilePaginatedData,
 } from '../types';
+import { formatOrderStatusLabel } from '../utils/orderStatusLabels';
 
 interface TmsEntityOrdersTabProps {
   data?: FirstMilePaginatedData<FirstMileOrderDetail>;
@@ -35,31 +36,6 @@ interface TmsEntityOrdersTabProps {
   onPreviousPage: () => void;
   onNextPage: () => void;
 }
-
-const formatOrderStatusLabel = (status?: FirstMileOrderStatus) => {
-  if (!status) {
-    return '--';
-  }
-
-  switch (status) {
-    case 'AT_ORIGIN_POST_OFFICE':
-      return 'Tại bưu cục gốc';
-    case 'INBOUND_AT_ORIGIN_HUB':
-      return 'Đã vào hub gốc';
-    case 'BAGGING_IN_PROGRESS':
-      return 'Đang đóng bao';
-    case 'BAGGED':
-      return 'Đã đóng bao';
-    case 'BAG_SEALED':
-      return 'Bao đã niêm phong';
-    case 'CANCELLED':
-      return 'Đã hủy';
-    case 'LOST_OR_DAMAGED':
-      return 'Mất hoặc hư hỏng';
-    default:
-      return status;
-  }
-};
 
 const getOrderStatusBadgeVariant = (
   status?: FirstMileOrderStatus

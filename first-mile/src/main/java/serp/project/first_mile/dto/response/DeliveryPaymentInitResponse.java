@@ -5,6 +5,7 @@ Description: Part of Serp Project
 
 package serp.project.first_mile.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import serp.project.first_mile.enums.PaymentStatus;
 
 public record DeliveryPaymentInitResponse(
@@ -17,4 +18,8 @@ public record DeliveryPaymentInitResponse(
         String status,
         String message
 ) {
+    @JsonProperty("tripId")
+    public Long getTripId() {
+        return manifestId;
+    }
 }

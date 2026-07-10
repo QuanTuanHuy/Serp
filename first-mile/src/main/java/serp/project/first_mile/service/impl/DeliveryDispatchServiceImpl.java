@@ -6,13 +6,26 @@ Description: Part of Serp Project
 package serp.project.first_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+import serp.project.first_mile.caller.PaymentServiceCaller;
+import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderRequest;
+import serp.project.first_mile.caller.dto.payment.PaymentCreateOrderResponse;
+import serp.project.first_mile.caller.dto.payment.PaymentQueryOrderResponse;
 import serp.project.first_mile.caller.TmsOrderClient;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.first_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
+import serp.project.first_mile.domain.Checkin;
+import serp.project.first_mile.domain.DeliveryManifest;
+import serp.project.first_mile.domain.DeliveryManifestOrder;
 import serp.project.first_mile.domain.PostOffice;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.PostOfficeStaffAssignment;
@@ -20,11 +33,26 @@ import serp.project.first_mile.domain.Trip;
 import serp.project.first_mile.domain.TripOrder;
 import serp.project.first_mile.domain.Vehicle;
 import serp.project.first_mile.dto.request.AutoAssignDeliveryPlanRequest;
+import serp.project.first_mile.dto.request.ConfirmDeliveryFailureRequest;
+import serp.project.first_mile.dto.request.ConfirmDeliveryPaymentRequest;
+import serp.project.first_mile.dto.request.ConfirmDeliveryRequest;
+import serp.project.first_mile.dto.request.FileUploadRequest;
+import serp.project.first_mile.dto.request.ManualAssignDeliveryOrdersRequest;
+import serp.project.first_mile.dto.request.ReturnToSenderRequest;
 import serp.project.first_mile.dto.request.ScanOutDeliveryOrderRequest;
 import serp.project.first_mile.dto.response.DeliveryAssignmentResponse;
+import serp.project.first_mile.dto.response.DeliveryManifestOrderResponse;
+import serp.project.first_mile.dto.response.DeliveryManifestResponse;
+import serp.project.first_mile.dto.response.DeliveryPaymentConfirmResponse;
+import serp.project.first_mile.dto.response.DeliveryPaymentInitResponse;
 import serp.project.first_mile.dto.response.DeliveryScanOutResponse;
+import serp.project.first_mile.dto.response.FileUploadResponse;
+import serp.project.first_mile.dto.response.PickupOptimizationResponse;
+import serp.project.first_mile.enums.CheckinType;
+import serp.project.first_mile.enums.DeliveryManifestStatus;
 import serp.project.first_mile.enums.DeliveryOrderStatus;
 import serp.project.first_mile.enums.OrderStatus;
+import serp.project.first_mile.enums.PaymentStatus;
 import serp.project.first_mile.enums.PickupOptimizationGoal;
 import serp.project.first_mile.enums.PickupShift;
 import serp.project.first_mile.enums.PostOfficeStaffRole;
@@ -35,7 +63,11 @@ import serp.project.first_mile.enums.TripType;
 import serp.project.first_mile.enums.VehicleStatus;
 import serp.project.first_mile.exception.AppException;
 import serp.project.first_mile.exception.ErrorCode;
+import serp.project.first_mile.kafka.StaffNotificationEventPublisher;
 import serp.project.first_mile.kernel.utils.FirstMileAccessUtils;
+import serp.project.first_mile.kernel.utils.ImageContentTypeUtils;
+import serp.project.first_mile.repository.CheckinRepository;
+import serp.project.first_mile.repository.DeliveryManifestRepository;
 import serp.project.first_mile.repository.PostOfficeRepository;
 import serp.project.first_mile.repository.PostOfficeStaffAssignmentRepository;
 import serp.project.first_mile.repository.PostOfficeStaffRepository;
@@ -44,6 +76,7 @@ import serp.project.first_mile.repository.TripOrderRepository;
 import serp.project.first_mile.repository.TripRepository;
 import serp.project.first_mile.repository.VehicleRepository;
 import serp.project.first_mile.service.DeliveryDispatchService;
+import serp.project.first_mile.service.FileStorageService;
 import serp.project.first_mile.service.TmsOrderTransitionPublisherService;
 import serp.project.first_mile.service.dto.AlgorithmConfig;
 import serp.project.first_mile.service.dto.CourierResource;
@@ -58,6 +91,7 @@ import serp.project.first_mile.service.dto.StopEvaluationData;
 import serp.project.first_mile.service.dto.TravelMetricProvider;
 import serp.project.first_mile.service.dto.UnassignedOrderState;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -79,9 +113,11 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
 
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
     private static final int DEFAULT_ORDER_LIMIT = 300;
     private static final double DEFAULT_AVERAGE_SPEED_KMPH = 25.0;
     private static final int DEFAULT_SERVICE_MINUTES_PER_STOP = 8;
@@ -107,6 +143,13 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
             "ALREADY_ASSIGNED_TO_ACTIVE_DELIVERY_MANIFEST";
     private static final String REASON_ORDER_NOT_ASSIGNABLE = "ORDER_NOT_ASSIGNABLE";
     private static final String TRANSITION_SOURCE = "LAST_MILE_DELIVERY_DISPATCH";
+    private static final String RECEIVER = "RECEIVER";
+    private static final String STORAGE_SERVICE_NAME = "first-mile";
+    private static final String DELIVERY_CHECKIN_IMAGE_FOLDER = "orders/delivery-checkin";
+    private static final String PAYMENT_SOURCE_SERVICE = "first-mile";
+    private static final String PAYMENT_SOURCE = "last-mile-delivery-trip";
+    private static final long MIN_PAYMENT_SERVICE_AMOUNT = 1_000L;
+    private static final double EARTH_RADIUS_METERS = 6_371_000D;
 
     private static final LocalTime SHIFT_MORNING_START = LocalTime.of(7, 30);
     private static final LocalTime SHIFT_MORNING_END = LocalTime.of(12, 0);
@@ -129,22 +172,131 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
             List.of(OrderStatus.READY_FOR_DELIVERY);
 
     private final TmsOrderClient tmsOrderClient;
+    private final PaymentServiceCaller paymentServiceCaller;
     private final PostOfficeRepository postOfficeRepository;
     private final PostOfficeStaffRepository postOfficeStaffRepository;
     private final PostOfficeStaffAssignmentRepository postOfficeStaffAssignmentRepository;
     private final VehicleRepository vehicleRepository;
     private final DeliveryManifestOrderRepository deliveryManifestOrderRepository;
+    private final DeliveryManifestRepository deliveryManifestRepository;
+    private final CheckinRepository checkinRepository;
     private final TripRepository tripRepository;
     private final TripOrderRepository tripOrderRepository;
     private final PickupOptimizationEngine pickupOptimizationEngine;
     private final FirstMileAccessUtils firstMileAccessUtils;
     private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
+    private final FileStorageService fileStorageService;
+    private final StaffNotificationEventPublisher staffNotificationEventPublisher;
 
     @Value("${distance-matrix.batch-size:20}")
     private Integer distanceMatrixBatchSize;
 
     @Value("${distance-matrix.max-nodes:120}")
     private Integer distanceMatrixMaxNodes;
+
+    @Value("${app.delivery.max-attempts:3}")
+    private int maxDeliveryAttempts;
+
+    @Value("${payment.service.redirect-url:http://localhost:3000/payment/result}")
+    private String paymentRedirectUrl;
+
+    @Override
+    public PickupOptimizationResponse optimizeDeliveryPlan(AutoAssignDeliveryPlanRequest request) {
+        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
+        ShiftPlanningWindow shiftPlanningWindow = resolveShiftPlanningWindow(
+                request.getShift(),
+                request.getTripDate(),
+                request.getPlanningStartTime(),
+                request.getPlanningEndTime()
+        );
+
+        PostOffice postOffice = lockPostOfficeAndValidateScope(request.getPostOfficeId(), tenantId);
+        validatePostOfficeOperational(
+                postOffice,
+                shiftPlanningWindow.planningStartTime(),
+                shiftPlanningWindow.planningEndTime()
+        );
+        Point depotLocation = postOffice.getLocation();
+        if (depotLocation == null) {
+            throw invalidRequest("Selected post office has no geocoded location.");
+        }
+
+        AlgorithmConfig config = buildConfig(request, shiftPlanningWindow);
+        List<CourierResource> couriers = loadActiveCouriers(
+                postOffice.getId(),
+                tenantId,
+                request.getCourierIds(),
+                shiftPlanningWindow.tripDate()
+        );
+        if (couriers.isEmpty()) {
+            throw invalidRequest("No active courier assignment is available for the selected post office and trip date.");
+        }
+
+        List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
+                tenantId,
+                postOffice.getId(),
+                List.of(VehicleStatus.ACTIVE)
+        );
+        List<RouteState> routes = initializeRoutes(couriers, activeVehicles, depotLocation.getY(), depotLocation.getX());
+        if (routes.isEmpty()) {
+            throw invalidRequest("No usable route can be initialized for delivery dispatch.");
+        }
+
+        Map<Long, Trip> existingTripByCourier = loadReplannableTripsByCourier(
+                tenantId,
+                postOffice.getId(),
+                shiftPlanningWindow.tripDate(),
+                request.getShift(),
+                routes
+        );
+        ExistingDeliveryRouteData existingRouteData = loadExistingRouteData(existingTripByCourier, tenantId);
+        applyExistingRouteData(routes, existingTripByCourier, existingRouteData);
+
+        List<TmsOrderOperationView> candidateOrders = loadCandidateDeliveryOrders(postOffice, request, config, tenantId);
+        validateCandidateOrders(candidateOrders, postOffice.getCode(), resolveCandidateStatuses(request.getCandidateStatuses()));
+
+        PreparedOrderData preparedOrderData = prepareDeliveryOrders(candidateOrders);
+        Set<Long> existingRouteOrderIds = extractOrderIds(existingRouteData.routeNodesByTripId().values());
+        PreparedOrderData filteredPreparedOrderData =
+                excludeOrdersAlreadyAssigned(preparedOrderData, tenantId, existingRouteOrderIds);
+
+        List<PickupOrderNode> matrixNodes = new ArrayList<>();
+        for (List<PickupOrderNode> routeNodes : existingRouteData.routeNodesByTripId().values()) {
+            matrixNodes.addAll(routeNodes);
+        }
+        matrixNodes.addAll(filteredPreparedOrderData.assignableOrders());
+
+        TravelMetricProvider travelMetricProvider = pickupOptimizationEngine.buildTravelMetricProvider(
+                matrixNodes,
+                depotLocation.getY(),
+                depotLocation.getX(),
+                config
+        );
+        AlgorithmConfig runtimeConfig = config.withTravelMetricProvider(travelMetricProvider);
+
+        List<UnassignedOrderState> unassignedOrders = new ArrayList<>();
+        for (UnassignedOrderState state : existingRouteData.invalidOrderStates()) {
+            unassignedOrders.add(state.copy());
+        }
+        for (UnassignedOrderState state : filteredPreparedOrderData.initialUnassignedOrders()) {
+            unassignedOrders.add(state.copy());
+        }
+        for (PickupOrderNode order : filteredPreparedOrderData.assignableOrders()) {
+            unassignedOrders.add(new UnassignedOrderState(order, REASON_UNASSIGNED, true));
+        }
+
+        SolutionState solution = new SolutionState(routes, unassignedOrders);
+        pickupOptimizationEngine.applyGreedyRepair(solution, runtimeConfig);
+        pickupOptimizationEngine.markNoFeasibleUnassigned(solution);
+        pickupOptimizationEngine.sanitizeSolution(solution);
+
+        SolutionEvaluation evaluation = pickupOptimizationEngine.evaluateSolution(solution, runtimeConfig);
+        if (pickupOptimizationEngine.isInfeasible(evaluation)) {
+            throw invalidRequest("Delivery dispatch produced an infeasible solution.");
+        }
+
+        return buildOptimizationResponse(postOffice, runtimeConfig, solution, evaluation);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -265,6 +417,182 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DeliveryAssignmentResponse manualAssignDeliveryOrders(ManualAssignDeliveryOrdersRequest request) {
+        Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
+        ShiftPlanningWindow shiftPlanningWindow = resolveShiftPlanningWindow(
+                request.getShift(),
+                request.getTripDate(),
+                request.getPlanningStartTime(),
+                request.getPlanningEndTime()
+        );
+
+        if (Boolean.TRUE.equals(request.getForceAssign())) {
+            return forceManualAssignDeliveryOrders(request, tenantId, shiftPlanningWindow);
+        }
+
+        PostOffice postOffice = lockPostOfficeAndValidateScope(request.getPostOfficeId(), tenantId);
+        validatePostOfficeOperational(
+                postOffice,
+                shiftPlanningWindow.planningStartTime(),
+                shiftPlanningWindow.planningEndTime()
+        );
+        Point depotLocation = postOffice.getLocation();
+        if (depotLocation == null) {
+            throw invalidRequest("Selected post office has no geocoded location.");
+        }
+
+        PostOfficeStaff courier = postOfficeStaffRepository.findByIdAndTenantId(request.getCourierStaffId(), tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_STAFF_NOT_FOUND));
+        validateCourierAssignableForManual(
+                courier,
+                postOffice.getId(),
+                tenantId,
+                shiftPlanningWindow.tripDate()
+        );
+
+        AlgorithmConfig config = buildConfig(request, shiftPlanningWindow);
+        List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
+                tenantId,
+                postOffice.getId(),
+                List.of(VehicleStatus.ACTIVE)
+        );
+        List<RouteState> routes = initializeRoutes(
+                List.of(new CourierResource(
+                        courier.getId(),
+                        courier.getCode(),
+                        courier.getFullName(),
+                        resolveMaxStops(courier)
+                )),
+                activeVehicles,
+                depotLocation.getY(),
+                depotLocation.getX()
+        );
+        if (routes.isEmpty()) {
+            throw invalidRequest("No usable route can be initialized for manual delivery assign.");
+        }
+
+        Map<Long, Trip> existingTripByCourier = loadReplannableTripsByCourier(
+                tenantId,
+                postOffice.getId(),
+                shiftPlanningWindow.tripDate(),
+                request.getShift(),
+                routes
+        );
+        Trip existingTrip = existingTripByCourier.get(courier.getId());
+        Set<Long> requestedOrderIds = normalizeDistinctOrderIds(request.getOrderIds());
+
+        List<TripOrder> existingTripOrders = existingTrip == null || existingTrip.getId() == null
+                ? List.of()
+                : tripOrderRepository.findByTrip_IdOrderBySequenceNoAsc(existingTrip.getId());
+        Set<Long> existingTripOrderIds = existingTripOrders.stream()
+                .map(TripOrder::getOrderId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        LinkedHashSet<Long> allOrderIds = new LinkedHashSet<>(existingTripOrderIds);
+        allOrderIds.addAll(requestedOrderIds);
+        Map<Long, TmsOrderOperationView> orderById = loadOrdersByIdMapOrThrow(allOrderIds, tenantId);
+
+        Long excludeTripId = existingTrip == null ? null : existingTrip.getId();
+        for (Long orderId : requestedOrderIds) {
+            TmsOrderOperationView order = orderById.get(orderId);
+            if (order == null) {
+                throw new AppException(ErrorCode.ORDER_NOT_FOUND);
+            }
+
+            boolean alreadyInCurrentTrip = existingTripOrderIds.contains(orderId);
+            validateManualDeliveryOrder(order, postOffice.getCode(), alreadyInCurrentTrip);
+
+            if (!alreadyInCurrentTrip && isAssignedToActiveManifest(toDeliveryOrderNode(order), tenantId)) {
+                throw invalidRequest("Order is already assigned to an active delivery manifest.");
+            }
+
+            boolean assignedInAnotherTrip = tripOrderRepository.existsByTenantIdAndOrderIdAndTripStatusIn(
+                    tenantId,
+                    orderId,
+                    TripType.DELIVERY,
+                    ACTIVE_DELIVERY_TRIP_STATUSES,
+                    excludeTripId
+            );
+            if (assignedInAnotherTrip) {
+                throw invalidRequest("Order is already assigned to another active delivery trip.");
+            }
+        }
+
+        ExistingDeliveryRouteData existingRouteData = loadExistingRouteData(existingTripByCourier, tenantId);
+        applyExistingRouteData(routes, existingTripByCourier, existingRouteData);
+
+        List<PickupOrderNode> manualCandidateNodes = new ArrayList<>();
+        for (Long orderId : requestedOrderIds) {
+            if (existingTripOrderIds.contains(orderId)) {
+                continue;
+            }
+            PickupOrderNode node = toDeliveryOrderNode(orderById.get(orderId));
+            if (node == null) {
+                throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+            }
+            manualCandidateNodes.add(node);
+        }
+        manualCandidateNodes.sort(Comparator
+                .comparing(PickupOrderNode::orderId, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(PickupOrderNode::customerOrderCode, Comparator.nullsLast(String::compareToIgnoreCase))
+        );
+
+        List<PickupOrderNode> matrixNodes = new ArrayList<>();
+        for (List<PickupOrderNode> routeNodes : existingRouteData.routeNodesByTripId().values()) {
+            matrixNodes.addAll(routeNodes);
+        }
+        matrixNodes.addAll(manualCandidateNodes);
+
+        TravelMetricProvider travelMetricProvider = pickupOptimizationEngine.buildTravelMetricProvider(
+                matrixNodes,
+                depotLocation.getY(),
+                depotLocation.getX(),
+                config
+        );
+        AlgorithmConfig runtimeConfig = config.withTravelMetricProvider(travelMetricProvider);
+
+        List<UnassignedOrderState> unassignedOrders = new ArrayList<>();
+        for (UnassignedOrderState state : existingRouteData.invalidOrderStates()) {
+            unassignedOrders.add(state.copy());
+        }
+        for (PickupOrderNode manualCandidateNode : manualCandidateNodes) {
+            unassignedOrders.add(new UnassignedOrderState(manualCandidateNode, REASON_UNASSIGNED, true));
+        }
+
+        SolutionState solution = new SolutionState(routes, unassignedOrders);
+        pickupOptimizationEngine.applyGreedyRepair(solution, runtimeConfig);
+        pickupOptimizationEngine.markNoFeasibleUnassigned(solution);
+        pickupOptimizationEngine.sanitizeSolution(solution);
+
+        SolutionEvaluation solutionEvaluation = pickupOptimizationEngine.evaluateSolution(solution, runtimeConfig);
+        if (pickupOptimizationEngine.isInfeasible(solutionEvaluation)) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        }
+
+        DeliveryPersistResult persistResult = persistAssignments(
+                postOffice,
+                request.getShift(),
+                shiftPlanningWindow.tripDate(),
+                solution,
+                solutionEvaluation,
+                existingTripByCourier,
+                tenantId
+        );
+
+        return buildAssignmentResponse(
+                postOffice,
+                request.getShift(),
+                shiftPlanningWindow.tripDate(),
+                requestedOrderIds.size(),
+                requestedOrderIds,
+                persistResult,
+                solution.unassignedOrders()
+        );
+    }
+
+    @Override
     public DeliveryAssignmentResponse getDeliveryTrips(Long postOfficeId, PickupShift shift, LocalDate tripDate) {
         Long tenantId = firstMileAccessUtils.getCurrentTenantIdOrThrow();
         LocalDate effectiveTripDate = tripDate == null ? LocalDate.now() : tripDate;
@@ -349,7 +677,7 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
                 order,
                 List.of(OrderStatus.READY_FOR_DELIVERY, OrderStatus.DELIVERY_FAILED, OrderStatus.OUT_FOR_DELIVERY),
                 OrderStatus.OUT_FOR_DELIVERY,
-                "Order scanned out for delivery.",
+                "Đơn hàng đã được quét xuất để giao.",
                 trip,
                 context,
                 now
@@ -377,6 +705,503 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
         );
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DeliveryPaymentInitResponse initiateTripDeliveryPayment(Long tripId, String orderCode, Long tenantId) {
+        DeliveryTripOrderContext context = resolveTripOrderContextForUpdate(tripId, orderCode, tenantId);
+        ensureTripOrderOutForDelivery(context.tripOrder());
+
+        long requiredAmount = requiredDeliveryPaymentAmount(context.order());
+        if (requiredAmount <= 0L) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "This delivery does not require customer payment.");
+        }
+        if (requiredAmount < MIN_PAYMENT_SERVICE_AMOUNT) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Customer payment amount must be at least 1,000 VND for payment service."
+            );
+        }
+
+        TripOrder tripOrder = context.tripOrder();
+        if (PaymentStatus.PAID.equals(tripOrder.getDeliveryPaymentStatus())) {
+            return new DeliveryPaymentInitResponse(
+                    context.trip().getId(),
+                    context.order().getOrderCode(),
+                    requiredAmount,
+                    tripOrder.getDeliveryPaymentStatus(),
+                    tripOrder.getDeliveryPaymentAppTransId(),
+                    null,
+                    "SUCCESS",
+                    "Customer payment is already confirmed."
+            );
+        }
+
+        PaymentCreateOrderResponse paymentResponse = paymentServiceCaller.createOrder(
+                buildTripDeliveryPaymentRequest(context, requiredAmount, tenantId)
+        );
+        if (paymentResponse.getStatus() == null || !"SUCCESS".equalsIgnoreCase(paymentResponse.getStatus())) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    paymentResponse.getMessage() == null
+                            ? "Cannot create payment order for delivery customer payment."
+                            : paymentResponse.getMessage()
+            );
+        }
+
+        tripOrder.setDeliveryPaymentStatus(PaymentStatus.UNPAID);
+        tripOrder.setDeliveryPaymentAmount(requiredAmount);
+        tripOrder.setDeliveryPaymentAppTransId(paymentResponse.getAppTransId());
+        tripOrder.setDeliveryPaymentConfirmedAt(null);
+        tripOrderRepository.save(tripOrder);
+
+        return new DeliveryPaymentInitResponse(
+                context.trip().getId(),
+                context.order().getOrderCode(),
+                requiredAmount,
+                tripOrder.getDeliveryPaymentStatus(),
+                paymentResponse.getAppTransId(),
+                paymentResponse.getOrderUrl(),
+                paymentResponse.getStatus(),
+                paymentResponse.getMessage()
+        );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DeliveryPaymentConfirmResponse confirmTripDeliveryPayment(
+            Long tripId,
+            String orderCode,
+            ConfirmDeliveryPaymentRequest request,
+            Long tenantId
+    ) {
+        if (request == null || !StringUtils.hasText(request.getAppTransId())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "appTransId is required.");
+        }
+
+        DeliveryTripOrderContext context = resolveTripOrderContextForUpdate(tripId, orderCode, tenantId);
+        ensureTripOrderOutForDelivery(context.tripOrder());
+
+        TripOrder tripOrder = context.tripOrder();
+        long requiredAmount = requiredDeliveryPaymentAmount(context.order());
+        if (requiredAmount <= 0L) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "This delivery does not require customer payment.");
+        }
+
+        String expectedAppTransId = normalizeText(tripOrder.getDeliveryPaymentAppTransId());
+        String requestedAppTransId = request.getAppTransId().trim();
+        if (expectedAppTransId == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Customer payment must be initiated before confirmation.");
+        }
+        if (!expectedAppTransId.equals(requestedAppTransId)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Payment transaction does not match this delivery order.");
+        }
+
+        if (!PaymentStatus.PAID.equals(tripOrder.getDeliveryPaymentStatus())) {
+            PaymentQueryOrderResponse queryResponse = paymentServiceCaller.queryOrderStatus(expectedAppTransId);
+            String gatewayStatus = queryResponse.getStatus() == null ? "UNKNOWN" : queryResponse.getStatus();
+            if (!"SUCCESS".equalsIgnoreCase(gatewayStatus)) {
+                throw new AppException(
+                        ErrorCode.INVALID_REQUEST,
+                        "Payment status is not successful yet. Current status: " + gatewayStatus
+                );
+            }
+            if (queryResponse.getAmount() != null && queryResponse.getAmount() < requiredAmount) {
+                throw new AppException(
+                        ErrorCode.INVALID_REQUEST,
+                        "Paid amount is lower than required customer payment."
+                );
+            }
+            tripOrder.setDeliveryPaymentStatus(PaymentStatus.PAID);
+            tripOrder.setDeliveryPaymentAmount(requiredAmount);
+            tripOrder.setDeliveryPaymentConfirmedAt(LocalDateTime.now());
+            tripOrderRepository.save(tripOrder);
+            markReceiverShippingFeePaidIfNeeded(context.order(), tenantId);
+
+            return new DeliveryPaymentConfirmResponse(
+                    context.trip().getId(),
+                    context.order().getOrderCode(),
+                    requiredAmount,
+                    PaymentStatus.PAID,
+                    expectedAppTransId,
+                    gatewayStatus,
+                    queryResponse.getMessage()
+            );
+        }
+
+        ensureConfirmedPaymentAmountCoversRequiredAmount(tripOrder, requiredAmount);
+        return new DeliveryPaymentConfirmResponse(
+                context.trip().getId(),
+                context.order().getOrderCode(),
+                tripOrder.getDeliveryPaymentAmount(),
+                tripOrder.getDeliveryPaymentStatus(),
+                expectedAppTransId,
+                "SUCCESS",
+                "Customer payment is already confirmed."
+        );
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DeliveryAssignmentResponse confirmTripDelivered(
+            Long tripId,
+            String orderCode,
+            ConfirmDeliveryRequest request,
+            MultipartFile photo,
+            Long tenantId
+    ) {
+        DeliveryTripOrderContext context = resolveTripOrderContextForUpdate(tripId, orderCode, tenantId);
+        LocalDateTime deliveredAt = request.getDeliveredAt() != null ? request.getDeliveredAt() : LocalDateTime.now();
+        ensureTripOrderReadyForDeliveryAction(context.tripOrder(), context.order(), deliveredAt);
+        validateDeliveryCheckinRequest(request, photo);
+        validateDeliveryPayment(context.tripOrder(), context.order());
+
+        TripOrder tripOrder = context.tripOrder();
+        long codCollected = safeAmount(context.order().getCodAmount());
+        long shippingFeeCollected = requiredReceiverShippingFee(context.order());
+        double distanceMeters = calculateDeliveryDistanceMeters(
+                request.getLatitude(),
+                request.getLongitude(),
+                context.order().getReceiverLatitude(),
+                context.order().getReceiverLongitude()
+        );
+        String contentType = ImageContentTypeUtils.normalizeImageContentType(photo.getContentType());
+        FileUploadResponse uploadResponse = uploadDeliveryCheckinPhoto(photo, contentType, tenantId);
+
+        Checkin deliveryCheckin = checkinRepository
+                .findByTenantIdAndCheckinTypeAndTripOrderId(tenantId, CheckinType.DELIVERY, tripOrder.getId())
+                .orElseGet(Checkin::new);
+        deliveryCheckin.setTenantId(tenantId);
+        deliveryCheckin.setCheckinType(CheckinType.DELIVERY);
+        deliveryCheckin.setTripOrderId(tripOrder.getId());
+        deliveryCheckin.setOrderId(context.order().getId());
+        deliveryCheckin.setOrderCode(context.order().getOrderCode());
+        deliveryCheckin.setTripId(context.trip().getId());
+        deliveryCheckin.setDeliveryManifestId(null);
+        deliveryCheckin.setDeliveryManifestOrderId(null);
+        deliveryCheckin.setCourierStaffId(context.trip().getCourierStaffId());
+        deliveryCheckin.setCheckinTime(deliveredAt);
+        deliveryCheckin.setCheckinLocation(toPoint(request.getLatitude(), request.getLongitude()));
+        deliveryCheckin.setDistanceM(round3(distanceMeters));
+        deliveryCheckin.setAllowedRadiusM(null);
+        deliveryCheckin.setPhotoUrl(uploadResponse.getUrl());
+        checkinRepository.save(deliveryCheckin);
+
+        tripOrder.setDeliveryStatus(DeliveryOrderStatus.DELIVERED);
+        tripOrder.setCodCollected(codCollected);
+        tripOrder.setShippingFeeCollected(shippingFeeCollected);
+        tripOrder.setDeliveredAt(deliveredAt);
+        tripOrder.setDeliveryNote(request.getNote());
+        tripOrderRepository.save(tripOrder);
+
+        enqueueTransitions(List.of(toTransitionItem(
+                context.order(),
+                List.of(OrderStatus.READY_FOR_DELIVERY, OrderStatus.DELIVERY_FAILED, OrderStatus.OUT_FOR_DELIVERY),
+                OrderStatus.DELIVERED,
+                "Giao hàng thành công.",
+                context.trip(),
+                context.deliveryContext(),
+                deliveredAt
+        )), tenantId);
+        markReceiverShippingFeePaidIfNeeded(context.order(), tenantId);
+
+        return getDeliveryTrips(context.trip().getPostOfficeId(), context.trip().getShift(), context.trip().getTripDate());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DeliveryAssignmentResponse confirmTripDeliveryFailed(
+            Long tripId,
+            String orderCode,
+            ConfirmDeliveryFailureRequest request,
+            Long tenantId
+    ) {
+        DeliveryTripOrderContext context = resolveTripOrderContextForUpdate(tripId, orderCode, tenantId);
+        LocalDateTime failedAt = LocalDateTime.now();
+        ensureTripOrderReadyForDeliveryAction(context.tripOrder(), context.order(), failedAt);
+
+        TripOrder tripOrder = context.tripOrder();
+        tripOrder.setDeliveryStatus(DeliveryOrderStatus.FAILED);
+        tripOrder.setFailureReason(request == null ? null : request.getFailureReason());
+        tripOrder.setDeliveryNote(request == null ? null : request.getNote());
+        tripOrder.setDeliveryAttemptCount(safeInteger(tripOrder.getDeliveryAttemptCount()) + 1);
+        tripOrderRepository.save(tripOrder);
+
+        enqueueTransitions(List.of(toTransitionItem(
+                context.order(),
+                List.of(OrderStatus.OUT_FOR_DELIVERY),
+                OrderStatus.DELIVERY_FAILED,
+                "Giao hàng thất bại: " + (tripOrder.getFailureReason() == null ? "UNKNOWN" : tripOrder.getFailureReason()),
+                context.trip(),
+                context.deliveryContext(),
+                failedAt
+        )), tenantId);
+
+        if (tripOrder.getDeliveryAttemptCount() >= maxDeliveryAttempts) {
+            returnTripOrderToSender(tripId, orderCode, ReturnToSenderRequest.builder()
+                    .note("Đã vượt quá số lần giao tối đa (" + maxDeliveryAttempts + ")")
+                    .build(), tenantId);
+        }
+
+        return getDeliveryTrips(context.trip().getPostOfficeId(), context.trip().getShift(), context.trip().getTripDate());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DeliveryAssignmentResponse returnTripOrderToSender(
+            Long tripId,
+            String orderCode,
+            ReturnToSenderRequest request,
+            Long tenantId
+    ) {
+        DeliveryTripOrderContext context = resolveTripOrderContextForUpdate(tripId, orderCode, tenantId);
+        TripOrder tripOrder = context.tripOrder();
+        if (!DeliveryOrderStatus.FAILED.equals(resolveDeliveryStatus(tripOrder, context.order()))) {
+            throw new AppException(ErrorCode.DELIVERY_ORDER_INVALID_STATUS, "Order must be FAILED to return to sender.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        tripOrder.setDeliveryStatus(DeliveryOrderStatus.RETURNED);
+        tripOrder.setReturnedAt(now);
+        tripOrder.setDeliveryNote(request == null ? null : request.getNote());
+        tripOrderRepository.save(tripOrder);
+
+        enqueueTransitions(List.of(toTransitionItem(
+                context.order(),
+                List.of(OrderStatus.DELIVERY_FAILED),
+                OrderStatus.RETURNED_TO_SENDER,
+                "Đã hoàn trả cho người gửi: " + (tripOrder.getDeliveryNote() == null ? "" : tripOrder.getDeliveryNote()),
+                context.trip(),
+                context.deliveryContext(),
+                now
+        )), tenantId);
+
+        return getDeliveryTrips(context.trip().getPostOfficeId(), context.trip().getShift(), context.trip().getTripDate());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DeliveryManifestResponse completeDeliveryTrip(Long tripId, Long tenantId) {
+        Trip trip = tripRepository.findByIdAndTenantIdForUpdate(tripId, tenantId)
+                .filter(candidate -> TripType.DELIVERY.equals(candidate.getTripType()))
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Delivery trip not found."));
+        ensureCanOperateTrip(tenantId, trip);
+        List<TripOrder> tripOrders = tripOrderRepository.findByTenantIdAndTrip_IdOrderBySequenceNoAsc(tenantId, tripId);
+        if (tripOrders.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Delivery trip has no orders.");
+        }
+
+        Map<Long, TmsOrderOperationView> orderById = tmsOrderClient.lookupByIds(
+                        tenantId,
+                        tripOrders.stream().map(TripOrder::getOrderId).filter(Objects::nonNull).toList()
+                )
+                .stream()
+                .collect(Collectors.toMap(TmsOrderOperationView::getId, Function.identity()));
+        boolean hasOpenOrders = tripOrders.stream()
+                .map(tripOrder -> resolveDeliveryStatus(tripOrder, orderById.get(tripOrder.getOrderId())))
+                .anyMatch(status -> status == DeliveryOrderStatus.PENDING || status == DeliveryOrderStatus.OUT_FOR_DELIVERY);
+        if (hasOpenOrders) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "All delivery orders must be delivered, failed, or returned before completing the trip.");
+        }
+
+        DeliveryContext context = resolveDeliveryContext(trip, tenantId);
+        DeliveryManifest manifest = buildManifestFromTrip(trip, tripOrders, orderById, context, tenantId);
+        DeliveryManifest savedManifest = deliveryManifestRepository.save(manifest);
+        linkDeliveryCheckinsToManifest(savedManifest, tripOrders, tenantId);
+
+        trip.setStatus(TripStatus.COMPLETED);
+        tripRepository.save(trip);
+
+        return toManifestResponse(savedManifest);
+    }
+
+    private DeliveryAssignmentResponse forceManualAssignDeliveryOrders(
+            ManualAssignDeliveryOrdersRequest request,
+            Long tenantId,
+            ShiftPlanningWindow shiftPlanningWindow
+    ) {
+        PostOffice postOffice = lockPostOfficeAndValidateScope(request.getPostOfficeId(), tenantId);
+        PostOfficeStaff courier = postOfficeStaffRepository.findByIdAndTenantId(request.getCourierStaffId(), tenantId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_STAFF_NOT_FOUND));
+
+        Set<Long> requestedOrderIds = normalizeDistinctOrderIds(request.getOrderIds());
+        loadOrdersByIdMapOrThrow(requestedOrderIds, tenantId);
+
+        Trip trip = tripRepository.findFirstByTenantIdAndTripTypeAndPostOfficeIdAndCourierStaffIdAndTripDateAndShiftAndStatusIn(
+                tenantId,
+                TripType.DELIVERY,
+                postOffice.getId(),
+                courier.getId(),
+                shiftPlanningWindow.tripDate(),
+                request.getShift(),
+                REPLANNABLE_DELIVERY_TRIP_STATUSES
+        ).orElse(null);
+        boolean createdTrip = trip == null;
+        if (trip == null) {
+            trip = new Trip();
+        }
+        if (trip.getTripCode() == null || trip.getTripCode().isBlank()) {
+            trip.setTripCode(generateTripCode(shiftPlanningWindow.tripDate(), request.getShift(), courier.getCode()));
+        }
+
+        List<Vehicle> activeVehicles = vehicleRepository.findByTenantIdAndPostOffice_IdAndStatusIn(
+                tenantId,
+                postOffice.getId(),
+                List.of(VehicleStatus.ACTIVE)
+        );
+        if (trip.getVehicleId() == null) {
+            trip.setVehicleId(resolveForceVehicleId(activeVehicles, courier.getId()));
+        }
+        String vehicleLicensePlate = resolveVehicleLicensePlate(activeVehicles, trip.getVehicleId());
+
+        LinkedHashSet<Long> finalTripOrderIds = new LinkedHashSet<>();
+        if (trip.getId() != null) {
+            List<TripOrder> existingTripOrders = tripOrderRepository.findByTrip_IdOrderBySequenceNoAsc(trip.getId());
+            for (TripOrder existingTripOrder : existingTripOrders) {
+                if (existingTripOrder.getOrderId() != null) {
+                    finalTripOrderIds.add(existingTripOrder.getOrderId());
+                }
+            }
+        }
+        finalTripOrderIds.addAll(requestedOrderIds);
+
+        trip.setTenantId(tenantId);
+        trip.setTripType(TripType.DELIVERY);
+        trip.setPostOfficeId(postOffice.getId());
+        trip.setCourierStaffId(courier.getId());
+        trip.setShift(request.getShift());
+        trip.setTripDate(shiftPlanningWindow.tripDate());
+        trip.setPlannedStartTime(shiftPlanningWindow.planningStartTime());
+        trip.setPlannedEndTime(shiftPlanningWindow.planningEndTime());
+        trip.setStatus(TripStatus.PLANNED);
+        trip.setTotalOrders(finalTripOrderIds.size());
+        trip.setTotalDistanceKm(0.0);
+        trip.setTotalTravelMinutes(0L);
+        Trip savedTrip = tripRepository.save(trip);
+
+        tripOrderRepository.deleteByTenantIdAndOrderIdInAndTripStatusInAndTripIdNot(
+                tenantId,
+                requestedOrderIds,
+                TripType.DELIVERY,
+                ACTIVE_DELIVERY_TRIP_STATUSES,
+                savedTrip.getId()
+        );
+
+        tripOrderRepository.deleteByTrip_Id(savedTrip.getId());
+        List<TripOrder> forceTripOrders = new ArrayList<>();
+        int sequence = 1;
+        for (Long orderId : finalTripOrderIds) {
+            TripOrder tripOrder = new TripOrder();
+            tripOrder.setTenantId(tenantId);
+            tripOrder.setTrip(savedTrip);
+            tripOrder.setOrderId(orderId);
+            tripOrder.setSequenceNo(sequence++);
+            forceTripOrders.add(tripOrder);
+        }
+        if (!forceTripOrders.isEmpty()) {
+            tripOrderRepository.saveAll(forceTripOrders);
+        }
+
+        Map<Long, TmsOrderOperationView> finalOrderById = loadOrdersByIdMapOrThrow(finalTripOrderIds, tenantId);
+        DeliveryContext deliveryContext = new DeliveryContext(
+                postOffice.getCode(),
+                postOffice.getName(),
+                courier.getCode(),
+                courier.getFullName(),
+                vehicleLicensePlate
+        );
+        enqueueTransitions(
+                finalOrderById.values().stream()
+                        .filter(Objects::nonNull)
+                        .filter(order -> isDeliveryAssignmentTransitionStatus(order.getStatus()))
+                        .map(this::toDeliveryOrderNode)
+                        .filter(Objects::nonNull)
+                        .map(order -> toDeliveryAssignmentTransitionItem(order, savedTrip, deliveryContext, LocalDateTime.now()))
+                        .toList(),
+                tenantId
+        );
+        staffNotificationEventPublisher.publishDeliveryTripAssigned(courier, savedTrip, tenantId);
+        List<DeliveryAssignmentResponse.DeliveryStopResponse> stopResponses = new ArrayList<>();
+        int stopSequence = 1;
+        for (Long orderId : finalTripOrderIds) {
+            TmsOrderOperationView order = finalOrderById.get(orderId);
+            stopResponses.add(new DeliveryAssignmentResponse.DeliveryStopResponse(
+                    stopSequence++,
+                    orderId,
+                    order == null ? null : order.getOrderCode(),
+                    order == null ? null : order.getCustomerOrderCode(),
+                    order == null ? null : order.getReceiverName(),
+                    order == null ? null : order.getReceiverPhone(),
+                    order == null ? null : order.getReceiverLatitude(),
+                    order == null ? null : order.getReceiverLongitude(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    order == null ? null : order.getStatus(),
+                    null,
+                    order == null ? null : order.getReceiverAddressDetail(),
+                    order == null ? null : order.getReceiverWardCode(),
+                    order == null ? null : order.getReceiverProvinceCode(),
+                    order == null ? 0L : safeAmount(order.getCodAmount()),
+                    order == null ? 0L : safeAmount(order.getTotalShippingFee()),
+                    order == null ? null : order.getFeePayer(),
+                    PaymentStatus.UNPAID,
+                    0L,
+                    null,
+                    null,
+                    0,
+                    0L,
+                    0L,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            ));
+        }
+
+        DeliveryAssignmentResponse.DeliveryTripResponse assignedTripResponse =
+                new DeliveryAssignmentResponse.DeliveryTripResponse(
+                        savedTrip.getId(),
+                        savedTrip.getTripCode(),
+                        courier.getId(),
+                        courier.getCode(),
+                        courier.getFullName(),
+                        savedTrip.getVehicleId(),
+                        vehicleLicensePlate,
+                        stopResponses.size(),
+                        round3(savedTrip.getTotalDistanceKm()),
+                        savedTrip.getTotalTravelMinutes(),
+                        0L,
+                        0L,
+                        savedTrip.getPlannedStartTime(),
+                        savedTrip.getPlannedEndTime(),
+                        stopResponses
+                );
+
+        return new DeliveryAssignmentResponse(
+                postOffice.getId(),
+                postOffice.getCode(),
+                postOffice.getName(),
+                request.getShift(),
+                shiftPlanningWindow.tripDate(),
+                requestedOrderIds.size(),
+                requestedOrderIds.size(),
+                0,
+                createdTrip ? 1 : 0,
+                List.of(assignedTripResponse),
+                List.of()
+        );
+    }
+
     private DeliveryPersistResult persistAssignments(
             PostOffice postOffice,
             PickupShift shift,
@@ -389,6 +1214,7 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
         Set<Long> assignedOrderIds = extractAssignedOrderIds(solution.routes());
         int createdTrips = 0;
         List<DeliveryAssignmentResponse.DeliveryTripResponse> tripResponses = new ArrayList<>();
+        List<TmsOrderStatusTransitionRequest.Item> assignmentTransitionItems = new ArrayList<>();
 
         for (int routeIndex = 0; routeIndex < solution.routes().size(); routeIndex++) {
             RouteState route = solution.routes().get(routeIndex);
@@ -440,13 +1266,33 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
 
             tripOrderRepository.deleteByTrip_Id(savedTrip.getId());
             saveTripOrders(savedTrip, routeEvaluation.stopDetails(), tenantId);
+            DeliveryContext deliveryContext = new DeliveryContext(
+                    postOffice.getCode(),
+                    postOffice.getName(),
+                    route.courierCode(),
+                    route.courierName(),
+                    route.vehicleLicensePlate()
+            );
+            LocalDateTime assignmentEventTime = LocalDateTime.now();
+            routeEvaluation.stopDetails().stream()
+                    .map(StopEvaluationData::order)
+                    .filter(Objects::nonNull)
+                    .map(order -> toDeliveryAssignmentTransitionItem(
+                            order,
+                            savedTrip,
+                            deliveryContext,
+                            assignmentEventTime
+                    ))
+                    .forEach(assignmentTransitionItems::add);
 
             if (created) {
                 createdTrips += 1;
             }
+            publishDeliveryAssignmentNotification(route.courierStaffId(), savedTrip, tenantId);
             tripResponses.add(toAssignedTripResponse(savedTrip, route, routeEvaluation));
         }
 
+        enqueueTransitions(assignmentTransitionItems, tenantId);
         return new DeliveryPersistResult(tripResponses, assignedOrderIds, createdTrips);
     }
 
@@ -461,6 +1307,20 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
         List<Long> tripIds = trips.stream().map(Trip::getId).filter(Objects::nonNull).toList();
         List<TripOrder> tripOrders = tripOrderRepository
                 .findByTenantIdAndTripIdInOrderByTripIdAscSequenceNoAsc(tenantId, tripIds);
+        List<Long> tripOrderIds = tripOrders.stream()
+                .map(TripOrder::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        Map<Long, Checkin> deliveryCheckinByTripOrderId = tripOrderIds.isEmpty()
+                ? Map.of()
+                : checkinRepository.findByTenantIdAndCheckinTypeAndTripOrderIdIn(
+                                tenantId,
+                                CheckinType.DELIVERY,
+                                tripOrderIds
+                        )
+                        .stream()
+                        .filter(checkin -> checkin.getTripOrderId() != null)
+                        .collect(Collectors.toMap(Checkin::getTripOrderId, Function.identity(), (left, right) -> left));
         Map<Long, List<TripOrder>> tripOrdersByTripId = tripOrders.stream()
                 .filter(tripOrder -> tripOrder.getTrip() != null && tripOrder.getTrip().getId() != null)
                 .collect(Collectors.groupingBy(tripOrder -> tripOrder.getTrip().getId(), LinkedHashMap::new, Collectors.toList()));
@@ -484,7 +1344,8 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
             List<DeliveryAssignmentResponse.DeliveryStopResponse> stops = new ArrayList<>();
             for (TripOrder tripOrder : currentTripOrders) {
                 TmsOrderOperationView order = orderById.get(tripOrder.getOrderId());
-                stops.add(toDeliveryStopResponse(tripOrder, order));
+                Checkin deliveryCheckin = deliveryCheckinByTripOrderId.get(tripOrder.getId());
+                stops.add(toDeliveryStopResponse(tripOrder, order, deliveryCheckin));
             }
 
             responses.add(new DeliveryAssignmentResponse.DeliveryTripResponse(
@@ -535,6 +1396,99 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
         );
     }
 
+    private PickupOptimizationResponse buildOptimizationResponse(
+            PostOffice postOffice,
+            AlgorithmConfig config,
+            SolutionState solution,
+            SolutionEvaluation solutionEvaluation
+    ) {
+        List<PickupOptimizationResponse.PickupRoutePlanResponse> routeResponses = new ArrayList<>();
+        for (int index = 0; index < solution.routes().size(); index++) {
+            RouteState route = solution.routes().get(index);
+            RouteEvaluation routeEvaluation = solutionEvaluation.routeEvaluations().get(index);
+
+            List<PickupOptimizationResponse.PickupStopResponse> stopResponses = new ArrayList<>();
+            for (StopEvaluationData stop : routeEvaluation.stopDetails()) {
+                PickupOrderNode order = stop.order();
+                stopResponses.add(new PickupOptimizationResponse.PickupStopResponse(
+                        stop.sequence(),
+                        order.orderId(),
+                        order.orderCode(),
+                        order.customerOrderCode(),
+                        order.senderName(),
+                        order.senderPhone(),
+                        order.latitude(),
+                        order.longitude(),
+                        null,
+                        null,
+                        stop.arrivalTime(),
+                        stop.startServiceTime(),
+                        stop.departureTime(),
+                        round3(stop.distanceFromPreviousKm()),
+                        stop.travelMinutes(),
+                        stop.latenessMinutes()
+                ));
+            }
+
+            routeResponses.add(new PickupOptimizationResponse.PickupRoutePlanResponse(
+                    route.courierStaffId(),
+                    route.courierCode(),
+                    route.courierName(),
+                    route.vehicleId(),
+                    route.vehicleLicensePlate(),
+                    round3(route.maxWeight()),
+                    round3(route.maxVolume()),
+                    route.stops().size(),
+                    round3(routeEvaluation.totalWeight()),
+                    round3(routeEvaluation.totalVolume()),
+                    round3(routeEvaluation.totalDistanceKm()),
+                    routeEvaluation.totalTravelMinutes(),
+                    routeEvaluation.totalServiceMinutes(),
+                    routeEvaluation.totalLatenessMinutes(),
+                    routeEvaluation.routeStartTime(),
+                    routeEvaluation.routeEndTime(),
+                    stopResponses
+            ));
+        }
+
+        List<PickupOptimizationResponse.UnassignedPickupOrderResponse> unassignedResponses = new ArrayList<>();
+        for (UnassignedOrderState unassignedOrder : solution.unassignedOrders()) {
+            PickupOrderNode order = unassignedOrder.order();
+            unassignedResponses.add(new PickupOptimizationResponse.UnassignedPickupOrderResponse(
+                    order.orderId(),
+                    order.orderCode(),
+                    order.customerOrderCode(),
+                    unassignedOrder.reason()
+            ));
+        }
+        unassignedResponses.sort(Comparator
+                .comparing(PickupOptimizationResponse.UnassignedPickupOrderResponse::orderId,
+                        Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(PickupOptimizationResponse.UnassignedPickupOrderResponse::customerOrderCode,
+                        Comparator.nullsLast(String::compareToIgnoreCase))
+        );
+
+        return new PickupOptimizationResponse(
+                postOffice.getId(),
+                postOffice.getCode(),
+                postOffice.getName(),
+                config.planningStartTime(),
+                config.planningEndTime(),
+                solutionEvaluation.assignedOrders() + solutionEvaluation.unassignedOrders(),
+                solutionEvaluation.assignedOrders(),
+                solutionEvaluation.unassignedOrders(),
+                round3(solutionEvaluation.totalDistanceKm()),
+                solutionEvaluation.totalTravelMinutes(),
+                solutionEvaluation.totalServiceMinutes(),
+                solutionEvaluation.totalLatenessMinutes(),
+                round3(solutionEvaluation.objectiveScore()),
+                solution.routes().size(),
+                solutionEvaluation.usedRoutes(),
+                routeResponses,
+                unassignedResponses
+        );
+    }
+
     private DeliveryAssignmentResponse.DeliveryTripResponse toAssignedTripResponse(
             Trip trip,
             RouteState route,
@@ -558,6 +1512,31 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
                     round3(stop.distanceFromPreviousKm()),
                     stop.travelMinutes(),
                     stop.latenessMinutes(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    PaymentStatus.UNPAID,
+                    0L,
+                    null,
+                    null,
+                    0,
+                    0L,
+                    0L,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
                     null
             ));
         }
@@ -583,8 +1562,10 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
 
     private DeliveryAssignmentResponse.DeliveryStopResponse toDeliveryStopResponse(
             TripOrder tripOrder,
-            TmsOrderOperationView order
+            TmsOrderOperationView order,
+            Checkin deliveryCheckin
     ) {
+        Point checkinLocation = deliveryCheckin == null ? null : deliveryCheckin.getCheckinLocation();
         return new DeliveryAssignmentResponse.DeliveryStopResponse(
                 tripOrder.getSequenceNo(),
                 tripOrder.getOrderId(),
@@ -600,7 +1581,32 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
                 tripOrder.getDistanceFromPreviousKm(),
                 tripOrder.getTravelMinutes(),
                 tripOrder.getLatenessMinutes(),
-                tripOrder.getScanOutTime()
+                tripOrder.getScanOutTime(),
+                order == null ? null : order.getStatus(),
+                resolveDeliveryStatus(tripOrder, order),
+                order == null ? null : order.getReceiverAddressDetail(),
+                order == null ? null : order.getReceiverWardCode(),
+                order == null ? null : order.getReceiverProvinceCode(),
+                order == null ? null : safeAmount(order.getCodAmount()),
+                order == null ? null : safeAmount(order.getTotalShippingFee()),
+                order == null ? null : order.getFeePayer(),
+                tripOrder.getDeliveryPaymentStatus(),
+                tripOrder.getDeliveryPaymentAmount(),
+                tripOrder.getDeliveryPaymentAppTransId(),
+                tripOrder.getDeliveryPaymentConfirmedAt(),
+                tripOrder.getDeliveryAttemptCount(),
+                tripOrder.getCodCollected(),
+                tripOrder.getShippingFeeCollected(),
+                tripOrder.getFailureReason(),
+                tripOrder.getDeliveryNote(),
+                tripOrder.getDeliveredAt(),
+                tripOrder.getReturnedAt(),
+                deliveryCheckin == null ? null : deliveryCheckin.getId(),
+                deliveryCheckin == null ? null : deliveryCheckin.getCheckinTime(),
+                checkinLocation == null ? null : round3(checkinLocation.getY()),
+                checkinLocation == null ? null : round3(checkinLocation.getX()),
+                deliveryCheckin == null ? null : deliveryCheckin.getDistanceM(),
+                deliveryCheckin == null ? null : deliveryCheckin.getPhotoUrl()
         );
     }
 
@@ -1041,6 +2047,46 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
         );
     }
 
+    private AlgorithmConfig buildConfig(ManualAssignDeliveryOrdersRequest request, ShiftPlanningWindow window) {
+        GoalPreset goalPreset = resolveGoalPreset(request.getOptimizationGoal());
+        double averageSpeedKmph = resolvePositiveDouble(request.getAverageSpeedKmph(), DEFAULT_AVERAGE_SPEED_KMPH);
+        int serviceMinutesPerStop =
+                resolvePositiveInt(request.getServiceMinutesPerStop(), DEFAULT_SERVICE_MINUTES_PER_STOP);
+        boolean allowLateness = resolveBoolean(request.getAllowLateness(), goalPreset.allowLateness(), DEFAULT_ALLOW_LATENESS);
+        boolean enforcePlanningEnd = resolveBoolean(
+                request.getEnforcePlanningEnd(),
+                goalPreset.enforcePlanningEnd(),
+                DEFAULT_ENFORCE_PLANNING_END
+        );
+        boolean enforceCapacity = resolveBoolean(
+                request.getEnforceCapacity(),
+                goalPreset.enforceCapacity(),
+                DEFAULT_ENFORCE_CAPACITY
+        );
+        int matrixBatchSize = resolvePositiveInt(distanceMatrixBatchSize, DEFAULT_DISTANCE_MATRIX_BATCH_SIZE);
+        int matrixMaxNodes = resolvePositiveInt(distanceMatrixMaxNodes, DEFAULT_DISTANCE_MATRIX_MAX_NODES);
+
+        return new AlgorithmConfig(
+                window.planningStartTime(),
+                window.planningEndTime(),
+                window.tripDate(),
+                request.getOrderIds() == null ? DEFAULT_ORDER_LIMIT : Math.max(request.getOrderIds().size(), 1),
+                averageSpeedKmph,
+                serviceMinutesPerStop,
+                allowLateness,
+                enforcePlanningEnd,
+                enforceCapacity,
+                resolveNonNegativeDouble(goalPreset.distanceWeight(), DEFAULT_DISTANCE_WEIGHT),
+                resolveNonNegativeDouble(goalPreset.latenessWeight(), DEFAULT_LATENESS_WEIGHT),
+                resolveNonNegativeDouble(goalPreset.unassignedPenalty(), DEFAULT_UNASSIGNED_PENALTY),
+                resolveNonNegativeDouble(goalPreset.usedRoutePenalty(), DEFAULT_USED_ROUTE_PENALTY),
+                RoutingVehicle.fromValue(request.getVehicle()),
+                matrixBatchSize,
+                matrixMaxNodes,
+                null
+        );
+    }
+
     private PostOffice lockPostOfficeAndValidateScope(Long postOfficeId, Long tenantId) {
         PostOffice postOffice = postOfficeRepository.findByIdAndTenantIdForUpdate(postOfficeId, tenantId)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_OFFICE_NOT_FOUND));
@@ -1187,6 +2233,133 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
         firstMileAccessUtils.ensureCurrentManagerAssignedToPostOfficeOrThrow(postOfficeId, tenantId);
     }
 
+    private void validateManualDeliveryOrder(
+            TmsOrderOperationView order,
+            String postOfficeCode,
+            boolean alreadyInCurrentTrip
+    ) {
+        OrderStatus status = order.getStatus();
+        if (alreadyInCurrentTrip) {
+            boolean validExistingStatus = OrderStatus.READY_FOR_DELIVERY.equals(status)
+                    || OrderStatus.DELIVERY_FAILED.equals(status)
+                    || OrderStatus.OUT_FOR_DELIVERY.equals(status);
+            if (!validExistingStatus) {
+                throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+            }
+        } else if (!List.of(OrderStatus.READY_FOR_DELIVERY, OrderStatus.DELIVERY_FAILED).contains(status)) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        }
+
+        String destinationPostOfficeCode = order.getDestinationPostOfficeCode();
+        if (postOfficeCode == null
+                || destinationPostOfficeCode == null
+                || !postOfficeCode.equalsIgnoreCase(destinationPostOfficeCode)) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        }
+
+        if (toDeliveryOrderNode(order) == null) {
+            throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+        }
+    }
+
+    private void validateCourierAssignableForManual(
+            PostOfficeStaff courier,
+            Long postOfficeId,
+            Long tenantId,
+            LocalDate planningDate
+    ) {
+        if (!PostOfficeStaffRole.COURIER.equals(courier.getRole())
+                || !PostOfficeStaffStatus.ACTIVE.equals(courier.getStatus())) {
+            throw new AppException(ErrorCode.COURIER_NOT_ASSIGNED_TO_POST_OFFICE);
+        }
+
+        List<PostOfficeStaffAssignment> assignments = postOfficeStaffAssignmentRepository
+                .findActiveAssignmentsByStaffIdAndPostOfficeIdAndTenantId(
+                        courier.getId(),
+                        postOfficeId,
+                        tenantId,
+                        planningDate
+                );
+        if (assignments.isEmpty()) {
+            throw new AppException(ErrorCode.COURIER_NOT_ASSIGNED_TO_POST_OFFICE);
+        }
+    }
+
+    private Set<Long> normalizeDistinctOrderIds(List<Long> orderIds) {
+        LinkedHashSet<Long> normalizedOrderIds = new LinkedHashSet<>();
+        if (orderIds != null) {
+            for (Long orderId : orderIds) {
+                if (orderId != null && orderId > 0) {
+                    normalizedOrderIds.add(orderId);
+                }
+            }
+        }
+
+        if (normalizedOrderIds.isEmpty()) {
+            throw invalidRequest("order_ids must contain at least one positive order id.");
+        }
+
+        return normalizedOrderIds;
+    }
+
+    private Map<Long, TmsOrderOperationView> loadOrdersByIdMapOrThrow(Collection<Long> orderIds, Long tenantId) {
+        Map<Long, TmsOrderOperationView> orderById = new HashMap<>();
+        List<TmsOrderOperationView> orders = tmsOrderClient.lookupByIds(tenantId, orderIds);
+        for (TmsOrderOperationView order : orders) {
+            if (order != null && order.getId() != null) {
+                orderById.put(order.getId(), order);
+            }
+        }
+
+        for (Long orderId : orderIds) {
+            if (orderId != null && !orderById.containsKey(orderId)) {
+                throw new AppException(ErrorCode.ORDER_NOT_FOUND);
+            }
+        }
+
+        return orderById;
+    }
+
+    private Long resolveForceVehicleId(List<Vehicle> activeVehicles, Long courierStaffId) {
+        if (activeVehicles == null || activeVehicles.isEmpty()) {
+            return null;
+        }
+
+        for (Vehicle vehicle : activeVehicles) {
+            if (vehicle == null || vehicle.getId() == null) {
+                continue;
+            }
+            if (courierStaffId != null && Objects.equals(vehicle.getPostOfficeStaffId(), courierStaffId)) {
+                return vehicle.getId();
+            }
+        }
+
+        for (Vehicle vehicle : activeVehicles) {
+            if (vehicle != null && vehicle.getId() != null) {
+                return vehicle.getId();
+            }
+        }
+
+        return null;
+    }
+
+    private String resolveVehicleLicensePlate(List<Vehicle> activeVehicles, Long vehicleId) {
+        if (vehicleId == null || activeVehicles == null || activeVehicles.isEmpty()) {
+            return null;
+        }
+
+        for (Vehicle vehicle : activeVehicles) {
+            if (vehicle == null || vehicle.getId() == null) {
+                continue;
+            }
+            if (Objects.equals(vehicle.getId(), vehicleId)) {
+                return vehicle.getLicensePlate();
+            }
+        }
+
+        return null;
+    }
+
     private boolean canViewTrip(Long tenantId, Trip trip) {
         if (firstMileAccessUtils.isAdmin()) {
             return true;
@@ -1254,7 +2427,7 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
                 .vehicleLicensePlate(context.vehicleLicensePlate())
                 .latitude(order.getReceiverLatitude())
                 .longitude(order.getReceiverLongitude())
-                .locationLabel("Delivery scan-out")
+                .locationLabel("Quét xuất giao hàng")
                 .build();
 
         return TmsOrderStatusTransitionRequest.Item.builder()
@@ -1267,6 +2440,50 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
                 .build();
     }
 
+    private TmsOrderStatusTransitionRequest.Item toDeliveryAssignmentTransitionItem(
+            PickupOrderNode order,
+            Trip trip,
+            DeliveryContext context,
+            LocalDateTime eventTime
+    ) {
+        TmsOrderStatusTransitionRequest.Context transitionContext = TmsOrderStatusTransitionRequest.Context.builder()
+                .eventTime(eventTime)
+                .tripId(trip.getId())
+                .tripCode(trip.getTripCode())
+                .postOfficeId(trip.getPostOfficeId())
+                .postOfficeCode(context.postOfficeCode())
+                .postOfficeName(context.postOfficeName())
+                .staffId(trip.getCourierStaffId())
+                .staffCode(context.courierCode())
+                .staffName(context.courierName())
+                .vehicleId(trip.getVehicleId())
+                .vehicleLicensePlate(context.vehicleLicensePlate())
+                .latitude(order.latitude())
+                .longitude(order.longitude())
+                .locationLabel("Điều phối giao hàng")
+                .build();
+
+        return TmsOrderStatusTransitionRequest.Item.builder()
+                .orderId(order.orderId())
+                .orderCode(order.orderCode())
+                .expectedStatuses(List.of(
+                        OrderStatus.READY_FOR_DELIVERY,
+                        OrderStatus.DELIVERY_FAILED,
+                        OrderStatus.OUT_FOR_DELIVERY
+                ))
+                .targetStatus(OrderStatus.OUT_FOR_DELIVERY)
+                .description("Đơn hàng đã được điều phối cho bưu tá giao hàng.")
+                .recordTimelineWhenUnchanged(true)
+                .context(transitionContext)
+                .build();
+    }
+
+    private boolean isDeliveryAssignmentTransitionStatus(OrderStatus status) {
+        return status == OrderStatus.READY_FOR_DELIVERY
+                || status == OrderStatus.DELIVERY_FAILED
+                || status == OrderStatus.OUT_FOR_DELIVERY;
+    }
+
     private void enqueueTransitions(List<TmsOrderStatusTransitionRequest.Item> items, Long tenantId) {
         if (items == null || items.isEmpty()) {
             return;
@@ -1276,6 +2493,14 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
                 .idempotencyKey(TRANSITION_SOURCE + "-" + UUID.randomUUID())
                 .items(items)
                 .build(), tenantId);
+    }
+
+    private void publishDeliveryAssignmentNotification(Long courierStaffId, Trip trip, Long tenantId) {
+        if (courierStaffId == null || trip == null) {
+            return;
+        }
+        postOfficeStaffRepository.findByIdAndTenantId(courierStaffId, tenantId)
+                .ifPresent(courier -> staffNotificationEventPublisher.publishDeliveryTripAssigned(courier, trip, tenantId));
     }
 
     private PostOffice resolveSinglePostOfficeForResponse(Long tenantId, Long postOfficeId, List<Trip> trips) {
@@ -1495,8 +2720,473 @@ public class DeliveryDispatchServiceImpl implements DeliveryDispatchService {
         return Math.round(value * 1000.0) / 1000.0;
     }
 
+    private DeliveryTripOrderContext resolveTripOrderContextForUpdate(Long tripId, String orderCode, Long tenantId) {
+        Trip trip = tripRepository.findByIdAndTenantIdForUpdate(tripId, tenantId)
+                .filter(candidate -> TripType.DELIVERY.equals(candidate.getTripType()))
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST, "Delivery trip not found."));
+        ensureCanOperateTrip(tenantId, trip);
+        if (!ACTIVE_DELIVERY_TRIP_STATUSES.contains(trip.getStatus())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Delivery trip is not active.");
+        }
+
+        String normalizedOrderCode = normalizeText(orderCode);
+        if (normalizedOrderCode == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "orderCode is required.");
+        }
+
+        TmsOrderOperationView order = tmsOrderClient.lookupByCodes(tenantId, List.of(normalizedOrderCode)).stream()
+                .findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        TripOrder tripOrder = tripOrderRepository
+                .findByTenantIdAndTrip_IdAndOrderIdAndTrip_TripType(tenantId, trip.getId(), order.getId(), TripType.DELIVERY)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.INVALID_REQUEST,
+                        "Order is not assigned to this delivery trip."
+                ));
+        return new DeliveryTripOrderContext(trip, tripOrder, order, resolveDeliveryContext(trip, tenantId));
+    }
+
+    private void ensureTripOrderOutForDelivery(TripOrder tripOrder) {
+        if (tripOrder.getScanOutTime() == null) {
+            throw new AppException(ErrorCode.DELIVERY_ORDER_INVALID_STATUS, "Order must be scanned out before delivery action.");
+        }
+        DeliveryOrderStatus status = tripOrder.getDeliveryStatus();
+        if (status != null && status != DeliveryOrderStatus.OUT_FOR_DELIVERY && status != DeliveryOrderStatus.PENDING) {
+            throw new AppException(ErrorCode.DELIVERY_ORDER_INVALID_STATUS, "Order is already processed.");
+        }
+    }
+
+    private void ensureTripOrderReadyForDeliveryAction(
+            TripOrder tripOrder,
+            TmsOrderOperationView order,
+            LocalDateTime actionTime
+    ) {
+        if (tripOrder.getScanOutTime() == null) {
+            if (!List.of(OrderStatus.READY_FOR_DELIVERY, OrderStatus.DELIVERY_FAILED, OrderStatus.OUT_FOR_DELIVERY)
+                    .contains(order.getStatus())) {
+                throw new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE);
+            }
+            tripOrder.setScanOutTime(actionTime);
+        }
+
+        DeliveryOrderStatus status = tripOrder.getDeliveryStatus();
+        if (status != null && status != DeliveryOrderStatus.OUT_FOR_DELIVERY && status != DeliveryOrderStatus.PENDING) {
+            throw new AppException(ErrorCode.DELIVERY_ORDER_INVALID_STATUS, "Order is already processed.");
+        }
+        if (status == null || status == DeliveryOrderStatus.PENDING) {
+            tripOrder.setDeliveryStatus(DeliveryOrderStatus.OUT_FOR_DELIVERY);
+        }
+    }
+
+    private DeliveryOrderStatus resolveDeliveryStatus(TripOrder tripOrder, TmsOrderOperationView order) {
+        if (tripOrder.getDeliveryStatus() != null) {
+            return tripOrder.getDeliveryStatus();
+        }
+        if (tripOrder.getScanOutTime() != null) {
+            return DeliveryOrderStatus.OUT_FOR_DELIVERY;
+        }
+        if (order != null && OrderStatus.DELIVERED.equals(order.getStatus())) {
+            return DeliveryOrderStatus.DELIVERED;
+        }
+        if (order != null && OrderStatus.DELIVERY_FAILED.equals(order.getStatus())) {
+            return DeliveryOrderStatus.FAILED;
+        }
+        if (order != null && OrderStatus.RETURNED_TO_SENDER.equals(order.getStatus())) {
+            return DeliveryOrderStatus.RETURNED;
+        }
+        return DeliveryOrderStatus.PENDING;
+    }
+
+    private void validateDeliveryCheckinRequest(ConfirmDeliveryRequest request, MultipartFile photo) {
+        if (request == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Delivery check-in request is required.");
+        }
+        if (request.getLatitude() == null || request.getLongitude() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "latitude and longitude are required.");
+        }
+        if (!isValidCoordinate(request.getLatitude(), request.getLongitude())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Invalid delivery check-in coordinates.");
+        }
+        if (photo == null || photo.isEmpty()) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_EMPTY);
+        }
+    }
+
+    private void validateDeliveryPayment(TripOrder tripOrder, TmsOrderOperationView order) {
+        long requiredPayment = requiredDeliveryPaymentAmount(order);
+        if (requiredPayment > 0 && !PaymentStatus.PAID.equals(tripOrder.getDeliveryPaymentStatus())) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Customer payment must be confirmed through payment service before delivery check-in."
+            );
+        }
+        ensureConfirmedPaymentAmountCoversRequiredAmount(tripOrder, requiredPayment);
+    }
+
+    private long requiredDeliveryPaymentAmount(TmsOrderOperationView order) {
+        return safeAmount(order == null ? null : order.getCodAmount()) + requiredReceiverShippingFee(order);
+    }
+
+    private long requiredReceiverShippingFee(TmsOrderOperationView order) {
+        if (order == null || !RECEIVER.equalsIgnoreCase(order.getFeePayer())) {
+            return 0L;
+        }
+        return safeAmount(order.getTotalShippingFee());
+    }
+
+    private long safeAmount(Long amount) {
+        return amount != null ? amount : 0L;
+    }
+
+    private int safeInteger(Integer value) {
+        return value != null ? value : 0;
+    }
+
+    private void ensureConfirmedPaymentAmountCoversRequiredAmount(TripOrder tripOrder, long requiredPayment) {
+        if (requiredPayment > 0 && safeAmount(tripOrder.getDeliveryPaymentAmount()) < requiredPayment) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Confirmed customer payment amount is insufficient.");
+        }
+    }
+
+    private PaymentCreateOrderRequest buildTripDeliveryPaymentRequest(
+            DeliveryTripOrderContext context,
+            long requiredAmount,
+            Long tenantId
+    ) {
+        Long actorId = firstMileAccessUtils.getCurrentUserIdOrNull();
+        String orderCode = context.order().getOrderCode();
+        return PaymentCreateOrderRequest.builder()
+                .appUser(orderCode)
+                .amount(requiredAmount)
+                .description("Thanh toán của khách hàng cho đơn giao hàng " + orderCode)
+                .embedData(PaymentCreateOrderRequest.EmbedData.builder()
+                        .redirectUrl(paymentRedirectUrl
+                                + "?source=first-mile&tripId=" + context.trip().getId()
+                                + "&orderCode=" + orderCode)
+                        .merchantInfo(buildTripDeliveryPaymentMerchantInfo(context, requiredAmount, tenantId, actorId))
+                        .build())
+                .title("Delivery payment - " + orderCode)
+                .tenantId(tenantId)
+                .actorId(actorId)
+                .userId(actorId)
+                .items(List.of(PaymentCreateOrderRequest.Item.builder()
+                        .itemId("delivery-trip-payment-" + orderCode)
+                        .itemName("Thanh toán của khách hàng cho đơn giao hàng " + orderCode)
+                        .itemPrice(requiredAmount)
+                        .itemQuantity(1)
+                        .build()))
+                .build();
+    }
+
+    private String buildTripDeliveryPaymentMerchantInfo(
+            DeliveryTripOrderContext context,
+            long requiredAmount,
+            Long tenantId,
+            Long actorId
+    ) {
+        return """
+                {"sourceService":"%s","source":"%s","tenantId":%d,"actorId":%s,"userId":%s,"tripId":%d,"tripOrderId":%d,"orderCode":"%s","amount":%d,"codAmount":%d,"shippingFee":%d}
+                """.formatted(
+                PAYMENT_SOURCE_SERVICE,
+                PAYMENT_SOURCE,
+                tenantId,
+                actorId == null ? "null" : actorId.toString(),
+                actorId == null ? "null" : actorId.toString(),
+                context.trip().getId(),
+                context.tripOrder().getId(),
+                context.order().getOrderCode(),
+                requiredAmount,
+                safeAmount(context.order().getCodAmount()),
+                requiredReceiverShippingFee(context.order())
+        ).trim();
+    }
+
+    private void markReceiverShippingFeePaidIfNeeded(TmsOrderOperationView order, Long tenantId) {
+        if (requiredReceiverShippingFee(order) <= 0L) {
+            return;
+        }
+        try {
+            tmsOrderClient.updatePaymentStatus(order.getOrderCode(), tenantId, "PAID");
+        } catch (Exception e) {
+            log.warn("Failed to update payment status for order {}: {}", order.getOrderCode(), e.getMessage());
+        }
+    }
+
+    private FileUploadResponse uploadDeliveryCheckinPhoto(MultipartFile photo, String contentType, Long tenantId) {
+        try {
+            return fileStorageService.upload(FileUploadRequest.builder()
+                    .content(photo.getBytes())
+                    .originalFileName(photo.getOriginalFilename())
+                    .contentType(contentType)
+                    .serviceName(STORAGE_SERVICE_NAME)
+                    .folder(DELIVERY_CHECKIN_IMAGE_FOLDER)
+                    .tenantId(tenantId)
+                    .uploaderId(firstMileAccessUtils.getCurrentUserIdOrNull())
+                    .publicFile(true)
+                    .build());
+        } catch (IOException exception) {
+            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
+        }
+    }
+
+    private double calculateDeliveryDistanceMeters(
+            double checkinLatitude,
+            double checkinLongitude,
+            Double receiverLatitude,
+            Double receiverLongitude
+    ) {
+        if (receiverLatitude == null
+                || receiverLongitude == null
+                || !isValidCoordinate(receiverLatitude, receiverLongitude)) {
+            return 0D;
+        }
+
+        double latitudeDeltaRadians = Math.toRadians(receiverLatitude - checkinLatitude);
+        double longitudeDeltaRadians = Math.toRadians(receiverLongitude - checkinLongitude);
+        double checkinLatitudeRadians = Math.toRadians(checkinLatitude);
+        double receiverLatitudeRadians = Math.toRadians(receiverLatitude);
+        double haversineComponent = Math.sin(latitudeDeltaRadians / 2) * Math.sin(latitudeDeltaRadians / 2)
+                + Math.cos(checkinLatitudeRadians) * Math.cos(receiverLatitudeRadians)
+                * Math.sin(longitudeDeltaRadians / 2) * Math.sin(longitudeDeltaRadians / 2);
+        double normalizedHaversineComponent = Math.max(0D, Math.min(1D, haversineComponent));
+        double centralAngle = 2 * Math.atan2(
+                Math.sqrt(normalizedHaversineComponent),
+                Math.sqrt(1D - normalizedHaversineComponent)
+        );
+        return EARTH_RADIUS_METERS * centralAngle;
+    }
+
+    private Point toPoint(double latitude, double longitude) {
+        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
+        point.setSRID(4326);
+        return point;
+    }
+
+    private DeliveryManifest buildManifestFromTrip(
+            Trip trip,
+            List<TripOrder> tripOrders,
+            Map<Long, TmsOrderOperationView> orderById,
+            DeliveryContext context,
+            Long tenantId
+    ) {
+        DeliveryManifest manifest = DeliveryManifest.builder()
+                .tenantId(tenantId)
+                .manifestCode(generateManifestCode(tenantId))
+                .postOfficeCode(context.postOfficeCode())
+                .courierId(trip.getCourierStaffId())
+                .courierName(context.courierName())
+                .vehicleId(trip.getVehicleId() == null ? null : trip.getVehicleId().toString())
+                .status(DeliveryManifestStatus.COMPLETED)
+                .plannedDate(trip.getTripDate())
+                .plannedDepartureAt(trip.getPlannedStartTime())
+                .actualDepartureAt(resolveActualDepartureAt(tripOrders))
+                .actualReturnAt(LocalDateTime.now())
+                .totalOrders(tripOrders.size())
+                .deliveredCount(0)
+                .failedCount(0)
+                .totalCodAmount(0L)
+                .collectedCodAmount(0L)
+                .totalShippingFee(0L)
+                .collectedShippingFee(0L)
+                .note("Tạo tự động khi kết thúc chuyến " + trip.getTripCode())
+                .build();
+
+        long totalCod = 0L;
+        long collectedCod = 0L;
+        long totalShippingFee = 0L;
+        long collectedShippingFee = 0L;
+        int deliveredCount = 0;
+        int failedCount = 0;
+
+        for (TripOrder tripOrder : tripOrders) {
+            TmsOrderOperationView order = orderById.get(tripOrder.getOrderId());
+            DeliveryManifestOrder manifestOrder = buildManifestOrderFromTripOrder(tripOrder, order, manifest, tenantId);
+            manifest.addOrder(manifestOrder);
+
+            totalCod += safeAmount(order == null ? null : order.getCodAmount());
+            totalShippingFee += requiredReceiverShippingFee(order);
+            collectedCod += safeAmount(tripOrder.getCodCollected());
+            collectedShippingFee += safeAmount(tripOrder.getShippingFeeCollected());
+            DeliveryOrderStatus status = manifestOrder.getStatus();
+            if (status == DeliveryOrderStatus.DELIVERED) {
+                deliveredCount += 1;
+            } else if (status == DeliveryOrderStatus.FAILED || status == DeliveryOrderStatus.RETURNED) {
+                failedCount += 1;
+            }
+        }
+
+        manifest.setTotalCodAmount(totalCod);
+        manifest.setCollectedCodAmount(collectedCod);
+        manifest.setTotalShippingFee(totalShippingFee);
+        manifest.setCollectedShippingFee(collectedShippingFee);
+        manifest.setDeliveredCount(deliveredCount);
+        manifest.setFailedCount(failedCount);
+        return manifest;
+    }
+
+    private DeliveryManifestOrder buildManifestOrderFromTripOrder(
+            TripOrder tripOrder,
+            TmsOrderOperationView order,
+            DeliveryManifest manifest,
+            Long tenantId
+    ) {
+        DeliveryOrderStatus status = resolveDeliveryStatus(tripOrder, order);
+        return DeliveryManifestOrder.builder()
+                .tenantId(tenantId)
+                .manifest(manifest)
+                .orderId(tripOrder.getOrderId())
+                .orderCode(order == null ? String.valueOf(tripOrder.getOrderId()) : order.getOrderCode())
+                .sequence(tripOrder.getSequenceNo())
+                .deliveryAttemptCount(safeInteger(tripOrder.getDeliveryAttemptCount()))
+                .status(status)
+                .receiverName(order == null ? null : order.getReceiverName())
+                .receiverPhone(order == null ? null : order.getReceiverPhone())
+                .receiverAddressDetail(order == null ? null : order.getReceiverAddressDetail())
+                .receiverWardCode(order == null ? null : order.getReceiverWardCode())
+                .receiverProvinceCode(order == null ? null : order.getReceiverProvinceCode())
+                .receiverLat(order == null ? null : order.getReceiverLatitude())
+                .receiverLng(order == null ? null : order.getReceiverLongitude())
+                .codAmount(safeAmount(order == null ? null : order.getCodAmount()))
+                .codCollected(safeAmount(tripOrder.getCodCollected()))
+                .shippingFee(requiredReceiverShippingFee(order))
+                .shippingFeeCollected(safeAmount(tripOrder.getShippingFeeCollected()))
+                .feePayer(order == null ? null : order.getFeePayer())
+                .deliveryPaymentStatus(tripOrder.getDeliveryPaymentStatus())
+                .deliveryPaymentAmount(tripOrder.getDeliveryPaymentAmount())
+                .deliveryPaymentAppTransId(tripOrder.getDeliveryPaymentAppTransId())
+                .deliveryPaymentConfirmedAt(tripOrder.getDeliveryPaymentConfirmedAt())
+                .failureReason(tripOrder.getFailureReason())
+                .deliveredAt(tripOrder.getDeliveredAt())
+                .note(tripOrder.getDeliveryNote())
+                .build();
+    }
+
+    private void linkDeliveryCheckinsToManifest(DeliveryManifest manifest, List<TripOrder> tripOrders, Long tenantId) {
+        if (manifest.getOrders() == null || manifest.getOrders().isEmpty()) {
+            return;
+        }
+        Map<Long, Long> tripOrderIdByOrderId = tripOrders.stream()
+                .filter(tripOrder -> tripOrder.getOrderId() != null && tripOrder.getId() != null)
+                .collect(Collectors.toMap(TripOrder::getOrderId, TripOrder::getId, (left, right) -> left));
+        for (DeliveryManifestOrder manifestOrder : manifest.getOrders()) {
+            Long tripOrderId = tripOrderIdByOrderId.get(manifestOrder.getOrderId());
+            if (tripOrderId == null) {
+                continue;
+            }
+            checkinRepository
+                    .findByTenantIdAndCheckinTypeAndTripOrderId(tenantId, CheckinType.DELIVERY, tripOrderId)
+                    .ifPresent(checkin -> {
+                        checkin.setDeliveryManifestId(manifest.getId());
+                        checkin.setDeliveryManifestOrderId(manifestOrder.getId());
+                        checkinRepository.save(checkin);
+                    });
+        }
+    }
+
+    private LocalDateTime resolveActualDepartureAt(List<TripOrder> tripOrders) {
+        return tripOrders.stream()
+                .map(TripOrder::getScanOutTime)
+                .filter(Objects::nonNull)
+                .min(LocalDateTime::compareTo)
+                .orElse(null);
+    }
+
+    private String generateManifestCode(Long tenantId) {
+        String dateStr = LocalDate.now().toString().replace("-", "");
+        String prefix = "DM-" + dateStr + "-" + tenantId + "-";
+        return deliveryManifestRepository.findTopByTenantIdAndManifestCodeStartingWithOrderByManifestCodeDesc(tenantId, prefix)
+                .map(manifest -> {
+                    String code = manifest.getManifestCode();
+                    String seqStr = code.substring(prefix.length());
+                    int seq = Integer.parseInt(seqStr) + 1;
+                    return String.format("%s%05d", prefix, seq);
+                })
+                .orElse(prefix + "00001");
+    }
+
+    private DeliveryManifestResponse toManifestResponse(DeliveryManifest manifest) {
+        List<DeliveryManifestOrderResponse> orderResponses = manifest.getOrders() == null
+                ? List.of()
+                : manifest.getOrders().stream().map(this::toManifestOrderResponse).toList();
+
+        return DeliveryManifestResponse.builder()
+                .id(manifest.getId())
+                .manifestCode(manifest.getManifestCode())
+                .postOfficeCode(manifest.getPostOfficeCode())
+                .courierId(manifest.getCourierId())
+                .courierName(manifest.getCourierName())
+                .vehicleId(manifest.getVehicleId())
+                .status(manifest.getStatus())
+                .plannedDate(manifest.getPlannedDate())
+                .plannedDepartureAt(manifest.getPlannedDepartureAt())
+                .actualDepartureAt(manifest.getActualDepartureAt())
+                .actualReturnAt(manifest.getActualReturnAt())
+                .totalOrders(manifest.getTotalOrders())
+                .deliveredCount(manifest.getDeliveredCount())
+                .failedCount(manifest.getFailedCount())
+                .totalCodAmount(manifest.getTotalCodAmount())
+                .collectedCodAmount(manifest.getCollectedCodAmount())
+                .totalShippingFee(manifest.getTotalShippingFee())
+                .collectedShippingFee(manifest.getCollectedShippingFee())
+                .note(manifest.getNote())
+                .createdAt(manifest.getCreatedAt())
+                .orders(orderResponses)
+                .build();
+    }
+
+    private DeliveryManifestOrderResponse toManifestOrderResponse(DeliveryManifestOrder order) {
+        Checkin deliveryCheckin = order.getOrderId() == null
+                ? null
+                : checkinRepository.findByTenantIdAndCheckinTypeAndDeliveryManifestOrderId(
+                        order.getTenantId(),
+                        CheckinType.DELIVERY,
+                        order.getId()
+                ).orElse(null);
+        Point checkinLocation = deliveryCheckin == null ? null : deliveryCheckin.getCheckinLocation();
+
+        return DeliveryManifestOrderResponse.builder()
+                .id(order.getId())
+                .orderId(order.getOrderId())
+                .orderCode(order.getOrderCode())
+                .sequence(order.getSequence())
+                .deliveryAttemptCount(order.getDeliveryAttemptCount())
+                .status(order.getStatus())
+                .receiverName(order.getReceiverName())
+                .receiverPhone(order.getReceiverPhone())
+                .receiverAddressDetail(order.getReceiverAddressDetail())
+                .receiverWardCode(order.getReceiverWardCode())
+                .receiverProvinceCode(order.getReceiverProvinceCode())
+                .receiverLat(order.getReceiverLat())
+                .receiverLng(order.getReceiverLng())
+                .codAmount(order.getCodAmount())
+                .codCollected(order.getCodCollected())
+                .shippingFee(order.getShippingFee())
+                .shippingFeeCollected(order.getShippingFeeCollected())
+                .feePayer(order.getFeePayer())
+                .deliveryPaymentStatus(order.getDeliveryPaymentStatus())
+                .deliveryPaymentAmount(order.getDeliveryPaymentAmount())
+                .deliveryPaymentAppTransId(order.getDeliveryPaymentAppTransId())
+                .deliveryPaymentConfirmedAt(order.getDeliveryPaymentConfirmedAt())
+                .proofPhotoUrl(deliveryCheckin == null ? order.getProofPhotoUrl() : deliveryCheckin.getPhotoUrl())
+                .failureReason(order.getFailureReason())
+                .deliveredAt(order.getDeliveredAt())
+                .deliveryCheckinLat(checkinLocation == null ? null : round3(checkinLocation.getY()))
+                .deliveryCheckinLng(checkinLocation == null ? null : round3(checkinLocation.getX()))
+                .deliveryCheckinDistanceM(deliveryCheckin == null ? null : deliveryCheckin.getDistanceM())
+                .note(order.getNote())
+                .build();
+    }
+
     private AppException invalidRequest(String detail) {
         return new AppException(ErrorCode.INVALID_REQUEST, detail);
+    }
+
+    private record DeliveryTripOrderContext(
+            Trip trip,
+            TripOrder tripOrder,
+            TmsOrderOperationView order,
+            DeliveryContext deliveryContext
+    ) {
     }
 
     private record ExistingDeliveryRouteData(

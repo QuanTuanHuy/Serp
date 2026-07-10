@@ -18,6 +18,7 @@ import { Loader2, Pencil } from 'lucide-react';
 import type { Hub, SecondMileVehicle } from '../../../../types';
 import {
   buildHubLabel,
+  buildVehicleDriverLabel,
   formatDateTime,
   formatOptionalNumber,
   formatStatusLabel,
@@ -54,10 +55,7 @@ export const SecondMileVehicleDetailDialog: React.FC<
     imageUrl && imageRefreshKey
       ? `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}v=${imageRefreshKey}`
       : imageUrl;
-  const driverLabel = vehicle?.assignedStaffId
-    ? (driverLabelByStaffId[vehicle.assignedStaffId] ??
-      `Tài xế #${vehicle.assignedStaffId}`)
-    : '-';
+  const driverLabel = buildVehicleDriverLabel(vehicle, driverLabelByStaffId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

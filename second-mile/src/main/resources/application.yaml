@@ -48,6 +48,7 @@ app:
       sync-hub-post-office: ${SYNC_HUB_POST_OFFICE_TOPIC:HUB_POST_OFFICE_SYNC}
       sync-handover-manifest: ${SYNC_HANDOVER_MANIFEST_TOPIC:HANDOVER_MANIFEST_SYNC}
       order-status-transition: ${ORDER_STATUS_TRANSITION_TOPIC:ORDER_STATUS_TRANSITIONS}
+      user-notification: ${USER_NOTIFICATION_TOPIC:serp.notification.user.events}
     order-sync:
       consumer-group-id: ${KAFKA_SECOND_MILE_ORDER_SYNC_GROUP:second-mile-sync-order}
     hub-post-office-sync:

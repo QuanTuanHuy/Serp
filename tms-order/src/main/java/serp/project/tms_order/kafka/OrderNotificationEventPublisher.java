@@ -12,7 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import serp.project.tms_order.domain.Order;
+import serp.project.tms_order.dto.request.InternalOrderStatusTransitionRequest;
 import serp.project.tms_order.kafka.event.NotificationCreateRequestedEvent;
+import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.service.OutboxEventService;
 
 import java.time.Instant;
@@ -51,7 +53,7 @@ public class OrderNotificationEventPublisher {
                 order,
                 "order-confirmed",
                 "Order confirmed",
-                String.format("Order %s has been confirmed.", resolveOrderCode(order)),
+                String.format("Đơn %s đã được xác nhận.", resolveOrderCode(order)),
                 TYPE_SUCCESS,
                 PRIORITY_MEDIUM
         );
@@ -62,7 +64,7 @@ public class OrderNotificationEventPublisher {
                 order,
                 "payment-succeeded",
                 "Payment successful",
-                String.format("Shipping fee payment for order %s was successful.", resolveOrderCode(order)),
+                String.format("Thanh toán phí vận chuyển cho đơn %s đã thành công.", resolveOrderCode(order)),
                 TYPE_SUCCESS,
                 PRIORITY_MEDIUM
         );
@@ -72,11 +74,67 @@ public class OrderNotificationEventPublisher {
         publishForOrderOwner(
                 order,
                 "order-cancelled",
-                "Order cancelled",
-                String.format("Order %s has been cancelled.", resolveOrderCode(order)),
+                "Đơn hàng đã bị hủy",
+                String.format("Đơn hàng %s đã bị hủy.", resolveOrderCode(order)),
                 TYPE_WARNING,
                 PRIORITY_HIGH
         );
+    }
+
+    public void publishOrderStatusTransition(
+            Order order,
+            OrderStatus targetStatus,
+            InternalOrderStatusTransitionRequest.Context context
+    ) {
+        if (targetStatus == null) {
+            return;
+        }
+
+        switch (targetStatus) {
+            case ASSIGNED_TO_PICKUP -> publishForOrderOwner(
+                    order,
+                    "assigned-to-pickup",
+                    "Đơn hàng đã được phân công gom",
+                    String.format(
+                            "Đơn hàng %s đã được phân công cho bưu tá gom hàng%s.",
+                            resolveOrderCode(order),
+                            staffSuffix(context)
+                    ),
+                    TYPE_SUCCESS,
+                    PRIORITY_MEDIUM
+            );
+            case PENDING_ORIGIN_POST_OFFICE_INBOUND, AT_ORIGIN_POST_OFFICE -> publishForOrderOwner(
+                    order,
+                    "pickup-succeeded",
+                    "Gom hàng thành công",
+                    String.format("Đơn hàng %s đã được gom hàng thành công.", resolveOrderCode(order)),
+                    TYPE_SUCCESS,
+                    PRIORITY_MEDIUM
+            );
+            case OUT_FOR_DELIVERY -> publishForOrderOwner(
+                    order,
+                    "out-for-delivery",
+                    "Đơn hàng đang được giao",
+                    String.format(
+                            "Đơn hàng %s đã được phân công cho bưu tá giao hàng%s.",
+                            resolveOrderCode(order),
+                            staffSuffix(context)
+                    ),
+                    TYPE_SUCCESS,
+                    PRIORITY_MEDIUM
+            );
+            case DELIVERED -> publishForOrderOwner(
+                    order,
+                    "delivered",
+                    "Giao hàng thành công",
+                    String.format("Đơn hàng %s đã được giao thành công.", resolveOrderCode(order)),
+                    TYPE_SUCCESS,
+                    PRIORITY_HIGH
+            );
+            default -> {
+                // Status này không cần thông báo cho người dùng.
+            }
+        }
     }
 
     private void publishForOrderOwner(
@@ -193,6 +251,13 @@ public class OrderNotificationEventPublisher {
         putIfNotNull(metadata, "paymentStatus", order.getPaymentStatus());
         putIfNotNull(metadata, "cancelReason", order.getCancelReason());
         return metadata;
+    }
+
+    private String staffSuffix(InternalOrderStatusTransitionRequest.Context context) {
+        if (context == null || context.getStaffName() == null || context.getStaffName().trim().isEmpty()) {
+            return "";
+        }
+        return " " + context.getStaffName().trim();
     }
 
     private void putIfNotNull(Map<String, Object> metadata, String key, Object value) {

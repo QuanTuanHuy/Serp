@@ -32,7 +32,7 @@ interface PlanResultCardProps {
 
 export function PlanResultCard({ plan }: PlanResultCardProps) {
   return (
-    <Card>
+    <Card className='min-w-0 overflow-hidden'>
       <CardHeader>
         <CardTitle>Xem trước kế hoạch tự động</CardTitle>
         <CardDescription>
@@ -40,7 +40,7 @@ export function PlanResultCard({ plan }: PlanResultCardProps) {
           tình trạng tài xế.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className='min-w-0'>
         {!plan ? (
           <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
             Chạy xem trước kế hoạch để kiểm tra các biên bản gợi ý trước khi
@@ -61,17 +61,17 @@ export function PlanResultCard({ plan }: PlanResultCardProps) {
                 {plan.manifestCount} biên bản
               </span>
             </div>
-            <div className='overflow-x-auto rounded-md border'>
-              <Table>
+            <div className='max-w-full overflow-x-auto rounded-md border'>
+              <Table className='min-w-[1020px] table-fixed'>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tuyến</TableHead>
-                    <TableHead>Xe</TableHead>
-                    <TableHead>Túi hàng</TableHead>
-                    <TableHead>Tải</TableHead>
-                    <TableHead>Điểm</TableHead>
-                    <TableHead>Gợi ý</TableHead>
-                    <TableHead>Đã tạo</TableHead>
+                    <TableHead className='w-[110px]'>Tuyến</TableHead>
+                    <TableHead className='w-[120px]'>Xe</TableHead>
+                    <TableHead className='w-[180px]'>Túi hàng</TableHead>
+                    <TableHead className='w-[120px]'>Tải</TableHead>
+                    <TableHead className='w-[80px]'>Điểm</TableHead>
+                    <TableHead className='w-[270px]'>Gợi ý</TableHead>
+                    <TableHead className='w-[160px]'>Đã tạo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -91,11 +91,13 @@ export function PlanResultCard({ plan }: PlanResultCardProps) {
 function PlanItemRow({ item }: { item: BagDistributionPlanItem }) {
   return (
     <TableRow>
-      <TableCell>{item.routeCode ?? '-'}</TableCell>
-      <TableCell>{item.vehicleLicensePlate ?? '-'}</TableCell>
+      <TableCell className='truncate'>{item.routeCode ?? '-'}</TableCell>
+      <TableCell className='truncate'>
+        {item.vehicleLicensePlate ?? '-'}
+      </TableCell>
       <TableCell>
         <div className='font-medium'>{formatNumber(item.bagIds.length, 0)}</div>
-        <div className='max-w-[220px] truncate text-xs text-muted-foreground'>
+        <div className='truncate text-xs text-muted-foreground'>
           {item.bagCodes.join(', ') || '-'}
         </div>
       </TableCell>
@@ -107,8 +109,8 @@ function PlanItemRow({ item }: { item: BagDistributionPlanItem }) {
         </div>
       </TableCell>
       <TableCell>{formatNumber(item.score)}</TableCell>
-      <TableCell>
-        <div className='flex max-w-[260px] flex-wrap gap-1'>
+      <TableCell className='whitespace-normal'>
+        <div className='flex flex-wrap gap-1'>
           {item.hints.length === 0 ? (
             <Badge variant='outline'>Không có gợi ý</Badge>
           ) : (
@@ -129,7 +131,9 @@ function PlanItemRow({ item }: { item: BagDistributionPlanItem }) {
           )}
         </div>
       </TableCell>
-      <TableCell>{item.createdManifestCode ?? '-'}</TableCell>
+      <TableCell className='truncate'>
+        {item.createdManifestCode ?? '-'}
+      </TableCell>
     </TableRow>
   );
 }

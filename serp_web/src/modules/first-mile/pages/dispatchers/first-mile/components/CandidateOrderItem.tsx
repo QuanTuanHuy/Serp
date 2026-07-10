@@ -12,32 +12,7 @@ import {
   getPickupBacklogMinutes,
   isPickupBacklogOrder,
 } from '../dispatchOrderBacklog';
-import type { FirstMileOrderStatus } from '../../../../types';
-
-const formatOrderStatusLabel = (status: FirstMileOrderStatus): string => {
-  switch (status) {
-    case 'CREATED':
-      return 'Mới tạo';
-    case 'ASSIGNED_TO_PICKUP':
-      return 'Đã phân công lấy hàng';
-    case 'PICKING_UP':
-      return 'Đang lấy hàng';
-    case 'PICKUP_FAILED':
-      return 'Lấy hàng thất bại';
-    case 'PICKED_UP':
-      return 'Đã lấy hàng';
-    case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
-      return 'Chờ nhập bưu cục gốc';
-    case 'AT_ORIGIN_POST_OFFICE':
-      return 'Tại bưu cục gốc';
-    case 'CANCELLED':
-      return 'Đã hủy';
-    case 'LOST_OR_DAMAGED':
-      return 'Thất lạc / hư hỏng';
-    default:
-      return status.replaceAll('_', ' ');
-  }
-};
+import { formatOrderStatusLabel } from '../../../../utils/orderStatusLabels';
 
 export const CandidateOrderItem: React.FC<CandidateOrderItemProps> = ({
   order,

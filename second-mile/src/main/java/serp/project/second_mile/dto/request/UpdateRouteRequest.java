@@ -24,7 +24,6 @@ import java.time.LocalTime;
 @AllArgsConstructor
 public class UpdateRouteRequest {
     @JsonProperty("route_code")
-    @NotBlank
     @Size(max = 100)
     private String routeCode;
 

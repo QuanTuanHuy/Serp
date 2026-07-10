@@ -78,8 +78,8 @@ export function ReadyBagsTab({
           <div>
             <CardTitle>Túi hàng sẵn sàng</CardTitle>
             <CardDescription>
-              Chọn các túi đã niêm phong, dùng cùng điểm đến để lập kế hoạch
-              hoặc tạo biên bản điều phối thủ công.
+              Chọn các túi đã niêm phong hoặc đã đến hub, dùng cùng điểm đến để
+              lập kế hoạch hoặc tạo biên bản điều phối thủ công.
             </CardDescription>
           </div>
           <Button
@@ -124,8 +124,8 @@ export function ReadyBagsTab({
           !selectedDestinationSummary.sameDestination && (
             <div className='flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive'>
               <AlertCircle className='mt-0.5 h-4 w-4' />
-              Các túi đã chọn không cùng hub xuất phát và điểm đến. Hãy chọn
-              một nhóm điểm đến trước khi tạo biên bản.
+              Các túi đã chọn không cùng hub xuất phát và điểm đến. Hãy chọn một
+              nhóm điểm đến trước khi tạo biên bản.
             </div>
           )}
 
@@ -145,7 +145,7 @@ export function ReadyBagsTab({
                 <TableHead>Đơn hàng</TableHead>
                 <TableHead>Khối lượng</TableHead>
                 <TableHead>Thể tích</TableHead>
-                <TableHead>Niêm phong lúc</TableHead>
+                <TableHead>Sẵn sàng lúc</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -159,7 +159,7 @@ export function ReadyBagsTab({
                       </span>
                     ) : (
                       <span className='text-muted-foreground'>
-                        Không có túi đã niêm phong phù hợp bộ lọc.
+                        Không có túi sẵn sàng phù hợp bộ lọc.
                       </span>
                     )}
                   </TableCell>

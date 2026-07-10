@@ -31,7 +31,9 @@ public enum OrderStatus {
     ;
 
     public boolean isReadyForBagging() {
-        return this == INBOUND_AT_ORIGIN_HUB || this == BAGGING_IN_PROGRESS;
+        return this == INBOUND_AT_ORIGIN_HUB
+                || this == INBOUND_AT_DESTINATION_HUB
+                || this == BAGGING_IN_PROGRESS;
     }
 
     public static boolean isReadyForBagging(OrderStatus status) {

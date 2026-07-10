@@ -34,7 +34,6 @@ export const VEHICLE_STATUS_OPTIONS: Array<{
 }> = [
   { value: 'ACTIVE', label: 'Đang hoạt động' },
   { value: 'INACTIVE', label: 'Ngừng hoạt động' },
-  { value: 'MAINTENANCE', label: 'Bảo trì' },
 ];
 
 export const VEHICLE_TYPE_OPTIONS: Array<{
@@ -62,8 +61,6 @@ export const getStatusBadgeVariant = (
   switch (status) {
     case 'ACTIVE':
       return 'default';
-    case 'MAINTENANCE':
-      return 'outline';
     case 'INACTIVE':
       return 'destructive';
     default:
@@ -118,6 +115,36 @@ export const buildHubLabel = (
   }
 
   return hub.code || hub.name || `Hub #${hubId}`;
+};
+
+export const buildVehicleDriverLabel = (
+  vehicle?: Pick<
+    SecondMileVehicle,
+    'assignedStaffCode' | 'assignedStaffFullName' | 'assignedStaffId'
+  >,
+  driverLabelByStaffId?: Record<number, string>
+): string => {
+  if (!vehicle?.assignedStaffId) {
+    return '-';
+  }
+
+  const code = vehicle.assignedStaffCode?.trim();
+  const name = vehicle.assignedStaffFullName?.trim();
+
+  if (code && name) {
+    return `${code} - ${name}`;
+  }
+  if (name) {
+    return name;
+  }
+  if (code) {
+    return code;
+  }
+
+  return (
+    driverLabelByStaffId?.[vehicle.assignedStaffId] ??
+    `Tài xế #${vehicle.assignedStaffId}`
+  );
 };
 
 export const parseOptionalNumber = (value: string): number | undefined => {

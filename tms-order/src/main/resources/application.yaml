@@ -37,6 +37,7 @@ spring:
         - classpath:db.migration/product-type.sql
         - classpath:db.migration/order.sql
         - classpath:db.migration/order-remove-express-type.sql
+        - classpath:db.migration/order-route-plan.sql
         - classpath:db.migration/product.sql
         - classpath:db.migration/order-history.sql
         - classpath:db.migration/order-transition-log.sql
@@ -104,6 +105,11 @@ first-mile:
     reserve-best-destination-path: ${FIRST_MILE_RESERVE_BEST_DESTINATION_PATH:/api/v1/internal/post-office-reservations/destination/best}
     validate-managed-post-office-path: ${FIRST_MILE_VALIDATE_MANAGED_POST_OFFICE_PATH:/api/v1/internal/post-office-reservations/origin/%d/managed}
     drop-off-suggestions-path: ${FIRST_MILE_DROP_OFF_SUGGESTIONS_PATH:/api/v1/internal/post-office-suggestions/drop-off}
+
+second-mile:
+  service:
+    base-url: ${SECOND_MILE_SERVICE_BASE_URL:http://localhost:8102}
+    route-plan-path: ${SECOND_MILE_ROUTE_PLAN_PATH:/api/v1/internal/route-plans/orders}
 
 geocode:
   base-url: ${GEOCODE_BASE_URL:https://rsapi.goong.io/geocode}

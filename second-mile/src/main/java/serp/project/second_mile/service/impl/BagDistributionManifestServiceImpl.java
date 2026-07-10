@@ -7,7 +7,10 @@ package serp.project.second_mile.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,11 +19,14 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import serp.project.second_mile.caller.TmsOrderClient;
+import serp.project.second_mile.caller.dto.tms_order.TmsOrderOperationView;
 import serp.project.second_mile.caller.dto.tms_order.TmsOrderStatusTransitionRequest;
 import serp.project.second_mile.domain.Bag;
 import serp.project.second_mile.domain.BagDistributionManifest;
 import serp.project.second_mile.domain.BagDistributionManifestBag;
 import serp.project.second_mile.domain.BagOrder;
+import serp.project.second_mile.domain.Checkin;
 import serp.project.second_mile.domain.Hub;
 import serp.project.second_mile.domain.HubPostOfficeMapping;
 import serp.project.second_mile.domain.Route;
@@ -38,6 +44,7 @@ import serp.project.second_mile.dto.response.BagDistributionPlanResponse;
 import serp.project.second_mile.enums.BagDestinationType;
 import serp.project.second_mile.enums.BagDistributionManifestStatus;
 import serp.project.second_mile.enums.BagStatus;
+import serp.project.second_mile.enums.CheckinType;
 import serp.project.second_mile.enums.HandoverManifestStatus;
 import serp.project.second_mile.enums.OrderStatus;
 import serp.project.second_mile.enums.RouteDestinationType;
@@ -46,24 +53,29 @@ import serp.project.second_mile.enums.RouteStatus;
 import serp.project.second_mile.enums.VehicleStatus;
 import serp.project.second_mile.exception.AppException;
 import serp.project.second_mile.exception.ErrorCode;
+import serp.project.second_mile.kafka.DriverNotificationEventPublisher;
 import serp.project.second_mile.kernel.utils.ImageContentTypeUtils;
 import serp.project.second_mile.kernel.utils.SecondMileAccessUtils;
 import serp.project.second_mile.repository.BagDistributionManifestBagRepository;
 import serp.project.second_mile.repository.BagDistributionManifestRepository;
 import serp.project.second_mile.repository.BagOrderRepository;
 import serp.project.second_mile.repository.BagRepository;
+import serp.project.second_mile.repository.CheckinRepository;
 import serp.project.second_mile.repository.HandoverManifestRepository;
 import serp.project.second_mile.repository.HubPostOfficeMappingRepository;
 import serp.project.second_mile.repository.HubRepository;
 import serp.project.second_mile.repository.HubStaffAssignmentRepository;
+import serp.project.second_mile.repository.HubStaffRepository;
 import serp.project.second_mile.repository.RouteRepository;
 import serp.project.second_mile.repository.VehicleRepository;
 import serp.project.second_mile.repository.specification.BagDistributionManifestSpecification;
 import serp.project.second_mile.service.BagDistributionManifestService;
 import serp.project.second_mile.service.FileStorageService;
 import serp.project.second_mile.service.TmsOrderTransitionPublisherService;
+import serp.project.second_mile.service.dto.BagDestinationTarget;
 import serp.project.second_mile.service.dto.request.FileUploadRequest;
 import serp.project.second_mile.service.dto.response.FileUploadResponse;
+import serp.project.second_mile.service.validator.BagValidator;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -86,6 +98,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
     private static final String STORAGE_SERVICE_NAME = "second-mile";
     private static final String CHECKIN_PHOTO_FOLDER = "bag-distribution-checkin-photo";
     private static final DateTimeFormatter MANIFEST_CODE_SUFFIX_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
     private static final double CHECKIN_RADIUS_METERS = 100.0;
     private static final double EARTH_RADIUS_METERS = 6_371_000.0;
     private static final List<BagDistributionManifestStatus> ACTIVE_MANIFEST_STATUSES = List.of(
@@ -101,16 +114,21 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
     private final BagDistributionManifestBagRepository manifestBagRepository;
     private final BagRepository bagRepository;
     private final BagOrderRepository bagOrderRepository;
+    private final CheckinRepository checkinRepository;
     private final HandoverManifestRepository handoverManifestRepository;
     private final VehicleRepository vehicleRepository;
     private final RouteRepository routeRepository;
     private final HubRepository hubRepository;
     private final HubPostOfficeMappingRepository hubPostOfficeMappingRepository;
     private final HubStaffAssignmentRepository hubStaffAssignmentRepository;
+    private final HubStaffRepository hubStaffRepository;
     private final SecondMileAccessUtils secondMileAccessUtils;
     private final FileStorageService fileStorageService;
     private final TmsOrderTransitionPublisherService tmsOrderTransitionPublisherService;
     private final BagDistributionPlanningService planningService;
+    private final TmsOrderClient tmsOrderClient;
+    private final BagValidator bagValidator;
+    private final DriverNotificationEventPublisher driverNotificationEventPublisher;
 
     @Override
     public PageResponse<BagDistributionManifestResponse> listManifests(
@@ -350,6 +368,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 .map(bag -> toManifestBag(savedManifest, bag, tenantId))
                 .toList();
         List<BagDistributionManifestBag> savedManifestBags = manifestBagRepository.saveAll(manifestBags);
+        publishDriverAssignmentNotification(savedManifest, tenantId);
         return new CreatedManifest(savedManifest, savedManifestBags, vehicle, route);
     }
 
@@ -398,7 +417,9 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
             if (bag == null || !Objects.equals(bag.getTenantId(), manifest.getTenantId())) {
                 throw new AppException(ErrorCode.BAG_NOT_FOUND);
             }
-            if (bag.getStatus() != BagStatus.SEALED && bag.getStatus() != BagStatus.IN_TRANSIT) {
+            if (bag.getStatus() != BagStatus.SEALED
+                    && bag.getStatus() != BagStatus.ARRIVED
+                    && bag.getStatus() != BagStatus.IN_TRANSIT) {
                 throw new AppException(ErrorCode.BAG_STATUS_INVALID);
             }
             if (manifestBag.getScanOutTime() == null) {
@@ -412,8 +433,12 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 transitionItems.add(toTransitionItem(
                         bagOrder,
                         OrderStatus.BAG_IN_TRANSIT,
-                        List.of(OrderStatus.BAG_SEALED, OrderStatus.BAG_IN_TRANSIT),
-                        "Second-mile bag distribution outbound confirmed.",
+                        List.of(
+                                OrderStatus.BAG_SEALED,
+                                OrderStatus.INBOUND_AT_DESTINATION_HUB,
+                                OrderStatus.BAG_IN_TRANSIT
+                        ),
+                        "Đã xác nhận xuất kho phân phối bao trung chuyển.",
                         context
                 ));
             }
@@ -486,10 +511,10 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 target.setScanOutTime(now);
             }
             target.setScanInTime(now);
+            List<BagOrder> bagOrders = bagOrderRepository.findByBag_IdAndTenantId(bag.getId(), tenantId);
             bag.setStatus(BagStatus.ARRIVED);
             bag.setVehicleId(vehicle.getId());
-
-            List<BagOrder> bagOrders = bagOrderRepository.findByBag_IdAndTenantId(bag.getId(), tenantId);
+            prepareArrivedBagForNextLeg(tenantId, manifest, bag, bagOrders);
             if (newlyArrivedBag) {
                 newlyArrivedOrderCount += bagOrders.size();
             }
@@ -499,7 +524,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                         bagOrder,
                         inboundStatus,
                         List.of(OrderStatus.BAG_IN_TRANSIT, inboundStatus),
-                        "Second-mile bag distribution inbound confirmed.",
+                        "Đã xác nhận nhập kho phân phối bao trung chuyển.",
                         context
                 ));
             }
@@ -585,6 +610,9 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
         validatePlannedWindow(request.getPlannedDepartureAt(), request.getPlannedArrivalAt());
+        if (normalizeIds(request.getBagIds()).isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Select at least one bag for auto planning.");
+        }
         if (request.getDestinationType() != null) {
             validateDestination(
                     request.getOriginHubId(),
@@ -665,7 +693,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         }
 
         for (Bag bag : bags) {
-            if (bag.getStatus() != BagStatus.SEALED) {
+            if (!isDispatchReadyBagStatus(bag.getStatus())) {
                 throw new AppException(ErrorCode.BAG_STATUS_INVALID);
             }
             if (!Objects.equals(bag.getOriginHubId(), originHubId)) {
@@ -686,6 +714,98 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 );
             }
         }
+    }
+
+    private boolean isDispatchReadyBagStatus(BagStatus status) {
+        return status == BagStatus.SEALED || status == BagStatus.ARRIVED;
+    }
+
+    private void prepareArrivedBagForNextLeg(
+            Long tenantId,
+            BagDistributionManifest manifest,
+            Bag bag,
+            List<BagOrder> bagOrders
+    ) {
+        if (manifest.getDestinationType() != BagDestinationType.HUB
+                || manifest.getDestinationHubId() == null
+                || !Objects.equals(bag.getDestinationHubId(), manifest.getDestinationHubId())) {
+            return;
+        }
+        BagDestinationTarget nextTarget = resolveNextTargetForArrivedBag(
+                tenantId,
+                manifest.getDestinationHubId(),
+                bagOrders
+        );
+        if (nextTarget == null) {
+            return;
+        }
+
+        bag.setOriginHubId(manifest.getDestinationHubId());
+        bag.setDestinationType(nextTarget.destinationType());
+        bag.setDestinationHubId(nextTarget.destinationType() == BagDestinationType.HUB
+                ? nextTarget.destinationHubId()
+                : null);
+        bag.setDestinationPostOfficeCode(nextTarget.destinationType() == BagDestinationType.POST_OFFICE
+                ? normalizeText(nextTarget.destinationPostOfficeCode())
+                : null);
+    }
+
+    private BagDestinationTarget resolveNextTargetForArrivedBag(
+            Long tenantId,
+            Long currentHubId,
+            List<BagOrder> bagOrders
+    ) {
+        if (bagOrders == null || bagOrders.isEmpty()) {
+            return null;
+        }
+
+        Map<Long, TmsOrderOperationView> orderById = tmsOrderClient.lookupByIds(
+                        tenantId,
+                        bagOrders.stream()
+                                .map(BagOrder::getTmsOrderId)
+                                .filter(Objects::nonNull)
+                                .toList()
+                )
+                .stream()
+                .filter(order -> order.getId() != null)
+                .collect(Collectors.toMap(TmsOrderOperationView::getId, order -> order));
+        BagDestinationTarget sharedTarget = null;
+        for (BagOrder bagOrder : bagOrders) {
+            TmsOrderOperationView order = orderById.get(bagOrder.getTmsOrderId());
+            if (order == null) {
+                throw new AppException(ErrorCode.BAG_ORDER_NOT_FOUND);
+            }
+            bagValidator.validateTmsOrderTenant(tenantId, order);
+            BagDestinationTarget nextTarget = bagValidator.resolveDestinationTargetForOrder(
+                    tenantId,
+                    order,
+                    currentHubId
+            );
+            if (sharedTarget == null) {
+                sharedTarget = nextTarget;
+                continue;
+            }
+            if (!sameDestinationTarget(sharedTarget, nextTarget)) {
+                throw new AppException(
+                        ErrorCode.BAG_DESTINATION_INVALID,
+                        "Orders in the same bag must share the same next planned route leg."
+                );
+            }
+        }
+        return sharedTarget;
+    }
+
+    private boolean sameDestinationTarget(BagDestinationTarget first, BagDestinationTarget second) {
+        if (first == null || second == null || first.destinationType() != second.destinationType()) {
+            return false;
+        }
+        if (first.destinationType() == BagDestinationType.HUB) {
+            return Objects.equals(first.destinationHubId(), second.destinationHubId());
+        }
+        return Objects.equals(
+                normalizeText(first.destinationPostOfficeCode()),
+                normalizeText(second.destinationPostOfficeCode())
+        );
     }
 
     private String validateDestination(
@@ -916,7 +1036,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
             DriverHandoverCheckinRequest request,
             MultipartFile photo
     ) {
-        if (manifest.getDriverStartPhotoUrl() != null) {
+        if (findManifestCheckin(manifest, CheckinType.BAG_DISTRIBUTION_START) != null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver has already checked in at the origin hub.");
         }
         validateCheckinRequest(request);
@@ -938,10 +1058,15 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         if (manifest.getActualDepartureAt() == null) {
             manifest.setActualDepartureAt(now);
         }
-        manifest.setDriverStartLatitude(request.getLatitude());
-        manifest.setDriverStartLongitude(request.getLongitude());
-        manifest.setDriverStartDistanceM(distanceMeters);
-        manifest.setDriverStartPhotoUrl(uploadCheckinPhoto(photo, manifest.getTenantId()));
+        saveManifestCheckin(
+                manifest,
+                CheckinType.BAG_DISTRIBUTION_START,
+                request,
+                now,
+                distanceMeters,
+                CHECKIN_RADIUS_METERS,
+                uploadCheckinPhoto(photo, manifest.getTenantId())
+        );
     }
 
     private void recordDriverEndCheckin(
@@ -952,7 +1077,7 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         if (manifest.getActualDepartureAt() == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver departure check-in is required before arrival.");
         }
-        if (manifest.getDriverEndPhotoUrl() != null) {
+        if (findManifestCheckin(manifest, CheckinType.BAG_DISTRIBUTION_END) != null) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Driver has already checked in at the destination.");
         }
         validateCheckinRequest(request);
@@ -978,10 +1103,39 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         if (manifest.getActualArrivalAt() == null) {
             manifest.setActualArrivalAt(now);
         }
-        manifest.setDriverEndLatitude(request.getLatitude());
-        manifest.setDriverEndLongitude(request.getLongitude());
-        manifest.setDriverEndDistanceM(distanceMeters);
-        manifest.setDriverEndPhotoUrl(uploadCheckinPhoto(photo, manifest.getTenantId()));
+        saveManifestCheckin(
+                manifest,
+                CheckinType.BAG_DISTRIBUTION_END,
+                request,
+                now,
+                distanceMeters,
+                manifest.getDestinationType() == BagDestinationType.HUB ? CHECKIN_RADIUS_METERS : null,
+                uploadCheckinPhoto(photo, manifest.getTenantId())
+        );
+    }
+
+    private void saveManifestCheckin(
+            BagDistributionManifest manifest,
+            CheckinType checkinType,
+            DriverHandoverCheckinRequest request,
+            LocalDateTime checkinTime,
+            Double distanceMeters,
+            Double allowedRadiusMeters,
+            String photoUrl
+    ) {
+        Checkin checkin = Checkin.builder()
+                .checkinType(checkinType)
+                .bagDistributionManifestId(manifest.getId())
+                .driverStaffId(manifest.getAssignedDriverId())
+                .checkinTime(checkinTime)
+                .checkinLocation(toPoint(request.getLatitude(), request.getLongitude()))
+                .distanceM(distanceMeters)
+                .allowedRadiusM(allowedRadiusMeters)
+                .locationLabel(trimToNull(request.getLocationLabel()))
+                .photoUrl(photoUrl)
+                .tenantId(manifest.getTenantId())
+                .build();
+        checkinRepository.save(checkin);
     }
 
     private void validateCheckinRequest(DriverHandoverCheckinRequest request) {
@@ -1066,6 +1220,36 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
         return EARTH_RADIUS_METERS * c;
     }
 
+    private Point toPoint(Double latitude, Double longitude) {
+        if (latitude == null || longitude == null) {
+            return null;
+        }
+        return GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
+    }
+
+    private Checkin findManifestCheckin(BagDistributionManifest manifest, CheckinType checkinType) {
+        if (manifest == null || manifest.getId() == null || manifest.getTenantId() == null) {
+            return null;
+        }
+        return checkinRepository
+                .findByTenantIdAndCheckinTypeAndBagDistributionManifestId(
+                        manifest.getTenantId(),
+                        checkinType,
+                        manifest.getId()
+                )
+                .orElse(null);
+    }
+
+    private Double latitudeOf(Checkin checkin) {
+        Point location = checkin == null ? null : checkin.getCheckinLocation();
+        return location == null ? null : Double.valueOf(location.getY());
+    }
+
+    private Double longitudeOf(Checkin checkin) {
+        Point location = checkin == null ? null : checkin.getCheckinLocation();
+        return location == null ? null : Double.valueOf(location.getX());
+    }
+
     private void addDestinationHubLoad(BagDistributionManifest manifest, int incomingOrders) {
         if (incomingOrders <= 0 || manifest.getDestinationHubId() == null) {
             return;
@@ -1113,6 +1297,8 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
     ) {
         Hub originHub = loadHub(manifest.getOriginHubId());
         Hub destinationHub = manifest.getDestinationHubId() == null ? null : loadHub(manifest.getDestinationHubId());
+        Checkin startCheckin = findManifestCheckin(manifest, CheckinType.BAG_DISTRIBUTION_START);
+        Checkin endCheckin = findManifestCheckin(manifest, CheckinType.BAG_DISTRIBUTION_END);
         List<BagDistributionManifestBagResponse> bagResponses = manifestBags.stream()
                 .map(item -> new BagDistributionManifestBagResponse(
                         item.getId(),
@@ -1147,14 +1333,20 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 manifest.getPlannedArrivalAt(),
                 manifest.getActualDepartureAt(),
                 manifest.getActualArrivalAt(),
-                manifest.getDriverStartLatitude(),
-                manifest.getDriverStartLongitude(),
-                manifest.getDriverStartDistanceM(),
-                manifest.getDriverStartPhotoUrl(),
-                manifest.getDriverEndLatitude(),
-                manifest.getDriverEndLongitude(),
-                manifest.getDriverEndDistanceM(),
-                manifest.getDriverEndPhotoUrl(),
+                startCheckin == null ? null : startCheckin.getId(),
+                startCheckin == null ? null : startCheckin.getCheckinTime(),
+                latitudeOf(startCheckin),
+                longitudeOf(startCheckin),
+                startCheckin == null ? null : startCheckin.getDistanceM(),
+                startCheckin == null ? null : startCheckin.getLocationLabel(),
+                startCheckin == null ? null : startCheckin.getPhotoUrl(),
+                endCheckin == null ? null : endCheckin.getId(),
+                endCheckin == null ? null : endCheckin.getCheckinTime(),
+                latitudeOf(endCheckin),
+                longitudeOf(endCheckin),
+                endCheckin == null ? null : endCheckin.getDistanceM(),
+                endCheckin == null ? null : endCheckin.getLocationLabel(),
+                endCheckin == null ? null : endCheckin.getPhotoUrl(),
                 manifest.getStatus(),
                 manifest.getNote(),
                 bagResponses,
@@ -1221,6 +1413,18 @@ public class BagDistributionManifestServiceImpl implements BagDistributionManife
                 .idempotencyKey(idempotencyKey)
                 .items(items)
                 .build(), tenantId);
+    }
+
+    private void publishDriverAssignmentNotification(BagDistributionManifest manifest, Long tenantId) {
+        if (manifest == null || manifest.getAssignedDriverId() == null) {
+            return;
+        }
+        hubStaffRepository.findByIdAndTenantId(manifest.getAssignedDriverId(), tenantId)
+                .ifPresent(driver -> driverNotificationEventPublisher.publishBagDistributionAssigned(
+                        driver,
+                        manifest,
+                        tenantId
+                ));
     }
 
     private OrderStatus resolveInboundOrderStatus(BagDestinationType destinationType) {

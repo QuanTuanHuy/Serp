@@ -8,19 +8,23 @@
 import React from 'react';
 import {
   AlertCircle,
+  ArrowRight,
   Building2,
   CheckCircle2,
   CircleDot,
+  Clock3,
   Loader2,
   MapPin,
+  Milestone,
   PackageCheck,
+  Route as RouteIcon,
   Search,
   Truck,
   UserRound,
-  XCircle,
 } from 'lucide-react';
 import { getErrorMessage } from '@/lib/store';
 import {
+  useGetHubsQuery,
   useGetOrdersQuery,
   useLazyGetOrderByIdQuery,
   useLazyGetOrderTimelineQuery,
@@ -29,6 +33,9 @@ import type {
   FirstMileOrderDetail,
   FirstMileOrderStatus,
   FirstMileOrderTimelineItem,
+  FirstMilePlannedOrderRoute,
+  FirstMilePlannedOrderRouteLeg,
+  Hub,
 } from '@/modules/first-mile/types';
 import {
   Badge,
@@ -40,7 +47,6 @@ import {
   CardTitle,
   Input,
   Label,
-  Separator,
 } from '@/shared/components/ui';
 import {
   Table,
@@ -65,14 +71,13 @@ type JourneyStageKey =
   | 'confirmed'
   | 'pickup'
   | 'facility'
-  | 'transit'
   | 'delivery'
-  | 'exception';
+  | 'delivered';
 
 interface JourneyStage {
   key: JourneyStageKey;
   title: string;
-  status: 'done' | 'active' | 'pending' | 'exception';
+  status: 'done' | 'active' | 'pending';
   time?: string;
   description: string;
   actor?: string;
@@ -86,27 +91,24 @@ const stageOrder: JourneyStageKey[] = [
   'confirmed',
   'pickup',
   'facility',
-  'transit',
   'delivery',
-  'exception',
+  'delivered',
 ];
 
 const stageTitles: Record<JourneyStageKey, string> = {
   confirmed: 'Đơn hàng đã xác nhận',
-  pickup: 'Lấy hàng',
-  facility: 'Bưu cục / trung tâm',
-  transit: 'Vận chuyển liên tuyến',
-  delivery: 'Giao hàng',
-  exception: 'Sự cố',
+  pickup: 'Đơn hàng đang được lấy',
+  facility: 'Đơn hàng đã đến Bưu cục / trung tâm khai thác',
+  delivery: 'Đơn hàng đang được giao',
+  delivered: 'Đơn hàng được giao thành công',
 };
 
 const stageDescriptions: Record<JourneyStageKey, string> = {
-  confirmed: 'Đang chờ dữ liệu xác nhận.',
+  confirmed: 'Đang chờ dữ liệu xác nhận đơn hàng.',
   pickup: 'Đang chờ dữ liệu lấy hàng.',
-  facility: 'Đang chờ dữ liệu quét tại bưu cục.',
-  transit: 'Đang chờ dữ liệu vận chuyển.',
+  facility: 'Đang chờ dữ liệu tại bưu cục hoặc trung tâm khai thác.',
   delivery: 'Đang chờ dữ liệu giao hàng.',
-  exception: 'Chưa ghi nhận hủy hoặc thất bại.',
+  delivered: 'Đang chờ dữ liệu giao hàng thành công.',
 };
 
 const getTimelineStatus = (
@@ -121,27 +123,6 @@ const getEventStage = (
   const status = getTimelineStatus(item);
   const description = normalizeText(item.description);
 
-  if (
-    status === 'CANCELLED' ||
-    status === 'LOST_OR_DAMAGED' ||
-    status === 'PICKUP_FAILED' ||
-    description.includes('cancel') ||
-    description.includes('failed') ||
-    description.includes('failure') ||
-    description.includes('lost') ||
-    description.includes('damaged')
-  ) {
-    return 'exception';
-  }
-
-  if (
-    description.includes('deliver') ||
-    description.includes('last mile') ||
-    description.includes('receiver')
-  ) {
-    return 'delivery';
-  }
-
   switch (status) {
     case 'CREATED':
       return 'confirmed';
@@ -152,19 +133,30 @@ const getEventStage = (
     case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
     case 'AT_ORIGIN_POST_OFFICE':
     case 'INBOUND_AT_ORIGIN_HUB':
-      return 'facility';
+    case 'INBOUND_AT_DESTINATION_HUB':
+    case 'INBOUND_AT_DESTINATION_POST_OFFICE':
     case 'OUTBOUND_READY_FROM_PO':
     case 'BAGGING_IN_PROGRESS':
     case 'BAGGED':
     case 'BAG_SEALED':
-      return 'transit';
+    case 'BAG_IN_TRANSIT':
+    case 'READY_FOR_DELIVERY':
+      return 'facility';
+    case 'OUT_FOR_DELIVERY':
+      return 'delivery';
+    case 'DELIVERED':
+      return 'delivered';
     default:
       if (item.postOfficeCode || item.postOfficeName || item.locationLabel) {
         return 'facility';
       }
 
-      if (item.tripCode || item.vehicleLicensePlate || item.courierName) {
-        return 'transit';
+      if (
+        description.includes('deliver') ||
+        description.includes('last mile') ||
+        description.includes('receiver')
+      ) {
+        return 'delivery';
       }
 
       return null;
@@ -237,6 +229,33 @@ const getEventDescription = (item?: FirstMileOrderTimelineItem): string => {
     : 'Đã cập nhật';
 };
 
+const getEventTimeValue = (item?: FirstMileOrderTimelineItem): number => {
+  if (!item?.eventTime) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const eventTime = new Date(item.eventTime).getTime();
+  return Number.isNaN(eventTime) ? Number.NEGATIVE_INFINITY : eventTime;
+};
+
+const isNewerTimelineEvent = (
+  candidate: FirstMileOrderTimelineItem,
+  current?: FirstMileOrderTimelineItem
+): boolean => {
+  if (!current) {
+    return true;
+  }
+
+  const candidateTime = getEventTimeValue(candidate);
+  const currentTime = getEventTimeValue(current);
+
+  if (candidateTime !== currentTime) {
+    return candidateTime > currentTime;
+  }
+
+  return (candidate.id ?? 0) > (current.id ?? 0);
+};
+
 const buildJourneyStages = (
   order: FirstMileOrderDetail | null,
   timeline: FirstMileOrderTimelineItem[]
@@ -252,7 +271,9 @@ const buildJourneyStages = (
       return;
     }
 
-    latestEventByStage.set(stage, item);
+    if (isNewerTimelineEvent(item, latestEventByStage.get(stage))) {
+      latestEventByStage.set(stage, item);
+    }
   });
 
   if (order?.isConfirm && !latestEventByStage.has('confirmed')) {
@@ -264,27 +285,21 @@ const buildJourneyStages = (
     });
   }
 
-  const exceptionEvent = latestEventByStage.get('exception');
-
   return stageOrder.map((stageKey) => {
     const item = latestEventByStage.get(stageKey);
     const stageIndex = stageOrder.indexOf(stageKey);
     const furthestDoneIndex = Math.max(
       ...stageOrder
-        .filter((key) => key !== 'exception' && latestEventByStage.has(key))
+        .filter((key) => latestEventByStage.has(key))
         .map((key) => stageOrder.indexOf(key)),
       -1
     );
     const status =
-      stageKey === 'exception'
-        ? exceptionEvent
-          ? 'exception'
-          : 'pending'
-        : item
-          ? 'done'
-          : stageIndex === furthestDoneIndex + 1
-            ? 'active'
-            : 'pending';
+      item || stageIndex < furthestDoneIndex
+        ? 'done'
+        : stageIndex === furthestDoneIndex + 1
+          ? 'active'
+          : 'pending';
 
     return {
       key: stageKey,
@@ -312,6 +327,71 @@ const getValidCoordinate = (
     Number.isFinite(longitude);
 
   return isValid ? [latitude, longitude] : null;
+};
+
+const formatEstimatedDistance = (distanceKm?: number): string => {
+  if (typeof distanceKm !== 'number' || !Number.isFinite(distanceKm)) {
+    return '--';
+  }
+
+  return `${distanceKm.toLocaleString('vi-VN', {
+    maximumFractionDigits: 1,
+  })} km`;
+};
+
+const formatEstimatedDuration = (durationMinutes?: number): string => {
+  if (
+    typeof durationMinutes !== 'number' ||
+    !Number.isFinite(durationMinutes) ||
+    durationMinutes < 0
+  ) {
+    return '--';
+  }
+
+  const hours = Math.floor(durationMinutes / 60);
+  const minutes = Math.round(durationMinutes % 60);
+
+  if (hours <= 0) {
+    return `${minutes} phút`;
+  }
+
+  return minutes > 0 ? `${hours} giờ ${minutes} phút` : `${hours} giờ`;
+};
+
+const formatRouteEndpoint = (
+  type?: string,
+  hubId?: number,
+  postOfficeCode?: string,
+  hubById?: Map<number, Hub>
+): string => {
+  const normalizedType = type?.toUpperCase();
+
+  if (normalizedType === 'HUB') {
+    const hub = hubId ? hubById?.get(hubId) : undefined;
+
+    if (hub) {
+      return [hub.code, hub.name].filter(Boolean).join(' - ');
+    }
+
+    return hubId ? `Hub #${hubId}` : 'Hub';
+  }
+
+  if (normalizedType === 'POST_OFFICE') {
+    return postOfficeCode ? `Bưu cục ${postOfficeCode}` : 'Bưu cục';
+  }
+
+  return postOfficeCode || (hubId ? `Hub #${hubId}` : 'Điểm xử lý');
+};
+
+const getPlannedRouteLegs = (
+  plannedRoute?: FirstMilePlannedOrderRoute
+): FirstMilePlannedOrderRouteLeg[] => {
+  return [...(plannedRoute?.legs ?? [])].sort((first, second) => {
+    const firstSequence = first.sequence ?? Number.MAX_SAFE_INTEGER;
+    const secondSequence = second.sequence ?? Number.MAX_SAFE_INTEGER;
+
+    return firstSequence - secondSequence;
+  });
 };
 
 const buildTrackingMapPoints = (
@@ -360,11 +440,13 @@ const buildTrackingMapPoints = (
       latitude: eventCoordinate[0],
       longitude: eventCoordinate[1],
       kind:
-        stage === 'exception'
-          ? 'exception'
-          : stage === 'facility'
-            ? 'facility'
-            : 'movement',
+        stage === 'facility'
+          ? 'facility'
+          : stage === 'confirmed'
+            ? 'sender'
+            : stage === 'delivered'
+              ? 'receiver'
+              : 'movement',
     });
   });
 
@@ -390,16 +472,121 @@ const buildTrackingMapPoints = (
   return points;
 };
 
-const getStageIcon = (stage: JourneyStage) => {
-  if (stage.status === 'exception') {
-    return XCircle;
-  }
+interface PlannedRoutePanelProps {
+  plannedRoute?: FirstMilePlannedOrderRoute;
+  hubById: Map<number, Hub>;
+}
 
+const PlannedRoutePanel: React.FC<PlannedRoutePanelProps> = ({
+  plannedRoute,
+  hubById,
+}) => {
+  const legs = React.useMemo(
+    () => getPlannedRouteLegs(plannedRoute),
+    [plannedRoute]
+  );
+
+  return (
+    <div className='rounded-md border p-4'>
+      <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+        <div className='space-y-1'>
+          <div className='flex items-center gap-2'>
+            <RouteIcon className='h-4 w-4 text-primary' />
+            <h2 className='text-base font-semibold'>Lộ trình dự kiến</h2>
+          </div>
+          <p className='text-sm text-muted-foreground'>
+            Theo dõi các chặng đã được hoạch định từ đơn hàng.
+          </p>
+        </div>
+        <div className='grid grid-cols-2 gap-2 text-sm md:min-w-[260px]'>
+          <div className='rounded-md bg-muted px-3 py-2'>
+            <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+              <Milestone className='h-3.5 w-3.5' />
+              Quãng đường
+            </p>
+            <p className='font-medium'>
+              {formatEstimatedDistance(plannedRoute?.totalEstimatedDistanceKm)}
+            </p>
+          </div>
+          <div className='rounded-md bg-muted px-3 py-2'>
+            <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+              <Clock3 className='h-3.5 w-3.5' />
+              Thời gian
+            </p>
+            <p className='font-medium'>
+              {formatEstimatedDuration(
+                plannedRoute?.totalEstimatedDurationMinutes
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {legs.length === 0 ? (
+        <div className='mt-4 rounded-md border border-dashed p-4 text-sm text-muted-foreground'>
+          Chưa có lộ trình dự kiến cho đơn hàng này.
+        </div>
+      ) : (
+        <div className='mt-4 space-y-3'>
+          {legs.map((leg, index) => {
+            const originLabel = formatRouteEndpoint(
+              leg.originType,
+              leg.originHubId,
+              leg.originPostOfficeCode,
+              hubById
+            );
+            const destinationLabel = formatRouteEndpoint(
+              leg.destinationType,
+              leg.destinationHubId,
+              leg.destinationPostOfficeCode,
+              hubById
+            );
+
+            return (
+              <div
+                key={`${leg.sequence ?? index}-${originLabel}-${destinationLabel}`}
+                className='grid gap-3 rounded-md border p-3 lg:grid-cols-[1fr_auto]'
+              >
+                <div className='min-w-0'>
+                  <div className='flex flex-wrap items-center gap-2 text-sm font-medium'>
+                    <span>{originLabel}</span>
+                    <ArrowRight className='h-4 w-4 text-muted-foreground' />
+                    <span>{destinationLabel}</span>
+                  </div>
+                  <p className='mt-1 text-xs text-muted-foreground'>
+                    {leg.routeCode || leg.routeName
+                      ? [leg.routeCode, leg.routeName]
+                          .filter(Boolean)
+                          .join(' - ')
+                      : 'Chưa gán tuyến vận chuyển'}
+                  </p>
+                </div>
+                <div className='flex flex-wrap gap-2 text-xs text-muted-foreground lg:justify-end'>
+                  <Badge variant='outline'>
+                    Chặng {leg.sequence ?? index + 1}
+                  </Badge>
+                  <Badge variant='outline'>
+                    {formatEstimatedDistance(leg.estimatedDistanceKm)}
+                  </Badge>
+                  <Badge variant='outline'>
+                    {formatEstimatedDuration(leg.estimatedDurationMinutes)}
+                  </Badge>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const getStageIcon = (stage: JourneyStage) => {
   switch (stage.key) {
     case 'confirmed':
+    case 'delivered':
       return CheckCircle2;
     case 'pickup':
-    case 'transit':
     case 'delivery':
       return Truck;
     case 'facility':
@@ -410,10 +597,6 @@ const getStageIcon = (stage: JourneyStage) => {
 };
 
 const getStageClasses = (stage: JourneyStage): string => {
-  if (stage.status === 'exception') {
-    return 'border-destructive bg-destructive text-destructive-foreground';
-  }
-
   if (stage.status === 'done') {
     return 'border-emerald-600 bg-emerald-600 text-white';
   }
@@ -460,10 +643,24 @@ export const OrderTrackingPage: React.FC = () => {
     size: TRACKING_PAGE_SIZE,
     keyword: appliedSearch || undefined,
   });
+  const hubsQuery = useGetHubsQuery({
+    page: 0,
+    size: 500,
+    status: 'ACTIVE',
+  });
   const [loadOrderById] = useLazyGetOrderByIdQuery();
   const [loadOrderTimeline] = useLazyGetOrderTimelineQuery();
 
   const orders = orderListQuery.data?.items ?? [];
+  const hubById = React.useMemo(() => {
+    const nextHubById = new Map<number, Hub>();
+
+    (hubsQuery.data?.items ?? []).forEach((hub) => {
+      nextHubById.set(hub.id, hub);
+    });
+
+    return nextHubById;
+  }, [hubsQuery.data?.items]);
 
   const loadTrackingData = React.useCallback(
     async (orderId: number) => {
@@ -711,107 +908,67 @@ export const OrderTrackingPage: React.FC = () => {
 
                   <TrackingMap points={mapPoints} />
 
-                  <div className='grid gap-4 lg:grid-cols-[1fr_300px]'>
-                    <div className='space-y-4'>
-                      {journeyStages.map((stage, index) => {
-                        const StageIcon = getStageIcon(stage);
-                        const isLastStage = index === journeyStages.length - 1;
+                  <PlannedRoutePanel
+                    plannedRoute={selectedOrder.plannedRoute}
+                    hubById={hubById}
+                  />
 
-                        return (
-                          <div key={stage.key} className='relative flex gap-3'>
-                            {!isLastStage ? (
-                              <span className='absolute left-5 top-11 h-[calc(100%-1.75rem)] w-px bg-border' />
-                            ) : null}
-                            <div
-                              className={cn(
-                                'relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border',
-                                getStageClasses(stage)
-                              )}
-                            >
-                              <StageIcon className='h-5 w-5' />
+                  <div className='space-y-4'>
+                    {journeyStages.map((stage, index) => {
+                      const StageIcon = getStageIcon(stage);
+                      const isLastStage = index === journeyStages.length - 1;
+
+                      return (
+                        <div key={stage.key} className='relative flex gap-3'>
+                          {!isLastStage ? (
+                            <span className='absolute left-5 top-11 h-[calc(100%-1.75rem)] w-px bg-border' />
+                          ) : null}
+                          <div
+                            className={cn(
+                              'relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border',
+                              getStageClasses(stage)
+                            )}
+                          >
+                            <StageIcon className='h-5 w-5' />
+                          </div>
+                          <div className='min-w-0 flex-1 rounded-md border p-3'>
+                            <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
+                              <div>
+                                <p className='font-semibold'>{stage.title}</p>
+                                <p className='text-sm text-muted-foreground'>
+                                  {stage.description}
+                                </p>
+                              </div>
+                              <Badge variant='outline'>
+                                {stage.status === 'done'
+                                  ? 'Hoàn tất'
+                                  : stage.status === 'active'
+                                    ? 'Đang diễn ra'
+                                    : 'Chờ xử lý'}
+                              </Badge>
                             </div>
-                            <div className='min-w-0 flex-1 rounded-md border p-3'>
-                              <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
-                                <div>
-                                  <p className='font-semibold'>{stage.title}</p>
-                                  <p className='text-sm text-muted-foreground'>
-                                    {stage.description}
-                                  </p>
-                                </div>
-                                <Badge variant='outline'>
-                                  {stage.status === 'exception'
-                                    ? 'Sự cố'
-                                    : stage.status === 'done'
-                                      ? 'Hoàn tất'
-                                      : stage.status === 'active'
-                                        ? 'Đang diễn ra'
-                                        : 'Chờ xử lý'}
-                                </Badge>
-                              </div>
-                              <div className='mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2'>
-                                <p className='flex items-center gap-1.5'>
-                                  <MapPin className='h-3.5 w-3.5' />
-                                  {stage.location || '--'}
-                                </p>
-                                <p className='flex items-center gap-1.5'>
-                                  <UserRound className='h-3.5 w-3.5' />
-                                  {stage.actor || '--'}
-                                </p>
-                                <p className='flex items-center gap-1.5'>
-                                  <Truck className='h-3.5 w-3.5' />
-                                  {stage.vehicle || '--'}
-                                </p>
-                                <p className='flex items-center gap-1.5'>
-                                  <PackageCheck className='h-3.5 w-3.5' />
-                                  {formatDateTime(stage.time)}
-                                </p>
-                              </div>
+                            <div className='mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2'>
+                              <p className='flex items-center gap-1.5'>
+                                <MapPin className='h-3.5 w-3.5' />
+                                {stage.location || '--'}
+                              </p>
+                              <p className='flex items-center gap-1.5'>
+                                <UserRound className='h-3.5 w-3.5' />
+                                {stage.actor || '--'}
+                              </p>
+                              <p className='flex items-center gap-1.5'>
+                                <Truck className='h-3.5 w-3.5' />
+                                {stage.vehicle || '--'}
+                              </p>
+                              <p className='flex items-center gap-1.5'>
+                                <PackageCheck className='h-3.5 w-3.5' />
+                                {formatDateTime(stage.time)}
+                              </p>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className='rounded-md border p-4'>
-                      <div className='mb-4'>
-                        <h2 className='text-base font-semibold'>
-                          Các sự kiện theo dõi
-                        </h2>
-                      </div>
-                      <div className='space-y-3'>
-                        {timeline.length === 0 ? (
-                          <p className='text-sm text-muted-foreground'>
-                            Chưa có sự kiện theo dõi nào.
-                          </p>
-                        ) : (
-                          timeline.map((item, index) => (
-                            <div key={`${item.id ?? index}-${item.eventTime}`}>
-                              {index > 0 ? (
-                                <Separator className='mb-3' />
-                              ) : null}
-                              <div className='space-y-1 text-sm'>
-                                <div className='flex items-start justify-between gap-3'>
-                                  <p className='font-medium'>
-                                    {getEventDescription(item)}
-                                  </p>
-                                  {item.orderStatus ? (
-                                    <Badge variant='outline'>
-                                      {formatStatusLabel(item.orderStatus)}
-                                    </Badge>
-                                  ) : null}
-                                </div>
-                                <p className='text-xs text-muted-foreground'>
-                                  {formatDateTime(item.eventTime)}
-                                </p>
-                                <p className='text-xs text-muted-foreground'>
-                                  {getLocationLabel(item) || '--'}
-                                </p>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

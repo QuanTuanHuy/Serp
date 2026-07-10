@@ -33,6 +33,7 @@ public class TmsOrderStatusTransitionRequest {
         private List<OrderStatus> expectedStatuses;
         private OrderStatus targetStatus;
         private String description;
+        private Boolean recordTimelineWhenUnchanged;
         private Context context;
     }
 

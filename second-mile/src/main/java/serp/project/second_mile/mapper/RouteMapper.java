@@ -18,7 +18,6 @@ public final class RouteMapper {
 
     public static Route toEntity(CreateRouteRequest request) {
         Route route = new Route();
-        route.setRouteCode(request.getRouteCode());
         route.setRouteName(request.getRouteName());
         route.setOriginType(request.getOriginType() == null ? RouteEndpointType.HUB : request.getOriginType());
         route.setOriginHubId(request.getOriginHubId());
@@ -36,7 +35,6 @@ public final class RouteMapper {
     }
 
     public static void mapForUpdate(UpdateRouteRequest request, Route route) {
-        route.setRouteCode(request.getRouteCode());
         route.setRouteName(request.getRouteName());
         route.setOriginType(request.getOriginType() == null ? RouteEndpointType.HUB : request.getOriginType());
         route.setOriginHubId(request.getOriginHubId());

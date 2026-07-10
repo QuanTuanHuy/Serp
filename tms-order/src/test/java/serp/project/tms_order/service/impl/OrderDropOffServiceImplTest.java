@@ -15,9 +15,11 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
 import serp.project.tms_order.caller.FirstMilePostOfficeCaller;
 import serp.project.tms_order.caller.FirstMilePostOfficeSuggestionCaller;
+import serp.project.tms_order.caller.SecondMileRoutePlanCaller;
 import serp.project.tms_order.caller.dto.firstmile.DestinationPostOfficeReservationResponse;
 import serp.project.tms_order.caller.dto.firstmile.OriginPostOfficeReservationResponse;
 import serp.project.tms_order.domain.Order;
+import serp.project.tms_order.domain.PlannedOrderRoute;
 import serp.project.tms_order.dto.request.ConfirmDropOffOrderRequest;
 import serp.project.tms_order.dto.response.OrderConfirmationResponse;
 import serp.project.tms_order.enums.FeePayer;
@@ -35,6 +37,7 @@ import serp.project.tms_order.service.order.OrderAccessPolicy;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,6 +70,9 @@ class OrderDropOffServiceImplTest {
     @Mock
     private OrderNotificationEventPublisher orderNotificationEventPublisher;
 
+    @Mock
+    private SecondMileRoutePlanCaller secondMileRoutePlanCaller;
+
     private OrderDropOffServiceImpl orderDropOffService;
 
     @BeforeEach
@@ -77,7 +83,8 @@ class OrderDropOffServiceImplTest {
                 firstMilePostOfficeSuggestionCaller,
                 orderTimelineService,
                 new OrderAccessPolicy(authUtils),
-                new OrderEventDispatcher(orderSyncEventPublisher, orderNotificationEventPublisher)
+                new OrderEventDispatcher(orderSyncEventPublisher, orderNotificationEventPublisher),
+                secondMileRoutePlanCaller
         );
     }
 
@@ -109,6 +116,8 @@ class OrderDropOffServiceImplTest {
                 .thenReturn(destinationPostOffice);
         when(firstMilePostOfficeCaller.reserveDropOffOriginPostOffice(5L, 21.0278D, 105.8342D))
                 .thenReturn(originPostOffice);
+        when(secondMileRoutePlanCaller.planOrderRoute("PO-HN-01", "PO-HCM-01"))
+                .thenReturn(plannedRoute());
         when(orderRepository.save(any(Order.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -122,6 +131,7 @@ class OrderDropOffServiceImplTest {
         assertEquals("PO-HN-01", response.originPostOffice().code());
         assertEquals("PO-HCM-01", response.destinationPostOffice().code());
         assertEquals(true, order.getIsConfirm());
+        assertNotNull(order.getPlannedRoute());
         verify(orderSyncEventPublisher).publish(order);
         verify(orderNotificationEventPublisher).publishOrderConfirmed(order);
     }
@@ -152,6 +162,13 @@ class OrderDropOffServiceImplTest {
                 .receiverLocation(GEOMETRY_FACTORY.createPoint(new Coordinate(106.7009D, 10.7769D)))
                 .tenantId(TENANT_ID)
                 .createdBy(String.valueOf(CUSTOMER_USER_ID))
+                .build();
+    }
+
+    private PlannedOrderRoute plannedRoute() {
+        return PlannedOrderRoute.builder()
+                .originPostOfficeCode("PO-HN-01")
+                .destinationPostOfficeCode("PO-HCM-01")
                 .build();
     }
 }

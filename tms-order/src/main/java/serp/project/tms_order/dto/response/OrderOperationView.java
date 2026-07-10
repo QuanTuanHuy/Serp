@@ -6,6 +6,7 @@ Description: Part of Serp Project
 package serp.project.tms_order.dto.response;
 
 import serp.project.tms_order.domain.Dimension;
+import serp.project.tms_order.domain.PlannedOrderRoute;
 import serp.project.tms_order.enums.OrderPickupMethod;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.enums.OrderType;
@@ -20,6 +21,9 @@ public record OrderOperationView(
         Boolean isConfirm,
         String originPostOfficeCode,
         String destinationPostOfficeCode,
+        PlannedOrderRoute plannedRoute,
+        Long currentHubId,
+        String currentHubCode,
         String senderName,
         String senderPhone,
         String senderProvinceCode,

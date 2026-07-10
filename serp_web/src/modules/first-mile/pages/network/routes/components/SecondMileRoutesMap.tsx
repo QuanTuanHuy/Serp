@@ -34,6 +34,10 @@ export interface RouteMapLine {
 interface SecondMileRoutesMapProps {
   lines: RouteMapLine[];
   selectedRouteId?: number;
+  title?: string;
+  description?: string;
+  emptyText?: string;
+  mapClassName?: string;
 }
 
 const DEFAULT_CENTER = {
@@ -58,6 +62,10 @@ function escapeHtml(value: string): string {
 export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
   lines,
   selectedRouteId,
+  title = 'Bản đồ tuyến',
+  description,
+  emptyText = 'Bổ sung tọa độ điểm xuất phát và điểm đến để xem tuyến trên bản đồ.',
+  mapClassName = 'h-[420px] overflow-hidden rounded-lg border',
 }) => {
   const [isMapReady, setIsMapReady] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
@@ -192,23 +200,20 @@ export const SecondMileRoutesMap: React.FC<SecondMileRoutesMapProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Bản đồ tuyến</CardTitle>
+        <CardTitle>{title}</CardTitle>
         <CardDescription>
-          {lines.length > 0
-            ? `${lines.length} tuyến có đầy đủ tọa độ`
-            : 'Không có tuyến đủ tọa độ để hiển thị.'}
+          {description ??
+            (lines.length > 0
+              ? `${lines.length} tuyến có đầy đủ tọa độ`
+              : 'Không có tuyến đủ tọa độ để hiển thị.')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className='relative'>
-          <div
-            ref={containerRef}
-            className='h-[420px] overflow-hidden rounded-lg border'
-          />
+          <div ref={containerRef} className={mapClassName} />
           {lines.length === 0 && (
             <div className='pointer-events-none absolute inset-x-4 top-4 rounded-md border bg-background/95 px-3 py-2 text-sm text-muted-foreground shadow-sm'>
-              Bổ sung tọa độ điểm xuất phát và điểm đến để xem tuyến trên bản
-              đồ.
+              {emptyText}
             </div>
           )}
         </div>

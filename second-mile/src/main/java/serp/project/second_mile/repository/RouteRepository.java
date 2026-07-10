@@ -19,6 +19,8 @@ import java.util.List;
 public interface RouteRepository extends JpaRepository<Route, Long>, JpaSpecificationExecutor<Route> {
     boolean existsByTenantIdAndRouteCodeIgnoreCase(Long tenantId, String routeCode);
 
+    List<Route> findByTenantIdAndStatus(Long tenantId, RouteStatus status);
+
     List<Route> findByTenantIdAndStatusAndOriginTypeAndOriginHubIdAndDestinationTypeAndDestinationHubId(
             Long tenantId,
             RouteStatus status,

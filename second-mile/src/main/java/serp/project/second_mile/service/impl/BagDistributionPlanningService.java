@@ -50,6 +50,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BagDistributionPlanningService {
     private static final int DEFAULT_SEALED_SLA_HOURS = 24;
+    private static final List<BagStatus> DISPATCH_READY_BAG_STATUSES = List.of(
+            BagStatus.SEALED,
+            BagStatus.ARRIVED
+    );
     private static final List<BagDistributionManifestStatus> ACTIVE_MANIFEST_STATUSES = List.of(
             BagDistributionManifestStatus.CREATED,
             BagDistributionManifestStatus.OUTBOUND_CONFIRMED
@@ -76,7 +80,8 @@ public class BagDistributionPlanningService {
                 request.getOriginHubId(),
                 request.getDestinationType(),
                 request.getDestinationHubId(),
-                destinationPostOfficeCode
+                destinationPostOfficeCode,
+                normalizeIds(request.getBagIds())
         );
         if (candidateBags.isEmpty()) {
             return List.of();
@@ -194,22 +199,27 @@ public class BagDistributionPlanningService {
             Long originHubId,
             BagDestinationType destinationType,
             Long destinationHubId,
-            String destinationPostOfficeCode
+            String destinationPostOfficeCode,
+            List<Long> requestedBagIds
     ) {
-        List<Bag> sealedBags = bagRepository.findByTenantIdAndOriginHubIdAndStatus(
+        Set<Long> requestedBagIdSet = requestedBagIds.isEmpty()
+                ? Set.of()
+                : new LinkedHashSet<>(requestedBagIds);
+        List<Bag> readyBags = bagRepository.findByTenantIdAndOriginHubIdAndStatusIn(
                 tenantId,
                 originHubId,
-                BagStatus.SEALED
+                DISPATCH_READY_BAG_STATUSES
         );
-        List<Long> sealedBagIds = sealedBags.stream().map(Bag::getId).toList();
-        Set<Long> activeBagIds = sealedBagIds.isEmpty()
+        List<Long> readyBagIds = readyBags.stream().map(Bag::getId).toList();
+        Set<Long> activeBagIds = readyBagIds.isEmpty()
                 ? Set.of()
                 : new LinkedHashSet<>(manifestBagRepository.findActiveBagIds(
                 tenantId,
-                sealedBagIds,
+                readyBagIds,
                 ACTIVE_MANIFEST_STATUSES
         ));
-        return sealedBags.stream()
+        return readyBags.stream()
+                .filter(bag -> requestedBagIdSet.isEmpty() || requestedBagIdSet.contains(bag.getId()))
                 .filter(bag -> !activeBagIds.contains(bag.getId()))
                 .filter(bag -> destinationType == null || bag.getDestinationType() == destinationType)
                 .filter(bag -> destinationHubId == null || Objects.equals(bag.getDestinationHubId(), destinationHubId))
@@ -221,6 +231,19 @@ public class BagDistributionPlanningService {
                         .thenComparing(Comparator.comparingDouble(this::safeCurrentWeight).reversed())
                         .thenComparing(Bag::getId))
                 .toList();
+    }
+
+    private List<Long> normalizeIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<Long> normalizedIds = new LinkedHashSet<>();
+        for (Long id : ids) {
+            if (id != null && id > 0) {
+                normalizedIds.add(id);
+            }
+        }
+        return new ArrayList<>(normalizedIds);
     }
 
     private List<Route> findMatchingRoutes(Long tenantId, DestinationKey key) {

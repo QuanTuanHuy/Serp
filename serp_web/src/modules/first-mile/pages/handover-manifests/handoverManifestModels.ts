@@ -4,6 +4,7 @@
  */
 
 import type { HandoverManifest, HandoverManifestStatus } from '../../types';
+import { formatOrderStatusLabel } from '../../utils/orderStatusLabels';
 
 export const PAGE_SIZE = 20;
 export const SELECT_PAGE_SIZE = 200;
@@ -11,9 +12,7 @@ export const DRIVER_PAGE_SIZE = 50;
 
 export type ManifestMode = 'POST_OFFICE' | 'HUB';
 
-export type HandoverManagementDomain =
-  | 'POST_OFFICE_HUB'
-  | 'HUB_TRANSFER';
+export type HandoverManagementDomain = 'POST_OFFICE_HUB' | 'HUB_TRANSFER';
 
 export type DriverHandoverAction = 'START' | 'END';
 
@@ -34,34 +33,7 @@ export const MANIFEST_STATUS_LABELS: Record<HandoverManifestStatus, string> = {
   CANCELLED: 'Đã hủy',
 };
 
-export const formatHandoverOrderStatusLabel = (status?: string): string => {
-  switch (status) {
-    case 'CREATED':
-      return 'Mới tạo';
-    case 'ASSIGNED_TO_PICKUP':
-      return 'Đã phân công lấy hàng';
-    case 'PICKING_UP':
-      return 'Đang lấy hàng';
-    case 'PICKUP_FAILED':
-      return 'Lấy hàng thất bại';
-    case 'PICKED_UP':
-      return 'Đã lấy hàng';
-    case 'PENDING_ORIGIN_POST_OFFICE_INBOUND':
-      return 'Chờ nhập bưu cục gửi';
-    case 'AT_ORIGIN_POST_OFFICE':
-      return 'Tại bưu cục gửi';
-    case 'IN_TRANSIT_TO_HUB':
-      return 'Đang vận chuyển đến hub';
-    case 'AT_HUB':
-      return 'Đã đến hub';
-    case 'CANCELLED':
-      return 'Đã hủy';
-    case 'LOST_OR_DAMAGED':
-      return 'Thất lạc / hư hỏng';
-    default:
-      return status ? status.replaceAll('_', ' ') : '--';
-  }
-};
+export const formatHandoverOrderStatusLabel = formatOrderStatusLabel;
 
 export const canManagePostOfficeHandover = (roles: string[]): boolean =>
   roles.includes('TMS_ADMIN') || roles.includes('TMS_POSTOFFICER_MANAGER');

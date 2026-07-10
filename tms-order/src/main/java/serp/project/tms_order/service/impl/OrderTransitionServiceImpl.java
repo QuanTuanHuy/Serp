@@ -19,6 +19,7 @@ import serp.project.tms_order.dto.response.OrderStatusTransitionResponse;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.exception.AppException;
 import serp.project.tms_order.exception.ErrorCode;
+import serp.project.tms_order.kafka.OrderNotificationEventPublisher;
 import serp.project.tms_order.kafka.OrderSyncEventPublisher;
 import serp.project.tms_order.repository.OrderRepository;
 import serp.project.tms_order.repository.OrderTransitionLogRepository;
@@ -76,11 +77,16 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.BAGGING_IN_PROGRESS,
-                EnumSet.of(OrderStatus.INBOUND_AT_ORIGIN_HUB)
+                EnumSet.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.INBOUND_AT_DESTINATION_HUB)
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.BAGGED,
-                EnumSet.of(OrderStatus.INBOUND_AT_ORIGIN_HUB, OrderStatus.BAGGING_IN_PROGRESS, OrderStatus.BAG_SEALED)
+                EnumSet.of(
+                        OrderStatus.INBOUND_AT_ORIGIN_HUB,
+                        OrderStatus.INBOUND_AT_DESTINATION_HUB,
+                        OrderStatus.BAGGING_IN_PROGRESS,
+                        OrderStatus.BAG_SEALED
+                )
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.BAG_SEALED,
@@ -88,7 +94,7 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.BAG_IN_TRANSIT,
-                EnumSet.of(OrderStatus.BAG_SEALED)
+                EnumSet.of(OrderStatus.BAG_SEALED, OrderStatus.INBOUND_AT_DESTINATION_HUB)
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.INBOUND_AT_DESTINATION_HUB,
@@ -108,7 +114,7 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.DELIVERED,
-                EnumSet.of(OrderStatus.OUT_FOR_DELIVERY)
+                EnumSet.of(OrderStatus.READY_FOR_DELIVERY, OrderStatus.OUT_FOR_DELIVERY)
         );
         ALLOWED_PREVIOUS_STATUSES.put(
                 OrderStatus.DELIVERY_FAILED,
@@ -125,6 +131,7 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
     private final OrderTransitionLogRepository transitionLogRepository;
     private final OrderTimelineService orderTimelineService;
     private final OrderSyncEventPublisher orderSyncEventPublisher;
+    private final OrderNotificationEventPublisher orderNotificationEventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -166,6 +173,7 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
             if (changed) {
                 validateLifecycleTransition(previousStatus, targetStatus);
                 order.setStatus(targetStatus);
+                applyCurrentHub(order, targetStatus, item.getContext());
                 Order savedOrder = orderRepository.save(order);
                 changedOrders.add(savedOrder);
                 orderTimelineService.recordStatusEvent(
@@ -174,8 +182,18 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
                         item.getDescription(),
                         item.getContext()
                 );
+                publishStatusNotification(savedOrder, targetStatus, item.getContext());
                 results.add(toResult(savedOrder, previousStatus, targetStatus, true));
             } else {
+                if (Boolean.TRUE.equals(item.getRecordTimelineWhenUnchanged())) {
+                    orderTimelineService.recordStatusEvent(
+                            order,
+                            targetStatus,
+                            item.getDescription(),
+                            item.getContext()
+                    );
+                    publishStatusNotification(order, targetStatus, item.getContext());
+                }
                 results.add(toResult(order, previousStatus, targetStatus, false));
             }
         }
@@ -302,6 +320,42 @@ public class OrderTransitionServiceImpl implements OrderTransitionService {
                     )
             );
         }
+    }
+
+    private void applyCurrentHub(
+            Order order,
+            OrderStatus targetStatus,
+            InternalOrderStatusTransitionRequest.Context context
+    ) {
+        if (targetStatus == OrderStatus.INBOUND_AT_ORIGIN_HUB
+                || targetStatus == OrderStatus.INBOUND_AT_DESTINATION_HUB) {
+            if (context != null && context.getHubId() != null) {
+                order.setCurrentHubId(context.getHubId());
+                order.setCurrentHubCode(context.getHubCode());
+            }
+            return;
+        }
+
+        if (targetStatus == OrderStatus.AT_ORIGIN_POST_OFFICE
+                || targetStatus == OrderStatus.OUTBOUND_READY_FROM_PO
+                || targetStatus == OrderStatus.INBOUND_AT_DESTINATION_POST_OFFICE
+                || targetStatus == OrderStatus.READY_FOR_DELIVERY
+                || targetStatus == OrderStatus.OUT_FOR_DELIVERY
+                || targetStatus == OrderStatus.DELIVERED
+                || targetStatus == OrderStatus.DELIVERY_FAILED
+                || targetStatus == OrderStatus.RETURNED_TO_SENDER
+                || targetStatus == OrderStatus.CANCELLED) {
+            order.setCurrentHubId(null);
+            order.setCurrentHubCode(null);
+        }
+    }
+
+    private void publishStatusNotification(
+            Order order,
+            OrderStatus targetStatus,
+            InternalOrderStatusTransitionRequest.Context context
+    ) {
+        orderNotificationEventPublisher.publishOrderStatusTransition(order, targetStatus, context);
     }
 
     private OrderStatusTransitionResponse deserializeResponse(OrderTransitionLog transitionLog) {

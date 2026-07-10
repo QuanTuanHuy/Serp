@@ -5,6 +5,7 @@
 
 export {
   destinationLabel,
+  formatDateTime,
   formatNumber,
   getManifestBagStats,
   STATUS_LABELS,
