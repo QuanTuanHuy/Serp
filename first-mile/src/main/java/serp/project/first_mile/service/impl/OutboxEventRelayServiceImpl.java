@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,14 +67,20 @@ public class OutboxEventRelayServiceImpl {
 
     private void publishSingleEvent(OutboxEvent event) {
         try {
-            kafkaTemplate.send(event.getTopic(), event.getMessageKey(), event.getPayload())
+            SendResult<String, String> sendResult = kafkaTemplate.send(event.getTopic(), event.getMessageKey(), event.getPayload())
                     .get(resolveConfiguredSendTimeoutMs(), TimeUnit.MILLISECONDS);
             event.setStatus(OutboxEventStatus.PUBLISHED);
             event.setPublishedAt(LocalDateTime.now());
             event.setErrorMessage(null);
             event.setNextRetryAt(null);
-            log.info("Outbox event published: id={}, topic={}, key={}, eventType={}",
-                    event.getId(), event.getTopic(), event.getMessageKey(), event.getEventType());
+            log.info("Outbox event published: id={}, topic={}, key={}, eventType={}, partition={}, offset={}, timestamp={}",
+                    event.getId(),
+                    event.getTopic(),
+                    event.getMessageKey(),
+                    event.getEventType(),
+                    sendResult.getRecordMetadata().partition(),
+                    sendResult.getRecordMetadata().offset(),
+                    sendResult.getRecordMetadata().timestamp());
         } catch (Exception exception) {
             int nextRetryCount = safeInt(event.getRetryCount()) + 1;
             event.setRetryCount(nextRetryCount);

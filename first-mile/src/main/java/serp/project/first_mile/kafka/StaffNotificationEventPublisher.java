@@ -10,10 +10,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import serp.project.first_mile.domain.PostOfficeStaff;
 import serp.project.first_mile.domain.Trip;
-import serp.project.first_mile.service.OutboxEventService;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -34,10 +34,9 @@ public class StaffNotificationEventPublisher {
     private static final String DELIVERY_CHANNEL_IN_APP = "IN_APP";
     private static final String ACTION_VIEW_TRIP = "VIEW_TRIP";
     private static final String ENTITY_TYPE_TRIP = "FIRST_MILE_TRIP";
-    private static final String AGGREGATE_TYPE_TRIP = "FIRST_MILE_TRIP";
 
     private final ObjectMapper objectMapper;
-    private final OutboxEventService outboxEventService;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Value("${app.kafka.topics.user-notification:serp.notification.user.events}")
     private String userNotificationTopic;
@@ -102,18 +101,14 @@ public class StaffNotificationEventPublisher {
         ));
 
         try {
-            outboxEventService.enqueue(
-                    AGGREGATE_TYPE_TRIP,
-                    String.valueOf(trip.getId()),
-                    EVENT_TYPE_NOTIFICATION_CREATE_REQUESTED,
-                    userNotificationTopic,
-                    String.valueOf(courier.getUserId()),
-                    objectMapper.writeValueAsString(payload),
-                    resolvedTenantId
-            );
-            log.info("Enqueued staff assignment notification eventId={} topic={}", eventId, userNotificationTopic);
+            kafkaTemplate.send(userNotificationTopic, String.valueOf(courier.getUserId()),
+                    objectMapper.writeValueAsString(payload));
+            log.info("Published staff assignment notification eventId={} topic={}", eventId, userNotificationTopic);
         } catch (JsonProcessingException exception) {
             log.error("Failed to serialize staff assignment notification eventId={}", eventId, exception);
+        } catch (RuntimeException exception) {
+            log.error("Failed to publish staff assignment notification eventId={} topic={}",
+                    eventId, userNotificationTopic, exception);
         }
     }
 

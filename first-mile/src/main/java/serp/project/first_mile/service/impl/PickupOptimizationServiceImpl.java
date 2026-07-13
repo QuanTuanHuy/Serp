@@ -176,12 +176,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         }
 
         List<OrderStatus> statuses = resolveCandidateStatuses(request.getCandidateStatuses());
-        List<TmsOrderOperationView> candidateOrders = tmsOrderClient.findPickupCandidates(
+        List<TmsOrderOperationView> candidateOrders = resolvePickupCandidateOrders(
                 postOffice.getCode(),
                 statuses,
-                config.planningStartTime(),
-                config.planningEndTime(),
-                config.orderLimit()
+                config,
+                request.getOrderIds(),
+                tenantId
         );
 
         PreparedOrderData preparedOrderData = prepareOrders(candidateOrders);
@@ -258,12 +258,12 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         applyExistingRouteData(routes, existingTripByCourier, existingRouteData);
 
         List<OrderStatus> statuses = resolveCandidateStatuses(request.getCandidateStatuses());
-        List<TmsOrderOperationView> candidateOrders = tmsOrderClient.findPickupCandidates(
+        List<TmsOrderOperationView> candidateOrders = resolvePickupCandidateOrders(
                 postOffice.getCode(),
                 statuses,
-                config.planningStartTime(),
-                config.planningEndTime(),
-                config.orderLimit()
+                config,
+                request.getOrderIds(),
+                tenantId
         );
         lockOrdersForAssignment(candidateOrders, tenantId);
 
@@ -1205,7 +1205,7 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
 
     private Map<Long, TmsOrderOperationView> loadOrdersByIdMapOrThrow(Collection<Long> orderIds, Long tenantId) {
         Map<Long, TmsOrderOperationView> orderById = new HashMap<>();
-        List<TmsOrderOperationView> orders = tmsOrderClient.lookupByIds(orderIds);
+        List<TmsOrderOperationView> orders = tmsOrderClient.lookupByIds(tenantId, orderIds);
         for (TmsOrderOperationView order : orders) {
             orderById.put(order.getId(), order);
         }
@@ -1325,6 +1325,123 @@ public class PickupOptimizationServiceImpl implements PickupOptimizationService 
         }
 
         return normalizedOrderIds;
+    }
+
+    private List<TmsOrderOperationView> resolvePickupCandidateOrders(
+            String postOfficeCode,
+            List<OrderStatus> statuses,
+            AlgorithmConfig config,
+            List<Long> orderIds,
+            Long tenantId
+    ) {
+        if (orderIds == null) {
+            return tmsOrderClient.findPickupCandidates(
+                    postOfficeCode,
+                    statuses,
+                    config.planningStartTime(),
+                    config.planningEndTime(),
+                    config.orderLimit()
+            );
+        }
+
+        Set<Long> requestedOrderIds = normalizeDistinctOrderIds(orderIds);
+        Map<Long, TmsOrderOperationView> orderById = loadOrdersByIdMapOrThrow(requestedOrderIds, tenantId);
+        List<TmsOrderOperationView> selectedOrders = new ArrayList<>();
+
+        for (Long orderId : requestedOrderIds) {
+            TmsOrderOperationView order = orderById.get(orderId);
+            validateSelectedPickupCandidateOrder(
+                    order,
+                    postOfficeCode,
+                    statuses,
+                    config
+            );
+            selectedOrders.add(order);
+        }
+
+        return selectedOrders;
+    }
+
+    private void validateSelectedPickupCandidateOrder(
+            TmsOrderOperationView order,
+            String postOfficeCode,
+            List<OrderStatus> statuses,
+            AlgorithmConfig config
+    ) {
+        if (order == null) {
+            throw orderNotAssignable(null, "Order was not found in tms-order lookup response.");
+        }
+
+        if (!statuses.contains(order.getStatus())) {
+            throw orderNotAssignable(
+                    order,
+                    "Status %s is not included in candidate statuses %s."
+                            .formatted(order.getStatus(), statuses)
+            );
+        }
+
+        String originPostOfficeCode = order.getOriginPostOfficeCode();
+        if (postOfficeCode == null
+                || originPostOfficeCode == null
+                || !postOfficeCode.equalsIgnoreCase(originPostOfficeCode)) {
+            throw orderNotAssignable(
+                    order,
+                    "Origin post office %s does not match selected post office %s."
+                            .formatted(originPostOfficeCode, postOfficeCode)
+            );
+        }
+
+        if (toOrderNodeIfValid(order) == null) {
+            throw orderNotAssignable(
+                    order,
+                    "Pickup location or pickup time window is missing or invalid."
+            );
+        }
+
+        if (!isPickupWindowAssignableForPlanning(order, config)) {
+            throw orderNotAssignable(
+                    order,
+                    "Pickup window %s - %s is outside planning window %s - %s. Set allow_lateness=true to include overdue orders."
+                            .formatted(
+                                    order.getPickupTimeStart(),
+                                    order.getPickupTimeEnd(),
+                                    config.planningStartTime(),
+                                    config.planningEndTime()
+                            )
+            );
+        }
+    }
+
+    private boolean isPickupWindowAssignableForPlanning(
+            TmsOrderOperationView order,
+            AlgorithmConfig config
+    ) {
+        if (order.getPickupTimeStart() == null || order.getPickupTimeEnd() == null) {
+            return false;
+        }
+
+        if (config.allowLateness() && config.planningStartTime() != null
+                && order.getPickupTimeEnd().isBefore(config.planningStartTime())) {
+            return true;
+        }
+
+        boolean startsBeforePlanningEnd = config.planningEndTime() == null
+                || !order.getPickupTimeStart().isAfter(config.planningEndTime());
+        boolean endsAfterPlanningStart = config.planningStartTime() == null
+                || !order.getPickupTimeEnd().isBefore(config.planningStartTime());
+
+        return startsBeforePlanningEnd && endsAfterPlanningStart;
+    }
+
+    private AppException orderNotAssignable(TmsOrderOperationView order, String detail) {
+        String orderLabel = order == null
+                ? "unknown order"
+                : "order %s (%s)".formatted(
+                        order.getId(),
+                        order.getOrderCode() == null ? "no code" : order.getOrderCode()
+                );
+
+        return new AppException(ErrorCode.ORDER_NOT_ASSIGNABLE, "%s: %s".formatted(orderLabel, detail));
     }
 
     private ShiftPlanningWindow resolveShiftPlanningWindow(

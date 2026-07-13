@@ -10,10 +10,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import serp.project.second_mile.domain.BagDistributionManifest;
 import serp.project.second_mile.domain.HubStaff;
-import serp.project.second_mile.service.OutboxEventService;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -36,7 +36,7 @@ public class DriverNotificationEventPublisher {
     private static final String ENTITY_TYPE_MANIFEST = "BAG_DISTRIBUTION_MANIFEST";
 
     private final ObjectMapper objectMapper;
-    private final OutboxEventService outboxEventService;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Value("${app.kafka.topics.user-notification:serp.notification.user.events}")
     private String userNotificationTopic;
@@ -68,18 +68,14 @@ public class DriverNotificationEventPublisher {
         ));
 
         try {
-            outboxEventService.enqueue(
-                    ENTITY_TYPE_MANIFEST,
-                    String.valueOf(manifest.getId()),
-                    EVENT_TYPE_NOTIFICATION_CREATE_REQUESTED,
-                    userNotificationTopic,
-                    String.valueOf(driver.getUserId()),
-                    objectMapper.writeValueAsString(payload),
-                    resolvedTenantId
-            );
-            log.info("Enqueued driver assignment notification eventId={} topic={}", eventId, userNotificationTopic);
+            kafkaTemplate.send(userNotificationTopic, String.valueOf(driver.getUserId()),
+                    objectMapper.writeValueAsString(payload));
+            log.info("Published driver assignment notification eventId={} topic={}", eventId, userNotificationTopic);
         } catch (JsonProcessingException exception) {
             log.error("Failed to serialize driver assignment notification eventId={}", eventId, exception);
+        } catch (RuntimeException exception) {
+            log.error("Failed to publish driver assignment notification eventId={} topic={}",
+                    eventId, userNotificationTopic, exception);
         }
     }
 

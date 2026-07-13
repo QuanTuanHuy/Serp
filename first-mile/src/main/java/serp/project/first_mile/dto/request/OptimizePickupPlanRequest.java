@@ -37,6 +37,9 @@ public class OptimizePickupPlanRequest {
     @JsonProperty("courier_ids")
     private List<Long> courierIds;
 
+    @JsonProperty("order_ids")
+    private List<Long> orderIds;
+
     @JsonProperty("candidate_statuses")
     private List<OrderStatus> candidateStatuses;
 

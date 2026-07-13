@@ -105,6 +105,7 @@ export interface CandidateOrdersPanelProps {
   onOrderToggle?: (orderId: number, checked: boolean) => void;
   maxVisibleOrders?: number;
   emptyText?: string;
+  selectionHint?: string;
   referenceTime?: Date;
 }
 
