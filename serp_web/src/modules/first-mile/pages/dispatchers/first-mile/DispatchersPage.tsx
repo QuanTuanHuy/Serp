@@ -231,6 +231,9 @@ export const DispatchersPage: React.FC = () => {
   const [selectedAutoCourierIds, setSelectedAutoCourierIds] = React.useState<
     number[]
   >([]);
+  const [selectedAutoOrderIds, setSelectedAutoOrderIds] = React.useState<
+    number[]
+  >([]);
   const [selectedManualCourierId, setSelectedManualCourierId] =
     React.useState('');
   const [orderLimitInput, setOrderLimitInput] = React.useState('');
@@ -566,6 +569,7 @@ export const DispatchersPage: React.FC = () => {
 
   React.useEffect(() => {
     setSelectedAutoCourierIds([]);
+    setSelectedAutoOrderIds([]);
     setOptimizationResult(null);
     setAssignmentResult(null);
     setAssignmentResultSource(null);
@@ -599,6 +603,21 @@ export const DispatchersPage: React.FC = () => {
       return isSame ? prev : next;
     });
   }, [setupCourierIdSet]);
+
+  React.useEffect(() => {
+    const setupOrderIdSet = new Set(
+      setupCandidateOrders.map((order) => order.id)
+    );
+
+    setSelectedAutoOrderIds((prev) => {
+      const next = prev.filter((orderId) => setupOrderIdSet.has(orderId));
+      const isSame =
+        next.length === prev.length &&
+        next.every((orderId, index) => orderId === prev[index]);
+
+      return isSame ? prev : next;
+    });
+  }, [setupCandidateOrders]);
 
   React.useEffect(() => {
     setSelectedManualCourierId((prev) => {
@@ -747,6 +766,20 @@ export const DispatchersPage: React.FC = () => {
     });
   };
 
+  const handleToggleAutoOrder = (orderId: number, checked: boolean) => {
+    setSelectedAutoOrderIds((prev) => {
+      if (checked) {
+        if (prev.includes(orderId)) {
+          return prev;
+        }
+
+        return [...prev, orderId];
+      }
+
+      return prev.filter((id) => id !== orderId);
+    });
+  };
+
   const handlePreviewPlan = async () => {
     const context = buildSetupDispatchContext();
     if (!context) {
@@ -755,7 +788,9 @@ export const DispatchersPage: React.FC = () => {
 
     const parsedCourierIds = parseSelectedCourierIds();
 
-    const parsedOrderLimit = parseOptionalOrderLimit();
+    const parsedOrderLimit = selectedAutoOrderIds.length
+      ? undefined
+      : parseOptionalOrderLimit();
     if (parsedOrderLimit === null) {
       return;
     }
@@ -769,7 +804,12 @@ export const DispatchersPage: React.FC = () => {
       candidate_statuses: CANDIDATE_ORDER_STATUSES,
       allow_lateness: true,
       ...(parsedCourierIds.length ? { courier_ids: parsedCourierIds } : {}),
-      ...(parsedOrderLimit ? { order_limit: parsedOrderLimit } : {}),
+      ...(selectedAutoOrderIds.length
+        ? { order_ids: selectedAutoOrderIds }
+        : {}),
+      ...(!selectedAutoOrderIds.length && parsedOrderLimit
+        ? { order_limit: parsedOrderLimit }
+        : {}),
       ...businessSettings,
     };
 
@@ -798,7 +838,9 @@ export const DispatchersPage: React.FC = () => {
 
     const parsedCourierIds = parseSelectedCourierIds();
 
-    const parsedOrderLimit = parseOptionalOrderLimit();
+    const parsedOrderLimit = selectedAutoOrderIds.length
+      ? undefined
+      : parseOptionalOrderLimit();
     if (parsedOrderLimit === null) {
       return;
     }
@@ -814,7 +856,12 @@ export const DispatchersPage: React.FC = () => {
       candidate_statuses: CANDIDATE_ORDER_STATUSES,
       allow_lateness: true,
       ...(parsedCourierIds.length ? { courier_ids: parsedCourierIds } : {}),
-      ...(parsedOrderLimit ? { order_limit: parsedOrderLimit } : {}),
+      ...(selectedAutoOrderIds.length
+        ? { order_ids: selectedAutoOrderIds }
+        : {}),
+      ...(!selectedAutoOrderIds.length && parsedOrderLimit
+        ? { order_limit: parsedOrderLimit }
+        : {}),
       ...businessSettings,
     };
 
@@ -823,6 +870,7 @@ export const DispatchersPage: React.FC = () => {
       const result = await autoAssignPickupPlan(payload).unwrap();
       setAssignmentResult(result);
       setAssignmentResultSource('automatic');
+      setSelectedAutoOrderIds([]);
       setSelectedOrderIds([]);
 
       notification.success('Đã hoàn tất điều phối tự động.', {
@@ -1073,7 +1121,10 @@ export const DispatchersPage: React.FC = () => {
                 title='Đơn chờ điều phối tự động'
                 orders={setupCandidateOrders}
                 loading={isLoadingSetupOrders}
+                selectedOrderIds={selectedAutoOrderIds}
+                onOrderToggle={handleToggleAutoOrder}
                 emptyText='Không có đơn có thể điều phối cho bưu cục này.'
+                selectionHint='Không chọn đơn nào: lấy tất cả'
                 referenceTime={candidateReferenceTime}
               />
 

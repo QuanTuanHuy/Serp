@@ -57,6 +57,10 @@ spring:
     use-code-as-default-message: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
     consumer:
       group-id: ${KAFKA_FIRST_MILE_GROUP_ID:first-mile-sync-user}
       auto-offset-reset: earliest

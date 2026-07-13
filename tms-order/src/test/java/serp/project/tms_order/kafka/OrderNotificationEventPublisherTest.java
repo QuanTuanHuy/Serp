@@ -13,11 +13,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 import serp.project.tms_order.domain.Order;
 import serp.project.tms_order.enums.OrderStatus;
 import serp.project.tms_order.enums.PaymentStatus;
-import serp.project.tms_order.service.OutboxEventService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
@@ -29,14 +29,14 @@ class OrderNotificationEventPublisherTest {
     private static final String TOPIC = "serp.notification.user.events";
 
     @Mock
-    private OutboxEventService outboxEventService;
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private OrderNotificationEventPublisher publisher;
 
     @BeforeEach
     void setUp() {
-        publisher = new OrderNotificationEventPublisher(objectMapper, outboxEventService);
+        publisher = new OrderNotificationEventPublisher(objectMapper, kafkaTemplate);
         ReflectionTestUtils.setField(publisher, "userNotificationTopic", TOPIC);
     }
 
@@ -45,15 +45,7 @@ class OrderNotificationEventPublisherTest {
         publisher.publishOrderConfirmed(order("42"));
 
         ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
-        verify(outboxEventService).enqueue(
-                eq("TMS_ORDER"),
-                eq("1"),
-                eq("notification.create.requested"),
-                eq(TOPIC),
-                eq("ORD-001"),
-                payloadCaptor.capture(),
-                eq(9L)
-        );
+        verify(kafkaTemplate).send(eq(TOPIC), eq("ORD-001"), payloadCaptor.capture());
 
         JsonNode payload = objectMapper.readTree(payloadCaptor.getValue());
         assertEquals("tms-order.order-confirmed.1", payload.path("meta").path("id").asText());
@@ -76,7 +68,7 @@ class OrderNotificationEventPublisherTest {
     void publishOrderCancelledSkipsWhenCreatedByIsNotNumeric() {
         publisher.publishOrderCancelled(order("system"));
 
-        verifyNoInteractions(outboxEventService);
+        verifyNoInteractions(kafkaTemplate);
     }
 
     private Order order(String createdBy) {

@@ -1198,6 +1198,7 @@ export interface OptimizePickupPlanRequest {
   planning_start_time?: string;
   planning_end_time?: string;
   courier_ids?: number[];
+  order_ids?: number[];
   candidate_statuses?: FirstMileOrderStatus[];
   vehicle?: string;
   order_limit?: number;
@@ -1220,6 +1221,7 @@ export interface AutoAssignPickupPlanRequest {
   planning_start_time?: string;
   planning_end_time?: string;
   courier_ids?: number[];
+  order_ids?: number[];
   candidate_statuses?: FirstMileOrderStatus[];
   vehicle?: string;
   order_limit?: number;
